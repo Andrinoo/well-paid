@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/network_providers.dart';
 import '../../../core/storage/token_storage.dart';
+import '../../app_lock/application/app_lock_notifier.dart';
 import '../data/auth_repository.dart';
 import 'auth_state.dart';
 import 'router_refresh.dart';
@@ -57,6 +58,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       accessToken: pair.accessToken,
       refreshToken: pair.refreshToken,
     );
+    await _ref.read(appLockNotifierProvider.notifier).onLoggedIn();
     _ref.read(routerRefreshProvider).ping();
   }
 
@@ -81,6 +83,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       accessToken: pair.accessToken,
       refreshToken: pair.refreshToken,
     );
+    await _ref.read(appLockNotifierProvider.notifier).onLoggedIn();
     _ref.read(routerRefreshProvider).ping();
   }
 

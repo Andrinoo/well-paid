@@ -5,6 +5,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 
 import 'app_router.dart';
 import 'core/theme/well_paid_colors.dart';
+import 'features/app_lock/presentation/app_lifecycle_lock.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -53,6 +54,9 @@ class WellPaidApp extends ConsumerWidget {
 
     return MaterialApp.router(
       title: 'Well Paid',
+      builder: (context, child) => AppLifecycleLock(
+        child: child ?? const SizedBox.shrink(),
+      ),
       theme: ThemeData(
         useMaterial3: true,
         scaffoldBackgroundColor: WellPaidColors.cream,

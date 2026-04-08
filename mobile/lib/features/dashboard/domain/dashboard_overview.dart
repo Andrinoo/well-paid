@@ -42,12 +42,14 @@ class PendingExpenseItem {
     required this.description,
     required this.amountCents,
     this.dueDate,
+    this.isMine = true,
   });
 
   final String id;
   final String description;
   final int amountCents;
   final DateTime? dueDate;
+  final bool isMine;
 
   factory PendingExpenseItem.fromJson(Map<String, dynamic> json) {
     final raw = json['due_date'];
@@ -56,6 +58,7 @@ class PendingExpenseItem {
       description: json['description'] as String,
       amountCents: json['amount_cents'] as int,
       dueDate: raw == null ? null : DateTime.parse(raw as String),
+      isMine: json['is_mine'] as bool? ?? true,
     );
   }
 }
@@ -66,12 +69,14 @@ class GoalSummaryItem {
     required this.title,
     required this.currentCents,
     required this.targetCents,
+    this.isMine = true,
   });
 
   final String id;
   final String title;
   final int currentCents;
   final int targetCents;
+  final bool isMine;
 
   factory GoalSummaryItem.fromJson(Map<String, dynamic> json) {
     return GoalSummaryItem(
@@ -79,6 +84,7 @@ class GoalSummaryItem {
       title: json['title'] as String,
       currentCents: json['current_cents'] as int,
       targetCents: json['target_cents'] as int,
+      isMine: json['is_mine'] as bool? ?? true,
     );
   }
 }

@@ -1,6 +1,7 @@
 class GoalItem {
   const GoalItem({
     required this.id,
+    this.isMine = true,
     required this.title,
     required this.targetCents,
     required this.currentCents,
@@ -8,6 +9,7 @@ class GoalItem {
   });
 
   final String id;
+  final bool isMine;
   final String title;
   final int targetCents;
   final int currentCents;
@@ -16,6 +18,7 @@ class GoalItem {
   factory GoalItem.fromJson(Map<String, dynamic> json) {
     return GoalItem(
       id: json['id'] as String,
+      isMine: json['is_mine'] as bool? ?? true,
       title: json['title'] as String,
       targetCents: (json['target_cents'] as num).toInt(),
       currentCents: (json['current_cents'] as num).toInt(),

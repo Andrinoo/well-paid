@@ -21,6 +21,16 @@ class HomePage extends ConsumerWidget {
         title: const Text('Dashboard'),
         actions: [
           IconButton(
+            tooltip: 'Segurança',
+            onPressed: () => context.push('/security'),
+            icon: const Icon(Icons.lock_outline),
+          ),
+          IconButton(
+            tooltip: 'Família',
+            onPressed: () => context.push('/family'),
+            icon: const Icon(Icons.group_outlined),
+          ),
+          IconButton(
             tooltip: 'Atualizar dashboard',
             onPressed: () => ref.invalidate(dashboardOverviewProvider),
             icon: const Icon(Icons.refresh),
@@ -80,13 +90,7 @@ class HomePage extends ConsumerWidget {
                           icon: Icons.savings_outlined,
                           label: 'Proventos',
                           color: WellPaidColors.goldPressed,
-                          onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Proventos será a próxima entrega.'),
-                              ),
-                            );
-                          },
+                          onTap: () => context.push('/incomes'),
                         ),
                       ),
                       const SizedBox(width: 10),

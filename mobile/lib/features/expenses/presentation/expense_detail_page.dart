@@ -52,16 +52,21 @@ class ExpenseDetailPage extends ConsumerWidget {
           ),
         ),
       ),
-      data: (e) => _DetailBody(expenseId: expenseId, e: e),
+      data: (e) => _DetailBody(expenseId: expenseId, e: e, readOnly: !e.isMine),
     );
   }
 }
 
 class _DetailBody extends ConsumerWidget {
-  const _DetailBody({required this.expenseId, required this.e});
+  const _DetailBody({
+    required this.expenseId,
+    required this.e,
+    required this.readOnly,
+  });
 
   final String expenseId;
   final ExpenseItem e;
+  final bool readOnly;
 
   Future<void> _pay(BuildContext context, WidgetRef ref) async {
     final messenger = ScaffoldMessenger.of(context);
@@ -138,16 +143,43 @@ class _DetailBody extends ConsumerWidget {
         ),
         title: const Text('Despesa'),
         actions: [
-          IconButton(
-            tooltip: 'Editar',
-            icon: const Icon(Icons.edit_outlined),
-            onPressed: () => context.push('/expenses/$expenseId/edit'),
-          ),
+          if (!readOnly)
+            IconButton(
+              tooltip: 'Editar',
+              icon: const Icon(Icons.edit_outlined),
+              onPressed: () => context.push('/expenses/$expenseId/edit'),
+            ),
         ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
+          if (readOnly)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Material(
+                color: WellPaidColors.navy.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline, color: WellPaidColors.navy.withValues(alpha: 0.8)),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Despesa de outro membro da família — só podes ver.',
+                          style: TextStyle(
+                            color: WellPaidColors.navy.withValues(alpha: 0.85),
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           Text(
             formatBrlFromCents(e.amountCents),
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -187,8 +219,16 @@ class _DetailBody extends ConsumerWidget {
             ),
           if (e.recurringLabelPt != null)
             _row(context, 'Recorrência', e.recurringLabelPt!),
+          if (e.isShared)
+            _row(
+              context,
+              'Partilha',
+              e.sharedWithLabel != null && e.sharedWithLabel!.isNotEmpty
+                  ? 'Com ${e.sharedWithLabel}'
+                  : 'Família',
+            ),
           const SizedBox(height: 32),
-          if (e.isPending) ...[
+          if (!readOnly && e.isPending) ...[
             FilledButton.icon(
               onPressed: () => unawaited(_pay(context, ref)),
               icon: const Icon(Icons.payment_outlined),
@@ -196,21 +236,23 @@ class _DetailBody extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
           ],
-          OutlinedButton.icon(
-            onPressed: () => context.push('/expenses/$expenseId/edit'),
-            icon: const Icon(Icons.edit_outlined),
-            label: const Text('Editar'),
-          ),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: () => unawaited(_delete(context, ref)),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFFB71C1C),
-              side: const BorderSide(color: Color(0xFFB71C1C)),
+          if (!readOnly) ...[
+            OutlinedButton.icon(
+              onPressed: () => context.push('/expenses/$expenseId/edit'),
+              icon: const Icon(Icons.edit_outlined),
+              label: const Text('Editar'),
             ),
-            icon: const Icon(Icons.delete_outline),
-            label: const Text('Eliminar'),
-          ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () => unawaited(_delete(context, ref)),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFFB71C1C),
+                side: const BorderSide(color: Color(0xFFB71C1C)),
+              ),
+              icon: const Icon(Icons.delete_outline),
+              label: const Text('Eliminar'),
+            ),
+          ],
         ],
       ),
     );

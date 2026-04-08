@@ -10,6 +10,7 @@ import '../../dashboard/application/dashboard_providers.dart';
 import '../application/expenses_providers.dart';
 import '../domain/expense_item.dart';
 import 'widgets/expense_category_dropdown.dart';
+import 'widgets/expense_share_form_section.dart';
 
 class ExpenseEditPage extends ConsumerWidget {
   const ExpenseEditPage({super.key, required this.expenseId});
@@ -46,11 +47,34 @@ class ExpenseEditPage extends ConsumerWidget {
           ),
         ),
       ),
-      data: (expense) => _ExpenseEditForm(
-        key: ValueKey('${expense.id}-${expense.updatedAt.toIso8601String()}'),
-        expenseId: expenseId,
-        expense: expense,
-      ),
+      data: (expense) {
+        if (!expense.isMine) {
+          return Scaffold(
+            appBar: AppBar(
+              leading: IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => context.pop(),
+              ),
+              title: const Text('Editar despesa'),
+            ),
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  'Só o titular desta despesa a pode editar.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: WellPaidColors.navy.withValues(alpha: 0.85)),
+                ),
+              ),
+            ),
+          );
+        }
+        return _ExpenseEditForm(
+          key: ValueKey('${expense.id}-${expense.updatedAt.toIso8601String()}'),
+          expenseId: expenseId,
+          expense: expense,
+        );
+      },
     );
   }
 }
@@ -78,6 +102,8 @@ class _ExpenseEditFormState extends ConsumerState<_ExpenseEditForm> {
   late String _categoryId;
   late String _status;
   String? _recurring;
+  late bool _isShared;
+  String? _sharedWithUserId;
 
   @override
   void initState() {
@@ -92,6 +118,8 @@ class _ExpenseEditFormState extends ConsumerState<_ExpenseEditForm> {
     _categoryId = e.categoryId;
     _status = e.status;
     _recurring = e.recurringFrequency;
+    _isShared = e.isShared;
+    _sharedWithUserId = e.sharedWithUserId;
   }
 
   @override
@@ -146,6 +174,8 @@ class _ExpenseEditFormState extends ConsumerState<_ExpenseEditForm> {
             status: _status,
             recurringFrequency:
                 widget.expense.isInstallmentPlan ? null : _recurring,
+            isShared: _isShared,
+            sharedWithUserId: _isShared ? _sharedWithUserId : null,
           );
       ref.invalidate(expenseDetailProvider(widget.expenseId));
       ref.invalidate(expensesListProvider);
@@ -318,6 +348,13 @@ class _ExpenseEditFormState extends ConsumerState<_ExpenseEditForm> {
                   if (id != null) setState(() => _categoryId = id);
                 },
               ),
+            ),
+            const SizedBox(height: 16),
+            ExpenseShareFormSection(
+              isShared: _isShared,
+              sharedWithUserId: _sharedWithUserId,
+              onSharedChanged: (v) => setState(() => _isShared = v),
+              onPeerChanged: (v) => setState(() => _sharedWithUserId = v),
             ),
             const SizedBox(height: 28),
             FilledButton(

@@ -5,13 +5,15 @@ from __future__ import annotations
 import calendar
 from datetime import date
 
-from sqlalchemy import func, nulls_last, select
+from sqlalchemy import func, inspect, nulls_last, select
 from sqlalchemy.orm import Session
 
 from app.models.category import Category
 from app.models.expense import Expense
 from app.models.goal import Goal
+from app.models.income import Income
 from app.models.user import User
+from app.services.family_scope import family_peer_user_ids
 from app.schemas.dashboard import (
     CategorySpend,
     DashboardOverviewResponse,
@@ -67,9 +69,11 @@ def get_dashboard_overview(
     nm_month = 1 if next_month_anchor.month == 12 else (next_month_anchor.month + 1)
     next_start, next_end = month_bounds(nm_year, nm_month)
 
+    peer_ids = family_peer_user_ids(db, user.id)
+
     month_total = db.scalar(
         select(func.coalesce(func.sum(Expense.amount_cents), 0)).where(
-            Expense.owner_user_id == user.id,
+            Expense.owner_user_id.in_(peer_ids),
             Expense.expense_date >= start,
             Expense.expense_date <= end,
         )
@@ -84,7 +88,7 @@ def get_dashboard_overview(
         )
         .join(Category, Expense.category_id == Category.id)
         .where(
-            Expense.owner_user_id == user.id,
+            Expense.owner_user_id.in_(peer_ids),
             Expense.expense_date >= start,
             Expense.expense_date <= end,
         )
@@ -100,7 +104,7 @@ def get_dashboard_overview(
 
     pending_total = db.scalar(
         select(func.coalesce(func.sum(Expense.amount_cents), 0)).where(
-            Expense.owner_user_id == user.id,
+            Expense.owner_user_id.in_(peer_ids),
             Expense.status == ExpenseStatus.PENDING.value,
             Expense.expense_date >= next_start,
             Expense.expense_date <= next_end,
@@ -111,7 +115,7 @@ def get_dashboard_overview(
     preview_stmt = (
         select(Expense)
         .where(
-            Expense.owner_user_id == user.id,
+            Expense.owner_user_id.in_(peer_ids),
             Expense.status == ExpenseStatus.PENDING.value,
             Expense.expense_date >= next_start,
             Expense.expense_date <= next_end,
@@ -129,6 +133,7 @@ def get_dashboard_overview(
             description=e.description,
             amount_cents=int(e.amount_cents),
             due_date=e.due_date,
+            is_mine=e.owner_user_id == user.id,
         )
         for e in pending_expenses
     ]
@@ -136,7 +141,7 @@ def get_dashboard_overview(
     upcoming_stmt = (
         select(Expense)
         .where(
-            Expense.owner_user_id == user.id,
+            Expense.owner_user_id.in_(peer_ids),
             Expense.status == ExpenseStatus.PENDING.value,
             Expense.due_date.isnot(None),
             Expense.due_date >= next_start,
@@ -152,16 +157,29 @@ def get_dashboard_overview(
             description=e.description,
             amount_cents=int(e.amount_cents),
             due_date=e.due_date,
+            is_mine=e.owner_user_id == user.id,
         )
         for e in upcoming_rows
     ]
 
-    month_income_cents = 0
+    # Evita 500 se a migração de proventos (009) ainda não foi aplicada na BD.
+    bind = db.get_bind()
+    if bind is not None and inspect(bind).has_table("incomes"):
+        income_sum = db.scalar(
+            select(func.coalesce(func.sum(Income.amount_cents), 0)).where(
+                Income.owner_user_id.in_(peer_ids),
+                Income.income_date >= start,
+                Income.income_date <= end,
+            )
+        )
+        month_income_cents = int(income_sum or 0)
+    else:
+        month_income_cents = 0
     month_balance_cents = month_income_cents - month_expense_total_cents
 
     goals_rows = (
         db.query(Goal)
-        .filter(Goal.owner_user_id == user.id, Goal.is_active.is_(True))
+        .filter(Goal.owner_user_id.in_(peer_ids), Goal.is_active.is_(True))
         .order_by(Goal.updated_at.desc())
         .limit(3)
         .all()
@@ -172,6 +190,7 @@ def get_dashboard_overview(
             title=g.title,
             current_cents=int(g.current_cents),
             target_cents=int(g.target_cents),
+            is_mine=g.owner_user_id == user.id,
         )
         for g in goals_rows
     ]

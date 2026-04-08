@@ -27,6 +27,7 @@ class GoalResponse(BaseModel):
 
     id: uuid.UUID
     owner_user_id: uuid.UUID
+    is_mine: bool = True
     title: str
     target_cents: int
     current_cents: int

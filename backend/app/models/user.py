@@ -29,6 +29,7 @@ class User(Base, TimestampMixin):
     )
     expenses: Mapped[list["Expense"]] = relationship(
         "Expense",
+        foreign_keys="Expense.owner_user_id",
         back_populates="owner",
         cascade="all, delete-orphan",
     )
@@ -36,4 +37,14 @@ class User(Base, TimestampMixin):
         "Goal",
         back_populates="owner",
         cascade="all, delete-orphan",
+    )
+    incomes: Mapped[list["Income"]] = relationship(
+        "Income",
+        back_populates="owner",
+        cascade="all, delete-orphan",
+    )
+    family_membership: Mapped["FamilyMember | None"] = relationship(
+        "FamilyMember",
+        back_populates="user",
+        uselist=False,
     )

@@ -107,8 +107,10 @@ class ExpensesRepository {
     String status = 'pending',
     int installmentTotal = 1,
     String? recurringFrequency,
+    bool isShared = false,
+    String? sharedWithUserId,
   }) async {
-    final body = {
+    final body = <String, dynamic>{
       'description': description.trim(),
       'amount_cents': amountCents,
       'expense_date': _isoDate(expenseDate),
@@ -117,6 +119,8 @@ class ExpensesRepository {
       'status': status,
       'installment_total': installmentTotal,
       'recurring_frequency': recurringFrequency,
+      'is_shared': isShared,
+      'shared_with_user_id': sharedWithUserId,
     };
     try {
       final res = await _dio.post<Map<String, dynamic>>(
@@ -138,6 +142,8 @@ class ExpensesRepository {
           );
       final localItem = ExpenseItem(
         id: localId,
+        isShared: isShared,
+        sharedWithUserId: sharedWithUserId,
         description: description.trim(),
         amountCents: amountCents,
         expenseDate: expenseDate,
@@ -173,8 +179,10 @@ class ExpensesRepository {
     required String categoryId,
     required String status,
     String? recurringFrequency,
+    required bool isShared,
+    String? sharedWithUserId,
   }) async {
-    final body = {
+    final body = <String, dynamic>{
       'description': description.trim(),
       'amount_cents': amountCents,
       'expense_date': _isoDate(expenseDate),
@@ -182,6 +190,8 @@ class ExpensesRepository {
       'category_id': categoryId,
       'status': status,
       'recurring_frequency': recurringFrequency,
+      'is_shared': isShared,
+      'shared_with_user_id': sharedWithUserId,
     };
     try {
       final res = await _dio.put<Map<String, dynamic>>(
@@ -204,6 +214,8 @@ class ExpensesRepository {
           categoryId: categoryId,
           status: status,
           recurringFrequency: recurringFrequency,
+          isShared: isShared,
+          sharedWithUserId: sharedWithUserId,
           syncStatus: 1,
           updatedAt: DateTime.now(),
         );

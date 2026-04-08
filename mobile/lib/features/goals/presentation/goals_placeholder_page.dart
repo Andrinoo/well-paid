@@ -72,7 +72,7 @@ class GoalsPlaceholderPage extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        g.title,
+                        g.isMine ? g.title : '${g.title} (família)',
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                               color: WellPaidColors.navy,
                               fontWeight: FontWeight.w700,

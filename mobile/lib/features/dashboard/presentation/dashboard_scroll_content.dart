@@ -82,29 +82,31 @@ class DashboardScrollContent extends ConsumerWidget {
                 ...data.pendingPreview.map(
                   (e) => _PendingTile(
                     item: e,
-                    onPay: () async {
-                      final messenger = ScaffoldMessenger.of(context);
-                      try {
-                        await ref
-                            .read(expensesRepositoryProvider)
-                            .payExpense(e.id);
-                        ref.invalidate(dashboardOverviewProvider);
-                        ref.invalidate(expensesListProvider);
-                        messenger.showSnackBar(
-                          const SnackBar(
-                            content: Text('Despesa marcada como paga.'),
-                          ),
-                        );
-                      } catch (err) {
-                        messenger.showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              messageFromDio(err) ?? 'Erro ao pagar.',
-                            ),
-                          ),
-                        );
-                      }
-                    },
+                    onPay: e.isMine
+                        ? () async {
+                            final messenger = ScaffoldMessenger.of(context);
+                            try {
+                              await ref
+                                  .read(expensesRepositoryProvider)
+                                  .payExpense(e.id);
+                              ref.invalidate(dashboardOverviewProvider);
+                              ref.invalidate(expensesListProvider);
+                              messenger.showSnackBar(
+                                const SnackBar(
+                                  content: Text('Despesa marcada como paga.'),
+                                ),
+                              );
+                            } catch (err) {
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    messageFromDio(err) ?? 'Erro ao pagar.',
+                                  ),
+                                ),
+                              );
+                            }
+                          }
+                        : null,
                   ),
                 ),
               const Divider(height: 24),
@@ -308,10 +310,10 @@ Widget _kv(
 }
 
 class _PendingTile extends StatelessWidget {
-  const _PendingTile({required this.item, required this.onPay});
+  const _PendingTile({required this.item, this.onPay});
 
   final PendingExpenseItem item;
-  final Future<void> Function() onPay;
+  final Future<void> Function()? onPay;
 
   @override
   Widget build(BuildContext context) {
@@ -342,7 +344,7 @@ class _PendingTile extends StatelessWidget {
                         ),
                   ),
                   Text(
-                    'Venc. $dueStr',
+                    'Venc. $dueStr${item.isMine ? '' : ' · Família'}',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: WellPaidColors.navy.withValues(alpha: 0.6),
                         ),
@@ -357,15 +359,17 @@ class _PendingTile extends StatelessWidget {
                     color: WellPaidColors.navy,
                   ),
             ),
-            const SizedBox(width: 4),
-            IconButton(
-              tooltip: 'Marcar como paga',
-              onPressed: () => unawaited(onPay()),
-              icon: const Icon(Icons.payment_outlined, size: 22),
-              color: WellPaidColors.goldPressed,
-              constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
-              padding: EdgeInsets.zero,
-            ),
+            if (onPay != null) ...[
+              const SizedBox(width: 4),
+              IconButton(
+                tooltip: 'Marcar como paga',
+                onPressed: () => unawaited(onPay!()),
+                icon: const Icon(Icons.payment_outlined, size: 22),
+                color: WellPaidColors.goldPressed,
+                constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                padding: EdgeInsets.zero,
+              ),
+            ],
           ],
         ),
       ),
@@ -455,7 +459,7 @@ class _GoalRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            goal.title,
+            goal.isMine ? goal.title : '${goal.title} (família)',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),

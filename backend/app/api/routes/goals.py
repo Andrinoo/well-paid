@@ -11,6 +11,7 @@ from app.core.database import get_db
 from app.models.goal import Goal
 from app.models.user import User
 from app.schemas.goal import GoalContribute, GoalCreate, GoalResponse, GoalUpdate
+from app.services.family_scope import family_peer_user_ids
 
 router = APIRouter(prefix="/goals", tags=["goals"])
 
@@ -24,13 +25,27 @@ def list_goals(
     user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> list[GoalResponse]:
+    peer_ids = family_peer_user_ids(db, user.id)
     rows = (
         db.query(Goal)
-        .filter(Goal.owner_user_id == user.id)
+        .filter(Goal.owner_user_id.in_(peer_ids))
         .order_by(Goal.is_active.desc(), Goal.updated_at.desc())
         .all()
     )
-    return rows
+    return [
+        GoalResponse(
+            id=r.id,
+            owner_user_id=r.owner_user_id,
+            is_mine=r.owner_user_id == user.id,
+            title=r.title,
+            target_cents=int(r.target_cents),
+            current_cents=int(r.current_cents),
+            is_active=r.is_active,
+            created_at=r.created_at,
+            updated_at=r.updated_at,
+        )
+        for r in rows
+    ]
 
 
 @router.post("", response_model=GoalResponse, status_code=status.HTTP_201_CREATED)

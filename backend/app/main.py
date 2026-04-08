@@ -6,7 +6,17 @@ from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
-from app.api.routes import auth, categories, dashboard, expenses, goals, health
+from app.api.routes import (
+    auth,
+    categories,
+    dashboard,
+    expenses,
+    families,
+    goals,
+    health,
+    income_categories,
+    incomes,
+)
 from app.core.config import get_settings
 from app.core.limiter import limiter
 
@@ -59,6 +69,9 @@ app.add_middleware(
 app.include_router(health.router)
 app.include_router(auth.router)
 app.include_router(categories.router)
+app.include_router(income_categories.router)
+app.include_router(incomes.router)
 app.include_router(dashboard.router)
 app.include_router(expenses.router)
 app.include_router(goals.router)
+app.include_router(families.router)

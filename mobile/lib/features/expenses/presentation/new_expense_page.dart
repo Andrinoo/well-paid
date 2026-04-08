@@ -10,6 +10,7 @@ import '../../../core/theme/well_paid_colors.dart';
 import '../../dashboard/application/dashboard_providers.dart';
 import '../application/expenses_providers.dart';
 import 'widgets/expense_category_dropdown.dart';
+import 'widgets/expense_share_form_section.dart';
 
 class NewExpensePage extends ConsumerStatefulWidget {
   const NewExpensePage({super.key});
@@ -30,6 +31,8 @@ class _NewExpensePageState extends ConsumerState<NewExpensePage> {
   bool _markPaid = false;
   int _installments = 1;
   String? _recurring;
+  bool _isShared = false;
+  String? _sharedWithUserId;
 
   @override
   void dispose() {
@@ -96,6 +99,8 @@ class _NewExpensePageState extends ConsumerState<NewExpensePage> {
             status: _markPaid ? 'paid' : 'pending',
             installmentTotal: _installments,
             recurringFrequency: _installments == 1 ? _recurring : null,
+            isShared: _isShared,
+            sharedWithUserId: _isShared ? _sharedWithUserId : null,
           );
       ref.invalidate(expensesListProvider);
       ref.invalidate(dashboardOverviewProvider);
@@ -319,6 +324,13 @@ class _NewExpensePageState extends ConsumerState<NewExpensePage> {
                 value: _categoryId,
                 onChanged: (id) => setState(() => _categoryId = id),
               ),
+            ),
+            const SizedBox(height: 16),
+            ExpenseShareFormSection(
+              isShared: _isShared,
+              sharedWithUserId: _sharedWithUserId,
+              onSharedChanged: (v) => setState(() => _isShared = v),
+              onPeerChanged: (v) => setState(() => _sharedWithUserId = v),
             ),
             const SizedBox(height: 28),
             FilledButton(

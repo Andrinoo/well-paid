@@ -253,7 +253,7 @@ class _ExpenseListPageState extends ConsumerState<ExpenseListPage> {
                       return _ExpenseTile(
                         item: e,
                         onTap: () => context.push('/expenses/${e.id}'),
-                        onPay: e.isPending ? () => _pay(e) : null,
+                        onPay: (e.isPending && e.isMine) ? () => _pay(e) : null,
                       );
                     },
                   ),
@@ -307,7 +307,7 @@ class _ExpenseTile extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      item.categoryName,
+                      item.isMine ? item.categoryName : '${item.categoryName} · Família',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: WellPaidColors.navy.withValues(alpha: 0.65),
                           ),
@@ -333,6 +333,18 @@ class _ExpenseTile extends StatelessWidget {
                               Chip(
                                 label: Text(
                                   item.recurringLabelPt!,
+                                  style: const TextStyle(fontSize: 11),
+                                ),
+                                visualDensity: VisualDensity.compact,
+                                padding: EdgeInsets.zero,
+                              ),
+                            if (item.isShared)
+                              Chip(
+                                label: Text(
+                                  item.sharedWithLabel != null &&
+                                          item.sharedWithLabel!.isNotEmpty
+                                      ? 'Partilhada · ${item.sharedWithLabel}'
+                                      : 'Partilhada',
                                   style: const TextStyle(fontSize: 11),
                                 ),
                                 visualDensity: VisualDensity.compact,

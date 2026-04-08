@@ -1,6 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'features/app_lock/application/app_lock_notifier.dart';
+import 'features/app_lock/presentation/security_settings_page.dart';
+import 'features/app_lock/presentation/unlock_page.dart';
 import 'features/auth/application/auth_notifier.dart';
 import 'features/auth/application/router_refresh.dart';
 import 'features/auth/presentation/forgot_password_page.dart';
@@ -12,8 +15,13 @@ import 'features/expenses/presentation/expense_detail_page.dart';
 import 'features/expenses/presentation/expense_edit_page.dart';
 import 'features/expenses/presentation/expense_list_page.dart';
 import 'features/expenses/presentation/new_expense_page.dart';
+import 'features/family/presentation/family_page.dart';
 import 'features/goals/presentation/goals_placeholder_page.dart';
 import 'features/home/presentation/home_page.dart';
+import 'features/incomes/presentation/income_detail_page.dart';
+import 'features/incomes/presentation/income_edit_page.dart';
+import 'features/incomes/presentation/income_list_page.dart';
+import 'features/incomes/presentation/new_income_page.dart';
 
 final goRouterProvider = Provider<GoRouter>((ref) {
   final refresh = ref.watch(routerRefreshProvider);
@@ -23,15 +31,20 @@ final goRouterProvider = Provider<GoRouter>((ref) {
     refreshListenable: refresh,
     redirect: (context, state) {
       final auth = ref.read(authNotifierProvider);
+      final lock = ref.read(appLockNotifierProvider);
       final loc = state.matchedLocation;
 
-      if (!auth.hydrated) {
+      if (!auth.hydrated || !lock.hydrated) {
         return loc == '/splash' ? null : '/splash';
       }
 
       if (loc == '/splash') {
-        return auth.isAuthenticated ? '/home' : '/login';
+        if (!auth.isAuthenticated) return '/login';
+        if (lock.pinEnabled && !lock.sessionUnlocked) return '/unlock';
+        return '/home';
       }
+
+      if (loc == '/unlock' && !auth.isAuthenticated) return '/login';
 
       const publicPaths = {
         '/login',
@@ -40,7 +53,21 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         '/reset-password',
       };
       final public = publicPaths.contains(loc);
-      if (!auth.isAuthenticated && !public) return '/login';
+
+      if (!auth.isAuthenticated) {
+        if (public) return null;
+        return '/login';
+      }
+
+      if (lock.pinEnabled && !lock.sessionUnlocked) {
+        if (loc == '/unlock') return null;
+        return '/unlock';
+      }
+
+      if (lock.sessionUnlocked && loc == '/unlock') {
+        return '/home';
+      }
+
       if (auth.isAuthenticated && public) return '/home';
 
       return null;
@@ -102,6 +129,40 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/goals',
         builder: (context, state) => const GoalsPlaceholderPage(),
+      ),
+      GoRoute(
+        path: '/family',
+        builder: (context, state) => FamilyPage(
+          initialInviteToken: state.uri.queryParameters['token'],
+        ),
+      ),
+      GoRoute(
+        path: '/unlock',
+        builder: (context, state) => const UnlockPage(),
+      ),
+      GoRoute(
+        path: '/security',
+        builder: (context, state) => const SecuritySettingsPage(),
+      ),
+      GoRoute(
+        path: '/incomes',
+        builder: (context, state) => const IncomeListPage(),
+      ),
+      GoRoute(
+        path: '/incomes/new',
+        builder: (context, state) => const NewIncomePage(),
+      ),
+      GoRoute(
+        path: '/incomes/:incomeId/edit',
+        builder: (context, state) => IncomeEditPage(
+          incomeId: state.pathParameters['incomeId']!,
+        ),
+      ),
+      GoRoute(
+        path: '/incomes/:incomeId',
+        builder: (context, state) => IncomeDetailPage(
+          incomeId: state.pathParameters['incomeId']!,
+        ),
       ),
     ],
   );

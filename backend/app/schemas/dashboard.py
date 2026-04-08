@@ -53,6 +53,10 @@ class PendingExpenseItem(BaseModel):
         default=None,
         description="Vencimento; null se não aplicável",
     )
+    is_mine: bool = Field(
+        default=True,
+        description="False se a despesa pertence a outro membro da família (só leitura no cliente)",
+    )
 
 
 class GoalSummaryItem(BaseModel):
@@ -62,6 +66,10 @@ class GoalSummaryItem(BaseModel):
     title: str
     current_cents: int = Field(ge=0)
     target_cents: int = Field(gt=0)
+    is_mine: bool = Field(
+        default=True,
+        description="False se a meta é de outro membro da família",
+    )
 
 
 class DashboardOverviewResponse(BaseModel):

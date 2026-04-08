@@ -15,6 +15,8 @@ class ExpenseCreate(BaseModel):
     status: ExpenseStatus = ExpenseStatus.PENDING
     installment_total: int = Field(default=1, ge=1, le=24)
     recurring_frequency: str | None = Field(default=None, max_length=32)
+    is_shared: bool = False
+    shared_with_user_id: uuid.UUID | None = None
 
     @field_validator("recurring_frequency")
     @classmethod
@@ -32,6 +34,8 @@ class ExpenseCreate(BaseModel):
             raise ValueError(
                 "Use parcelas OU recorrência, não ambos (Telas §5.6)."
             )
+        if not self.is_shared and self.shared_with_user_id is not None:
+            raise ValueError("shared_with_user_id exige is_shared true")
         return self
 
 
@@ -44,6 +48,8 @@ class ExpenseUpdate(BaseModel):
     status: ExpenseStatus | None = None
     sync_status: int | None = Field(default=None, ge=0, le=2)
     recurring_frequency: str | None = Field(default=None, max_length=32)
+    is_shared: bool | None = None
+    shared_with_user_id: uuid.UUID | None = None
 
     @field_validator("recurring_frequency")
     @classmethod
@@ -57,11 +63,19 @@ class ExpenseUpdate(BaseModel):
             raise ValueError("recurring_frequency deve ser monthly, weekly ou yearly")
         return v
 
+    @model_validator(mode="after")
+    def share_update_consistency(self) -> ExpenseUpdate:
+        if self.is_shared is False and self.shared_with_user_id is not None:
+            raise ValueError("Não uses shared_with_user_id com is_shared false")
+        return self
+
 
 class ExpenseResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
+    owner_user_id: uuid.UUID
+    is_mine: bool = True
     description: str
     amount_cents: int
     expense_date: date
@@ -77,5 +91,11 @@ class ExpenseResponse(BaseModel):
     recurring_frequency: str | None
     recurring_series_id: uuid.UUID | None = None
     recurring_generated_until: date | None = None
+    is_shared: bool = False
+    shared_with_user_id: uuid.UUID | None = None
+    shared_with_label: str | None = Field(
+        default=None,
+        description="Nome ou e-mail do membro (só quando shared_with_user_id definido)",
+    )
     created_at: datetime
     updated_at: datetime

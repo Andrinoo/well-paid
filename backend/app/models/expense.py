@@ -1,7 +1,7 @@
 import uuid
 from datetime import date
 
-from sqlalchemy import BigInteger, Date, ForeignKey, Integer, String
+from sqlalchemy import BigInteger, Boolean, Date, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -40,8 +40,24 @@ class Expense(Base, TimestampMixin):
         UUID(as_uuid=True), nullable=True, index=True
     )
     recurring_generated_until: Mapped[date | None] = mapped_column(Date, nullable=True)
+    is_shared: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    shared_with_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
 
-    owner: Mapped["User"] = relationship("User", back_populates="expenses")
+    owner: Mapped["User"] = relationship(
+        "User",
+        foreign_keys=[owner_user_id],
+        back_populates="expenses",
+    )
+    shared_with_user: Mapped["User | None"] = relationship(
+        "User",
+        foreign_keys=[shared_with_user_id],
+        viewonly=True,
+    )
     category: Mapped["Category"] = relationship(
         "Category", back_populates="expenses"
     )

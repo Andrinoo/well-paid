@@ -1,6 +1,11 @@
 class ExpenseItem {
   const ExpenseItem({
     required this.id,
+    this.ownerUserId,
+    this.isMine = true,
+    this.isShared = false,
+    this.sharedWithUserId,
+    this.sharedWithLabel,
     required this.description,
     required this.amountCents,
     required this.expenseDate,
@@ -19,6 +24,11 @@ class ExpenseItem {
   });
 
   final String id;
+  final String? ownerUserId;
+  final bool isMine;
+  final bool isShared;
+  final String? sharedWithUserId;
+  final String? sharedWithLabel;
   final String description;
   final int amountCents;
   final DateTime expenseDate;
@@ -55,6 +65,11 @@ class ExpenseItem {
   factory ExpenseItem.fromJson(Map<String, dynamic> json) {
     return ExpenseItem(
       id: json['id'] as String,
+      ownerUserId: json['owner_user_id'] as String?,
+      isMine: json['is_mine'] as bool? ?? true,
+      isShared: json['is_shared'] as bool? ?? false,
+      sharedWithUserId: json['shared_with_user_id'] as String?,
+      sharedWithLabel: json['shared_with_label'] as String?,
       description: json['description'] as String,
       amountCents: (json['amount_cents'] as num).toInt(),
       expenseDate: DateTime.parse(json['expense_date'] as String),
@@ -80,6 +95,11 @@ class ExpenseItem {
         '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
     return {
       'id': id,
+      if (ownerUserId != null) 'owner_user_id': ownerUserId,
+      'is_mine': isMine,
+      'is_shared': isShared,
+      if (sharedWithUserId != null) 'shared_with_user_id': sharedWithUserId,
+      if (sharedWithLabel != null) 'shared_with_label': sharedWithLabel,
       'description': description,
       'amount_cents': amountCents,
       'expense_date': isoDate(expenseDate),
@@ -100,6 +120,11 @@ class ExpenseItem {
 
   ExpenseItem copyWith({
     String? id,
+    String? ownerUserId,
+    bool? isMine,
+    bool? isShared,
+    String? sharedWithUserId,
+    String? sharedWithLabel,
     String? description,
     int? amountCents,
     DateTime? expenseDate,
@@ -118,6 +143,11 @@ class ExpenseItem {
   }) {
     return ExpenseItem(
       id: id ?? this.id,
+      ownerUserId: ownerUserId ?? this.ownerUserId,
+      isMine: isMine ?? this.isMine,
+      isShared: isShared ?? this.isShared,
+      sharedWithUserId: sharedWithUserId ?? this.sharedWithUserId,
+      sharedWithLabel: sharedWithLabel ?? this.sharedWithLabel,
       description: description ?? this.description,
       amountCents: amountCents ?? this.amountCents,
       expenseDate: expenseDate ?? this.expenseDate,
