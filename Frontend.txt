@@ -1,0 +1,7 @@
+
+**Frontend (Flutter)**
+
+- Especificação completa das telas e pacotes: **Telas.txt** (secções 5+) e **Ordems 1.md** §3.2.
+- Versões na máquina dev: Flutter **3.41.6** stable, Dart **3.11.4** — ver **Ordems 1.md §5**.
+- **Próximo passo de código:** criar pasta `mobile/` (ou `app/`) com `flutter create` **depois** do backend mínimo estar definido/testado (ver **Ordems 1.md §6**).
+- Target inicial: **Android**; Visual Studio (C++) **não** necessário para esse target.
