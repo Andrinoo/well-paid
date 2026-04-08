@@ -5,9 +5,25 @@ env.txt
 
 # IDE / tooling local
 .idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
 
 # Instaladores e binários locais (não versionar)
 *.exe
+
+# Documentação interna, prompts, guias e rascunhos (fora do código do produto)
+/PROMPT_*.md
+/GUIA_*.md
+/Ordems*.md
+/Telas.txt
+/Fastapi.txt
+/Frontend.txt
+/Flutter.txt
+/Text do think
+/Nao usar no projeto somente para exemplo/
 
 # Python / backend
 backend/.venv/
@@ -16,3 +32,7 @@ backend/.venv/
 *.egg-info/
 .pytest_cache/
 .mypy_cache/
+.ruff_cache/
+
+# Logs locais
+*.log
