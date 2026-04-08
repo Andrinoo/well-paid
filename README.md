@@ -7,7 +7,7 @@ Repositório: [github.com/Andrinoo/well-paid](https://github.com/Andrinoo/well-p
 ## Requisitos
 
 - **Python** 3.12+ (o projeto referencia `3.14.3` em `.python-version`)
-- **PostgreSQL** acessível (URL no formato esperado pelo SQLAlchemy; ver `.env.example`)
+- **PostgreSQL** acessível (URL no formato esperado pelo SQLAlchemy; ver `backend/.env.example`)
 - **Flutter** SDK estável, com toolchain para as plataformas que fores usar
 
 ## Variáveis de ambiente
