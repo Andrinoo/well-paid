@@ -6,7 +6,6 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
-from app.models.shopping_list_item import ShoppingListItem
 
 
 class ShoppingList(Base, TimestampMixin):
@@ -34,9 +33,8 @@ class ShoppingList(Base, TimestampMixin):
     )
     total_cents: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
 
-    items: Mapped[list[ShoppingListItem]] = relationship(
+    items: Mapped[list["ShoppingListItem"]] = relationship(
         "ShoppingListItem",
         back_populates="shopping_list",
         cascade="all, delete-orphan",
-        order_by=ShoppingListItem.sort_order,
     )
