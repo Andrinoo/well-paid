@@ -9,8 +9,15 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.models.goal import Goal
+from app.models.goal_contribution import GoalContribution
 from app.models.user import User
-from app.schemas.goal import GoalContribute, GoalCreate, GoalResponse, GoalUpdate
+from app.schemas.goal import (
+    GoalContribute,
+    GoalContributionResponse,
+    GoalCreate,
+    GoalResponse,
+    GoalUpdate,
+)
 from app.services.family_scope import family_peer_user_ids
 
 router = APIRouter(prefix="/goals", tags=["goals"])
@@ -18,6 +25,31 @@ router = APIRouter(prefix="/goals", tags=["goals"])
 
 def _owned_goal(db: Session, goal_id: uuid.UUID, owner_id: uuid.UUID) -> Goal | None:
     return db.query(Goal).filter(Goal.id == goal_id, Goal.owner_user_id == owner_id).first()
+
+
+def _visible_goal(
+    db: Session, goal_id: uuid.UUID, viewer_id: uuid.UUID
+) -> Goal | None:
+    peer_ids = family_peer_user_ids(db, viewer_id)
+    return (
+        db.query(Goal)
+        .filter(Goal.id == goal_id, Goal.owner_user_id.in_(peer_ids))
+        .first()
+    )
+
+
+def _to_response(row: Goal, viewer_id: uuid.UUID) -> GoalResponse:
+    return GoalResponse(
+        id=row.id,
+        owner_user_id=row.owner_user_id,
+        is_mine=row.owner_user_id == viewer_id,
+        title=row.title,
+        target_cents=int(row.target_cents),
+        current_cents=int(row.current_cents),
+        is_active=row.is_active,
+        created_at=row.created_at,
+        updated_at=row.updated_at,
+    )
 
 
 @router.get("", response_model=list[GoalResponse])
@@ -32,20 +64,7 @@ def list_goals(
         .order_by(Goal.is_active.desc(), Goal.updated_at.desc())
         .all()
     )
-    return [
-        GoalResponse(
-            id=r.id,
-            owner_user_id=r.owner_user_id,
-            is_mine=r.owner_user_id == user.id,
-            title=r.title,
-            target_cents=int(r.target_cents),
-            current_cents=int(r.current_cents),
-            is_active=r.is_active,
-            created_at=r.created_at,
-            updated_at=r.updated_at,
-        )
-        for r in rows
-    ]
+    return [_to_response(r, user.id) for r in rows]
 
 
 @router.post("", response_model=GoalResponse, status_code=status.HTTP_201_CREATED)
@@ -62,9 +81,85 @@ def create_goal(
         is_active=body.is_active,
     )
     db.add(row)
+    db.flush()
+    if int(body.current_cents) > 0:
+        db.add(
+            GoalContribution(
+                goal_id=row.id,
+                amount_cents=int(body.current_cents),
+                note=None,
+            )
+        )
     db.commit()
     db.refresh(row)
-    return row
+    return _to_response(row, user.id)
+
+
+@router.get("/{goal_id}/contributions", response_model=list[GoalContributionResponse])
+def list_goal_contributions(
+    goal_id: uuid.UUID,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+    limit: int = 200,
+) -> list[GoalContributionResponse]:
+    row = _owned_goal(db, goal_id, user.id)
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Meta não encontrada")
+    lim = min(max(limit, 1), 500)
+    q = (
+        db.query(GoalContribution)
+        .filter(GoalContribution.goal_id == goal_id)
+        .order_by(GoalContribution.recorded_at.desc())
+        .limit(lim)
+    )
+    return [
+        GoalContributionResponse(
+            id=c.id,
+            goal_id=c.goal_id,
+            amount_cents=int(c.amount_cents),
+            note=c.note,
+            recorded_at=c.recorded_at,
+        )
+        for c in q.all()
+    ]
+
+
+@router.post("/{goal_id}/contribute", response_model=GoalResponse)
+def contribute_goal(
+    goal_id: uuid.UUID,
+    body: GoalContribute,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> GoalResponse:
+    row = _owned_goal(db, goal_id, user.id)
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Meta não encontrada")
+    note = body.note.strip() if body.note else None
+    if note == "":
+        note = None
+    db.add(
+        GoalContribution(
+            goal_id=row.id,
+            amount_cents=int(body.amount_cents),
+            note=note,
+        )
+    )
+    row.current_cents = int(row.current_cents) + int(body.amount_cents)
+    db.commit()
+    db.refresh(row)
+    return _to_response(row, user.id)
+
+
+@router.get("/{goal_id}", response_model=GoalResponse)
+def get_goal(
+    goal_id: uuid.UUID,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> GoalResponse:
+    row = _visible_goal(db, goal_id, user.id)
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Meta não encontrada")
+    return _to_response(row, user.id)
 
 
 @router.put("/{goal_id}", response_model=GoalResponse)
@@ -84,7 +179,7 @@ def update_goal(
         setattr(row, k, v)
     db.commit()
     db.refresh(row)
-    return row
+    return _to_response(row, user.id)
 
 
 @router.delete("/{goal_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -96,21 +191,13 @@ def delete_goal(
     row = _owned_goal(db, goal_id, user.id)
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Meta não encontrada")
+    if int(row.current_cents) > 0:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "Não é possível apagar uma meta com saldo registado. "
+                "Desative a meta (arquivar) em editar ou retire o valor antes de apagar."
+            ),
+        )
     db.delete(row)
     db.commit()
-
-
-@router.post("/{goal_id}/contribute", response_model=GoalResponse)
-def contribute_goal(
-    goal_id: uuid.UUID,
-    body: GoalContribute,
-    user: Annotated[User, Depends(get_current_user)],
-    db: Annotated[Session, Depends(get_db)],
-) -> GoalResponse:
-    row = _owned_goal(db, goal_id, user.id)
-    if row is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Meta não encontrada")
-    row.current_cents = int(row.current_cents) + int(body.amount_cents)
-    db.commit()
-    db.refresh(row)
-    return row

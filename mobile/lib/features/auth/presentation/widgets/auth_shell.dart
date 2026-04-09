@@ -2,10 +2,11 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../../../core/l10n/context_l10n.dart';
 import '../../../../core/theme/well_paid_colors.dart';
 import 'well_paid_logo.dart';
 
-/// Fluxo de autenticação: fundo alinhado ao logo, cartão compacto (~20% menor).
+/// Fluxo de autenticação: fundo alinhado ao logo, cartão com respiro vertical.
 class AuthShell extends StatelessWidget {
   const AuthShell({
     super.key,
@@ -14,7 +15,7 @@ class AuthShell extends StatelessWidget {
     this.subtitle,
     this.leading,
     this.footer,
-    this.logoMaxHeight = 152,
+    this.logoMaxHeight,
   });
 
   final String title;
@@ -22,15 +23,21 @@ class AuthShell extends StatelessWidget {
   final Widget formBody;
   final Widget? leading;
   final Widget? footer;
-  final double logoMaxHeight;
+  final double? logoMaxHeight;
 
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
     final w = media.size.width;
+    final h = media.size.height;
     final sidePad = _sidePadding(w);
-    final maxContent = math.min(352.0, w - 2 * sidePad).clamp(260.0, 352.0);
+    final maxContent = math.min(380.0, w - 2 * sidePad).clamp(280.0, 380.0);
     final hInset = math.max(sidePad, (w - maxContent) / 2);
+
+    final logoH = logoMaxHeight ??
+        (h < 700 ? 128.0 : (h < 820 ? 144.0 : 158.0));
+    final gapLogoToWordmark = h < 700 ? 14.0 : 18.0;
+    final gapWordmarkToCard = h < 640 ? 28.0 : (h < 780 ? 36.0 : 44.0);
 
     final titleStyle = Theme.of(context).textTheme.titleMedium?.copyWith(
           color: WellPaidColors.authOnCard,
@@ -62,10 +69,10 @@ class AuthShell extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(title, style: titleStyle),
-              const SizedBox(height: 14),
+              const SizedBox(height: 16),
               formBody,
               if (footer != null) ...[
-                const SizedBox(height: 9),
+                const SizedBox(height: 12),
                 footer!,
               ],
             ],
@@ -77,7 +84,7 @@ class AuthShell extends StatelessWidget {
     final header = ColoredBox(
       color: WellPaidColors.loginBackground,
       child: Padding(
-        padding: EdgeInsets.fromLTRB(10, 8, 16, subtitle != null ? 20 : 12),
+        padding: EdgeInsets.fromLTRB(10, 8, 16, subtitle != null ? 18 : 10),
         child: Column(
           children: [
             if (leading != null)
@@ -86,15 +93,17 @@ class AuthShell extends StatelessWidget {
                 child: leading!,
               )
             else
-              const SizedBox(height: 8),
+              const SizedBox(height: 4),
             Center(
               child: WellPaidLogo(
-                maxHeight: logoMaxHeight,
+                maxHeight: logoH,
                 maxWidth: maxContent - 8,
               ),
             ),
+            SizedBox(height: gapLogoToWordmark),
+            _BrandWordmark(text: context.l10n.appTitle),
             if (subtitle != null) ...[
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               Text(
                 subtitle!,
                 textAlign: TextAlign.center,
@@ -109,22 +118,19 @@ class AuthShell extends StatelessWidget {
       ),
     );
 
-    final card = Transform.translate(
-      offset: const Offset(0, -14),
-      child: Material(
-        elevation: 6,
-        shadowColor: Colors.black54,
-        color: WellPaidColors.authCard,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
-          side: BorderSide(
-            color: WellPaidColors.brandBlue.withValues(alpha: 0.32),
-          ),
+    final card = Material(
+      elevation: 6,
+      shadowColor: Colors.black54,
+      color: WellPaidColors.authCard,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(
+          color: WellPaidColors.brandBlue.withValues(alpha: 0.32),
         ),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 15),
-          child: cardChild,
-        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 18, 18, 17),
+        child: cardChild,
       ),
     );
 
@@ -142,15 +148,19 @@ class AuthShell extends StatelessWidget {
                 hInset,
                 0,
                 hInset,
-                math.max(20.0, media.padding.bottom + 12),
+                math.max(24.0, media.padding.bottom + 16),
               ),
               sliver: SliverToBoxAdapter(
                 child: SizedBox(
                   width: maxContent,
-                  child: _AuthEntranceColumn(
-                    topPadding: media.padding.top + 6,
-                    header: RepaintBoundary(child: header),
-                    card: RepaintBoundary(child: card),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      SizedBox(height: media.padding.top + (h < 700 ? 8 : 16)),
+                      RepaintBoundary(child: header),
+                      SizedBox(height: gapWordmarkToCard),
+                      RepaintBoundary(child: card),
+                    ],
                   ),
                 ),
               ),
@@ -162,97 +172,68 @@ class AuthShell extends StatelessWidget {
   }
 }
 
-/// Entrada única: header e cartão com fade + slide escalonados (leve, sem loops).
-class _AuthEntranceColumn extends StatefulWidget {
-  const _AuthEntranceColumn({
-    required this.topPadding,
-    required this.header,
-    required this.card,
-  });
+/// Título inspirado no contraste prata/dourado do logo (apenas tipografia).
+class _BrandWordmark extends StatelessWidget {
+  const _BrandWordmark({required this.text});
 
-  final double topPadding;
-  final Widget header;
-  final Widget card;
-
-  @override
-  State<_AuthEntranceColumn> createState() => _AuthEntranceColumnState();
-}
-
-class _AuthEntranceColumnState extends State<_AuthEntranceColumn>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _c;
-  late final Animation<double> _headerOpacity;
-  late final Animation<Offset> _headerSlide;
-  late final Animation<double> _cardOpacity;
-  late final Animation<Offset> _cardSlide;
-
-  @override
-  void initState() {
-    super.initState();
-    _c = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 700),
-    );
-    _headerOpacity = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(
-        parent: _c,
-        curve: const Interval(0.0, 0.44, curve: Curves.easeOutCubic),
-      ),
-    );
-    _headerSlide = Tween<Offset>(
-      begin: const Offset(0, 0.055),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _c,
-        curve: const Interval(0.0, 0.5, curve: Curves.easeOutCubic),
-      ),
-    );
-    _cardOpacity = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(
-        parent: _c,
-        curve: const Interval(0.2, 0.9, curve: Curves.easeOutCubic),
-      ),
-    );
-    _cardSlide = Tween<Offset>(
-      begin: const Offset(0, 0.045),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _c,
-        curve: const Interval(0.2, 1.0, curve: Curves.easeOutCubic),
-      ),
-    );
-    _c.forward();
-  }
-
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
+  final String text;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SizedBox(height: widget.topPadding),
-        FadeTransition(
-          opacity: _headerOpacity,
-          child: SlideTransition(
-            position: _headerSlide,
-            child: widget.header,
+    final parts = text.trim().split(RegExp(r'\s+'));
+    final first = parts.isNotEmpty ? parts.first : text;
+    final rest = parts.length > 1 ? parts.sublist(1).join(' ') : '';
+
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
+        children: [
+          _gradientWord(
+            first,
+            const [
+              Color(0xFFEEF1F8),
+              Color(0xFFC8CDDA),
+              Color(0xFF9AA3B8),
+            ],
           ),
+          if (rest.isNotEmpty) ...[
+            const SizedBox(width: 10),
+            _gradientWord(
+              rest,
+              const [
+                Color(0xFFF0E6B8),
+                WellPaidColors.gold,
+                Color(0xFFB8943D),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  static Widget _gradientWord(String word, List<Color> colors) {
+    return ShaderMask(
+      blendMode: BlendMode.srcIn,
+      shaderCallback: (bounds) => LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: colors,
+      ).createShader(bounds),
+      child: Text(
+        word,
+        style: const TextStyle(
+          fontSize: 30,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.6,
+          height: 1.05,
+          color: Colors.white,
         ),
-        FadeTransition(
-          opacity: _cardOpacity,
-          child: SlideTransition(
-            position: _cardSlide,
-            child: widget.card,
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

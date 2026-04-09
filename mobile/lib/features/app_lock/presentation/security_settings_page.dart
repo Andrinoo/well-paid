@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:local_auth/local_auth.dart';
 
+import '../../../core/l10n/context_l10n.dart';
 import '../../../core/theme/well_paid_colors.dart';
+import '../../../l10n/app_localizations.dart';
 import '../application/app_lock_notifier.dart';
 
 bool _validPin(String p) {
@@ -46,54 +48,60 @@ class _SecuritySettingsPageState extends ConsumerState<SecuritySettingsPage> {
     final chosen = await showDialog<String>(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        title: Text(enabling ? 'Definir PIN da app' : 'Novo PIN'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: a,
-              obscureText: true,
-              keyboardType: TextInputType.number,
-              maxLength: 6,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: const InputDecoration(
-                labelText: 'PIN (4–6 dígitos)',
-                counterText: '',
+      builder: (ctx) {
+        final l10n = AppLocalizations.of(ctx)!;
+        return AlertDialog(
+          title: Text(enabling ? l10n.secSetPinTitle : l10n.secNewPinTitle),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: a,
+                obscureText: true,
+                keyboardType: TextInputType.number,
+                maxLength: 6,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: InputDecoration(
+                  labelText: l10n.secPinField,
+                  counterText: '',
+                ),
               ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: b,
+                obscureText: true,
+                keyboardType: TextInputType.number,
+                maxLength: 6,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: InputDecoration(
+                  labelText: l10n.secRepeatPinField,
+                  counterText: '',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(l10n.cancel),
             ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: b,
-              obscureText: true,
-              keyboardType: TextInputType.number,
-              maxLength: 6,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: const InputDecoration(
-                labelText: 'Repetir PIN',
-                counterText: '',
-              ),
+            FilledButton(
+              onPressed: () {
+                final p1 = a.text.trim();
+                final p2 = b.text.trim();
+                if (!_validPin(p1) || p1 != p2) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    SnackBar(content: Text(l10n.secPinInvalidOrMismatch)),
+                  );
+                  return;
+                }
+                Navigator.pop(ctx, p1);
+              },
+              child: Text(l10n.save),
             ),
           ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
-          FilledButton(
-            onPressed: () {
-              final p1 = a.text.trim();
-              final p2 = b.text.trim();
-              if (!_validPin(p1) || p1 != p2) {
-                ScaffoldMessenger.of(ctx).showSnackBar(
-                  const SnackBar(content: Text('PINs inválidos ou não coincidem.')),
-                );
-                return;
-              }
-              Navigator.pop(ctx, p1);
-            },
-            child: const Text('Guardar'),
-          ),
-        ],
-      ),
+        );
+      },
     );
     a.dispose();
     b.dispose();
@@ -101,7 +109,7 @@ class _SecuritySettingsPageState extends ConsumerState<SecuritySettingsPage> {
     await ref.read(appLockNotifierProvider.notifier).setNewPin(chosen);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('PIN da app guardado.')),
+        SnackBar(content: Text(context.l10n.secPinSavedSnackbar)),
       );
     }
   }
@@ -110,31 +118,37 @@ class _SecuritySettingsPageState extends ConsumerState<SecuritySettingsPage> {
     final ctrl = TextEditingController();
     final entered = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Desativar PIN'),
-        content: TextField(
-          controller: ctrl,
-          obscureText: true,
-          keyboardType: TextInputType.number,
-          maxLength: 6,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          decoration: const InputDecoration(labelText: 'PIN actual'),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
-            child: const Text('Confirmar'),
+      builder: (ctx) {
+        final l10n = AppLocalizations.of(ctx)!;
+        return AlertDialog(
+          title: Text(l10n.secDisablePinTitle),
+          content: TextField(
+            controller: ctrl,
+            obscureText: true,
+            keyboardType: TextInputType.number,
+            maxLength: 6,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: InputDecoration(labelText: l10n.secCurrentPinField),
           ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
+              child: Text(l10n.confirm),
+            ),
+          ],
+        );
+      },
     );
     if (entered == null || entered.isEmpty || !mounted) return;
     final ok = await ref.read(appLockStorageProvider).verifyPin(entered);
     if (!ok) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('PIN incorreto.')),
+          SnackBar(content: Text(context.l10n.secWrongPin)),
         );
       }
       return;
@@ -142,13 +156,14 @@ class _SecuritySettingsPageState extends ConsumerState<SecuritySettingsPage> {
     await ref.read(appLockNotifierProvider.notifier).disablePinCompletely();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Bloqueio por PIN desativado.')),
+        SnackBar(content: Text(context.l10n.secPinDisabledSnackbar)),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final lock = ref.watch(appLockNotifierProvider);
     final pinOn = lock.pinEnabled;
     final bioOk = _hardwareBio == true;
@@ -159,16 +174,14 @@ class _SecuritySettingsPageState extends ConsumerState<SecuritySettingsPage> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title: const Text('Segurança da app'),
+        title: Text(l10n.secAppTitle),
       ),
       body: ListView(
         children: [
           SwitchListTile(
-            title: const Text('Bloquear com PIN'),
+            title: Text(l10n.secLockWithPin),
             subtitle: Text(
-              pinOn
-                  ? 'Ao minimizar, a app pede o PIN ao voltar.'
-                  : 'Desligado — só a sessão online (login) protege.',
+              pinOn ? l10n.secLockPinOnSub : l10n.secLockPinOffSub,
               style: TextStyle(color: WellPaidColors.navy.withValues(alpha: 0.7), fontSize: 13),
             ),
             value: pinOn,
@@ -181,11 +194,9 @@ class _SecuritySettingsPageState extends ConsumerState<SecuritySettingsPage> {
             },
           ),
           SwitchListTile(
-            title: const Text('Oferecer biometria no desbloqueio'),
+            title: Text(l10n.secBiometricTitle),
             subtitle: Text(
-              bioOk
-                  ? 'Impressão digital ou rosto, se o telemóvel permitir.'
-                  : 'Este dispositivo não expõe biometria à app.',
+              bioOk ? l10n.secBiometricOnSub : l10n.secBiometricOffSub,
               style: TextStyle(color: WellPaidColors.navy.withValues(alpha: 0.7), fontSize: 13),
             ),
             value: lock.biometricPreferred && bioOk,
@@ -197,7 +208,7 @@ class _SecuritySettingsPageState extends ConsumerState<SecuritySettingsPage> {
           ),
           if (pinOn)
             ListTile(
-              title: const Text('Alterar PIN'),
+              title: Text(l10n.secChangePin),
               leading: const Icon(Icons.pin_outlined),
               onTap: () => _promptNewPin(enabling: false),
             ),

@@ -19,8 +19,11 @@ class ExpenseItem {
     required this.installmentNumber,
     this.installmentGroupId,
     this.recurringFrequency,
+    this.recurringSeriesId,
     required this.createdAt,
     required this.updatedAt,
+    this.installmentPlanHasPaid,
+    this.paidAt,
   });
 
   final String id;
@@ -42,25 +45,26 @@ class ExpenseItem {
   final int installmentNumber;
   final String? installmentGroupId;
   final String? recurringFrequency;
+  final String? recurringSeriesId;
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  /// Só preenchido em GET /expenses/{id} quando há plano parcelado.
+  final bool? installmentPlanHasPaid;
+
+  /// Preenchido quando a despesa foi quitada (servidor).
+  final DateTime? paidAt;
 
   bool get isPending => status == 'pending';
 
   bool get isInstallmentPlan => installmentTotal > 1;
 
-  String? get recurringLabelPt {
-    switch (recurringFrequency) {
-      case 'monthly':
-        return 'Recorrente · mensal';
-      case 'weekly':
-        return 'Recorrente · semanal';
-      case 'yearly':
-        return 'Recorrente · anual';
-      default:
-        return null;
-    }
-  }
+  bool get belongsToRecurringSeries =>
+      recurringSeriesId != null && recurringSeriesId!.isNotEmpty;
+
+  /// Linha-mãe com frequência (não é ocorrência gerada).
+  bool get isRecurringAnchor =>
+      recurringFrequency != null && recurringFrequency!.isNotEmpty;
 
   factory ExpenseItem.fromJson(Map<String, dynamic> json) {
     return ExpenseItem(
@@ -85,8 +89,13 @@ class ExpenseItem {
       installmentNumber: (json['installment_number'] as num?)?.toInt() ?? 1,
       installmentGroupId: json['installment_group_id'] as String?,
       recurringFrequency: json['recurring_frequency'] as String?,
+      recurringSeriesId: json['recurring_series_id'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
+      installmentPlanHasPaid: json['installment_plan_has_paid'] as bool?,
+      paidAt: json['paid_at'] == null
+          ? null
+          : DateTime.parse(json['paid_at'] as String),
     );
   }
 
@@ -113,8 +122,12 @@ class ExpenseItem {
       'installment_number': installmentNumber,
       'installment_group_id': installmentGroupId,
       'recurring_frequency': recurringFrequency,
+      if (recurringSeriesId != null) 'recurring_series_id': recurringSeriesId,
       'created_at': createdAt.toUtc().toIso8601String(),
       'updated_at': updatedAt.toUtc().toIso8601String(),
+      if (installmentPlanHasPaid != null)
+        'installment_plan_has_paid': installmentPlanHasPaid,
+      if (paidAt != null) 'paid_at': paidAt!.toUtc().toIso8601String(),
     };
   }
 
@@ -138,8 +151,11 @@ class ExpenseItem {
     int? installmentNumber,
     String? installmentGroupId,
     String? recurringFrequency,
+    String? recurringSeriesId,
     DateTime? createdAt,
     DateTime? updatedAt,
+    bool? installmentPlanHasPaid,
+    DateTime? paidAt,
   }) {
     return ExpenseItem(
       id: id ?? this.id,
@@ -161,8 +177,11 @@ class ExpenseItem {
       installmentNumber: installmentNumber ?? this.installmentNumber,
       installmentGroupId: installmentGroupId ?? this.installmentGroupId,
       recurringFrequency: recurringFrequency ?? this.recurringFrequency,
+      recurringSeriesId: recurringSeriesId ?? this.recurringSeriesId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      installmentPlanHasPaid: installmentPlanHasPaid ?? this.installmentPlanHasPaid,
+      paidAt: paidAt ?? this.paidAt,
     );
   }
 }

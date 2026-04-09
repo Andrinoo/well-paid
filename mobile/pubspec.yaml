@@ -30,6 +30,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  intl: ^0.20.2
 
   cupertino_icons: ^1.0.8
   dio: ^5.7.0
@@ -42,6 +45,7 @@ dependencies:
   qr_flutter: ^4.1.0
   local_auth: ^2.3.0
   crypto: ^3.0.6
+  shared_preferences: ^2.5.3
 
 dev_dependencies:
   flutter_test:
@@ -53,12 +57,31 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  remove_alpha_ios: true
+  image_path: assets/images/playstore-icon.png
+  adaptive_icon_background: "#000000"
+  adaptive_icon_foreground: assets/images/playstore-icon.png
+  web:
+    generate: true
+    image_path: assets/images/playstore-icon.png
+    background_color: "#000000"
+    theme_color: "#000000"
+  windows:
+    generate: true
+    image_path: assets/images/playstore-icon.png
+    icon_size: 256
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
 # The following section is specific to Flutter packages.
 flutter:
+  generate: true
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
@@ -67,6 +90,8 @@ flutter:
 
   assets:
     - assets/images/well_paid_logo.png
+    - assets/images/playstore-icon.png
+    - assets/images/login_logo.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

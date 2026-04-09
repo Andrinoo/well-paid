@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive/hive.dart';
 
@@ -23,7 +25,12 @@ final expensesRepositoryProvider = Provider<ExpensesRepository>(
 );
 
 final categoriesProvider = FutureProvider.autoDispose<List<CategoryOption>>(
-  (ref) => ref.watch(expensesRepositoryProvider).fetchCategories(),
+  (ref) async {
+    final link = ref.keepAlive();
+    final timer = Timer(const Duration(minutes: 10), link.close);
+    ref.onDispose(timer.cancel);
+    return ref.watch(expensesRepositoryProvider).fetchCategories();
+  },
 );
 
 /// Filtros da lista de despesas (mês + status opcional).
@@ -48,6 +55,9 @@ final expenseListFiltersProvider =
 
 final expensesListProvider =
     FutureProvider.autoDispose<List<ExpenseItem>>((ref) async {
+  final link = ref.keepAlive();
+  final timer = Timer(const Duration(minutes: 3), link.close);
+  ref.onDispose(timer.cancel);
   final f = ref.watch(expenseListFiltersProvider);
   return ref.watch(expensesRepositoryProvider).listExpenses(
         year: f.year,

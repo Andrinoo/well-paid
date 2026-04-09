@@ -100,6 +100,8 @@ class DashboardOverview {
     required this.pendingPreview,
     required this.upcomingDue,
     required this.goalsPreview,
+    this.emergencyReserveBalanceCents = 0,
+    this.emergencyReserveMonthlyTargetCents = 0,
   });
 
   final PeriodMonth period;
@@ -111,6 +113,8 @@ class DashboardOverview {
   final List<PendingExpenseItem> pendingPreview;
   final List<PendingExpenseItem> upcomingDue;
   final List<GoalSummaryItem> goalsPreview;
+  final int emergencyReserveBalanceCents;
+  final int emergencyReserveMonthlyTargetCents;
 
   factory DashboardOverview.fromJson(Map<String, dynamic> json) {
     return DashboardOverview(
@@ -131,6 +135,10 @@ class DashboardOverview {
       goalsPreview: (json['goals_preview'] as List<dynamic>)
           .map((e) => GoalSummaryItem.fromJson(e as Map<String, dynamic>))
           .toList(),
+      emergencyReserveBalanceCents:
+          (json['emergency_reserve_balance_cents'] as num?)?.toInt() ?? 0,
+      emergencyReserveMonthlyTargetCents:
+          (json['emergency_reserve_monthly_target_cents'] as num?)?.toInt() ?? 0,
     );
   }
 }

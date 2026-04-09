@@ -10,12 +10,14 @@ from app.api.routes import (
     auth,
     categories,
     dashboard,
+    emergency_reserve,
     expenses,
     families,
     goals,
     health,
     income_categories,
     incomes,
+    shopping_lists,
 )
 from app.core.config import get_settings
 from app.core.limiter import limiter
@@ -75,3 +77,5 @@ app.include_router(dashboard.router)
 app.include_router(expenses.router)
 app.include_router(goals.router)
 app.include_router(families.router)
+app.include_router(emergency_reserve.router)
+app.include_router(shopping_lists.router)

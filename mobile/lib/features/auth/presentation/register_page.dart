@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/l10n/context_l10n.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/theme/well_paid_colors.dart';
 import '../application/auth_notifier.dart';
@@ -42,6 +43,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _busy = true);
     final messenger = ScaffoldMessenger.of(context);
+    final l10n = context.l10n;
     try {
       await ref.read(authNotifierProvider.notifier).register(
             email: _email.text.trim(),
@@ -53,7 +55,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     } on DioException catch (e, st) {
       logDioException(e, st);
       messenger.showSnackBar(
-        SnackBar(content: Text(messageFromDio(e) ?? 'Erro ao registar')),
+        SnackBar(content: Text(messageFromDio(e, l10n) ?? l10n.authRegisterError)),
       );
     } catch (e, st) {
       debugPrint('[Register] $e\n$st');
@@ -65,9 +67,10 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return AuthShell(
-      title: 'Criar conta',
-      subtitle: 'Começa em poucos passos.',
+      title: l10n.authRegisterTitle,
+      subtitle: l10n.authRegisterSubtitle,
       leading: IconButton(
         icon: const Icon(Icons.arrow_back_rounded),
         color: WellPaidColors.brandBlue,
@@ -79,7 +82,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              passwordPolicyHint,
+              l10n.authPasswordPolicyHint,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: WellPaidColors.authOnCardMuted,
                   ),
@@ -91,7 +94,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
               textInputAction: TextInputAction.next,
               decoration: authFieldDecoration(
                 context,
-                label: 'Nome (opcional)',
+                label: l10n.authNameOptional,
               ),
             ),
             const SizedBox(height: 11),
@@ -99,8 +102,8 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
               controller: _email,
               keyboardType: TextInputType.emailAddress,
               textInputAction: TextInputAction.next,
-              decoration: authFieldDecoration(context, label: 'E-mail'),
-              validator: validateEmailField,
+              decoration: authFieldDecoration(context, label: l10n.authEmail),
+              validator: (v) => validateEmailField(v, l10n),
             ),
             const SizedBox(height: 11),
             TextFormField(
@@ -109,7 +112,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
               textInputAction: TextInputAction.next,
               decoration: authFieldDecoration(
                 context,
-                label: 'Telemóvel (opcional)',
+                label: l10n.authPhoneOptional,
               ),
             ),
             const SizedBox(height: 11),
@@ -119,9 +122,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
               textInputAction: TextInputAction.next,
               decoration: authFieldDecoration(
                 context,
-                label: 'Senha',
+                label: l10n.authPassword,
                 suffixIcon: IconButton(
-                  tooltip: _obscure ? 'Mostrar senha' : 'Ocultar senha',
+                  tooltip: _obscure ? l10n.authShowPassword : l10n.authHidePassword,
                   style: authFieldSuffixIconButtonStyle(),
                   iconSize: 20,
                   onPressed: () => setState(() => _obscure = !_obscure),
@@ -132,7 +135,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   ),
                 ),
               ),
-              validator: validatePasswordRules,
+              validator: (v) => validatePasswordRules(v, l10n),
             ),
             const SizedBox(height: 11),
             TextFormField(
@@ -142,9 +145,10 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
               onFieldSubmitted: (_) => _busy ? null : _submit(),
               decoration: authFieldDecoration(
                 context,
-                label: 'Confirmar senha',
+                label: l10n.authConfirmPassword,
                 suffixIcon: IconButton(
-                  tooltip: _obscureConfirm ? 'Mostrar senha' : 'Ocultar senha',
+                  tooltip:
+                      _obscureConfirm ? l10n.authShowPassword : l10n.authHidePassword,
                   style: authFieldSuffixIconButtonStyle(),
                   iconSize: 20,
                   onPressed: () =>
@@ -158,17 +162,17 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
               ),
               validator: (v) {
                 if (v == null || v.isEmpty) {
-                  return 'Confirme a senha';
+                  return l10n.authConfirmPasswordRequired;
                 }
                 if (v != _password.text) {
-                  return 'As senhas não coincidem';
+                  return l10n.authPasswordMismatch;
                 }
                 return null;
               },
             ),
             const SizedBox(height: 17),
             AuthGradientButton(
-              label: 'Registar',
+              label: l10n.authRegisterButton,
               busy: _busy,
               onPressed: _busy ? null : _submit,
             ),
@@ -180,7 +184,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
           foregroundColor: WellPaidColors.brandBlue,
         ),
         onPressed: _busy ? null : () => context.pop(),
-        child: const Text('Já tenho conta — entrar'),
+        child: Text(l10n.authAlreadyHaveAccount),
       ),
     );
   }

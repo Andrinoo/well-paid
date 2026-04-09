@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/l10n/context_l10n.dart';
 import '../../domain/income_category_option.dart';
 
 class IncomeCategoryDropdown extends StatelessWidget {
@@ -16,9 +17,10 @@ class IncomeCategoryDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return DropdownButtonFormField<String>(
-      decoration: const InputDecoration(
-        labelText: 'Tipo de provento',
+      decoration: InputDecoration(
+        labelText: l10n.incFormCategoryLabel,
       ),
       // ignore: deprecated_member_use
       value: value,
@@ -31,7 +33,7 @@ class IncomeCategoryDropdown extends StatelessWidget {
           )
           .toList(),
       onChanged: onChanged,
-      validator: (v) => v == null ? 'Obrigatório' : null,
+      validator: (v) => v == null ? l10n.requiredField : null,
     );
   }
 }

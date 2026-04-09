@@ -99,3 +99,19 @@ class ExpenseResponse(BaseModel):
     )
     created_at: datetime
     updated_at: datetime
+    paid_at: datetime | None = None
+    installment_plan_has_paid: bool | None = Field(
+        default=None,
+        description="Só em GET /expenses/{id}: se há parcelas pagas no plano.",
+    )
+
+
+class ExpenseCreateOutcome(BaseModel):
+    """POST /expenses: uma linha ou plano parcelado (mesmo installment_group_id)."""
+
+    installment_group_id: uuid.UUID | None = Field(
+        default=None,
+        description="Identificador comum do plano quando installment_total > 1; "
+        "liga todas as parcelas (não é uma linha extra na BD).",
+    )
+    expenses: list[ExpenseResponse]

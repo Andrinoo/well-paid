@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/l10n/context_l10n.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/theme/well_paid_colors.dart';
 import '../application/auth_notifier.dart';
@@ -35,6 +36,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _busy = true);
     final messenger = ScaffoldMessenger.of(context);
+    final l10n = context.l10n;
     try {
       await ref.read(authNotifierProvider.notifier).login(
             _email.text.trim(),
@@ -44,7 +46,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     } on DioException catch (e, st) {
       logDioException(e, st);
       messenger.showSnackBar(
-        SnackBar(content: Text(messageFromDio(e) ?? 'Erro ao entrar')),
+        SnackBar(content: Text(messageFromDio(e, l10n) ?? l10n.authLoginError)),
       );
     } catch (e, st) {
       debugPrint('[Login] $e\n$st');
@@ -56,8 +58,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return AuthShell(
-      title: 'Entrar na conta',
+      title: l10n.authLoginTitle,
       formBody: Form(
         key: _formKey,
         child: Column(
@@ -68,8 +71,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               keyboardType: TextInputType.emailAddress,
               textInputAction: TextInputAction.next,
               autofillHints: const [AutofillHints.email],
-              decoration: authFieldDecoration(context, label: 'E-mail'),
-              validator: validateEmailField,
+              decoration: authFieldDecoration(context, label: l10n.authEmail),
+              validator: (v) => validateEmailField(v, l10n),
             ),
             const SizedBox(height: 8),
             TextFormField(
@@ -80,9 +83,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               autofillHints: const [AutofillHints.password],
               decoration: authFieldDecoration(
                 context,
-                label: 'Senha',
+                label: l10n.authPassword,
                 suffixIcon: IconButton(
-                  tooltip: _obscure ? 'Mostrar senha' : 'Ocultar senha',
+                  tooltip: _obscure ? l10n.authShowPassword : l10n.authHidePassword,
                   style: authFieldSuffixIconButtonStyle(),
                   iconSize: 20,
                   onPressed: () => setState(() => _obscure = !_obscure),
@@ -94,7 +97,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 ),
               ),
               validator: (v) {
-                if (v == null || v.isEmpty) return 'Informe a senha';
+                if (v == null || v.isEmpty) return l10n.authPasswordRequired;
                 return null;
               },
             ),
@@ -108,15 +111,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
                 ),
                 onPressed: _busy ? null : () => context.push('/forgot-password'),
-                child: const Text(
-                  'Esqueceu a senha?',
-                  style: TextStyle(fontSize: 13),
+                child: Text(
+                  l10n.authForgotPassword,
+                  style: const TextStyle(fontSize: 13),
                 ),
               ),
             ),
             const SizedBox(height: 4),
             AuthGradientButton(
-              label: 'Entrar',
+              label: l10n.authEnter,
               busy: _busy,
               onPressed: _busy ? null : _submit,
             ),
@@ -132,7 +135,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             runSpacing: 4,
             children: [
               Text(
-                'Ainda sem conta?',
+                l10n.authNoAccountYet,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: WellPaidColors.authOnCardMuted,
                       fontSize: 13,
@@ -146,9 +149,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 0),
                 ),
                 onPressed: _busy ? null : () => context.push('/register'),
-                child: const Text(
-                  'Criar conta',
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                child: Text(
+                  l10n.authCreateAccount,
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                 ),
               ),
             ],
@@ -157,7 +160,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Text(
-              'Copyright © 2026 Andrino Cabral. All rights reserved.',
+              l10n.authCopyright,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: WellPaidColors.authOnCardMuted.withValues(alpha: 0.85),

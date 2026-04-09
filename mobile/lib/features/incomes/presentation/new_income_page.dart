@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../core/format/brl_cents.dart';
 import '../../../core/format/parse_brl_input.dart';
+import '../../../core/l10n/context_l10n.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/theme/well_paid_colors.dart';
 import '../../dashboard/application/dashboard_providers.dart';
@@ -47,17 +47,18 @@ class _NewIncomePageState extends ConsumerState<NewIncomePage> {
   }
 
   Future<void> _submit() async {
+    final l10n = context.l10n;
     if (!_formKey.currentState!.validate()) return;
     if (_categoryId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Escolhe o tipo de provento.')),
+        SnackBar(content: Text(l10n.incFormPickCategory)),
       );
       return;
     }
     final cents = parseInputToCents(_amountCtrl.text);
     if (cents == null || cents <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Valor inválido.')),
+        SnackBar(content: Text(l10n.valueInvalid)),
       );
       return;
     }
@@ -75,13 +76,13 @@ class _NewIncomePageState extends ConsumerState<NewIncomePage> {
       ref.invalidate(dashboardOverviewProvider);
       ref.invalidate(incomeCategoriesProvider);
       if (mounted) {
-        messenger.showSnackBar(const SnackBar(content: Text('Provento registado.')));
+        messenger.showSnackBar(SnackBar(content: Text(l10n.incFormCreatedSnackbar)));
         context.pop();
       }
     } catch (e) {
       if (mounted) {
         messenger.showSnackBar(
-          SnackBar(content: Text(messageFromDio(e) ?? 'Erro ao guardar.')),
+          SnackBar(content: Text(messageFromDio(e, l10n) ?? l10n.incomeSaveError)),
         );
       }
     }
@@ -89,6 +90,7 @@ class _NewIncomePageState extends ConsumerState<NewIncomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final cats = ref.watch(incomeCategoriesProvider);
 
     return Scaffold(
@@ -97,7 +99,7 @@ class _NewIncomePageState extends ConsumerState<NewIncomePage> {
           icon: const Icon(Icons.close),
           onPressed: () => context.pop(),
         ),
-        title: const Text('Novo provento'),
+        title: Text(l10n.newIncomeTitle),
       ),
       body: Form(
         key: _formKey,
@@ -105,8 +107,7 @@ class _NewIncomePageState extends ConsumerState<NewIncomePage> {
           padding: const EdgeInsets.all(20),
           children: [
             Text(
-              'Regista entradas reais (salário, extras, etc.). O saldo do mês no '
-              'dashboard usa a soma dos proventos deste período.',
+              l10n.incFormIntro,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: WellPaidColors.navy.withValues(alpha: 0.68),
                     height: 1.35,
@@ -115,36 +116,36 @@ class _NewIncomePageState extends ConsumerState<NewIncomePage> {
             const SizedBox(height: 16),
             TextFormField(
               controller: _descCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Descrição',
-                hintText: 'ex. Salário abril, Honorários cliente X',
+              decoration: InputDecoration(
+                labelText: l10n.incFormDescription,
+                hintText: l10n.incFormDescHint,
               ),
               textCapitalization: TextCapitalization.sentences,
               maxLength: 500,
               validator: (v) {
-                if (v == null || v.trim().isEmpty) return 'Obrigatório';
+                if (v == null || v.trim().isEmpty) return l10n.requiredField;
                 return null;
               },
             ),
             const SizedBox(height: 8),
             TextFormField(
               controller: _amountCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Valor (R\$)',
-                hintText: 'ex. 3.500,00',
+              decoration: InputDecoration(
+                labelText: l10n.incFormAmount,
+                hintText: l10n.incFormAmountHint,
               ),
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               validator: (v) {
-                if (v == null || v.trim().isEmpty) return 'Obrigatório';
+                if (v == null || v.trim().isEmpty) return l10n.requiredField;
                 final c = parseInputToCents(v);
-                if (c == null || c <= 0) return 'Valor inválido';
+                if (c == null || c <= 0) return l10n.valueInvalid;
                 return null;
               },
             ),
             const SizedBox(height: 8),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Data do provento (competência)'),
+              title: Text(l10n.incFormIncomeDateCompetence),
               subtitle: Text(_dmY(_incomeDate)),
               trailing: const Icon(Icons.calendar_today_outlined),
               onTap: _pickDate,
@@ -160,10 +161,10 @@ class _NewIncomePageState extends ConsumerState<NewIncomePage> {
               error: (e, _) => Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(messageFromDio(e) ?? 'Erro ao carregar tipos.'),
+                  Text(messageFromDio(e, l10n) ?? l10n.incFormCategoriesLoadError),
                   TextButton(
                     onPressed: () => ref.invalidate(incomeCategoriesProvider),
-                    child: const Text('Tentar novamente'),
+                    child: Text(l10n.tryAgain),
                   ),
                 ],
               ),
@@ -176,9 +177,9 @@ class _NewIncomePageState extends ConsumerState<NewIncomePage> {
             const SizedBox(height: 12),
             TextFormField(
               controller: _notesCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Notas (opcional)',
-                hintText: 'Origem, referência, NIF… — só para o teu agregado',
+              decoration: InputDecoration(
+                labelText: l10n.incFormNotes,
+                hintText: l10n.incFormNotesHint,
                 alignLabelWithHint: true,
               ),
               maxLines: 3,
@@ -187,7 +188,7 @@ class _NewIncomePageState extends ConsumerState<NewIncomePage> {
             const SizedBox(height: 24),
             FilledButton(
               onPressed: _submit,
-              child: const Text('Guardar provento'),
+              child: Text(l10n.incFormSaveButton),
             ),
           ],
         ),

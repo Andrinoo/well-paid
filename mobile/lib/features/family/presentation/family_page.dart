@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
+import '../../../core/l10n/context_l10n.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/theme/well_paid_colors.dart';
+import '../../../l10n/app_localizations.dart';
 import '../application/family_providers.dart';
 import '../domain/family_models.dart';
 
@@ -72,16 +74,23 @@ class _FamilyPageState extends ConsumerState<FamilyPage> {
   Future<void> _leave() async {
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Sair da família'),
-        content: const Text(
-          'Se fores o único membro, a família será eliminada. Se fores titular, a titularidade passa para outro membro.',
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Sair')),
-        ],
-      ),
+      builder: (ctx) {
+        final l10n = AppLocalizations.of(ctx)!;
+        return AlertDialog(
+          title: Text(l10n.famLeaveTitle),
+          content: Text(l10n.famLeaveBody),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(l10n.famExitAction),
+            ),
+          ],
+        );
+      },
     );
     if (ok != true || !mounted) return;
     await _run(() async {
@@ -93,14 +102,23 @@ class _FamilyPageState extends ConsumerState<FamilyPage> {
   Future<void> _removeMember(FamilyMemberItem m) async {
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Remover membro'),
-        content: Text('Remover ${m.email}?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Remover')),
-        ],
-      ),
+      builder: (ctx) {
+        final l10n = AppLocalizations.of(ctx)!;
+        return AlertDialog(
+          title: Text(l10n.famRemoveMemberTitle),
+          content: Text(l10n.famRemoveMemberConfirm(m.email)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(l10n.delete),
+            ),
+          ],
+        );
+      },
     );
     if (ok != true || !mounted) return;
     await _run(() async {
@@ -113,21 +131,27 @@ class _FamilyPageState extends ConsumerState<FamilyPage> {
     final ctrl = TextEditingController(text: current);
     final name = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Nome da família'),
-        content: TextField(
-          controller: ctrl,
-          decoration: const InputDecoration(labelText: 'Nome'),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
-            child: const Text('Guardar'),
+      builder: (ctx) {
+        final l10n = AppLocalizations.of(ctx)!;
+        return AlertDialog(
+          title: Text(l10n.famRenameTitle),
+          content: TextField(
+            controller: ctrl,
+            decoration: InputDecoration(labelText: l10n.famNameField),
+            autofocus: true,
           ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
+              child: Text(l10n.save),
+            ),
+          ],
+        );
+      },
     );
     if (name == null || name.isEmpty || !mounted) return;
     await _run(() async {
@@ -145,58 +169,67 @@ class _FamilyPageState extends ConsumerState<FamilyPage> {
     final c = created!;
     await showDialog<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Convite'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Válido até ${c.expiresAt.toLocal().toString().split('.').first}',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
+      builder: (ctx) {
+        final l10n = AppLocalizations.of(ctx)!;
+        return AlertDialog(
+          title: Text(l10n.famInviteTitle),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  l10n.famInviteValidUntil(
+                    c.expiresAt.toLocal().toString().split('.').first,
+                  ),
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
-                child: QrImageView(
-                  data: c.inviteUrl,
-                  version: QrVersions.auto,
-                  size: 200,
-                  backgroundColor: Colors.white,
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: QrImageView(
+                    data: c.inviteUrl,
+                    version: QrVersions.auto,
+                    size: 200,
+                    backgroundColor: Colors.white,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              SelectableText(
-                c.token,
-                style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
-              ),
-            ],
+                const SizedBox(height: 12),
+                SelectableText(
+                  c.token,
+                  style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                ),
+              ],
+            ),
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () async {
-              await Clipboard.setData(ClipboardData(text: c.token));
-              if (ctx.mounted) {
-                ScaffoldMessenger.of(ctx).showSnackBar(
-                  const SnackBar(content: Text('Token copiado')),
-                );
-              }
-            },
-            child: const Text('Copiar token'),
-          ),
-          FilledButton(onPressed: () => Navigator.pop(ctx), child: const Text('Fechar')),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                await Clipboard.setData(ClipboardData(text: c.token));
+                if (ctx.mounted) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    SnackBar(content: Text(l10n.tokenCopied)),
+                  );
+                }
+              },
+              child: Text(l10n.famCopyTokenButton),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(l10n.close),
+            ),
+          ],
+        );
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final async = ref.watch(familyMeProvider);
 
     return Scaffold(
@@ -205,10 +238,10 @@ class _FamilyPageState extends ConsumerState<FamilyPage> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title: const Text('Família'),
+        title: Text(l10n.familyTitle),
         actions: [
           IconButton(
-            tooltip: 'Atualizar',
+            tooltip: l10n.expensesRefresh,
             onPressed: _busy ? null : () => ref.invalidate(familyMeProvider),
             icon: const Icon(Icons.refresh),
           ),
@@ -222,7 +255,7 @@ class _FamilyPageState extends ConsumerState<FamilyPage> {
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Text(
-                  messageFromDio(e) ?? 'Erro ao carregar.',
+                  messageFromDio(e, l10n) ?? l10n.familyLoadError,
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -234,27 +267,27 @@ class _FamilyPageState extends ConsumerState<FamilyPage> {
                   padding: const EdgeInsets.all(20),
                   children: [
                     Text(
-                      'Cria uma família ou entra com um convite (token ou QR).',
+                      l10n.famNoFamilyIntro,
                       style: TextStyle(color: WellPaidColors.navy.withValues(alpha: 0.85)),
                     ),
                     const SizedBox(height: 20),
                     TextField(
                       controller: _createNameCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Nome da família (opcional)',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: l10n.famCreateNameOptional,
+                        border: const OutlineInputBorder(),
                       ),
                     ),
                     const SizedBox(height: 12),
                     FilledButton(
                       onPressed: _busy ? null : _createFamily,
-                      child: const Text('Criar família'),
+                      child: Text(l10n.famCreate),
                     ),
                     const SizedBox(height: 32),
                     const Divider(),
                     const SizedBox(height: 16),
                     Text(
-                      'Entrar com convite',
+                      l10n.famJoinSectionTitle,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                             color: WellPaidColors.navy,
                             fontWeight: FontWeight.w700,
@@ -263,9 +296,9 @@ class _FamilyPageState extends ConsumerState<FamilyPage> {
                     const SizedBox(height: 12),
                     TextField(
                       controller: _joinTokenCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Cole o token do convite',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: l10n.famJoinTokenField,
+                        border: const OutlineInputBorder(),
                       ),
                       maxLines: 3,
                     ),
@@ -276,7 +309,7 @@ class _FamilyPageState extends ConsumerState<FamilyPage> {
                         backgroundColor: WellPaidColors.navy,
                         foregroundColor: WellPaidColors.creamMuted,
                       ),
-                      child: const Text('Entrar na família'),
+                      child: Text(l10n.famJoin),
                     ),
                   ],
                 );
@@ -307,14 +340,14 @@ class _FamilyPageState extends ConsumerState<FamilyPage> {
                       ),
                       if (isOwner)
                         IconButton(
-                          tooltip: 'Editar nome',
+                          tooltip: l10n.famEditNameTooltip,
                           onPressed: _busy ? null : () => _renameFamily(fam.name),
                           icon: const Icon(Icons.edit_outlined),
                         ),
                     ],
                   ),
                   Text(
-                    '${fam.members.length} / 5 membros',
+                    l10n.famMemberCount(fam.members.length, 5),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: WellPaidColors.navy.withValues(alpha: 0.65),
                         ),
@@ -324,7 +357,7 @@ class _FamilyPageState extends ConsumerState<FamilyPage> {
                     FilledButton.icon(
                       onPressed: _busy ? null : _showInviteDialog,
                       icon: const Icon(Icons.qr_code_2_outlined),
-                      label: const Text('Gerar convite (QR)'),
+                      label: Text(l10n.famInviteQr),
                       style: FilledButton.styleFrom(
                         backgroundColor: WellPaidColors.gold,
                         foregroundColor: WellPaidColors.navy,
@@ -334,11 +367,11 @@ class _FamilyPageState extends ConsumerState<FamilyPage> {
                   OutlinedButton.icon(
                     onPressed: _busy ? null : _leave,
                     icon: const Icon(Icons.logout),
-                    label: const Text('Sair da família'),
+                    label: Text(l10n.famLeave),
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    'Membros',
+                    l10n.famMembersSection,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           color: WellPaidColors.navy,
                           fontWeight: FontWeight.w700,
@@ -346,6 +379,8 @@ class _FamilyPageState extends ConsumerState<FamilyPage> {
                   ),
                   const SizedBox(height: 8),
                   ...fam.members.map((m) {
+                    final roleLabel =
+                        m.isOwner ? l10n.famRoleOwner : l10n.famRoleMember;
                     return Card(
                       elevation: 0,
                       color: WellPaidColors.creamMuted.withValues(alpha: 0.9),
@@ -356,7 +391,7 @@ class _FamilyPageState extends ConsumerState<FamilyPage> {
                           style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
                         subtitle: Text(
-                          '${m.email} · ${m.isOwner ? 'Titular' : 'Membro'}${m.isSelf ? ' (tu)' : ''}',
+                          '${m.email} · $roleLabel${m.isSelf ? l10n.famYouSuffix : ''}',
                         ),
                         trailing: isOwner && !m.isSelf
                             ? IconButton(

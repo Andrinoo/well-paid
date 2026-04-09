@@ -13,6 +13,7 @@ from app.models.expense import Expense
 from app.models.goal import Goal
 from app.models.income import Income
 from app.models.user import User
+from app.services.emergency_reserve import refresh_reserve_balances_for_user
 from app.services.family_scope import family_peer_user_ids
 from app.schemas.dashboard import (
     CategorySpend,
@@ -70,12 +71,18 @@ def get_dashboard_overview(
     next_start, next_end = month_bounds(nm_year, nm_month)
 
     peer_ids = family_peer_user_ids(db, user.id)
+    visible_expense = Expense.deleted_at.is_(None)
+
+    er_balance, er_target = refresh_reserve_balances_for_user(
+        db, user, today=today or date.today()
+    )
 
     month_total = db.scalar(
         select(func.coalesce(func.sum(Expense.amount_cents), 0)).where(
             Expense.owner_user_id.in_(peer_ids),
             Expense.expense_date >= start,
             Expense.expense_date <= end,
+            visible_expense,
         )
     )
     month_expense_total_cents = int(month_total or 0)
@@ -91,6 +98,7 @@ def get_dashboard_overview(
             Expense.owner_user_id.in_(peer_ids),
             Expense.expense_date >= start,
             Expense.expense_date <= end,
+            visible_expense,
         )
         .group_by(Category.id, Category.key, Category.name, Category.sort_order)
         .having(func.sum(Expense.amount_cents) > 0)
@@ -108,6 +116,7 @@ def get_dashboard_overview(
             Expense.status == ExpenseStatus.PENDING.value,
             Expense.expense_date >= next_start,
             Expense.expense_date <= next_end,
+            visible_expense,
         )
     )
     pending_total_cents = int(pending_total or 0)
@@ -119,6 +128,7 @@ def get_dashboard_overview(
             Expense.status == ExpenseStatus.PENDING.value,
             Expense.expense_date >= next_start,
             Expense.expense_date <= next_end,
+            visible_expense,
         )
         .order_by(
             nulls_last(Expense.due_date.asc()),
@@ -146,6 +156,7 @@ def get_dashboard_overview(
             Expense.due_date.isnot(None),
             Expense.due_date >= next_start,
             Expense.due_date <= next_end,
+            visible_expense,
         )
         .order_by(Expense.due_date.asc(), Expense.created_at.asc())
         .limit(20)
@@ -163,6 +174,7 @@ def get_dashboard_overview(
     ]
 
     # Evita 500 se a migração de proventos (009) ainda não foi aplicada na BD.
+    # Incomes e goals usam delete físico no estado atual do projeto.
     bind = db.get_bind()
     if bind is not None and inspect(bind).has_table("incomes"):
         income_sum = db.scalar(
@@ -177,13 +189,16 @@ def get_dashboard_overview(
         month_income_cents = 0
     month_balance_cents = month_income_cents - month_expense_total_cents
 
-    goals_rows = (
-        db.query(Goal)
-        .filter(Goal.owner_user_id.in_(peer_ids), Goal.is_active.is_(True))
-        .order_by(Goal.updated_at.desc())
-        .limit(3)
-        .all()
-    )
+    if bind is not None and inspect(bind).has_table("goals"):
+        goals_rows = (
+            db.query(Goal)
+            .filter(Goal.owner_user_id.in_(peer_ids), Goal.is_active.is_(True))
+            .order_by(Goal.updated_at.desc())
+            .limit(3)
+            .all()
+        )
+    else:
+        goals_rows = []
     goals_preview = [
         GoalSummaryItem(
             id=g.id,
@@ -205,4 +220,6 @@ def get_dashboard_overview(
         pending_preview=pending_preview,
         upcoming_due=upcoming_due,
         goals_preview=goals_preview,
+        emergency_reserve_balance_cents=er_balance,
+        emergency_reserve_monthly_target_cents=er_target,
     )

@@ -1,7 +1,7 @@
 class IncomeItem {
   const IncomeItem({
     required this.id,
-    required this.ownerUserId,
+    this.ownerUserId,
     this.isMine = true,
     required this.description,
     required this.amountCents,
@@ -16,7 +16,7 @@ class IncomeItem {
   });
 
   final String id;
-  final String ownerUserId;
+  final String? ownerUserId;
   final bool isMine;
   final String description;
   final int amountCents;
@@ -32,7 +32,7 @@ class IncomeItem {
   factory IncomeItem.fromJson(Map<String, dynamic> json) {
     return IncomeItem(
       id: json['id'] as String,
-      ownerUserId: json['owner_user_id'] as String,
+      ownerUserId: json['owner_user_id'] as String?,
       isMine: json['is_mine'] as bool? ?? true,
       description: json['description'] as String,
       amountCents: (json['amount_cents'] as num).toInt(),
@@ -47,7 +47,30 @@ class IncomeItem {
     );
   }
 
+  Map<String, dynamic> toJson() {
+    String isoDate(DateTime d) =>
+        '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+    return {
+      'id': id,
+      if (ownerUserId != null) 'owner_user_id': ownerUserId,
+      'is_mine': isMine,
+      'description': description,
+      'amount_cents': amountCents,
+      'income_date': isoDate(incomeDate),
+      'income_category_id': incomeCategoryId,
+      'category_key': categoryKey,
+      'category_name': categoryName,
+      'notes': notes,
+      'sync_status': syncStatus,
+      'created_at': createdAt.toUtc().toIso8601String(),
+      'updated_at': updatedAt.toUtc().toIso8601String(),
+    };
+  }
+
   IncomeItem copyWith({
+    String? id,
+    String? ownerUserId,
+    bool? isMine,
     String? description,
     int? amountCents,
     DateTime? incomeDate,
@@ -55,12 +78,14 @@ class IncomeItem {
     String? categoryKey,
     String? categoryName,
     String? notes,
+    int? syncStatus,
+    DateTime? createdAt,
     DateTime? updatedAt,
   }) {
     return IncomeItem(
-      id: id,
-      ownerUserId: ownerUserId,
-      isMine: isMine,
+      id: id ?? this.id,
+      ownerUserId: ownerUserId ?? this.ownerUserId,
+      isMine: isMine ?? this.isMine,
       description: description ?? this.description,
       amountCents: amountCents ?? this.amountCents,
       incomeDate: incomeDate ?? this.incomeDate,
@@ -68,8 +93,8 @@ class IncomeItem {
       categoryKey: categoryKey ?? this.categoryKey,
       categoryName: categoryName ?? this.categoryName,
       notes: notes ?? this.notes,
-      syncStatus: syncStatus,
-      createdAt: createdAt,
+      syncStatus: syncStatus ?? this.syncStatus,
+      createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }

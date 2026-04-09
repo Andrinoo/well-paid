@@ -43,6 +43,11 @@ class ExpensesLocalStore {
     _cache.delete(id);
   }
 
+  /// Remove cache local de despesas (útil após DELETE parcial ou desvincular série).
+  void clearExpenseCache() {
+    _cache.clear();
+  }
+
   List<Map<String, dynamic>> readQueue() {
     return _queue.values
         .whereType<Map>()

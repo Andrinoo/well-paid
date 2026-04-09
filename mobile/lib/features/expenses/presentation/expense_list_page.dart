@@ -3,11 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/format/brl_cents.dart';
+import '../../../core/l10n/context_l10n.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/theme/well_paid_colors.dart';
 import '../../dashboard/application/dashboard_providers.dart';
 import '../application/expenses_providers.dart';
 import '../domain/expense_item.dart';
+import 'expense_recurring_label.dart';
+import 'pay_expense_flow.dart';
 
 class ExpenseListPage extends ConsumerStatefulWidget {
   const ExpenseListPage({super.key, this.initialStatus});
@@ -56,51 +59,31 @@ class _ExpenseListPageState extends ConsumerState<ExpenseListPage> {
   }
 
   Future<void> _pay(ExpenseItem e) async {
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      await ref.read(expensesRepositoryProvider).payExpense(e.id);
-      ref.invalidate(expensesListProvider);
-      ref.invalidate(dashboardOverviewProvider);
-      if (mounted) {
-        messenger.showSnackBar(
-          const SnackBar(content: Text('Despesa marcada como paga.')),
-        );
-      }
-    } catch (err) {
-      if (mounted) {
-        messenger.showSnackBar(
-          SnackBar(content: Text(messageFromDio(err) ?? 'Erro ao pagar.')),
-        );
-      }
-    }
+    await confirmAndPayExpense(context, ref, expense: e);
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final f = ref.watch(expenseListFiltersProvider);
     final async = ref.watch(expensesListProvider);
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
-        title: const Text('Despesas'),
+        leading: Navigator.of(context).canPop()
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => context.pop(),
+              )
+            : null,
+        title: Text(l10n.expensesTitle),
         actions: [
           IconButton(
-            tooltip: 'Atualizar',
+            tooltip: l10n.expensesRefresh,
             onPressed: () => ref.invalidate(expensesListProvider),
             icon: const Icon(Icons.refresh),
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/expenses/new'),
-        icon: const Icon(Icons.add),
-        label: const Text('Nova'),
-        backgroundColor: WellPaidColors.gold,
-        foregroundColor: WellPaidColors.navy,
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -113,7 +96,7 @@ class _ExpenseListPageState extends ConsumerState<ExpenseListPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   IconButton(
-                    tooltip: 'Mês anterior',
+                    tooltip: l10n.periodPrevMonth,
                     onPressed: () => _shiftMonth(-1),
                     icon: const Icon(Icons.chevron_left),
                     color: WellPaidColors.navy,
@@ -126,7 +109,7 @@ class _ExpenseListPageState extends ConsumerState<ExpenseListPage> {
                         ),
                   ),
                   IconButton(
-                    tooltip: 'Próximo mês',
+                    tooltip: l10n.periodNextMonth,
                     onPressed: () => _shiftMonth(1),
                     icon: const Icon(Icons.chevron_right),
                     color: WellPaidColors.navy,
@@ -154,15 +137,15 @@ class _ExpenseListPageState extends ConsumerState<ExpenseListPage> {
                     Expanded(
                       child: FilledButton.tonalIcon(
                         onPressed: () => context.push('/expenses/new'),
-                        icon: const Icon(Icons.add_circle_outline),
-                        label: const Text('Nova despesa'),
+                        icon: const Icon(Icons.receipt_long_outlined),
+                        label: Text(l10n.expensesNewLong),
                         style: FilledButton.styleFrom(
                           foregroundColor: WellPaidColors.navy,
                         ),
                       ),
                     ),
                     IconButton(
-                      tooltip: 'Atualizar lista',
+                      tooltip: l10n.expensesRefreshList,
                       onPressed: () => ref.invalidate(expensesListProvider),
                       icon: const Icon(Icons.refresh),
                       color: WellPaidColors.navy,
@@ -178,7 +161,7 @@ class _ExpenseListPageState extends ConsumerState<ExpenseListPage> {
               spacing: 8,
               children: [
                 FilterChip(
-                  label: const Text('Todas'),
+                  label: Text(l10n.expensesFilterAll),
                   selected: f.status == null,
                   onSelected: (_) {
                     ref.read(expenseListFiltersProvider.notifier).state =
@@ -189,7 +172,7 @@ class _ExpenseListPageState extends ConsumerState<ExpenseListPage> {
                   },
                 ),
                 FilterChip(
-                  label: const Text('Pendentes'),
+                  label: Text(l10n.expensesFilterPending),
                   selected: f.status == 'pending',
                   onSelected: (_) {
                     ref.read(expenseListFiltersProvider.notifier).state =
@@ -201,7 +184,7 @@ class _ExpenseListPageState extends ConsumerState<ExpenseListPage> {
                   },
                 ),
                 FilterChip(
-                  label: const Text('Pagas'),
+                  label: Text(l10n.expensesFilterPaid),
                   selected: f.status == 'paid',
                   onSelected: (_) {
                     ref.read(expenseListFiltersProvider.notifier).state =
@@ -222,7 +205,7 @@ class _ExpenseListPageState extends ConsumerState<ExpenseListPage> {
                 child: Padding(
                   padding: const EdgeInsets.all(24),
                   child: Text(
-                    messageFromDio(e) ?? 'Erro ao carregar.',
+                    messageFromDio(e, l10n) ?? l10n.expensesLoadError,
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -231,9 +214,9 @@ class _ExpenseListPageState extends ConsumerState<ExpenseListPage> {
                 if (items.isEmpty) {
                   return ListView(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    children: const [
-                      SizedBox(height: 48),
-                      Center(child: Text('Nenhuma despesa neste filtro.')),
+                    children: [
+                      const SizedBox(height: 48),
+                      Center(child: Text(l10n.expensesEmpty)),
                     ],
                   );
                 }
@@ -245,7 +228,7 @@ class _ExpenseListPageState extends ConsumerState<ExpenseListPage> {
                   },
                   child: ListView.separated(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 88),
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                     itemCount: items.length,
                     separatorBuilder: (context, _) => const Divider(height: 1),
                     itemBuilder: (context, i) {
@@ -283,6 +266,14 @@ class _ExpenseTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final rec = expenseRecurringLabel(item, l10n);
+    final catLine = item.isMine
+        ? item.categoryName
+        : l10n.expenseTileFamilyCategory(item.categoryName);
+    final statusLabel =
+        item.isPending ? l10n.expenseStatusPending : l10n.expenseStatusPaid;
+
     return Semantics(
       label:
           '${item.description}, ${formatBrlFromCents(item.amountCents)}, ${item.status}',
@@ -307,12 +298,12 @@ class _ExpenseTile extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      item.isMine ? item.categoryName : '${item.categoryName} · Família',
+                      catLine,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: WellPaidColors.navy.withValues(alpha: 0.65),
                           ),
                     ),
-                    if (item.isInstallmentPlan || item.recurringLabelPt != null)
+                    if (item.isInstallmentPlan || rec != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 6),
                         child: Wrap(
@@ -322,17 +313,19 @@ class _ExpenseTile extends StatelessWidget {
                             if (item.isInstallmentPlan)
                               Chip(
                                 label: Text(
-                                  'Parcela ${item.installmentNumber}/'
-                                  '${item.installmentTotal}',
+                                  l10n.expenseInstallmentChip(
+                                    item.installmentNumber,
+                                    item.installmentTotal,
+                                  ),
                                 ),
                                 visualDensity: VisualDensity.compact,
                                 padding: EdgeInsets.zero,
                                 labelStyle: const TextStyle(fontSize: 11),
                               ),
-                            if (item.recurringLabelPt != null)
+                            if (rec != null)
                               Chip(
                                 label: Text(
-                                  item.recurringLabelPt!,
+                                  rec,
                                   style: const TextStyle(fontSize: 11),
                                 ),
                                 visualDensity: VisualDensity.compact,
@@ -343,8 +336,10 @@ class _ExpenseTile extends StatelessWidget {
                                 label: Text(
                                   item.sharedWithLabel != null &&
                                           item.sharedWithLabel!.isNotEmpty
-                                      ? 'Partilhada · ${item.sharedWithLabel}'
-                                      : 'Partilhada',
+                                      ? l10n.expenseSharedWith(
+                                          item.sharedWithLabel!,
+                                        )
+                                      : l10n.expenseShared,
                                   style: const TextStyle(fontSize: 11),
                                 ),
                                 visualDensity: VisualDensity.compact,
@@ -354,7 +349,7 @@ class _ExpenseTile extends StatelessWidget {
                         ),
                       ),
                     Text(
-                      'Data ${_dmY(item.expenseDate)} · ${item.isPending ? 'Pendente' : 'Paga'}',
+                      l10n.expenseTileDateLine(_dmY(item.expenseDate), statusLabel),
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                             color: WellPaidColors.navy.withValues(alpha: 0.55),
                           ),
@@ -375,7 +370,7 @@ class _ExpenseTile extends StatelessWidget {
                   if (onPay != null)
                     TextButton(
                       onPressed: onPay,
-                      child: const Text('Pagar'),
+                      child: Text(l10n.expensePay),
                     ),
                 ],
               ),

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/format/brl_cents.dart';
+import '../../../core/l10n/context_l10n.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/theme/well_paid_colors.dart';
 import '../../dashboard/application/dashboard_providers.dart';
@@ -21,6 +22,7 @@ class IncomeDetailPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final async = ref.watch(incomeDetailProvider(incomeId));
 
     return async.when(
@@ -30,7 +32,7 @@ class IncomeDetailPage extends ConsumerWidget {
             icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
           ),
-          title: const Text('Provento'),
+          title: Text(l10n.incomeDetailTitle),
         ),
         body: const Center(child: CircularProgressIndicator()),
       ),
@@ -40,13 +42,13 @@ class IncomeDetailPage extends ConsumerWidget {
             icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
           ),
-          title: const Text('Provento'),
+          title: Text(l10n.incomeDetailTitle),
         ),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Text(
-              messageFromDio(e) ?? 'Erro ao carregar.',
+              messageFromDio(e, l10n) ?? l10n.incomesLoadError,
               textAlign: TextAlign.center,
             ),
           ),
@@ -64,22 +66,23 @@ class _DetailScaffold extends ConsumerWidget {
   final IncomeItem item;
 
   Future<void> _delete(BuildContext context, WidgetRef ref) async {
+    final l10n = context.l10n;
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Eliminar provento?'),
-        content: const Text('Esta ação não pode ser anulada.'),
+        title: Text(l10n.incomeDeleteTitle),
+        content: Text(l10n.expDelSingleBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFFB71C1C),
             ),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Eliminar'),
+            child: Text(l10n.delete),
           ),
         ],
       ),
@@ -91,13 +94,13 @@ class _DetailScaffold extends ConsumerWidget {
       ref.invalidate(incomesListProvider);
       ref.invalidate(dashboardOverviewProvider);
       if (context.mounted) {
-        messenger.showSnackBar(const SnackBar(content: Text('Eliminado.')));
+        messenger.showSnackBar(SnackBar(content: Text(l10n.incomeDeletedSnackbar)));
         context.pop();
       }
     } catch (err) {
       if (context.mounted) {
         messenger.showSnackBar(
-          SnackBar(content: Text(messageFromDio(err) ?? 'Erro.')),
+          SnackBar(content: Text(messageFromDio(err, l10n) ?? l10n.incomeDeleteError)),
         );
       }
     }
@@ -105,6 +108,7 @@ class _DetailScaffold extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
     final readOnly = !item.isMine;
 
     return Scaffold(
@@ -113,11 +117,11 @@ class _DetailScaffold extends ConsumerWidget {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title: const Text('Provento'),
+        title: Text(l10n.incomeDetailTitle),
         actions: [
           if (!readOnly)
             IconButton(
-              tooltip: 'Editar',
+              tooltip: l10n.expenseEdit,
               icon: const Icon(Icons.edit_outlined),
               onPressed: () => context.push('/incomes/$incomeId/edit'),
             ),
@@ -141,7 +145,7 @@ class _DetailScaffold extends ConsumerWidget {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          'Provento de outro membro da família — só podes ver.',
+                          l10n.incomeReadOnlyBanner,
                           style: TextStyle(
                             color: WellPaidColors.navy.withValues(alpha: 0.85),
                             fontSize: 13,
@@ -168,16 +172,20 @@ class _DetailScaffold extends ConsumerWidget {
                 ),
           ),
           const SizedBox(height: 12),
-          _row(context, 'Tipo', item.categoryName),
-          _row(context, 'Data (competência)', IncomeDetailPage._dmY(item.incomeDate)),
+          _row(context, l10n.incomeDetailTypeLabel, item.categoryName),
+          _row(
+            context,
+            l10n.incomeDetailDateCompetenceLabel,
+            IncomeDetailPage._dmY(item.incomeDate),
+          ),
           if (item.notes != null && item.notes!.trim().isNotEmpty)
-            _row(context, 'Notas', item.notes!.trim()),
+            _row(context, l10n.incomeDetailNotesLabel, item.notes!.trim()),
           const SizedBox(height: 32),
           if (!readOnly) ...[
             OutlinedButton.icon(
               onPressed: () => context.push('/incomes/$incomeId/edit'),
               icon: const Icon(Icons.edit_outlined),
-              label: const Text('Editar'),
+              label: Text(l10n.expenseEdit),
             ),
             const SizedBox(height: 12),
             OutlinedButton.icon(
@@ -187,7 +195,7 @@ class _DetailScaffold extends ConsumerWidget {
                 side: const BorderSide(color: Color(0xFFB71C1C)),
               ),
               icon: const Icon(Icons.delete_outline),
-              label: const Text('Eliminar'),
+              label: Text(l10n.expenseDelete),
             ),
           ],
         ],

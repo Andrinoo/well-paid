@@ -4,8 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import 'app_router.dart';
+import 'core/locale/app_locale_provider.dart';
 import 'core/theme/well_paid_colors.dart';
 import 'features/app_lock/presentation/app_lifecycle_lock.dart';
+import 'l10n/app_localizations.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,6 +15,11 @@ Future<void> main() async {
   await Hive.openBox<dynamic>('expenses_cache');
   await Hive.openBox<dynamic>('expenses_sync_queue');
   await Hive.openBox<dynamic>('expenses_categories_cache');
+  await Hive.openBox<dynamic>('goals_cache');
+  await Hive.openBox<dynamic>('goals_sync_queue');
+  await Hive.openBox<dynamic>('incomes_cache');
+  await Hive.openBox<dynamic>('incomes_sync_queue');
+  await Hive.openBox<dynamic>('incomes_categories_cache');
 
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.presentError(details);
@@ -37,6 +44,8 @@ class WellPaidApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(goRouterProvider);
+    final localeAsync = ref.watch(appLocaleProvider);
+    final appLocale = localeAsync.valueOrNull ?? const Locale('pt');
 
     final scheme = ColorScheme.fromSeed(
       seedColor: WellPaidColors.navy,
@@ -54,6 +63,9 @@ class WellPaidApp extends ConsumerWidget {
 
     return MaterialApp.router(
       title: 'Well Paid',
+      locale: appLocale,
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
       builder: (context, child) => AppLifecycleLock(
         child: child ?? const SizedBox.shrink(),
       ),

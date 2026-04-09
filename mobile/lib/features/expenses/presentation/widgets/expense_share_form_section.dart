@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/l10n/context_l10n.dart';
 import '../../../../core/theme/well_paid_colors.dart';
 import '../../../family/application/family_providers.dart';
 
@@ -28,6 +29,7 @@ class ExpenseShareFormSection extends ConsumerWidget {
       loading: () => const SizedBox.shrink(),
       error: (error, stackTrace) => const SizedBox.shrink(),
       data: (me) {
+        final l10n = context.l10n;
         final others =
             me.family?.members.where((m) => !m.isSelf).toList() ?? [];
         final canShare = others.isNotEmpty;
@@ -36,11 +38,9 @@ class ExpenseShareFormSection extends ConsumerWidget {
           children: [
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Partilhar na família'),
+              title: Text(l10n.shareFamilyTitle),
               subtitle: Text(
-                canShare
-                    ? 'Visível para o agregado; podes indicar com quem dividir.'
-                    : 'Junta-te a uma família (convite) para usar partilha.',
+                canShare ? l10n.shareFamilySubOn : l10n.shareFamilySubOff,
                 style: TextStyle(
                   fontSize: 12,
                   color: WellPaidColors.navy.withValues(alpha: 0.65),
@@ -57,15 +57,15 @@ class ExpenseShareFormSection extends ConsumerWidget {
             if (isShared && canShare) ...[
               const SizedBox(height: 4),
               DropdownButtonFormField<String?>(
-                decoration: const InputDecoration(
-                  labelText: 'Dividir com',
+                decoration: InputDecoration(
+                  labelText: l10n.shareSplitWith,
                 ),
                 // ignore: deprecated_member_use
                 value: sharedWithUserId,
                 items: [
-                  const DropdownMenuItem<String?>(
+                  DropdownMenuItem<String?>(
                     value: null,
-                    child: Text('Toda a família'),
+                    child: Text(l10n.shareWholeFamily),
                   ),
                   ...others.map(
                     (m) => DropdownMenuItem<String?>(

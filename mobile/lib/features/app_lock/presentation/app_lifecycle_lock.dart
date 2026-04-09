@@ -29,7 +29,9 @@ class _AppLifecycleLockState extends ConsumerState<AppLifecycleLock>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused) {
+    // `paused`: segundo plano típico. `hidden`: app já não visível (ex.: multitarefa).
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden) {
       ref.read(appLockNotifierProvider.notifier).lockSessionIfEnabled();
     }
   }

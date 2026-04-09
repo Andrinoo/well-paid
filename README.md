@@ -75,5 +75,10 @@ pytest
 ```
 backend/     # FastAPI, Alembic, modelos e testes
 mobile/      # App Flutter
+docs/        # Especificações de produto/UI versionadas (ex.: telas e padrões)
 .cursor/     # Regras do Cursor (ex.: não expor segredos em docs)
 ```
+
+### Documentação de telas e UI
+
+- **`docs/SCREENS_AND_UI.md`** — descrição das telas principais, padrão lista+despesas/proventos (cartão com ação primária, sem FAB duplicado, ícones temáticos), Configurações (engrenagem), internacionalização e regras para ecrãs futuros.

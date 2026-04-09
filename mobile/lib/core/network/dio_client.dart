@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../config/api_config.dart';
 
 typedef AccessTokenReader = Future<String?> Function();
@@ -188,16 +189,18 @@ void logDioException(DioException e, StackTrace? stack) {
   debugPrint('════════════════════════');
 }
 
-String? messageFromDio(Object error) {
+String? messageFromDio(Object error, [AppLocalizations? l10n]) {
   if (error is! DioException) return error.toString();
 
   switch (error.type) {
     case DioExceptionType.connectionTimeout:
     case DioExceptionType.sendTimeout:
     case DioExceptionType.receiveTimeout:
-      return 'Tempo esgotado. Confirma que o backend está a correr e que o URL da API está certo.';
+      return l10n?.dioRequestTimeout ??
+          'Tempo esgotado. Confirma que o backend está a correr e que o URL da API está certo.';
     case DioExceptionType.connectionError:
-      return 'Sem ligação ao servidor. Backend em http://0.0.0.0:8000? No emulador use 10.0.2.2; no Windows use 127.0.0.1 (--dart-define).';
+      return l10n?.dioConnectionFailed ??
+          'Sem ligação ao servidor. No emulador Android use 10.0.2.2; no Windows ou iOS use 127.0.0.1 (--dart-define=API_BASE_URL=…).';
     case DioExceptionType.badResponse:
       break;
     default:
@@ -215,5 +218,5 @@ String? messageFromDio(Object error) {
       }).join('\n');
     }
   }
-  return error.message ?? 'Erro de rede';
+  return error.message ?? l10n?.dioNetworkFallback ?? 'Erro de rede';
 }

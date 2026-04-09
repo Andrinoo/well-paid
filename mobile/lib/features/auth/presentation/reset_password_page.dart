@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/l10n/context_l10n.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/theme/well_paid_colors.dart';
 import '../application/auth_notifier.dart';
@@ -46,6 +47,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _busy = true);
     final messenger = ScaffoldMessenger.of(context);
+    final l10n = context.l10n;
     try {
       final repo = ref.read(authRepositoryProvider);
       await repo.resetPassword(
@@ -54,13 +56,13 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
       );
       if (!mounted) return;
       messenger.showSnackBar(
-        const SnackBar(content: Text('Senha atualizada. Pode entrar.')),
+        SnackBar(content: Text(l10n.authResetSuccess)),
       );
       context.go('/login');
     } on DioException catch (e, st) {
       logDioException(e, st);
       messenger.showSnackBar(
-        SnackBar(content: Text(messageFromDio(e) ?? 'Erro ao redefinir')),
+        SnackBar(content: Text(messageFromDio(e, l10n) ?? l10n.authResetError)),
       );
     } catch (e, st) {
       debugPrint('[ResetPassword] $e\n$st');
@@ -72,9 +74,10 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return AuthShell(
-      title: 'Redefinir senha',
-      subtitle: 'Cola o código que recebeste por e-mail.',
+      title: l10n.resetPasswordTitle,
+      subtitle: l10n.authResetSubtitle,
       leading: IconButton(
         icon: const Icon(Icons.arrow_back_rounded),
         color: WellPaidColors.brandBlue,
@@ -86,7 +89,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              passwordPolicyHint,
+              l10n.authPasswordPolicyHint,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: WellPaidColors.authOnCardMuted,
                   ),
@@ -98,12 +101,12 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
               textInputAction: TextInputAction.next,
               decoration: authFieldDecoration(
                 context,
-                label: 'Código de recuperação',
-                hintText: 'Cole o token completo',
+                label: l10n.authResetTokenLabel,
+                hintText: l10n.authResetTokenHint,
               ),
               validator: (v) {
                 if (v == null || v.trim().length < 10) {
-                  return 'Cole o código recebido por e-mail';
+                  return l10n.authResetTokenError;
                 }
                 return null;
               },
@@ -115,9 +118,9 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
               textInputAction: TextInputAction.next,
               decoration: authFieldDecoration(
                 context,
-                label: 'Nova senha',
+                label: l10n.authNewPassword,
                 suffixIcon: IconButton(
-                  tooltip: _obscure ? 'Mostrar senha' : 'Ocultar senha',
+                  tooltip: _obscure ? l10n.authShowPassword : l10n.authHidePassword,
                   style: authFieldSuffixIconButtonStyle(),
                   iconSize: 20,
                   onPressed: () => setState(() => _obscure = !_obscure),
@@ -128,7 +131,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                   ),
                 ),
               ),
-              validator: validatePasswordRules,
+              validator: (v) => validatePasswordRules(v, l10n),
             ),
             const SizedBox(height: 11),
             TextFormField(
@@ -138,9 +141,10 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
               onFieldSubmitted: (_) => _busy ? null : _submit(),
               decoration: authFieldDecoration(
                 context,
-                label: 'Confirmar nova senha',
+                label: l10n.authConfirmNewPassword,
                 suffixIcon: IconButton(
-                  tooltip: _obscureConfirm ? 'Mostrar senha' : 'Ocultar senha',
+                  tooltip:
+                      _obscureConfirm ? l10n.authShowPassword : l10n.authHidePassword,
                   style: authFieldSuffixIconButtonStyle(),
                   iconSize: 20,
                   onPressed: () =>
@@ -154,17 +158,17 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
               ),
               validator: (v) {
                 if (v == null || v.isEmpty) {
-                  return 'Confirme a senha';
+                  return l10n.authConfirmPasswordRequired;
                 }
                 if (v != _password.text) {
-                  return 'As senhas não coincidem';
+                  return l10n.authPasswordMismatch;
                 }
                 return null;
               },
             ),
             const SizedBox(height: 17),
             AuthGradientButton(
-              label: 'Guardar nova senha',
+              label: l10n.authSaveNewPassword,
               busy: _busy,
               onPressed: _busy ? null : _submit,
             ),
@@ -176,7 +180,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
           foregroundColor: WellPaidColors.brandBlue,
         ),
         onPressed: _busy ? null : () => context.push('/forgot-password'),
-        child: const Text('Pedir novo código'),
+        child: Text(l10n.authRequestNewCode),
       ),
     );
   }

@@ -1,22 +1,30 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/well_paid_colors.dart';
-
-enum DueUrgency { high, medium, low }
+enum DueUrgency {
+  overdue,
+  dueToday,
+  dueSoon,
+  upcoming,
+  safe,
+}
 
 DueUrgency dueUrgencyFor(DateTime dueDate, DateTime today) {
   final d0 = DateTime(today.year, today.month, today.day);
   final due = DateTime(dueDate.year, dueDate.month, dueDate.day);
   final days = due.difference(d0).inDays;
-  if (days <= 3) return DueUrgency.high;
-  if (days <= 7) return DueUrgency.medium;
-  return DueUrgency.low;
+  if (days < 0) return DueUrgency.overdue;
+  if (days == 0) return DueUrgency.dueToday;
+  if (days <= 2) return DueUrgency.dueSoon;
+  if (days <= 5) return DueUrgency.upcoming;
+  return DueUrgency.safe;
 }
 
 Color dueUrgencyAccent(DueUrgency u) {
   return switch (u) {
-    DueUrgency.high => const Color(0xFFC62828),
-    DueUrgency.medium => const Color(0xFFE65100),
-    DueUrgency.low => WellPaidColors.navy.withValues(alpha: 0.45),
+    DueUrgency.overdue => const Color(0xFFB00020),
+    DueUrgency.dueToday => const Color(0xFFD32F2F),
+    DueUrgency.dueSoon => const Color(0xFFE57373),
+    DueUrgency.upcoming => const Color(0xFFF9A825),
+    DueUrgency.safe => const Color(0xFF2E7D32),
   };
 }

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import uuid
 
 from sqlalchemy import BigInteger, Boolean, ForeignKey, String
@@ -24,3 +26,8 @@ class Goal(Base, TimestampMixin):
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
     owner: Mapped["User"] = relationship("User", back_populates="goals")
+    contributions: Mapped[list["GoalContribution"]] = relationship(
+        "GoalContribution",
+        back_populates="goal",
+        cascade="all, delete-orphan",
+    )

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../core/theme/well_paid_colors.dart';
 
 /// Alinhado com a validação do backend (`app.core.security`).
@@ -7,21 +8,18 @@ final passwordPolicyRegExp = RegExp(
   r'^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9\s]).{8,}$',
 );
 
-const passwordPolicyHint =
-    'Mín. 8 caracteres, 1 maiúscula, 1 número e 1 caractere especial.';
-
-String? validatePasswordRules(String? v) {
-  if (v == null || v.isEmpty) return 'Informe a senha';
+String? validatePasswordRules(String? v, AppLocalizations l10n) {
+  if (v == null || v.isEmpty) return l10n.authPasswordRequired;
   if (!passwordPolicyRegExp.hasMatch(v)) {
-    return 'Senha não cumpre as regras';
+    return l10n.authPasswordRulesError;
   }
   return null;
 }
 
-String? validateEmailField(String? v) {
-  if (v == null || v.trim().isEmpty) return 'Informe o e-mail';
+String? validateEmailField(String? v, AppLocalizations l10n) {
+  if (v == null || v.trim().isEmpty) return l10n.authEmailRequired;
   final t = v.trim();
-  if (!t.contains('@') || !t.contains('.')) return 'E-mail inválido';
+  if (!t.contains('@') || !t.contains('.')) return l10n.authEmailInvalid;
   return null;
 }
 

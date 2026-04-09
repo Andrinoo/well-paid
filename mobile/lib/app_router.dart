@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -10,24 +11,35 @@ import 'features/auth/presentation/forgot_password_page.dart';
 import 'features/auth/presentation/login_page.dart';
 import 'features/auth/presentation/register_page.dart';
 import 'features/auth/presentation/reset_password_page.dart';
-import 'features/auth/presentation/splash_page.dart';
+import 'features/emergency_reserve/presentation/emergency_reserve_page.dart';
 import 'features/expenses/presentation/expense_detail_page.dart';
 import 'features/expenses/presentation/expense_edit_page.dart';
 import 'features/expenses/presentation/expense_list_page.dart';
 import 'features/expenses/presentation/new_expense_page.dart';
 import 'features/family/presentation/family_page.dart';
+import 'features/goals/presentation/goal_detail_page.dart';
 import 'features/goals/presentation/goals_placeholder_page.dart';
+import 'features/goals/presentation/new_goal_page.dart';
 import 'features/home/presentation/home_page.dart';
 import 'features/incomes/presentation/income_detail_page.dart';
 import 'features/incomes/presentation/income_edit_page.dart';
 import 'features/incomes/presentation/income_list_page.dart';
 import 'features/incomes/presentation/new_income_page.dart';
+import 'features/settings/presentation/settings_page.dart';
+import 'features/shell/presentation/main_shell.dart';
+import 'features/shopping_lists/presentation/shopping_list_detail_page.dart';
+import 'features/shopping_lists/presentation/shopping_lists_page.dart';
+
+/// Root navigator — full-screen routes (forms, settings) use [parentNavigatorKey].
+final GlobalKey<NavigatorState> rootNavigatorKey =
+    GlobalKey<NavigatorState>(debugLabel: 'root');
 
 final goRouterProvider = Provider<GoRouter>((ref) {
   final refresh = ref.watch(routerRefreshProvider);
 
   return GoRouter(
-    initialLocation: '/splash',
+    navigatorKey: rootNavigatorKey,
+    initialLocation: '/login',
     refreshListenable: refresh,
     redirect: (context, state) {
       final auth = ref.read(authNotifierProvider);
@@ -35,13 +47,14 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       final loc = state.matchedLocation;
 
       if (!auth.hydrated || !lock.hydrated) {
-        return loc == '/splash' ? null : '/splash';
-      }
-
-      if (loc == '/splash') {
-        if (!auth.isAuthenticated) return '/login';
-        if (lock.pinEnabled && !lock.sessionUnlocked) return '/unlock';
-        return '/home';
+        const publicWhileHydrating = {
+          '/login',
+          '/register',
+          '/forgot-password',
+          '/reset-password',
+        };
+        if (publicWhileHydrating.contains(loc)) return null;
+        return '/login';
       }
 
       if (loc == '/unlock' && !auth.isAuthenticated) return '/login';
@@ -75,7 +88,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(
         path: '/splash',
-        builder: (context, state) => const SplashPage(),
+        redirect: (context, state) => '/login',
       ),
       GoRoute(
         path: '/login',
@@ -100,69 +113,150 @@ final goRouterProvider = Provider<GoRouter>((ref) {
           );
         },
       ),
-      GoRoute(
-        path: '/home',
-        builder: (context, state) => const HomePage(),
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) {
+          return MainShell(navigationShell: navigationShell);
+        },
+        branches: [
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/home',
+                builder: (context, state) => const HomePage(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/expenses',
+                builder: (context, state) => ExpenseListPage(
+                  initialStatus: state.uri.queryParameters['status'],
+                ),
+                routes: [
+                  GoRoute(
+                    path: 'new',
+                    parentNavigatorKey: rootNavigatorKey,
+                    builder: (context, state) => const NewExpensePage(),
+                  ),
+                  GoRoute(
+                    path: ':expenseId',
+                    parentNavigatorKey: rootNavigatorKey,
+                    builder: (context, state) => ExpenseDetailPage(
+                      expenseId: state.pathParameters['expenseId']!,
+                    ),
+                    routes: [
+                      GoRoute(
+                        path: 'edit',
+                        parentNavigatorKey: rootNavigatorKey,
+                        builder: (context, state) => ExpenseEditPage(
+                          expenseId: state.pathParameters['expenseId']!,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/incomes',
+                builder: (context, state) => const IncomeListPage(),
+                routes: [
+                  GoRoute(
+                    path: 'new',
+                    parentNavigatorKey: rootNavigatorKey,
+                    builder: (context, state) => const NewIncomePage(),
+                  ),
+                  GoRoute(
+                    path: ':incomeId',
+                    parentNavigatorKey: rootNavigatorKey,
+                    builder: (context, state) => IncomeDetailPage(
+                      incomeId: state.pathParameters['incomeId']!,
+                    ),
+                    routes: [
+                      GoRoute(
+                        path: 'edit',
+                        parentNavigatorKey: rootNavigatorKey,
+                        builder: (context, state) => IncomeEditPage(
+                          incomeId: state.pathParameters['incomeId']!,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/goals',
+                builder: (context, state) => const GoalsPlaceholderPage(),
+                routes: [
+                  GoRoute(
+                    path: 'new',
+                    parentNavigatorKey: rootNavigatorKey,
+                    builder: (context, state) => const NewGoalPage(),
+                  ),
+                  GoRoute(
+                    path: ':goalId',
+                    parentNavigatorKey: rootNavigatorKey,
+                    builder: (context, state) => GoalDetailPage(
+                      goalId: state.pathParameters['goalId']!,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/emergency-reserve',
+                builder: (context, state) => const EmergencyReservePage(),
+              ),
+            ],
+          ),
+        ],
       ),
       GoRoute(
-        path: '/expenses/new',
-        builder: (context, state) => const NewExpensePage(),
+        path: '/unlock',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const UnlockPage(),
       ),
       GoRoute(
-        path: '/expenses/:expenseId/edit',
-        builder: (context, state) => ExpenseEditPage(
-          expenseId: state.pathParameters['expenseId']!,
-        ),
+        path: '/security',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const SecuritySettingsPage(),
       ),
       GoRoute(
-        path: '/expenses/:expenseId',
-        builder: (context, state) => ExpenseDetailPage(
-          expenseId: state.pathParameters['expenseId']!,
-        ),
-      ),
-      GoRoute(
-        path: '/expenses',
-        builder: (context, state) => ExpenseListPage(
-          initialStatus: state.uri.queryParameters['status'],
-        ),
-      ),
-      GoRoute(
-        path: '/goals',
-        builder: (context, state) => const GoalsPlaceholderPage(),
+        path: '/settings',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const SettingsPage(),
       ),
       GoRoute(
         path: '/family',
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => FamilyPage(
           initialInviteToken: state.uri.queryParameters['token'],
         ),
       ),
       GoRoute(
-        path: '/unlock',
-        builder: (context, state) => const UnlockPage(),
-      ),
-      GoRoute(
-        path: '/security',
-        builder: (context, state) => const SecuritySettingsPage(),
-      ),
-      GoRoute(
-        path: '/incomes',
-        builder: (context, state) => const IncomeListPage(),
-      ),
-      GoRoute(
-        path: '/incomes/new',
-        builder: (context, state) => const NewIncomePage(),
-      ),
-      GoRoute(
-        path: '/incomes/:incomeId/edit',
-        builder: (context, state) => IncomeEditPage(
-          incomeId: state.pathParameters['incomeId']!,
-        ),
-      ),
-      GoRoute(
-        path: '/incomes/:incomeId',
-        builder: (context, state) => IncomeDetailPage(
-          incomeId: state.pathParameters['incomeId']!,
-        ),
+        path: '/shopping-lists',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const ShoppingListsPage(),
+        routes: [
+          GoRoute(
+            path: ':listId',
+            parentNavigatorKey: rootNavigatorKey,
+            builder: (context, state) => ShoppingListDetailPage(
+              listId: state.pathParameters['listId']!,
+            ),
+          ),
+        ],
       ),
     ],
   );

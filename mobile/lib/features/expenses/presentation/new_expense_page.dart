@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/format/brl_cents.dart';
 import '../../../core/format/parse_brl_input.dart';
+import '../../../core/l10n/context_l10n.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/theme/well_paid_colors.dart';
 import '../../dashboard/application/dashboard_providers.dart';
@@ -19,6 +20,8 @@ class NewExpensePage extends ConsumerStatefulWidget {
   ConsumerState<NewExpensePage> createState() => _NewExpensePageState();
 }
 
+enum _ExpenseKind { single, installments, recurring }
+
 class _NewExpensePageState extends ConsumerState<NewExpensePage> {
   final _formKey = GlobalKey<FormState>();
   final _descCtrl = TextEditingController();
@@ -30,6 +33,7 @@ class _NewExpensePageState extends ConsumerState<NewExpensePage> {
   bool _hasDueDate = false;
   bool _markPaid = false;
   int _installments = 1;
+  _ExpenseKind _kind = _ExpenseKind.single;
   String? _recurring;
   bool _isShared = false;
   String? _sharedWithUserId;
@@ -66,39 +70,54 @@ class _NewExpensePageState extends ConsumerState<NewExpensePage> {
       '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
 
   Future<void> _submit() async {
+    final l10n = context.l10n;
     if (!_formKey.currentState!.validate()) return;
-    _installments = int.parse(_installmentsCtrl.text.trim());
+    final installmentTotal = _kind == _ExpenseKind.installments
+        ? int.parse(_installmentsCtrl.text.trim())
+        : 1;
+    if (_kind == _ExpenseKind.installments) {
+      _installments = installmentTotal;
+    }
+    final recurringFrequency =
+        _kind == _ExpenseKind.recurring ? _recurring : null;
     if (_categoryId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Escolhe uma categoria.')),
+        SnackBar(content: Text(l10n.expFormPickCategory)),
       );
       return;
     }
     final cents = parseInputToCents(_amountCtrl.text);
     if (cents == null || cents <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Valor inválido.')),
+        SnackBar(content: Text(l10n.valueInvalid)),
       );
       return;
     }
     if (_hasDueDate && _dueDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Escolhe a data de vencimento.')),
+        SnackBar(content: Text(l10n.expFormPickDue)),
+      );
+      return;
+    }
+    if (_kind == _ExpenseKind.recurring &&
+        (recurringFrequency == null || recurringFrequency.isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.expFormRecurringFreqRequired)),
       );
       return;
     }
 
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await ref.read(expensesRepositoryProvider).createExpense(
+      final created = await ref.read(expensesRepositoryProvider).createExpense(
             description: _descCtrl.text,
             amountCents: cents,
             expenseDate: _expenseDate,
             dueDate: _hasDueDate ? _dueDate : null,
             categoryId: _categoryId!,
             status: _markPaid ? 'paid' : 'pending',
-            installmentTotal: _installments,
-            recurringFrequency: _installments == 1 ? _recurring : null,
+            installmentTotal: installmentTotal,
+            recurringFrequency: recurringFrequency,
             isShared: _isShared,
             sharedWithUserId: _isShared ? _sharedWithUserId : null,
           );
@@ -106,21 +125,25 @@ class _NewExpensePageState extends ConsumerState<NewExpensePage> {
       ref.invalidate(dashboardOverviewProvider);
       ref.invalidate(categoriesProvider);
       if (mounted) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(
-              _installments > 1
-                  ? 'Criadas $_installments despesas (parcelas mensais).'
-                  : 'Despesa criada.',
-            ),
-          ),
-        );
+        final n = created.length;
+        final planRef = n > 1
+            ? (created.first.installmentGroupId != null &&
+                    created.first.installmentGroupId!.length >= 8
+                ? '${created.first.installmentGroupId!.substring(0, 8)}…'
+                : null)
+            : null;
+        final msg = n > 1
+            ? (planRef != null
+                ? l10n.expFormPlanCreatedRef(n, planRef)
+                : l10n.expFormPlanCreated(n))
+            : l10n.expFormCreated;
+        messenger.showSnackBar(SnackBar(content: Text(msg)));
         context.pop();
       }
     } catch (e) {
       if (mounted) {
         messenger.showSnackBar(
-          SnackBar(content: Text(messageFromDio(e) ?? 'Erro ao criar.')),
+          SnackBar(content: Text(messageFromDio(e, l10n) ?? l10n.expFormCreateError)),
         );
       }
     }
@@ -128,11 +151,13 @@ class _NewExpensePageState extends ConsumerState<NewExpensePage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final cats = ref.watch(categoriesProvider);
     final installmentAmountCents = parseInputToCents(_amountCtrl.text);
     final totalForPlanCents = installmentAmountCents == null
         ? null
-        : installmentAmountCents * _installments;
+        : installmentAmountCents *
+            (_kind == _ExpenseKind.installments ? _installments : 1);
 
     return Scaffold(
       appBar: AppBar(
@@ -140,7 +165,7 @@ class _NewExpensePageState extends ConsumerState<NewExpensePage> {
           icon: const Icon(Icons.close),
           onPressed: () => context.pop(),
         ),
-        title: const Text('Nova despesa'),
+        title: Text(l10n.newExpenseTitle),
       ),
       body: Form(
         key: _formKey,
@@ -149,106 +174,148 @@ class _NewExpensePageState extends ConsumerState<NewExpensePage> {
           children: [
             TextFormField(
               controller: _descCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Descrição',
+              decoration: InputDecoration(
+                labelText: l10n.expFormDescription,
               ),
               textCapitalization: TextCapitalization.sentences,
               maxLength: 500,
               validator: (v) {
                 if (v == null || v.trim().isEmpty) {
-                  return 'Obrigatório';
+                  return l10n.requiredField;
                 }
                 return null;
               },
             ),
             const SizedBox(height: 8),
+            SegmentedButton<_ExpenseKind>(
+              segments: [
+                ButtonSegment<_ExpenseKind>(
+                  value: _ExpenseKind.single,
+                  label: Text(l10n.expFormKindSingle),
+                  icon: const Icon(Icons.receipt_long_outlined),
+                ),
+                ButtonSegment<_ExpenseKind>(
+                  value: _ExpenseKind.installments,
+                  label: Text(l10n.expFormKindInstallments),
+                  icon: const Icon(Icons.calendar_view_month_outlined),
+                ),
+                ButtonSegment<_ExpenseKind>(
+                  value: _ExpenseKind.recurring,
+                  label: Text(l10n.expFormKindRecurring),
+                  icon: const Icon(Icons.autorenew_outlined),
+                ),
+              ],
+              selected: {_kind},
+              onSelectionChanged: (s) {
+                if (s.isEmpty) return;
+                setState(() {
+                  _kind = s.first;
+                  if (_kind != _ExpenseKind.installments) {
+                    _installmentsCtrl.text = '1';
+                    _installments = 1;
+                  }
+                  if (_kind != _ExpenseKind.recurring) {
+                    _recurring = null;
+                  }
+                });
+              },
+            ),
+            const SizedBox(height: 16),
             TextFormField(
               controller: _amountCtrl,
               decoration: InputDecoration(
-                labelText: _installments > 1
-                    ? 'Valor da parcela (R\$)'
-                    : 'Valor (R\$)',
-                hintText: 'ex. 12,50',
+                labelText: _kind == _ExpenseKind.installments
+                    ? l10n.expFormAmountInstallment
+                    : l10n.expFormAmount,
+                hintText: l10n.expFormAmountHint,
               ),
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               onChanged: (_) => setState(() {}),
               validator: (v) {
-                if (v == null || v.trim().isEmpty) return 'Obrigatório';
+                if (v == null || v.trim().isEmpty) return l10n.requiredField;
                 final c = parseInputToCents(v);
-                if (c == null || c <= 0) return 'Valor inválido';
+                if (c == null || c <= 0) return l10n.valueInvalid;
                 return null;
               },
             ),
             const SizedBox(height: 8),
-            TextFormField(
-              controller: _installmentsCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Parcelas (competência mensal)',
-                hintText: '1 a 24',
+            if (_kind == _ExpenseKind.installments)
+              TextFormField(
+                controller: _installmentsCtrl,
+                decoration: InputDecoration(
+                  labelText: l10n.expFormInstallmentsLabel,
+                  hintText: l10n.expFormInstallmentsHint,
+                ),
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(2),
+                ],
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return l10n.requiredField;
+                  final n = int.tryParse(v.trim());
+                  if (n == null) return l10n.expFormInstallmentInvalid;
+                  if (n < 1 || n > 24) return l10n.expFormInstallmentRangeError;
+                  return null;
+                },
+                onChanged: (v) {
+                  final n = int.tryParse(v.trim());
+                  if (n == null || n < 1 || n > 24) return;
+                  setState(() => _installments = n);
+                },
               ),
-              keyboardType: TextInputType.number,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                LengthLimitingTextInputFormatter(2),
-              ],
-              validator: (v) {
-                if (v == null || v.trim().isEmpty) return 'Obrigatório';
-                final n = int.tryParse(v.trim());
-                if (n == null) return 'Número inválido';
-                if (n < 1 || n > 24) return 'Use de 1 a 24';
-                return null;
-              },
-              onChanged: (v) {
-                final n = int.tryParse(v.trim());
-                if (n == null || n < 1 || n > 24) return;
-                setState(() {
-                  _installments = n;
-                  if (n > 1) _recurring = null;
-                });
-              },
-            ),
-            if (_installments > 1)
+            if (_kind == _ExpenseKind.installments)
               Padding(
                 padding: const EdgeInsets.only(top: 8, bottom: 4),
                 child: Text(
                   totalForPlanCents == null
-                      ? 'Informe o valor de cada parcela. '
-                          'Total = parcela × $_installments.'
-                      : 'Total do plano: ${formatBrlFromCents(totalForPlanCents)} '
-                          '($_installments × ${formatBrlFromCents(installmentAmountCents!)}).',
+                      ? l10n.expFormInstallmentNeedAmountLine(_installments)
+                      : l10n.expFormInstallmentPlanTotalLine(
+                          formatBrlFromCents(totalForPlanCents),
+                          _installments,
+                          formatBrlFromCents(installmentAmountCents!),
+                        ),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: WellPaidColors.navy.withValues(alpha: 0.72),
                         height: 1.35,
                       ),
                 ),
               ),
-            if (_installments == 1) ...[
+            if (_kind == _ExpenseKind.recurring) ...[
               const SizedBox(height: 8),
               DropdownButtonFormField<String?>(
-                decoration: const InputDecoration(
-                  labelText: 'Recorrência (opcional)',
+                decoration: InputDecoration(
+                  labelText: l10n.expFormRecurringFrequency,
                 ),
                 // ignore: deprecated_member_use
                 value: _recurring,
-                items: const [
+                items: [
                   DropdownMenuItem<String?>(
                     value: null,
-                    child: Text('Nenhuma'),
+                    child: Text(l10n.expFormRecurringChoose),
                   ),
-                  DropdownMenuItem(value: 'monthly', child: Text('Mensal')),
-                  DropdownMenuItem(value: 'weekly', child: Text('Semanal')),
-                  DropdownMenuItem(value: 'yearly', child: Text('Anual')),
+                  DropdownMenuItem(
+                    value: 'monthly',
+                    child: Text(l10n.expFormFreqMonthly),
+                  ),
+                  DropdownMenuItem(
+                    value: 'weekly',
+                    child: Text(l10n.expFormFreqWeekly),
+                  ),
+                  DropdownMenuItem(
+                    value: 'yearly',
+                    child: Text(l10n.expFormFreqYearly),
+                  ),
                 ],
                 onChanged: (v) => setState(() => _recurring = v),
               ),
               Padding(
                 padding: const EdgeInsets.only(top: 6),
                 child: Text(
-                  'Recorrência regista a frequência; geração automática de '
-                  'futuras despesas virá numa fase seguinte.',
+                  l10n.expFormRecurringHelp,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: WellPaidColors.navy.withValues(alpha: 0.55),
-                        fontStyle: FontStyle.italic,
+                        height: 1.35,
                       ),
                 ),
               ),
@@ -256,14 +323,14 @@ class _NewExpensePageState extends ConsumerState<NewExpensePage> {
             const SizedBox(height: 12),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Já está paga'),
+              title: Text(l10n.expFormMarkPaid),
               value: _markPaid,
               onChanged: (v) => setState(() => _markPaid = v),
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Tem data de vencimento'),
-              subtitle: const Text('Contas a pagar / alertas no dashboard'),
+              title: Text(l10n.expFormHasDueDate),
+              subtitle: Text(l10n.expFormHasDueDateSub),
               value: _hasDueDate,
               onChanged: (v) => setState(() {
                 _hasDueDate = v;
@@ -273,7 +340,7 @@ class _NewExpensePageState extends ConsumerState<NewExpensePage> {
             const SizedBox(height: 8),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Data da despesa (competência)'),
+              title: Text(l10n.expFormExpenseDate),
               subtitle: Text(_dmY(_expenseDate)),
               trailing: const Icon(Icons.calendar_today_outlined),
               onTap: _pickExpenseDate,
@@ -281,8 +348,10 @@ class _NewExpensePageState extends ConsumerState<NewExpensePage> {
             if (_hasDueDate)
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Data de vencimento'),
-                subtitle: Text(_dueDate == null ? 'Escolher…' : _dmY(_dueDate!)),
+                title: Text(l10n.expFormDueDate),
+                subtitle: Text(
+                  _dueDate == null ? l10n.expFormChooseDate : _dmY(_dueDate!),
+                ),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -308,14 +377,14 @@ class _NewExpensePageState extends ConsumerState<NewExpensePage> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    messageFromDio(e) ?? 'Erro ao carregar categorias.',
+                    messageFromDio(e, l10n) ?? l10n.expFormCategoriesLoadError,
                     style: TextStyle(
                       color: WellPaidColors.navy.withValues(alpha: 0.8),
                     ),
                   ),
                   TextButton(
                     onPressed: () => ref.invalidate(categoriesProvider),
-                    child: const Text('Tentar novamente'),
+                    child: Text(l10n.tryAgain),
                   ),
                 ],
               ),
@@ -335,7 +404,7 @@ class _NewExpensePageState extends ConsumerState<NewExpensePage> {
             const SizedBox(height: 28),
             FilledButton(
               onPressed: _submit,
-              child: const Text('Guardar'),
+              child: Text(l10n.save),
             ),
           ],
         ),

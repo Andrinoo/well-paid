@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/format/brl_cents.dart';
+import '../../../core/l10n/context_l10n.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/theme/well_paid_colors.dart';
 import '../../dashboard/application/dashboard_providers.dart';
@@ -53,19 +54,22 @@ class _IncomeListPageState extends ConsumerState<IncomeListPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final f = ref.watch(incomeListFiltersProvider);
     final async = ref.watch(incomesListProvider);
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
-        title: const Text('Proventos'),
+        leading: Navigator.of(context).canPop()
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => context.pop(),
+              )
+            : null,
+        title: Text(l10n.incomesTitle),
         actions: [
           IconButton(
-            tooltip: 'Atualizar',
+            tooltip: l10n.incomesRefresh,
             onPressed: () {
               ref.invalidate(incomesListProvider);
               ref.invalidate(dashboardOverviewProvider);
@@ -73,13 +77,6 @@ class _IncomeListPageState extends ConsumerState<IncomeListPage> {
             icon: const Icon(Icons.refresh),
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/incomes/new'),
-        icon: const Icon(Icons.add),
-        label: const Text('Novo'),
-        backgroundColor: WellPaidColors.gold,
-        foregroundColor: WellPaidColors.navy,
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -92,7 +89,7 @@ class _IncomeListPageState extends ConsumerState<IncomeListPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   IconButton(
-                    tooltip: 'Mês anterior',
+                    tooltip: l10n.periodPrevMonth,
                     onPressed: () => _shiftMonth(-1),
                     icon: const Icon(Icons.chevron_left),
                     color: WellPaidColors.navy,
@@ -105,7 +102,7 @@ class _IncomeListPageState extends ConsumerState<IncomeListPage> {
                         ),
                   ),
                   IconButton(
-                    tooltip: 'Próximo mês',
+                    tooltip: l10n.periodNextMonth,
                     onPressed: () => _shiftMonth(1),
                     icon: const Icon(Icons.chevron_right),
                     color: WellPaidColors.navy,
@@ -115,9 +112,49 @@ class _IncomeListPageState extends ConsumerState<IncomeListPage> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+            child: Card(
+              elevation: 0,
+              color: WellPaidColors.creamMuted.withValues(alpha: 0.9),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+                side: BorderSide(
+                  color: WellPaidColors.navy.withValues(alpha: 0.1),
+                ),
+              ),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton.tonalIcon(
+                        onPressed: () => context.push('/incomes/new'),
+                        icon: const Icon(Icons.savings_outlined),
+                        label: Text(l10n.incomesAddLong),
+                        style: FilledButton.styleFrom(
+                          foregroundColor: WellPaidColors.navy,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: l10n.incomesRefreshList,
+                      onPressed: () {
+                        ref.invalidate(incomesListProvider);
+                        ref.invalidate(dashboardOverviewProvider);
+                      },
+                      icon: const Icon(Icons.refresh),
+                      color: WellPaidColors.navy,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
             child: Text(
-              'Valores em reais com centavos exactos; competência pelo dia do provento.',
+              l10n.incomesListHint,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: WellPaidColors.navy.withValues(alpha: 0.62),
                     height: 1.35,
@@ -131,7 +168,7 @@ class _IncomeListPageState extends ConsumerState<IncomeListPage> {
                 child: Padding(
                   padding: const EdgeInsets.all(24),
                   child: Text(
-                    messageFromDio(e) ?? 'Erro ao carregar.',
+                    messageFromDio(e, l10n) ?? l10n.incomesLoadError,
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -140,9 +177,9 @@ class _IncomeListPageState extends ConsumerState<IncomeListPage> {
                 if (items.isEmpty) {
                   return ListView(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    children: const [
-                      SizedBox(height: 48),
-                      Center(child: Text('Nenhum provento neste mês.')),
+                    children: [
+                      const SizedBox(height: 48),
+                      Center(child: Text(l10n.incomesEmpty)),
                     ],
                   );
                 }
@@ -154,7 +191,7 @@ class _IncomeListPageState extends ConsumerState<IncomeListPage> {
                   },
                   child: ListView.separated(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 88),
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                     itemCount: items.length,
                     separatorBuilder: (context, index) => const Divider(height: 1),
                     itemBuilder: (context, i) {
@@ -189,6 +226,7 @@ class _IncomeTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Semantics(
       label: '${item.description}, ${formatBrlFromCents(item.amountCents)}',
       button: true,
@@ -214,13 +252,13 @@ class _IncomeTile extends StatelessWidget {
                     Text(
                       item.isMine
                           ? item.categoryName
-                          : '${item.categoryName} · Família',
+                          : l10n.expenseTileFamilyCategory(item.categoryName),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: WellPaidColors.navy.withValues(alpha: 0.65),
                           ),
                     ),
                     Text(
-                      'Data ${dmY(item.incomeDate)}',
+                      l10n.incomeTileDateLine(dmY(item.incomeDate)),
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                             color: WellPaidColors.navy.withValues(alpha: 0.55),
                           ),

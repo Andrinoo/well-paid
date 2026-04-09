@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/l10n/context_l10n.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/theme/well_paid_colors.dart';
 import '../application/auth_notifier.dart';
@@ -33,6 +34,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _busy = true);
     final messenger = ScaffoldMessenger.of(context);
+    final l10n = context.l10n;
     try {
       final repo = ref.read(authRepositoryProvider);
       final result = await repo.forgotPassword(_email.text.trim());
@@ -45,24 +47,22 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
         await showDialog<void>(
           context: context,
           builder: (ctx) => AlertDialog(
-            title: const Text('Modo desenvolvimento'),
-            content: SelectableText(
-              'O backend devolveu o token para testes. Guarde-o e use no ecrã seguinte.\n\n$dev',
-            ),
+            title: Text(l10n.authDevModeTitle),
+            content: SelectableText(l10n.authDevTokenHint(dev)),
             actions: [
               TextButton(
                 onPressed: () {
                   Clipboard.setData(ClipboardData(text: dev));
                   Navigator.pop(ctx);
                   messenger.showSnackBar(
-                    const SnackBar(content: Text('Token copiado')),
+                    SnackBar(content: Text(l10n.tokenCopied)),
                   );
                 },
-                child: const Text('Copiar'),
+                child: Text(l10n.copy),
               ),
               FilledButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('OK'),
+                child: Text(l10n.ok),
               ),
             ],
           ),
@@ -76,7 +76,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
     } on DioException catch (e, st) {
       logDioException(e, st);
       messenger.showSnackBar(
-        SnackBar(content: Text(messageFromDio(e) ?? 'Erro ao enviar pedido')),
+        SnackBar(content: Text(messageFromDio(e, l10n) ?? l10n.authForgotError)),
       );
     } catch (e, st) {
       debugPrint('[ForgotPassword] $e\n$st');
@@ -88,9 +88,10 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return AuthShell(
-      title: 'Recuperar senha',
-      subtitle: 'Indica o teu e-mail para receberes instruções.',
+      title: l10n.authForgotTitle,
+      subtitle: l10n.authForgotSubtitle,
       leading: IconButton(
         icon: const Icon(Icons.arrow_back_rounded),
         color: WellPaidColors.brandBlue,
@@ -102,8 +103,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Enviaremos um código para redefinires a senha na app. '
-              'Se não vês o e-mail, verifica o spam.',
+              l10n.authForgotBody,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: WellPaidColors.authOnCardMuted,
                   ),
@@ -114,12 +114,12 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
               keyboardType: TextInputType.emailAddress,
               textInputAction: TextInputAction.done,
               onFieldSubmitted: (_) => _busy ? null : _submit(),
-              decoration: authFieldDecoration(context, label: 'E-mail'),
-              validator: validateEmailField,
+              decoration: authFieldDecoration(context, label: l10n.authEmail),
+              validator: (v) => validateEmailField(v, l10n),
             ),
             const SizedBox(height: 17),
             AuthGradientButton(
-              label: 'Enviar instruções',
+              label: l10n.authForgotSend,
               busy: _busy,
               onPressed: _busy ? null : _submit,
             ),
@@ -131,7 +131,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
           foregroundColor: WellPaidColors.brandBlue,
         ),
         onPressed: _busy ? null : () => context.pop(),
-        child: const Text('Voltar ao login'),
+        child: Text(l10n.authBackToLogin),
       ),
     );
   }

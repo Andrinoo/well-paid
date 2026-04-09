@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/format/brl_cents.dart';
 import '../../../core/format/parse_brl_input.dart';
+import '../../../core/l10n/context_l10n.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/theme/well_paid_colors.dart';
 import '../../dashboard/application/dashboard_providers.dart';
@@ -21,43 +22,50 @@ class IncomeEditPage extends ConsumerWidget {
     final async = ref.watch(incomeDetailProvider(incomeId));
 
     return async.when(
-      loading: () => Scaffold(
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.close),
-            onPressed: () => context.pop(),
+      loading: () {
+        final l10n = context.l10n;
+        return Scaffold(
+          appBar: AppBar(
+            leading: IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: () => context.pop(),
+            ),
+            title: Text(l10n.editIncomeTitle),
           ),
-          title: const Text('Editar provento'),
-        ),
-        body: const Center(child: CircularProgressIndicator()),
-      ),
-      error: (e, _) => Scaffold(
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.close),
-            onPressed: () => context.pop(),
+          body: const Center(child: CircularProgressIndicator()),
+        );
+      },
+      error: (e, _) {
+        final l10n = context.l10n;
+        return Scaffold(
+          appBar: AppBar(
+            leading: IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: () => context.pop(),
+            ),
+            title: Text(l10n.editIncomeTitle),
           ),
-          title: const Text('Editar provento'),
-        ),
-        body: Center(
-          child: Text(messageFromDio(e) ?? 'Erro.'),
-        ),
-      ),
+          body: Center(
+            child: Text(messageFromDio(e, l10n) ?? l10n.incDetailLoadError),
+          ),
+        );
+      },
       data: (income) {
         if (!income.isMine) {
+          final l10n = context.l10n;
           return Scaffold(
             appBar: AppBar(
               leading: IconButton(
                 icon: const Icon(Icons.close),
                 onPressed: () => context.pop(),
               ),
-              title: const Text('Editar provento'),
+              title: Text(l10n.editIncomeTitle),
             ),
             body: Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Text(
-                  'Só o titular deste provento o pode editar.',
+                  l10n.incomeEditOwnerOnly,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: WellPaidColors.navy.withValues(alpha: 0.85),
@@ -134,11 +142,12 @@ class _IncomeEditFormState extends ConsumerState<_IncomeEditForm> {
   }
 
   Future<void> _submit() async {
+    final l10n = context.l10n;
     if (!_formKey.currentState!.validate()) return;
     final cents = parseInputToCents(_amountCtrl.text);
     if (cents == null || cents <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Valor inválido.')),
+        SnackBar(content: Text(l10n.valueInvalid)),
       );
       return;
     }
@@ -156,13 +165,13 @@ class _IncomeEditFormState extends ConsumerState<_IncomeEditForm> {
       ref.invalidate(incomesListProvider);
       ref.invalidate(dashboardOverviewProvider);
       if (mounted) {
-        messenger.showSnackBar(const SnackBar(content: Text('Guardado.')));
+        messenger.showSnackBar(SnackBar(content: Text(l10n.incomeSaved)));
         context.pop();
       }
     } catch (e) {
       if (mounted) {
         messenger.showSnackBar(
-          SnackBar(content: Text(messageFromDio(e) ?? 'Erro ao guardar.')),
+          SnackBar(content: Text(messageFromDio(e, l10n) ?? l10n.incomeSaveError)),
         );
       }
     }
@@ -170,6 +179,7 @@ class _IncomeEditFormState extends ConsumerState<_IncomeEditForm> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final cats = ref.watch(incomeCategoriesProvider);
 
     return Scaffold(
@@ -178,7 +188,7 @@ class _IncomeEditFormState extends ConsumerState<_IncomeEditForm> {
           icon: const Icon(Icons.close),
           onPressed: () => context.pop(),
         ),
-        title: const Text('Editar provento'),
+        title: Text(l10n.editIncomeTitle),
       ),
       body: Form(
         key: _formKey,
@@ -187,30 +197,30 @@ class _IncomeEditFormState extends ConsumerState<_IncomeEditForm> {
           children: [
             TextFormField(
               controller: _descCtrl,
-              decoration: const InputDecoration(labelText: 'Descrição'),
+              decoration: InputDecoration(labelText: l10n.incFormDescription),
               maxLength: 500,
               validator: (v) {
-                if (v == null || v.trim().isEmpty) return 'Obrigatório';
+                if (v == null || v.trim().isEmpty) return l10n.requiredField;
                 return null;
               },
             ),
             const SizedBox(height: 8),
             TextFormField(
               controller: _amountCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Valor (R\$)',
+              decoration: InputDecoration(
+                labelText: l10n.incFormAmount,
               ),
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               validator: (v) {
-                if (v == null || v.trim().isEmpty) return 'Obrigatório';
+                if (v == null || v.trim().isEmpty) return l10n.requiredField;
                 final c = parseInputToCents(v);
-                if (c == null || c <= 0) return 'Valor inválido';
+                if (c == null || c <= 0) return l10n.valueInvalid;
                 return null;
               },
             ),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Data do provento'),
+              title: Text(l10n.incFormIncomeDate),
               subtitle: Text(_dmY(_incomeDate)),
               trailing: const Icon(Icons.calendar_today_outlined),
               onTap: _pickDate,
@@ -220,7 +230,7 @@ class _IncomeEditFormState extends ConsumerState<_IncomeEditForm> {
                 padding: EdgeInsets.all(24),
                 child: Center(child: CircularProgressIndicator()),
               ),
-              error: (e, _) => Text(messageFromDio(e) ?? 'Erro'),
+              error: (e, _) => Text(messageFromDio(e, l10n) ?? l10n.incFormCategoriesLoadError),
               data: (list) => IncomeCategoryDropdown(
                 categories: list,
                 value: _categoryId,
@@ -232,8 +242,8 @@ class _IncomeEditFormState extends ConsumerState<_IncomeEditForm> {
             const SizedBox(height: 8),
             TextFormField(
               controller: _notesCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Notas (opcional)',
+              decoration: InputDecoration(
+                labelText: l10n.incFormNotes,
               ),
               maxLines: 3,
               maxLength: 500,
@@ -241,7 +251,7 @@ class _IncomeEditFormState extends ConsumerState<_IncomeEditForm> {
             const SizedBox(height: 24),
             FilledButton(
               onPressed: _submit,
-              child: const Text('Guardar alterações'),
+              child: Text(l10n.saveChanges),
             ),
           ],
         ),

@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import calendar
 import uuid
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
@@ -18,9 +18,21 @@ from app.models.category import Category
 from app.models.expense import Expense
 from app.models.user import User
 from app.schemas.dashboard import ExpenseStatus
-from app.schemas.expense import ExpenseCreate, ExpenseResponse, ExpenseUpdate
+from app.schemas.expense import (
+    ExpenseCreate,
+    ExpenseCreateOutcome,
+    ExpenseResponse,
+    ExpenseUpdate,
+)
 from app.services.expense_share import ExpenseShareValidationError, normalize_expense_share
 from app.services.family_scope import family_peer_user_ids
+from app.services.expense_delete import (
+    ExpenseDeleteScope,
+    ExpenseDeleteTarget,
+    apply_expense_delete,
+    installment_plan_has_paid,
+    propagate_recurring_template_amount,
+)
 from app.services.recurrence import add_months, iter_occurrence_dates
 
 router = APIRouter(prefix="/expenses", tags=["expenses"])
@@ -41,7 +53,12 @@ def _shared_with_label(e: Expense) -> str | None:
     return name if name else su.email
 
 
-def _to_response(e: Expense, viewer_id: uuid.UUID) -> ExpenseResponse:
+def _to_response(
+    e: Expense,
+    viewer_id: uuid.UUID,
+    *,
+    installment_plan_has_paid: bool | None = None,
+) -> ExpenseResponse:
     return ExpenseResponse(
         id=e.id,
         owner_user_id=e.owner_user_id,
@@ -66,6 +83,8 @@ def _to_response(e: Expense, viewer_id: uuid.UUID) -> ExpenseResponse:
         shared_with_label=_shared_with_label(e),
         created_at=e.created_at,
         updated_at=e.updated_at,
+        paid_at=e.paid_at,
+        installment_plan_has_paid=installment_plan_has_paid,
     )
 
 
@@ -78,7 +97,11 @@ def _get_owned(
             joinedload(Expense.category),
             joinedload(Expense.shared_with_user),
         )
-        .where(Expense.id == expense_id, Expense.owner_user_id == owner_id)
+        .where(
+            Expense.id == expense_id,
+            Expense.owner_user_id == owner_id,
+            Expense.deleted_at.is_(None),
+        )
     )
 
 
@@ -95,6 +118,7 @@ def _get_visible_in_family(
         .where(
             Expense.id == expense_id,
             Expense.owner_user_id.in_(peer_ids),
+            Expense.deleted_at.is_(None),
         )
     )
 
@@ -114,6 +138,7 @@ def _ensure_recurring_generated(db: Session, user: User, until: date) -> None:
             Expense.installment_total == 1,
             Expense.installment_number == 1,
             Expense.recurring_frequency.isnot(None),
+            Expense.deleted_at.is_(None),
         )
     ).all()
     changed = False
@@ -178,6 +203,7 @@ def list_expenses(
     month: Annotated[int | None, Query(ge=1, le=12)] = None,
     category_id: Annotated[uuid.UUID | None, Query()] = None,
     status_filter: Annotated[ExpenseStatus | None, Query(alias="status")] = None,
+    installment_group_id: Annotated[uuid.UUID | None, Query()] = None,
 ) -> list[ExpenseResponse]:
     if year is not None and month is not None:
         _, end = _month_bounds(year, month)
@@ -190,7 +216,10 @@ def list_expenses(
             joinedload(Expense.category),
             joinedload(Expense.shared_with_user),
         )
-        .where(Expense.owner_user_id.in_(peer_ids))
+        .where(
+            Expense.owner_user_id.in_(peer_ids),
+            Expense.deleted_at.is_(None),
+        )
         .order_by(Expense.expense_date.desc(), Expense.created_at.desc())
     )
     if year is not None and month is not None:
@@ -200,17 +229,19 @@ def list_expenses(
         stmt = stmt.where(Expense.category_id == category_id)
     if status_filter is not None:
         stmt = stmt.where(Expense.status == status_filter.value)
+    if installment_group_id is not None:
+        stmt = stmt.where(Expense.installment_group_id == installment_group_id)
 
     rows = db.scalars(stmt).unique().all()
     return [_to_response(e, user.id) for e in rows]
 
 
-@router.post("", response_model=ExpenseResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ExpenseCreateOutcome, status_code=status.HTTP_201_CREATED)
 def create_expense(
     body: ExpenseCreate,
     user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
-) -> ExpenseResponse:
+) -> ExpenseCreateOutcome:
     _ensure_category(db, body.category_id)
     try:
         is_s, sw = normalize_expense_share(
@@ -253,7 +284,10 @@ def create_expense(
         db.refresh(e)
         e = _get_owned(db, e.id, user.id)
         assert e is not None
-        return _to_response(e, user.id)
+        return ExpenseCreateOutcome(
+            installment_group_id=None,
+            expenses=[_to_response(e, user.id)],
+        )
 
     group_id = uuid.uuid4()
     first_id: uuid.UUID | None = None
@@ -290,9 +324,23 @@ def create_expense(
             detail="Dados inválidos (categoria ou referência)",
         ) from None
     assert first_id is not None
-    e = _get_owned(db, first_id, user.id)
-    assert e is not None
-    return _to_response(e, user.id)
+    siblings = db.scalars(
+        select(Expense)
+        .options(
+            joinedload(Expense.category),
+            joinedload(Expense.shared_with_user),
+        )
+        .where(
+            Expense.owner_user_id == user.id,
+            Expense.installment_group_id == group_id,
+            Expense.deleted_at.is_(None),
+        )
+        .order_by(Expense.installment_number.asc())
+    ).unique().all()
+    return ExpenseCreateOutcome(
+        installment_group_id=group_id,
+        expenses=[_to_response(x, user.id) for x in siblings],
+    )
 
 
 @router.get("/{expense_id}", response_model=ExpenseResponse)
@@ -304,7 +352,12 @@ def get_expense(
     e = _get_visible_in_family(db, expense_id, user.id)
     if e is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Despesa não encontrada")
-    return _to_response(e, user.id)
+    has_paid: bool | None = None
+    if e.installment_group_id is not None:
+        has_paid = installment_plan_has_paid(
+            db, e.owner_user_id, e.installment_group_id
+        )
+    return _to_response(e, user.id, installment_plan_has_paid=has_paid)
 
 
 @router.put("/{expense_id}", response_model=ExpenseResponse)
@@ -344,10 +397,27 @@ def update_expense(
     if "category_id" in data and data["category_id"] is not None:
         _ensure_category(db, data["category_id"])
 
+    old_amount = int(e.amount_cents)
+    series_for_propagate: uuid.UUID | None = None
+    if (
+        e.recurring_frequency is not None
+        and e.recurring_series_id is not None
+        and "amount_cents" in data
+    ):
+        series_for_propagate = e.recurring_series_id
+
     for k, v in data.items():
         setattr(e, k, v)
 
     try:
+        if series_for_propagate is not None and int(e.amount_cents) != old_amount:
+            propagate_recurring_template_amount(
+                db,
+                user_id=user.id,
+                series_id=series_for_propagate,
+                amount_cents=int(e.amount_cents),
+                today=date.today(),
+            )
         db.commit()
     except IntegrityError:
         db.rollback()
@@ -366,11 +436,40 @@ def delete_expense(
     expense_id: uuid.UUID,
     user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
+    delete_target: Annotated[ExpenseDeleteTarget, Query()] = ExpenseDeleteTarget.series,
+    delete_scope: Annotated[ExpenseDeleteScope, Query()] = ExpenseDeleteScope.all,
 ) -> None:
     e = _get_owned(db, expense_id, user.id)
     if e is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Despesa não encontrada")
-    db.delete(e)
+    if e.installment_group_id is not None and delete_target != ExpenseDeleteTarget.series:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Parcelamento: use delete_target=series",
+        )
+    if (
+        e.recurring_series_id is not None
+        and e.recurring_frequency is not None
+        and delete_target == ExpenseDeleteTarget.occurrence
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Esta linha é a âncora da recorrência; não pode ser eliminada como "
+                "ocorrência isolada. Pare a recorrência na edição ou elimine a série."
+            ),
+        )
+    now = datetime.now(UTC)
+    today = date.today()
+    apply_expense_delete(
+        db,
+        user_id=user.id,
+        e=e,
+        target=delete_target,
+        scope=delete_scope,
+        now=now,
+        today=today,
+    )
     db.commit()
 
 
@@ -388,7 +487,9 @@ def pay_expense(
             status_code=status.HTTP_409_CONFLICT,
             detail="Só despesas pendentes podem ser quitadas",
         )
+    now = datetime.now(UTC)
     e.status = ExpenseStatus.PAID.value
+    e.paid_at = now
     db.commit()
     db.refresh(e)
     e = _get_owned(db, expense_id, user.id)

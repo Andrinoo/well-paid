@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/format/brl_cents.dart';
 import '../../../core/format/parse_brl_input.dart';
+import '../../../core/l10n/context_l10n.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/theme/well_paid_colors.dart';
 import '../../dashboard/application/dashboard_providers.dart';
@@ -22,46 +23,53 @@ class ExpenseEditPage extends ConsumerWidget {
     final async = ref.watch(expenseDetailProvider(expenseId));
 
     return async.when(
-      loading: () => Scaffold(
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.close),
-            onPressed: () => context.pop(),
+      loading: () {
+        final l10n = context.l10n;
+        return Scaffold(
+          appBar: AppBar(
+            leading: IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: () => context.pop(),
+            ),
+            title: Text(l10n.editExpenseTitle),
           ),
-          title: const Text('Editar despesa'),
-        ),
-        body: const Center(child: CircularProgressIndicator()),
-      ),
-      error: (e, _) => Scaffold(
-        appBar: AppBar(
-          leading: IconButton(
-            icon: const Icon(Icons.close),
-            onPressed: () => context.pop(),
+          body: const Center(child: CircularProgressIndicator()),
+        );
+      },
+      error: (e, _) {
+        final l10n = context.l10n;
+        return Scaffold(
+          appBar: AppBar(
+            leading: IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: () => context.pop(),
+            ),
+            title: Text(l10n.editExpenseTitle),
           ),
-          title: const Text('Editar despesa'),
-        ),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Text(messageFromDio(e) ?? 'Erro.'),
+          body: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(messageFromDio(e, l10n) ?? l10n.expenseLoadError),
+            ),
           ),
-        ),
-      ),
+        );
+      },
       data: (expense) {
         if (!expense.isMine) {
+          final l10n = context.l10n;
           return Scaffold(
             appBar: AppBar(
               leading: IconButton(
                 icon: const Icon(Icons.close),
                 onPressed: () => context.pop(),
               ),
-              title: const Text('Editar despesa'),
+              title: Text(l10n.editExpenseTitle),
             ),
             body: Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Text(
-                  'Só o titular desta despesa a pode editar.',
+                  l10n.expenseEditOwnerOnly,
                   textAlign: TextAlign.center,
                   style: TextStyle(color: WellPaidColors.navy.withValues(alpha: 0.85)),
                 ),
@@ -153,11 +161,12 @@ class _ExpenseEditFormState extends ConsumerState<_ExpenseEditForm> {
   }
 
   Future<void> _submit() async {
+    final l10n = context.l10n;
     if (!_formKey.currentState!.validate()) return;
     final cents = parseInputToCents(_amountCtrl.text);
     if (cents == null || cents <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Valor inválido.')),
+        SnackBar(content: Text(l10n.valueInvalid)),
       );
       return;
     }
@@ -182,14 +191,14 @@ class _ExpenseEditFormState extends ConsumerState<_ExpenseEditForm> {
       ref.invalidate(dashboardOverviewProvider);
       if (mounted) {
         messenger.showSnackBar(
-          const SnackBar(content: Text('Alterações guardadas.')),
+          SnackBar(content: Text(l10n.expenseChangesSaved)),
         );
         context.pop();
       }
     } catch (e) {
       if (mounted) {
         messenger.showSnackBar(
-          SnackBar(content: Text(messageFromDio(e) ?? 'Erro ao guardar.')),
+          SnackBar(content: Text(messageFromDio(e, l10n) ?? l10n.expenseSaveError)),
         );
       }
     }
@@ -197,6 +206,7 @@ class _ExpenseEditFormState extends ConsumerState<_ExpenseEditForm> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final cats = ref.watch(categoriesProvider);
 
     return Scaffold(
@@ -205,7 +215,7 @@ class _ExpenseEditFormState extends ConsumerState<_ExpenseEditForm> {
           icon: const Icon(Icons.close),
           onPressed: () => context.pop(),
         ),
-        title: const Text('Editar despesa'),
+        title: Text(l10n.editExpenseTitle),
       ),
       body: Form(
         key: _formKey,
@@ -226,9 +236,41 @@ class _ExpenseEditFormState extends ConsumerState<_ExpenseEditForm> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            'Parcela ${widget.expense.installmentNumber} de '
-                            '${widget.expense.installmentTotal}. '
-                            'Alterações aplicam-se só a esta linha.',
+                            l10n.expEditInstallmentBanner(
+                              widget.expense.installmentNumber,
+                              widget.expense.installmentTotal,
+                            ),
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: WellPaidColors.navy,
+                                  height: 1.35,
+                                ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            if (widget.expense.isRecurringAnchor &&
+                !widget.expense.isInstallmentPlan)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Material(
+                  color: WellPaidColors.navy.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.autorenew,
+                          color: WellPaidColors.navy.withValues(alpha: 0.75),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            l10n.expEditRecurringAnchorBanner,
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                   color: WellPaidColors.navy,
                                   height: 1.35,
@@ -242,41 +284,41 @@ class _ExpenseEditFormState extends ConsumerState<_ExpenseEditForm> {
               ),
             TextFormField(
               controller: _descCtrl,
-              decoration: const InputDecoration(labelText: 'Descrição'),
+              decoration: InputDecoration(labelText: l10n.expEditDescription),
               textCapitalization: TextCapitalization.sentences,
               maxLength: 500,
               validator: (v) {
-                if (v == null || v.trim().isEmpty) return 'Obrigatório';
+                if (v == null || v.trim().isEmpty) return l10n.requiredField;
                 return null;
               },
             ),
             const SizedBox(height: 8),
             TextFormField(
               controller: _amountCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Valor (R\$)',
-                hintText: 'ex. 12,50',
+              decoration: InputDecoration(
+                labelText: l10n.expEditAmount,
+                hintText: l10n.expFormAmountHint,
               ),
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               validator: (v) {
-                if (v == null || v.trim().isEmpty) return 'Obrigatório';
+                if (v == null || v.trim().isEmpty) return l10n.requiredField;
                 final c = parseInputToCents(v);
-                if (c == null || c <= 0) return 'Valor inválido';
+                if (c == null || c <= 0) return l10n.valueInvalid;
                 return null;
               },
             ),
             const SizedBox(height: 16),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Data da despesa'),
+              title: Text(l10n.expEditExpenseDate),
               subtitle: Text(_dmY(_expenseDate)),
               trailing: const Icon(Icons.calendar_today_outlined),
               onTap: _pickExpenseDate,
             ),
             ListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Vencimento (opcional)'),
-              subtitle: Text(_dueDate == null ? '—' : _dmY(_dueDate!)),
+              title: Text(l10n.expEditDueOptional),
+              subtitle: Text(_dueDate == null ? l10n.noneDash : _dmY(_dueDate!)),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -292,12 +334,18 @@ class _ExpenseEditFormState extends ConsumerState<_ExpenseEditForm> {
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
-              decoration: const InputDecoration(labelText: 'Estado'),
+              decoration: InputDecoration(labelText: l10n.expEditState),
               // ignore: deprecated_member_use
               value: _status,
-              items: const [
-                DropdownMenuItem(value: 'pending', child: Text('Pendente')),
-                DropdownMenuItem(value: 'paid', child: Text('Paga')),
+              items: [
+                DropdownMenuItem(
+                  value: 'pending',
+                  child: Text(l10n.expenseStatusPending),
+                ),
+                DropdownMenuItem(
+                  value: 'paid',
+                  child: Text(l10n.expenseStatusPaid),
+                ),
               ],
               onChanged: (v) {
                 if (v != null) setState(() => _status = v);
@@ -306,19 +354,28 @@ class _ExpenseEditFormState extends ConsumerState<_ExpenseEditForm> {
             if (!widget.expense.isInstallmentPlan) ...[
               const SizedBox(height: 12),
               DropdownButtonFormField<String?>(
-                decoration: const InputDecoration(
-                  labelText: 'Recorrência (metadado)',
+                decoration: InputDecoration(
+                  labelText: l10n.expEditRecurrenceMeta,
                 ),
                 // ignore: deprecated_member_use
                 value: _recurring,
-                items: const [
+                items: [
                   DropdownMenuItem<String?>(
                     value: null,
-                    child: Text('Nenhuma'),
+                    child: Text(l10n.expEditRecurrenceNone),
                   ),
-                  DropdownMenuItem(value: 'monthly', child: Text('Mensal')),
-                  DropdownMenuItem(value: 'weekly', child: Text('Semanal')),
-                  DropdownMenuItem(value: 'yearly', child: Text('Anual')),
+                  DropdownMenuItem(
+                    value: 'monthly',
+                    child: Text(l10n.expFormFreqMonthly),
+                  ),
+                  DropdownMenuItem(
+                    value: 'weekly',
+                    child: Text(l10n.expFormFreqWeekly),
+                  ),
+                  DropdownMenuItem(
+                    value: 'yearly',
+                    child: Text(l10n.expFormFreqYearly),
+                  ),
                 ],
                 onChanged: (v) => setState(() => _recurring = v),
               ),
@@ -334,10 +391,10 @@ class _ExpenseEditFormState extends ConsumerState<_ExpenseEditForm> {
               error: (e, _) => Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(messageFromDio(e) ?? 'Erro nas categorias.'),
+                  Text(messageFromDio(e, l10n) ?? l10n.expFormCategoriesLoadError),
                   TextButton(
                     onPressed: () => ref.invalidate(categoriesProvider),
-                    child: const Text('Tentar novamente'),
+                    child: Text(l10n.tryAgain),
                   ),
                 ],
               ),
@@ -359,7 +416,7 @@ class _ExpenseEditFormState extends ConsumerState<_ExpenseEditForm> {
             const SizedBox(height: 28),
             FilledButton(
               onPressed: _submit,
-              child: const Text('Guardar alterações'),
+              child: Text(l10n.saveChanges),
             ),
           ],
         ),

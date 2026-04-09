@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../../../core/network/dio_client.dart';
 import '../domain/category_option.dart';
+import '../domain/expense_delete_options.dart';
 import '../domain/expense_item.dart';
 import 'expenses_local_store.dart';
 
@@ -49,6 +50,7 @@ class ExpensesRepository {
     int? month,
     String? status,
     String? categoryId,
+    String? installmentGroupId,
   }) async {
     await _flushQueue();
     try {
@@ -57,6 +59,9 @@ class ExpensesRepository {
       if (month != null) q['month'] = month;
       if (status != null && status.isNotEmpty) q['status'] = status;
       if (categoryId != null) q['category_id'] = categoryId;
+      if (installmentGroupId != null) {
+        q['installment_group_id'] = installmentGroupId;
+      }
 
       final res = await _dio.get<List<dynamic>>(
         '/expenses',
@@ -66,6 +71,7 @@ class ExpensesRepository {
       final parsed = list
           .map((e) => ExpenseItem.fromJson(e as Map<String, dynamic>))
           .toList();
+      _sortExpensesNewestFirst(parsed);
       _local.upsertMany(parsed);
       return parsed;
     } on DioException catch (e, st) {
@@ -84,12 +90,17 @@ class ExpensesRepository {
     }
   }
 
+  Future<ExpenseItem> _fetchExpenseFromServerNoFlush(String id) async {
+    final res = await _dio.get<Map<String, dynamic>>('/expenses/$id');
+    final item = ExpenseItem.fromJson(res.data!);
+    _local.upsertOne(item);
+    return item;
+  }
+
   Future<ExpenseItem> getExpense(String id) async {
     try {
-      final res = await _dio.get<Map<String, dynamic>>('/expenses/$id');
-      final item = ExpenseItem.fromJson(res.data!);
-      _local.upsertOne(item);
-      return item;
+      await _flushQueue();
+      return await _fetchExpenseFromServerNoFlush(id);
     } on DioException catch (e, st) {
       logDioException(e, st);
       final cached = _local.getById(id);
@@ -98,7 +109,7 @@ class ExpensesRepository {
     }
   }
 
-  Future<ExpenseItem> createExpense({
+  Future<List<ExpenseItem>> createExpense({
     required String description,
     required int amountCents,
     required DateTime expenseDate,
@@ -127,10 +138,16 @@ class ExpensesRepository {
         '/expenses',
         data: body,
       );
-      final item = ExpenseItem.fromJson(res.data!);
-      _local.upsertOne(item);
+      final data = res.data!;
+      final rawList = data['expenses'] as List<dynamic>? ?? [data];
+      final list = rawList
+          .map((e) => ExpenseItem.fromJson(e as Map<String, dynamic>))
+          .toList();
+      for (final item in list) {
+        _local.upsertOne(item);
+      }
       await _flushQueue();
-      return item;
+      return list;
     } on DioException catch (e, st) {
       logDioException(e, st);
       final now = DateTime.now();
@@ -157,6 +174,7 @@ class ExpensesRepository {
         installmentNumber: 1,
         installmentGroupId: null,
         recurringFrequency: recurringFrequency,
+        recurringSeriesId: null,
         createdAt: now,
         updatedAt: now,
       );
@@ -166,7 +184,7 @@ class ExpensesRepository {
         'local_id': localId,
         'body': body,
       });
-      return localItem;
+      return [localItem];
     }
   }
 
@@ -232,16 +250,105 @@ class ExpensesRepository {
     }
   }
 
-  Future<void> deleteExpense(String id) async {
-    try {
-      await _dio.delete<void>('/expenses/$id');
+  void _removeExpenseClusterFromCache(String deletedId, ExpenseItem? anchor) {
+    _local.removeById(deletedId);
+    if (anchor == null) return;
+    final gid = anchor.installmentGroupId;
+    final sid = anchor.recurringSeriesId;
+    if (gid == null && sid == null) return;
+    for (final other in _local.readAll()) {
+      if (other.id == deletedId) continue;
+      if (gid != null && other.installmentGroupId == gid) {
+        _local.removeById(other.id);
+      } else if (sid != null && other.recurringSeriesId == sid) {
+        _local.removeById(other.id);
+      }
+    }
+  }
+
+  Future<void> _applyDeleteCacheAfterSuccess(
+    String id,
+    ExpenseItem? cached,
+    ExpenseDeleteTarget target,
+    ExpenseDeleteScope scope,
+  ) async {
+    if (cached == null) {
       _local.removeById(id);
+      return;
+    }
+    if (cached.installmentGroupId != null) {
+      if (scope == ExpenseDeleteScope.all) {
+        _removeExpenseClusterFromCache(id, cached);
+      } else {
+        _local.clearExpenseCache();
+      }
+      return;
+    }
+    if (cached.recurringSeriesId != null) {
+      if (target == ExpenseDeleteTarget.occurrence) {
+        if (cached.status == 'paid') {
+          try {
+            await _fetchExpenseFromServerNoFlush(id);
+          } catch (_) {
+            _local.clearExpenseCache();
+          }
+        } else {
+          _local.removeById(id);
+        }
+        return;
+      }
+      _local.clearExpenseCache();
+      return;
+    }
+    _local.removeById(id);
+  }
+
+  void _applyDeleteCacheAfterQueued(
+    String id,
+    ExpenseItem? cached,
+    ExpenseDeleteTarget target,
+    ExpenseDeleteScope scope,
+  ) {
+    if (cached == null) {
+      _local.clearExpenseCache();
+      return;
+    }
+    if (cached.installmentGroupId != null) {
+      _local.clearExpenseCache();
+      return;
+    }
+    if (cached.recurringSeriesId != null) {
+      if (target == ExpenseDeleteTarget.occurrence && cached.status == 'pending') {
+        _local.removeById(id);
+        return;
+      }
+      _local.clearExpenseCache();
+      return;
+    }
+    _local.removeById(id);
+  }
+
+  Future<void> deleteExpense(
+    String id, {
+    ExpenseDeleteTarget target = ExpenseDeleteTarget.series,
+    ExpenseDeleteScope scope = ExpenseDeleteScope.all,
+  }) async {
+    final cached = _local.getById(id);
+    final qp = <String, dynamic>{
+      'delete_target': expenseDeleteTargetApi(target),
+      'delete_scope': expenseDeleteScopeApi(scope),
+    };
+    try {
+      await _dio.delete<void>('/expenses/$id', queryParameters: qp);
+      await _applyDeleteCacheAfterSuccess(id, cached, target, scope);
     } on DioException catch (e, st) {
       logDioException(e, st);
-      _local.removeById(id);
+      _applyDeleteCacheAfterQueued(id, cached, target, scope);
       await _local.enqueue({
         'type': 'delete',
         'id': id,
+        'delete_target': qp['delete_target'],
+        'delete_scope': qp['delete_scope'],
       });
     }
   }
@@ -257,10 +364,12 @@ class ExpensesRepository {
       logDioException(e, st);
       final cached = _local.getById(id);
       if (cached != null) {
+        final now = DateTime.now().toUtc();
         final paid = cached.copyWith(
           status: 'paid',
           syncStatus: 1,
-          updatedAt: DateTime.now(),
+          updatedAt: now,
+          paidAt: now,
         );
         _local.upsertOne(paid);
       }
@@ -289,13 +398,19 @@ class ExpensesRepository {
             '/expenses',
             data: op['body'],
           );
-          final created = ExpenseItem.fromJson(res.data!);
+          final data = res.data!;
+          final rawList = data['expenses'] as List<dynamic>? ?? [data];
+          final createdList = rawList
+              .map((e) => ExpenseItem.fromJson(e as Map<String, dynamic>))
+              .toList();
           final localId = op['local_id'] as String?;
-          if (localId != null) {
+          if (localId != null && createdList.isNotEmpty) {
             _local.removeById(localId);
-            idMap[localId] = created.id;
+            idMap[localId] = createdList.first.id;
           }
-          _local.upsertOne(created);
+          for (final item in createdList) {
+            _local.upsertOne(item);
+          }
           continue;
         }
         if (opId == null || opId.startsWith('local_')) {
@@ -316,8 +431,24 @@ class ExpensesRepository {
           continue;
         }
         if (type == 'delete') {
-          await _dio.delete<void>('/expenses/$opId');
-          _local.removeById(opId);
+          final dt = op['delete_target'] as String?;
+          final ds = op['delete_scope'] as String?;
+          final q = <String, dynamic>{
+            if (dt != null && dt.isNotEmpty) 'delete_target': dt,
+            if (ds != null && ds.isNotEmpty) 'delete_scope': ds,
+          };
+          final cachedBefore = _local.getById(opId);
+          await _dio.delete<void>(
+            '/expenses/$opId',
+            queryParameters: q.isEmpty ? null : q,
+          );
+          final t = dt == 'occurrence'
+              ? ExpenseDeleteTarget.occurrence
+              : ExpenseDeleteTarget.series;
+          final s = ds == 'future_unpaid'
+              ? ExpenseDeleteScope.futureUnpaid
+              : ExpenseDeleteScope.all;
+          await _applyDeleteCacheAfterSuccess(opId, cachedBefore, t, s);
           continue;
         }
       } on DioException {
@@ -341,6 +472,18 @@ class ExpensesRepository {
       if (categoryId != null && e.categoryId != categoryId) return false;
       return true;
     }).toList()
-      ..sort((a, b) => b.expenseDate.compareTo(a.expenseDate));
+      ..sort((a, b) {
+        final byDate = b.expenseDate.compareTo(a.expenseDate);
+        if (byDate != 0) return byDate;
+        return b.createdAt.compareTo(a.createdAt);
+      });
   }
+}
+
+void _sortExpensesNewestFirst(List<ExpenseItem> items) {
+  items.sort((a, b) {
+    final byDate = b.expenseDate.compareTo(a.expenseDate);
+    if (byDate != 0) return byDate;
+    return b.createdAt.compareTo(a.createdAt);
+  });
 }

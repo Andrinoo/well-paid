@@ -72,6 +72,21 @@ class GoalSummaryItem(BaseModel):
     )
 
 
+class DashboardCashflowResponse(BaseModel):
+    """Série mensal para o gráfico Histórico mensal (§6.2.1 Ordems). Tudo em centavos inteiros."""
+
+    dynamic: bool = Field(description="Se true, o intervalo histórico foi fixado pelo servidor")
+    forecast_months: int = Field(ge=1, le=12)
+    months: list[PeriodMonth] = Field(
+        description="Meses civis na ordem cronológica (histórico + extensão de previsão)"
+    )
+    income_cents: list[int] = Field(description="Proventos por mês (paralelo a months)")
+    expense_paid_cents: list[int] = Field(description="Despesas pagas por mês")
+    expense_forecast_cents: list[int] = Field(
+        description="Despesas pendentes por expense_date; 0 em meses antes do mês civil atual"
+    )
+
+
 class DashboardOverviewResponse(BaseModel):
     """Resposta agregada principal: um round-trip para o ecrã Dashboard."""
 
@@ -103,4 +118,14 @@ class DashboardOverviewResponse(BaseModel):
     goals_preview: list[GoalSummaryItem] = Field(
         default_factory=list,
         description="Metas ativas (curto); vazio com TODO no cliente se API /goals ainda não existir",
+    )
+    emergency_reserve_balance_cents: int = Field(
+        default=0,
+        ge=0,
+        description="Saldo acumulado da reserva de emergência (acréscimos mensais automáticos)",
+    )
+    emergency_reserve_monthly_target_cents: int = Field(
+        default=0,
+        ge=0,
+        description="Meta mensal configurada para a reserva (centavos)",
     )

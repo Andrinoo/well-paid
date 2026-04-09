@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/well_paid_colors.dart';
 
-/// Logo em `assets/images/well_paid_logo.png` (fundo preto da arte).
+/// Logo da tela de autenticação.
 class WellPaidLogo extends StatelessWidget {
   const WellPaidLogo({
     super.key,
@@ -23,7 +23,7 @@ class WellPaidLogo extends StatelessWidget {
           maxWidth: maxWidth,
         ),
         child: Image.asset(
-          'assets/images/well_paid_logo.png',
+          'assets/images/login_logo.png',
           fit: BoxFit.contain,
           alignment: Alignment.center,
           filterQuality: FilterQuality.high,
