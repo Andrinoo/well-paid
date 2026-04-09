@@ -25,6 +25,9 @@ Thumbs.db
 /Text do think
 /Nao usar no projeto somente para exemplo/
 
+# Cópia solta na raiz; ícones Android oficiais em mobile/android/
+/android/
+
 # Python / backend
 backend/.venv/
 **/__pycache__/
