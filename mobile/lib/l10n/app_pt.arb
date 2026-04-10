@@ -63,6 +63,25 @@
   "authConfirmPasswordRequired": "Confirme a senha",
   "authPasswordMismatch": "As senhas não coincidem",
   "authRegisterButton": "Registar",
+  "authVerifyEmailTitle": "Confirmar e-mail",
+  "authVerifyEmailSubtitle": "Introduza o código de 6 dígitos que enviámos para o seu e-mail.",
+  "authVerifyEmailFromLink": "A confirmar o seu e-mail…",
+  "authVerificationCodeLabel": "Código",
+  "authVerificationCodeHint": "000000",
+  "authVerificationCodeError": "Introduza os 6 dígitos",
+  "authVerifyEmailButton": "Confirmar e entrar",
+  "authResendVerification": "Reenviar código",
+  "authVerifyEmailSuccess": "E-mail confirmado. Bem-vindo!",
+  "authVerifyEmailError": "Não foi possível confirmar",
+  "authResendVerificationError": "Não foi possível reenviar",
+  "authVerifyEmailAction": "Confirmar e-mail",
+  "authDevVerificationHint": "Token (link):\n{token}\n\nCódigo:\n{code}",
+  "@authDevVerificationHint": {
+    "placeholders": {
+      "token": {"type": "String"},
+      "code": {"type": "String"}
+    }
+  },
   "authAlreadyHaveAccount": "Já tenho conta — entrar",
   "authEmailRequired": "Informe o e-mail",
   "authEmailInvalid": "E-mail inválido",

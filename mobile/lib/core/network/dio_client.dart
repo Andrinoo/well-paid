@@ -46,6 +46,8 @@ bool _skip401Refresh(RequestOptions o) {
   final path = o.uri.path;
   return path.endsWith('/auth/login') ||
       path.endsWith('/auth/register') ||
+      path.endsWith('/auth/verify-email') ||
+      path.endsWith('/auth/resend-verification') ||
       path.endsWith('/auth/refresh') ||
       path.endsWith('/auth/logout') ||
       path.endsWith('/auth/forgot-password') ||

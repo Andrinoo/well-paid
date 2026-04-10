@@ -1,6 +1,7 @@
 import uuid
+from datetime import datetime
 
-from sqlalchemy import Boolean, String
+from sqlalchemy import Boolean, DateTime, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -18,12 +19,20 @@ class User(Base, TimestampMixin):
     full_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
     phone: Mapped[str | None] = mapped_column(String(32), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    email_verified_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     refresh_tokens: Mapped[list["RefreshToken"]] = relationship(
         "RefreshToken", back_populates="user", cascade="all, delete-orphan"
     )
     password_reset_tokens: Mapped[list["PasswordResetToken"]] = relationship(
         "PasswordResetToken",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+    email_verification_tokens: Mapped[list["EmailVerificationToken"]] = relationship(
+        "EmailVerificationToken",
         back_populates="user",
         cascade="all, delete-orphan",
     )

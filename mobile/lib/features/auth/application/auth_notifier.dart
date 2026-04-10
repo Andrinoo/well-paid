@@ -4,6 +4,7 @@ import '../../../core/network/network_providers.dart';
 import '../../../core/storage/token_storage.dart';
 import '../../app_lock/application/app_lock_notifier.dart';
 import '../data/auth_repository.dart';
+import '../domain/token_pair.dart';
 import 'auth_state.dart';
 import 'router_refresh.dart';
 
@@ -62,18 +63,22 @@ class AuthNotifier extends StateNotifier<AuthState> {
     _ref.read(routerRefreshProvider).ping();
   }
 
-  Future<void> register({
+  Future<RegisterResult> register({
     required String email,
     required String password,
     String? fullName,
     String? phone,
   }) async {
-    final pair = await _repository.register(
+    return _repository.register(
       email: email,
       password: password,
       fullName: fullName,
       phone: phone,
     );
+  }
+
+  /// Após `POST /auth/verify-email` — grava tokens e entra na sessão.
+  Future<void> completeEmailVerification(TokenPair pair) async {
     await _storage.writePair(
       accessToken: pair.accessToken,
       refreshToken: pair.refreshToken,

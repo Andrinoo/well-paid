@@ -117,6 +117,10 @@ class Settings(BaseSettings):
     mail_from: str | None = None
     # Quando true e SMTP não configurado, regista o token de reset nos logs (só para desenvolvimento).
     password_reset_log_token: bool = False
+    # Link na mensagem de confirmação de e-mail (deep link ou URL HTTPS). Vazio = não incluir link no e-mail.
+    email_verification_link_base: str | None = None
+    # Só desenvolvimento: regista código e token de verificação nos logs se o e-mail não for enviado.
+    email_verification_log_token: bool = False
 
     @model_validator(mode="before")
     @classmethod
@@ -124,7 +128,13 @@ class Settings(BaseSettings):
         """Evita SMTP_HOST= no .env ser lido como '' e parecer 'definido' em logs."""
         if not isinstance(data, dict):
             return data
-        for key in ("smtp_host", "smtp_user", "smtp_password", "mail_from"):
+        for key in (
+            "smtp_host",
+            "smtp_user",
+            "smtp_password",
+            "mail_from",
+            "email_verification_link_base",
+        ):
             v = data.get(key)
             if isinstance(v, str) and not v.strip():
                 data[key] = None

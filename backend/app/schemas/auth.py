@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, model_validator
 
 
 class RegisterRequest(BaseModel):
@@ -17,6 +17,43 @@ class TokenPairResponse(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
+
+
+class RegisterResponse(BaseModel):
+    message: str
+    email: str
+    dev_verification_token: str | None = None
+    dev_verification_code: str | None = None
+
+
+class VerifyEmailRequest(BaseModel):
+    email: EmailStr | None = None
+    token: str | None = Field(default=None, max_length=512)
+    code: str | None = Field(default=None, min_length=6, max_length=6)
+
+    @model_validator(mode="after")
+    def token_or_code_with_email(self) -> VerifyEmailRequest:
+        tok = (self.token or "").strip()
+        cod = (self.code or "").strip()
+        if tok:
+            self.token = tok
+            return self
+        if cod and self.email is not None:
+            self.code = cod
+            return self
+        raise ValueError(
+            "Informe o token do link de confirmação ou o e-mail juntamente com o código de 6 dígitos."
+        )
+
+
+class ResendVerificationRequest(BaseModel):
+    email: EmailStr
+
+
+class ResendVerificationResponse(BaseModel):
+    message: str
+    dev_verification_token: str | None = None
+    dev_verification_code: str | None = None
 
 
 class RefreshRequest(BaseModel):

@@ -204,6 +204,48 @@ class AppLocalizationsPt extends AppLocalizations {
   String get authRegisterButton => 'Registar';
 
   @override
+  String get authVerifyEmailTitle => 'Confirmar e-mail';
+
+  @override
+  String get authVerifyEmailSubtitle =>
+      'Introduza o código de 6 dígitos que enviámos para o seu e-mail.';
+
+  @override
+  String get authVerifyEmailFromLink => 'A confirmar o seu e-mail…';
+
+  @override
+  String get authVerificationCodeLabel => 'Código';
+
+  @override
+  String get authVerificationCodeHint => '000000';
+
+  @override
+  String get authVerificationCodeError => 'Introduza os 6 dígitos';
+
+  @override
+  String get authVerifyEmailButton => 'Confirmar e entrar';
+
+  @override
+  String get authResendVerification => 'Reenviar código';
+
+  @override
+  String get authVerifyEmailSuccess => 'E-mail confirmado. Bem-vindo!';
+
+  @override
+  String get authVerifyEmailError => 'Não foi possível confirmar';
+
+  @override
+  String get authResendVerificationError => 'Não foi possível reenviar';
+
+  @override
+  String get authVerifyEmailAction => 'Confirmar e-mail';
+
+  @override
+  String authDevVerificationHint(String token, String code) {
+    return 'Token (link):\n$token\n\nCódigo:\n$code';
+  }
+
+  @override
   String get authAlreadyHaveAccount => 'Já tenho conta — entrar';
 
   @override

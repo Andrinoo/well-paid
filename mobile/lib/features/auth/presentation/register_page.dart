@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -45,13 +46,51 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     final messenger = ScaffoldMessenger.of(context);
     final l10n = context.l10n;
     try {
-      await ref.read(authNotifierProvider.notifier).register(
+      final r = await ref.read(authNotifierProvider.notifier).register(
             email: _email.text.trim(),
             password: _password.text,
             fullName: _name.text.trim().isEmpty ? null : _name.text.trim(),
             phone: _phone.text.trim().isEmpty ? null : _phone.text.trim(),
           );
-      if (mounted) context.go('/home');
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text(r.message)));
+      final devT = r.devVerificationToken;
+      final devC = r.devVerificationCode;
+      if (devT != null &&
+          devT.isNotEmpty &&
+          devC != null &&
+          devC.isNotEmpty) {
+        await showDialog<void>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(l10n.authDevModeTitle),
+            content: SelectableText(l10n.authDevVerificationHint(devT, devC)),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: '$devT\n$devC'));
+                  Navigator.pop(ctx);
+                  messenger.showSnackBar(
+                    SnackBar(content: Text(l10n.tokenCopied)),
+                  );
+                },
+                child: Text(l10n.copy),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(l10n.ok),
+              ),
+            ],
+          ),
+        );
+      }
+      if (!mounted) return;
+      var loc =
+          '/verify-email?email=${Uri.encodeComponent(r.email)}';
+      if (devT != null && devT.isNotEmpty) {
+        loc += '&token=${Uri.encodeComponent(devT)}';
+      }
+      context.go(loc);
     } on DioException catch (e, st) {
       logDioException(e, st);
       messenger.showSnackBar(

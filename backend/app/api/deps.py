@@ -46,4 +46,9 @@ def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Usuário inválido",
         )
+    if user.email_verified_at is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Confirme o seu e-mail antes de continuar. Use o código enviado ou solicite um novo e-mail.",
+        )
     return user

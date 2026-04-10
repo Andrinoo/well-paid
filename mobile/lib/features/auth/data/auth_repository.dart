@@ -3,6 +3,32 @@ import 'package:dio/dio.dart';
 import '../../../core/config/api_config.dart';
 import '../domain/token_pair.dart';
 
+class RegisterResult {
+  RegisterResult({
+    required this.message,
+    required this.email,
+    this.devVerificationToken,
+    this.devVerificationCode,
+  });
+
+  final String message;
+  final String email;
+  final String? devVerificationToken;
+  final String? devVerificationCode;
+}
+
+class ResendVerificationResult {
+  ResendVerificationResult({
+    required this.message,
+    this.devVerificationToken,
+    this.devVerificationCode,
+  });
+
+  final String message;
+  final String? devVerificationToken;
+  final String? devVerificationCode;
+}
+
 class ForgotPasswordResult {
   ForgotPasswordResult({required this.message, this.devResetToken});
 
@@ -15,7 +41,7 @@ class AuthRepository {
 
   final Dio _dio;
 
-  Future<TokenPair> register({
+  Future<RegisterResult> register({
     required String email,
     required String password,
     String? fullName,
@@ -31,7 +57,46 @@ class AuthRepository {
         if (phone != null && phone.trim().isNotEmpty) 'phone': phone.trim(),
       },
     );
+    final d = res.data!;
+    return RegisterResult(
+      message: d['message'] as String? ?? '',
+      email: d['email'] as String? ?? email.trim(),
+      devVerificationToken: d['dev_verification_token'] as String?,
+      devVerificationCode: d['dev_verification_code'] as String?,
+    );
+  }
+
+  Future<TokenPair> verifyEmail({
+    String? token,
+    String? email,
+    String? code,
+  }) async {
+    final body = <String, dynamic>{};
+    final t = token?.trim();
+    if (t != null && t.isNotEmpty) {
+      body['token'] = t;
+    } else {
+      body['email'] = email!.trim();
+      body['code'] = code!.trim();
+    }
+    final res = await _dio.postUri<Map<String, dynamic>>(
+      ApiConfig.apiUri('/auth/verify-email'),
+      data: body,
+    );
     return TokenPair.fromJson(res.data!);
+  }
+
+  Future<ResendVerificationResult> resendVerification(String email) async {
+    final res = await _dio.postUri<Map<String, dynamic>>(
+      ApiConfig.apiUri('/auth/resend-verification'),
+      data: {'email': email.trim()},
+    );
+    final d = res.data!;
+    return ResendVerificationResult(
+      message: d['message'] as String? ?? '',
+      devVerificationToken: d['dev_verification_token'] as String?,
+      devVerificationCode: d['dev_verification_code'] as String?,
+    );
   }
 
   Future<TokenPair> login({

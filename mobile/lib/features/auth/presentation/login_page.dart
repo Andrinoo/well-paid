@@ -45,9 +45,25 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       if (mounted) context.go('/home');
     } on DioException catch (e, st) {
       logDioException(e, st);
-      messenger.showSnackBar(
-        SnackBar(content: Text(messageFromDio(e, l10n) ?? l10n.authLoginError)),
-      );
+      final msg = messageFromDio(e, l10n) ?? l10n.authLoginError;
+      final email = _email.text.trim();
+      if (e.response?.statusCode == 403 && email.isNotEmpty) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(msg),
+            action: SnackBarAction(
+              label: l10n.authVerifyEmailAction,
+              onPressed: () {
+                context.push(
+                  '/verify-email?email=${Uri.encodeComponent(email)}',
+                );
+              },
+            ),
+          ),
+        );
+      } else {
+        messenger.showSnackBar(SnackBar(content: Text(msg)));
+      }
     } catch (e, st) {
       debugPrint('[Login] $e\n$st');
       messenger.showSnackBar(SnackBar(content: Text(e.toString())));

@@ -63,6 +63,25 @@
   "authConfirmPasswordRequired": "Confirm your password",
   "authPasswordMismatch": "Passwords do not match",
   "authRegisterButton": "Register",
+  "authVerifyEmailTitle": "Confirm email",
+  "authVerifyEmailSubtitle": "Enter the 6-digit code we sent to your email.",
+  "authVerifyEmailFromLink": "Confirming your email…",
+  "authVerificationCodeLabel": "Code",
+  "authVerificationCodeHint": "000000",
+  "authVerificationCodeError": "Enter all 6 digits",
+  "authVerifyEmailButton": "Confirm and sign in",
+  "authResendVerification": "Resend code",
+  "authVerifyEmailSuccess": "Email confirmed. Welcome!",
+  "authVerifyEmailError": "Could not confirm",
+  "authResendVerificationError": "Could not resend",
+  "authVerifyEmailAction": "Confirm email",
+  "authDevVerificationHint": "Link token:\n{token}\n\nCode:\n{code}",
+  "@authDevVerificationHint": {
+    "placeholders": {
+      "token": {"type": "String"},
+      "code": {"type": "String"}
+    }
+  },
   "authAlreadyHaveAccount": "I already have an account — sign in",
   "authEmailRequired": "Enter your email",
   "authEmailInvalid": "Invalid email",

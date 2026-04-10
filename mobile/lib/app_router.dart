@@ -11,6 +11,7 @@ import 'features/auth/presentation/forgot_password_page.dart';
 import 'features/auth/presentation/login_page.dart';
 import 'features/auth/presentation/register_page.dart';
 import 'features/auth/presentation/reset_password_page.dart';
+import 'features/auth/presentation/verify_email_page.dart';
 import 'features/emergency_reserve/presentation/emergency_reserve_page.dart';
 import 'features/expenses/presentation/expense_detail_page.dart';
 import 'features/expenses/presentation/expense_edit_page.dart';
@@ -50,6 +51,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         const publicWhileHydrating = {
           '/login',
           '/register',
+          '/verify-email',
           '/forgot-password',
           '/reset-password',
         };
@@ -62,6 +64,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       const publicPaths = {
         '/login',
         '/register',
+        '/verify-email',
         '/forgot-password',
         '/reset-password',
       };
@@ -97,6 +100,16 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/register',
         builder: (context, state) => const RegisterPage(),
+      ),
+      GoRoute(
+        path: '/verify-email',
+        builder: (context, state) {
+          final q = state.uri.queryParameters;
+          return VerifyEmailPage(
+            initialEmail: q['email'],
+            initialToken: q['token'],
+          );
+        },
       ),
       GoRoute(
         path: '/forgot-password',

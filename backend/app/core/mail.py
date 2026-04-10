@@ -4,6 +4,7 @@ import smtplib
 import ssl
 from email.message import EmailMessage
 from email.utils import formataddr, parseaddr
+from urllib.parse import quote
 
 from app.core.config import get_settings
 
@@ -124,6 +125,160 @@ Well Paid — gestão financeira pensada para si.
 </body>
 </html>
 """
+
+
+def _verification_plain_text(code: str, link: str | None) -> str:
+    lines = [
+        "Olá,",
+        "",
+        "Bem-vindo ao Well Paid. Para ativar a sua conta, confirme este endereço de e-mail.",
+        "",
+        f"CÓDIGO DE CONFIRMAÇÃO (6 dígitos — use na app, ecrã «Confirmar e-mail»):\n\n{code}\n",
+    ]
+    if link:
+        lines.extend(
+            [
+                "Ou abra o link na app (se o dispositivo associar o Well Paid a este tipo de ligação):",
+                "",
+                link,
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "O código e o link expiram em 48 horas. Se não criou esta conta, ignore este e-mail.",
+            "",
+            f"— {_BRAND_MAIL_NAME}\n",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def _verification_html(code: str, link: str | None) -> str:
+    safe_code = html.escape(code, quote=True)
+    link_html = ""
+    if link:
+        safe_link = html.escape(link, quote=True)
+        link_html = f"""
+<tr>
+<td style="padding:0 24px 16px 24px;">
+<p style="margin:0 0 8px 0;font-size:14px;line-height:1.5;color:#94a3b8;">
+Alternativa: abra o link no telemóvel (associação Well Paid):
+</p>
+<p style="margin:0;font-size:14px;word-break:break-all;font-family:Consolas,Monaco,monospace;">
+<a href="{safe_link}" style="color:#38bdf8;">{safe_link}</a>
+</p>
+</td>
+</tr>
+"""
+    return f"""\
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Confirmar e-mail — Well Paid</title>
+</head>
+<body style="margin:0;padding:0;background-color:#040301;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#040301;padding:24px 12px;">
+<tr>
+<td align="center">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:560px;background-color:#0e0e14;border-radius:16px;border:1px solid rgba(30,144,255,0.35);overflow:hidden;">
+<tr>
+<td style="padding:28px 24px 8px 24px;text-align:center;">
+<p style="margin:0;font-size:13px;letter-spacing:0.25em;text-transform:uppercase;color:#94a3b8;">Well Paid</p>
+<h1 style="margin:12px 0 0 0;font-size:22px;font-weight:700;color:#f1f5f9;line-height:1.3;">
+Confirmar o seu e-mail
+</h1>
+</td>
+</tr>
+<tr>
+<td style="padding:16px 24px 8px 24px;">
+<p style="margin:0 0 14px 0;font-size:15px;line-height:1.55;color:#cbd5e1;">
+Utilize o código abaixo na aplicação Well Paid, no ecrã <strong style="color:#e2e8f0;">«Confirmar e-mail»</strong>.
+</p>
+</td>
+</tr>
+<tr>
+<td style="padding:0 24px 20px 24px;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:linear-gradient(135deg,rgba(30,144,255,0.15),rgba(147,51,234,0.12));border-radius:12px;border:1px solid rgba(56,189,248,0.4);">
+<tr>
+<td style="padding:20px 18px;text-align:center;">
+<p style="margin:0 0 10px 0;font-size:12px;text-transform:uppercase;letter-spacing:0.12em;color:#94a3b8;">
+Código de confirmação
+</p>
+<p style="margin:0;font-size:28px;line-height:1.3;font-weight:700;letter-spacing:0.35em;color:#f8fafc;font-family:Consolas,Monaco,monospace;">
+{safe_code}
+</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+{link_html}
+<tr>
+<td style="padding:8px 24px 24px 24px;border-top:1px solid rgba(148,163,184,0.15);">
+<p style="margin:16px 0 0 0;font-size:13px;line-height:1.5;color:#64748b;">
+Com os melhores cumprimentos,<br>
+<strong style="color:#94a3b8;">{_BRAND_MAIL_NAME}</strong>
+</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+</table>
+</body>
+</html>
+"""
+
+
+def send_verification_email(to_email: str, raw_token: str, code: str) -> bool:
+    """Envia confirmação com código de 6 dígitos e link opcional (deep link)."""
+    settings = get_settings()
+    host = (settings.smtp_host or "").strip()
+    if not host:
+        return False
+    mail_from = (settings.mail_from or settings.smtp_user or "").strip()
+    if not mail_from:
+        logger.warning("SMTP configurado mas mail_from/smtp_user em falta; e-mail não enviado.")
+        return False
+
+    base = (settings.email_verification_link_base or "").strip()
+    if not base:
+        base = "wellpaid://verify-email"
+    link = f"{base.rstrip('/')}?token={quote(raw_token, safe='')}"
+
+    msg = EmailMessage()
+    msg["Subject"] = "Well Paid — confirme o seu e-mail"
+    msg["From"] = _brand_from_header(mail_from)
+    msg["To"] = to_email
+    msg.set_content(_verification_plain_text(code, link))
+    msg.add_alternative(_verification_html(code, link), subtype="html")
+
+    try:
+        context = ssl.create_default_context()
+        port = int(settings.smtp_port)
+        user = (settings.smtp_user or "").strip()
+        password = (settings.smtp_password or "").strip()
+        if port == 465:
+            with smtplib.SMTP_SSL(host, port, context=context, timeout=30) as server:
+                if user and password:
+                    server.login(user, password)
+                server.send_message(msg)
+        else:
+            with smtplib.SMTP(host, port, timeout=30) as server:
+                server.ehlo()
+                if server.has_extn("STARTTLS"):
+                    server.starttls(context=context)
+                    server.ehlo()
+                if user and password:
+                    server.login(user, password)
+                server.send_message(msg)
+        return True
+    except Exception as e:
+        logger.exception("Falha ao enviar e-mail de confirmação: %s", e)
+        return False
 
 
 def send_password_reset_email(to_email: str, raw_token: str) -> bool:

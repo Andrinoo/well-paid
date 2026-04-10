@@ -476,6 +476,84 @@ abstract class AppLocalizations {
   /// **'Registar'**
   String get authRegisterButton;
 
+  /// No description provided for @authVerifyEmailTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Confirmar e-mail'**
+  String get authVerifyEmailTitle;
+
+  /// No description provided for @authVerifyEmailSubtitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Introduza o código de 6 dígitos que enviámos para o seu e-mail.'**
+  String get authVerifyEmailSubtitle;
+
+  /// No description provided for @authVerifyEmailFromLink.
+  ///
+  /// In pt, this message translates to:
+  /// **'A confirmar o seu e-mail…'**
+  String get authVerifyEmailFromLink;
+
+  /// No description provided for @authVerificationCodeLabel.
+  ///
+  /// In pt, this message translates to:
+  /// **'Código'**
+  String get authVerificationCodeLabel;
+
+  /// No description provided for @authVerificationCodeHint.
+  ///
+  /// In pt, this message translates to:
+  /// **'000000'**
+  String get authVerificationCodeHint;
+
+  /// No description provided for @authVerificationCodeError.
+  ///
+  /// In pt, this message translates to:
+  /// **'Introduza os 6 dígitos'**
+  String get authVerificationCodeError;
+
+  /// No description provided for @authVerifyEmailButton.
+  ///
+  /// In pt, this message translates to:
+  /// **'Confirmar e entrar'**
+  String get authVerifyEmailButton;
+
+  /// No description provided for @authResendVerification.
+  ///
+  /// In pt, this message translates to:
+  /// **'Reenviar código'**
+  String get authResendVerification;
+
+  /// No description provided for @authVerifyEmailSuccess.
+  ///
+  /// In pt, this message translates to:
+  /// **'E-mail confirmado. Bem-vindo!'**
+  String get authVerifyEmailSuccess;
+
+  /// No description provided for @authVerifyEmailError.
+  ///
+  /// In pt, this message translates to:
+  /// **'Não foi possível confirmar'**
+  String get authVerifyEmailError;
+
+  /// No description provided for @authResendVerificationError.
+  ///
+  /// In pt, this message translates to:
+  /// **'Não foi possível reenviar'**
+  String get authResendVerificationError;
+
+  /// No description provided for @authVerifyEmailAction.
+  ///
+  /// In pt, this message translates to:
+  /// **'Confirmar e-mail'**
+  String get authVerifyEmailAction;
+
+  /// No description provided for @authDevVerificationHint.
+  ///
+  /// In pt, this message translates to:
+  /// **'Token (link):\n{token}\n\nCódigo:\n{code}'**
+  String authDevVerificationHint(String token, String code);
+
   /// No description provided for @authAlreadyHaveAccount.
   ///
   /// In pt, this message translates to:

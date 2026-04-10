@@ -204,6 +204,48 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authRegisterButton => 'Register';
 
   @override
+  String get authVerifyEmailTitle => 'Confirm email';
+
+  @override
+  String get authVerifyEmailSubtitle =>
+      'Enter the 6-digit code we sent to your email.';
+
+  @override
+  String get authVerifyEmailFromLink => 'Confirming your email…';
+
+  @override
+  String get authVerificationCodeLabel => 'Code';
+
+  @override
+  String get authVerificationCodeHint => '000000';
+
+  @override
+  String get authVerificationCodeError => 'Enter all 6 digits';
+
+  @override
+  String get authVerifyEmailButton => 'Confirm and sign in';
+
+  @override
+  String get authResendVerification => 'Resend code';
+
+  @override
+  String get authVerifyEmailSuccess => 'Email confirmed. Welcome!';
+
+  @override
+  String get authVerifyEmailError => 'Could not confirm';
+
+  @override
+  String get authResendVerificationError => 'Could not resend';
+
+  @override
+  String get authVerifyEmailAction => 'Confirm email';
+
+  @override
+  String authDevVerificationHint(String token, String code) {
+    return 'Link token:\n$token\n\nCode:\n$code';
+  }
+
+  @override
   String get authAlreadyHaveAccount => 'I already have an account — sign in';
 
   @override
