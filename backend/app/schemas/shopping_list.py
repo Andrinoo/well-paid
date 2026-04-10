@@ -1,5 +1,6 @@
 import uuid
 from datetime import date, datetime
+from typing import Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -129,7 +130,7 @@ class ShoppingListComplete(BaseModel):
         return v
 
     @model_validator(mode="after")
-    def share_consistency(self) -> ShoppingListComplete:
+    def share_consistency(self) -> Self:
         if not self.is_shared and self.shared_with_user_id is not None:
             raise ValueError("shared_with_user_id exige is_shared true")
         return self
