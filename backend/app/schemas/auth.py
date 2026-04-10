@@ -1,3 +1,5 @@
+from typing import Self
+
 from pydantic import BaseModel, EmailStr, Field, model_validator
 
 
@@ -32,7 +34,7 @@ class VerifyEmailRequest(BaseModel):
     code: str | None = Field(default=None, min_length=6, max_length=6)
 
     @model_validator(mode="after")
-    def token_or_code_with_email(self) -> VerifyEmailRequest:
+    def token_or_code_with_email(self) -> Self:
         tok = (self.token or "").strip()
         cod = (self.code or "").strip()
         if tok:
