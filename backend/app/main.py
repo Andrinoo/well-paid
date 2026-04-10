@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
@@ -37,6 +37,20 @@ def root() -> dict[str, str]:
         "health": "/health",
         "docs": "/docs",
     }
+
+
+@app.post("/")
+def root_post_rejected() -> None:
+    """Evita 405 genérico: clientes que fazem POST na origem (URL mal configurada) recebem pista clara."""
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail=(
+            "Não use POST na raiz. Para login: POST /auth/login com JSON "
+            '{"email","password"}. No app Flutter, API_BASE_URL deve ser só a origem '
+            "(ex.: https://….vercel.app), sem path extra; rebuild com "
+            "--dart-define=API_BASE_URL=…"
+        ),
+    )
 
 
 @app.on_event("startup")

@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import '../../../core/config/api_config.dart';
 import '../domain/token_pair.dart';
 
 class ForgotPasswordResult {
@@ -20,8 +21,8 @@ class AuthRepository {
     String? fullName,
     String? phone,
   }) async {
-    final res = await _dio.post<Map<String, dynamic>>(
-      '/auth/register',
+    final res = await _dio.postUri<Map<String, dynamic>>(
+      ApiConfig.apiUri('/auth/register'),
       data: {
         'email': email,
         'password': password,
@@ -37,23 +38,23 @@ class AuthRepository {
     required String email,
     required String password,
   }) async {
-    final res = await _dio.post<Map<String, dynamic>>(
-      '/auth/login',
+    final res = await _dio.postUri<Map<String, dynamic>>(
+      ApiConfig.apiUri('/auth/login'),
       data: {'email': email, 'password': password},
     );
     return TokenPair.fromJson(res.data!);
   }
 
   Future<void> logout(String refreshToken) async {
-    await _dio.post<void>(
-      '/auth/logout',
+    await _dio.postUri<void>(
+      ApiConfig.apiUri('/auth/logout'),
       data: {'refresh_token': refreshToken},
     );
   }
 
   Future<ForgotPasswordResult> forgotPassword(String email) async {
-    final res = await _dio.post<Map<String, dynamic>>(
-      '/auth/forgot-password',
+    final res = await _dio.postUri<Map<String, dynamic>>(
+      ApiConfig.apiUri('/auth/forgot-password'),
       data: {'email': email.trim()},
     );
     final data = res.data!;
@@ -67,8 +68,8 @@ class AuthRepository {
     required String token,
     required String newPassword,
   }) async {
-    await _dio.post<void>(
-      '/auth/reset-password',
+    await _dio.postUri<void>(
+      ApiConfig.apiUri('/auth/reset-password'),
       data: {'token': token.trim(), 'new_password': newPassword},
     );
   }

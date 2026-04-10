@@ -89,8 +89,8 @@ Dio createAuthorizedDio({
         type: DioExceptionType.unknown,
       );
     }
-    final res = await refreshClient.post<Map<String, dynamic>>(
-      '/auth/refresh',
+    final res = await refreshClient.postUri<Map<String, dynamic>>(
+      ApiConfig.apiUri('/auth/refresh'),
       data: {'refresh_token': rt},
     );
     final data = res.data;
