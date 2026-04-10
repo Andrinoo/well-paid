@@ -29,6 +29,16 @@ app = FastAPI(title="Well Paid API", version="0.1.0")
 app.state.limiter = limiter
 
 
+@app.get("/")
+def root() -> dict[str, str]:
+    """Raiz: evita 404 ao abrir a URL do deploy no browser; a API vive em /health, /auth, …"""
+    return {
+        "service": "Well Paid API",
+        "health": "/health",
+        "docs": "/docs",
+    }
+
+
 @app.on_event("startup")
 def _log_smtp_status() -> None:
     s = get_settings()
