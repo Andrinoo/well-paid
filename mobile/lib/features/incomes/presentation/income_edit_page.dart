@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/format/brl_cents.dart';
+import '../../../core/format/brl_currency_input_formatter.dart';
 import '../../../core/format/parse_brl_input.dart';
 import '../../../core/l10n/context_l10n.dart';
 import '../../../core/network/dio_client.dart';
@@ -27,7 +29,7 @@ class IncomeEditPage extends ConsumerWidget {
         return Scaffold(
           appBar: AppBar(
             leading: IconButton(
-              icon: const Icon(Icons.close),
+              icon: const Icon(PhosphorIconsRegular.x),
               onPressed: () => context.pop(),
             ),
             title: Text(l10n.editIncomeTitle),
@@ -40,7 +42,7 @@ class IncomeEditPage extends ConsumerWidget {
         return Scaffold(
           appBar: AppBar(
             leading: IconButton(
-              icon: const Icon(Icons.close),
+              icon: const Icon(PhosphorIconsRegular.x),
               onPressed: () => context.pop(),
             ),
             title: Text(l10n.editIncomeTitle),
@@ -56,7 +58,7 @@ class IncomeEditPage extends ConsumerWidget {
           return Scaffold(
             appBar: AppBar(
               leading: IconButton(
-                icon: const Icon(Icons.close),
+                icon: const Icon(PhosphorIconsRegular.x),
                 onPressed: () => context.pop(),
               ),
               title: Text(l10n.editIncomeTitle),
@@ -185,7 +187,7 @@ class _IncomeEditFormState extends ConsumerState<_IncomeEditForm> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.close),
+                icon: const Icon(PhosphorIconsRegular.x),
           onPressed: () => context.pop(),
         ),
         title: Text(l10n.editIncomeTitle),
@@ -211,6 +213,7 @@ class _IncomeEditFormState extends ConsumerState<_IncomeEditForm> {
                 labelText: l10n.incFormAmount,
               ),
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: kBrCurrencyInputFormatters,
               validator: (v) {
                 if (v == null || v.trim().isEmpty) return l10n.requiredField;
                 final c = parseInputToCents(v);
@@ -222,7 +225,7 @@ class _IncomeEditFormState extends ConsumerState<_IncomeEditForm> {
               contentPadding: EdgeInsets.zero,
               title: Text(l10n.incFormIncomeDate),
               subtitle: Text(_dmY(_incomeDate)),
-              trailing: const Icon(Icons.calendar_today_outlined),
+              trailing: const Icon(PhosphorIconsRegular.calendar),
               onTap: _pickDate,
             ),
             cats.when(

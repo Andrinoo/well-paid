@@ -5,9 +5,10 @@ from __future__ import annotations
 import calendar
 from datetime import date
 
-from sqlalchemy import func, inspect, nulls_last, select
+from sqlalchemy import func, nulls_last, select
 from sqlalchemy.orm import Session
 
+from app.core.schema_introspection import session_has_table
 from app.models.category import Category
 from app.models.expense import Expense
 from app.models.goal import Goal
@@ -175,8 +176,7 @@ def get_dashboard_overview(
 
     # Evita 500 se a migração de proventos (009) ainda não foi aplicada na BD.
     # Incomes e goals usam delete físico no estado atual do projeto.
-    bind = db.get_bind()
-    if bind is not None and inspect(bind).has_table("incomes"):
+    if session_has_table(db, "incomes"):
         income_sum = db.scalar(
             select(func.coalesce(func.sum(Income.amount_cents), 0)).where(
                 Income.owner_user_id.in_(peer_ids),
@@ -189,7 +189,7 @@ def get_dashboard_overview(
         month_income_cents = 0
     month_balance_cents = month_income_cents - month_expense_total_cents
 
-    if bind is not None and inspect(bind).has_table("goals"):
+    if session_has_table(db, "goals"):
         goals_rows = (
             db.query(Goal)
             .filter(Goal.owner_user_id.in_(peer_ids), Goal.is_active.is_(True))

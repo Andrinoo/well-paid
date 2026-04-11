@@ -22,12 +22,13 @@ abstract final class WellPaidColors {
   static const Color brandPurple = Color(0xFF9400D3);
   static const Color brandGreen = Color(0xFF32CD32);
 
-  static const Color authCard = Color(0xFF0E0E14);
-  static const Color authCardBorder = Color(0xFF1E90FF);
-  static const Color authFieldFill = Color(0xFF16161F);
-  static const Color authOnCard = Color(0xFFE8E8F0);
-  static const Color authOnCardMuted = Color(0xFF9CA3B8);
-  static const Color authHint = Color(0xFF6B7289);
+  /// Cartão sobre fundo preto — alinhado ao navy/cream da app autenticada.
+  static const Color authCard = Color(0xFF141C2A);
+  static const Color authCardBorder = Color(0xFFC9A94E);
+  static const Color authFieldFill = Color(0xFF1B2C41);
+  static const Color authOnCard = Color(0xFFF5F1E8);
+  static const Color authOnCardMuted = Color(0xFFADA59A);
+  static const Color authHint = Color(0xFF7A756D);
 
   static const TextStyle authInputTextStyle = TextStyle(
     color: authOnCard,

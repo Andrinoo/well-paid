@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/format/brl_currency_input_formatter.dart';
 import '../../../core/format/parse_brl_input.dart';
 import '../../../core/l10n/context_l10n.dart';
 import '../../../core/network/dio_client.dart';
@@ -96,7 +98,7 @@ class _NewIncomePageState extends ConsumerState<NewIncomePage> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.close),
+          icon: const Icon(PhosphorIconsRegular.x),
           onPressed: () => context.pop(),
         ),
         title: Text(l10n.newIncomeTitle),
@@ -135,6 +137,7 @@ class _NewIncomePageState extends ConsumerState<NewIncomePage> {
                 hintText: l10n.incFormAmountHint,
               ),
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: kBrCurrencyInputFormatters,
               validator: (v) {
                 if (v == null || v.trim().isEmpty) return l10n.requiredField;
                 final c = parseInputToCents(v);
@@ -147,7 +150,7 @@ class _NewIncomePageState extends ConsumerState<NewIncomePage> {
               contentPadding: EdgeInsets.zero,
               title: Text(l10n.incFormIncomeDateCompetence),
               subtitle: Text(_dmY(_incomeDate)),
-              trailing: const Icon(Icons.calendar_today_outlined),
+              trailing: const Icon(PhosphorIconsRegular.calendar),
               onTap: _pickDate,
             ),
             const SizedBox(height: 8),

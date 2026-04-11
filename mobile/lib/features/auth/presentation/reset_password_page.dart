@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -79,8 +80,8 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
       title: l10n.resetPasswordTitle,
       subtitle: l10n.authResetSubtitle,
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back_rounded),
-        color: WellPaidColors.brandBlue,
+        icon: const Icon(PhosphorIconsRegular.arrowLeft),
+        color: WellPaidColors.gold,
         onPressed: _busy ? null : () => context.pop(),
       ),
       formBody: Form(
@@ -126,8 +127,8 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                   onPressed: () => setState(() => _obscure = !_obscure),
                   icon: Icon(
                     _obscure
-                        ? Icons.visibility_outlined
-                        : Icons.visibility_off_outlined,
+                        ? PhosphorIconsRegular.eye
+                        : PhosphorIconsRegular.eyeSlash,
                   ),
                 ),
               ),
@@ -151,8 +152,8 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
                       setState(() => _obscureConfirm = !_obscureConfirm),
                   icon: Icon(
                     _obscureConfirm
-                        ? Icons.visibility_outlined
-                        : Icons.visibility_off_outlined,
+                        ? PhosphorIconsRegular.eye
+                        : PhosphorIconsRegular.eyeSlash,
                   ),
                 ),
               ),
@@ -177,7 +178,7 @@ class _ResetPasswordPageState extends ConsumerState<ResetPasswordPage> {
       ),
       footer: TextButton(
         style: TextButton.styleFrom(
-          foregroundColor: WellPaidColors.brandBlue,
+          foregroundColor: WellPaidColors.gold,
         ),
         onPressed: _busy ? null : () => context.push('/forgot-password'),
         child: Text(l10n.authRequestNewCode),

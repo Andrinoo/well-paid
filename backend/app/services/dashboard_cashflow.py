@@ -5,9 +5,10 @@ from __future__ import annotations
 import calendar
 from datetime import date, datetime
 
-from sqlalchemy import Date, cast, func, inspect, select
+from sqlalchemy import Date, cast, func, select
 from sqlalchemy.orm import Session
 
+from app.core.schema_introspection import session_has_table
 from app.models.expense import Expense
 from app.models.income import Income
 from app.models.user import User
@@ -85,8 +86,7 @@ def get_dashboard_cashflow(
     range_end = _last_day_of_month(y_end, m_end)
 
     income_map: dict[tuple[int, int], int] = {}
-    bind = db.get_bind()
-    if bind is not None and inspect(bind).has_table("incomes"):
+    if session_has_table(db, "incomes"):
         inc_bucket = cast(func.date_trunc("month", Income.income_date), Date)
         inc_rows = db.execute(
             select(inc_bucket, func.coalesce(func.sum(Income.amount_cents), 0)).where(

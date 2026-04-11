@@ -6,9 +6,10 @@ import uuid
 from datetime import date
 from typing import TYPE_CHECKING
 
-from sqlalchemy import inspect, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.schema_introspection import session_has_table
 from app.models.emergency_reserve import EmergencyReserve, EmergencyReserveAccrual
 from app.models.family import FamilyMember
 
@@ -161,8 +162,7 @@ def ensure_accruals(db: Session, reserve: EmergencyReserve, today: date) -> bool
 
 def refresh_reserve_balances_for_user(db: Session, user: User, today: date | None = None) -> tuple[int, int]:
     """Garante acréscimos até ao mês corrente; devolve (balance, monthly_target)."""
-    bind = db.get_bind()
-    if bind is None or not inspect(bind).has_table("emergency_reserves"):
+    if not session_has_table(db, "emergency_reserves"):
         return (0, 0)
 
     d = today or date.today()

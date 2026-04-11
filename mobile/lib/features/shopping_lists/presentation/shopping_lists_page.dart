@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -40,7 +41,7 @@ class ShoppingListsPage extends ConsumerWidget {
             );
           }
         },
-        icon: const Icon(Icons.add),
+        icon: const Icon(PhosphorIconsRegular.plus),
         label: Text(l10n.shoppingListsNewList),
       ),
       body: async.when(
@@ -132,8 +133,8 @@ class _SummaryTile extends ConsumerWidget {
       title: Text(title),
       subtitle: Text(subtitle.toString()),
       trailing: summary.isDraft
-          ? Icon(Icons.edit_outlined, color: WellPaidColors.navy.withValues(alpha: 0.45))
-          : Icon(Icons.check_circle_outline, color: WellPaidColors.gold.withValues(alpha: 0.9)),
+          ? Icon(PhosphorIconsRegular.pencilSimple, color: WellPaidColors.navy.withValues(alpha: 0.45))
+          : Icon(PhosphorIconsRegular.checkCircle, color: WellPaidColors.gold.withValues(alpha: 0.9)),
       onTap: () {
         context.push('/shopping-lists/${summary.id}');
       },

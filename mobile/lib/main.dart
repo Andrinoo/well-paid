@@ -5,6 +5,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 
 import 'app_router.dart';
 import 'core/locale/app_locale_provider.dart';
+import 'core/notifications/goal_stall_reminder_service.dart';
 import 'core/theme/well_paid_colors.dart';
 import 'features/app_lock/presentation/app_lifecycle_lock.dart';
 import 'l10n/app_localizations.dart';
@@ -20,6 +21,8 @@ Future<void> main() async {
   await Hive.openBox<dynamic>('incomes_cache');
   await Hive.openBox<dynamic>('incomes_sync_queue');
   await Hive.openBox<dynamic>('incomes_categories_cache');
+
+  await GoalStallReminderService.init();
 
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.presentError(details);

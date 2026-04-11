@@ -110,6 +110,14 @@ class AuthRepository {
     return TokenPair.fromJson(res.data!);
   }
 
+  Future<TokenPair> refresh({required String refreshToken}) async {
+    final res = await _dio.postUri<Map<String, dynamic>>(
+      ApiConfig.apiUri('/auth/refresh'),
+      data: {'refresh_token': refreshToken},
+    );
+    return TokenPair.fromJson(res.data!);
+  }
+
   Future<void> logout(String refreshToken) async {
     await _dio.postUri<void>(
       ApiConfig.apiUri('/auth/logout'),

@@ -39,7 +39,12 @@ class ShoppingListPatch(BaseModel):
 
 class ShoppingListItemCreate(BaseModel):
     label: str = Field(min_length=1, max_length=500)
-    line_amount_cents: int | None = Field(default=None, gt=0)
+    quantity: int = Field(default=1, ge=1, le=9999)
+    line_amount_cents: int | None = Field(
+        default=None,
+        gt=0,
+        description="Preço unitário em centavos (total da linha = unitário × quantidade)",
+    )
 
     @field_validator("label")
     @classmethod
@@ -49,7 +54,11 @@ class ShoppingListItemCreate(BaseModel):
 
 class ShoppingListItemPatch(BaseModel):
     label: str | None = Field(default=None, min_length=1, max_length=500)
-    line_amount_cents: int | None = None
+    quantity: int | None = Field(default=None, ge=1, le=9999)
+    line_amount_cents: int | None = Field(
+        default=None,
+        description="Preço unitário em centavos",
+    )
     sort_order: int | None = Field(default=None, ge=0)
 
     @field_validator("label")
@@ -73,7 +82,11 @@ class ShoppingListItemResponse(BaseModel):
     id: uuid.UUID
     sort_order: int
     label: str
-    line_amount_cents: int | None
+    quantity: int
+    line_amount_cents: int | None = Field(
+        default=None,
+        description="Preço unitário em centavos; total da linha = unitário × quantidade",
+    )
 
 
 class ShoppingListSummaryResponse(BaseModel):
@@ -111,9 +124,15 @@ class ShoppingListDetailResponse(BaseModel):
 
 
 class ShoppingListComplete(BaseModel):
+    """Fechar lista: a despesa é sempre **paga**, sem parcelas/recorrência.
+
+    `status` e `description` no corpo são ignorados (retrocompat.); a descrição
+    da despesa vem só do título da lista (ou texto padrão com loja/data).
+    """
+
     category_id: uuid.UUID
     expense_date: date
-    status: ExpenseStatus
+    status: ExpenseStatus = ExpenseStatus.PAID
     description: str | None = Field(default=None, max_length=500)
     total_cents: int | None = Field(default=None, gt=0)
     is_shared: bool = False

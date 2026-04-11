@@ -155,6 +155,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get authPasswordRequired => 'Informe a senha';
 
   @override
+  String get authRememberCredentials => 'Lembrar e-mail e senha neste aparelho';
+
+  @override
   String get authForgotPassword => 'Esqueceu a senha?';
 
   @override
@@ -303,6 +306,24 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get dashByCategory => 'Despesas por categoria';
+
+  @override
+  String get dashPendingThisMonthTitle => 'Contas a pagar';
+
+  @override
+  String get dashPendingThisMonthSubtitle => 'Toque para rever e quitar';
+
+  @override
+  String get chartViewCategoryExpenses => 'Ver despesas desta categoria';
+
+  @override
+  String get chartRegisterExpenseCta => 'Registar despesa';
+
+  @override
+  String get expenseListFilteredByCategory => 'Filtrado por categoria';
+
+  @override
+  String get expenseListClearCategoryFilter => 'Limpar';
 
   @override
   String get dashToPay => 'A pagar';
@@ -574,7 +595,55 @@ class AppLocalizationsPt extends AppLocalizations {
   String get emergencyReserveResetSuccess => 'Reserva reposta.';
 
   @override
+  String get reserveMilestoneBannerQuarter =>
+      'Já alcançaste um quarto do objetivo anual da reserva — bom ritmo.';
+
+  @override
+  String get reserveMilestoneBannerHalf =>
+      'Metade do caminho em relação ao teu ano de poupança.';
+
+  @override
+  String get reserveMilestoneBannerAlmost =>
+      'Quase lá: falta pouco para fechares o objetivo anual da reserva.';
+
+  @override
+  String get reserveMilestoneBannerComplete =>
+      'Objetivo anual da reserva atingido. Disciplina em destaque.';
+
+  @override
   String get settingsEmergencyReserve => 'Reserva de emergência';
+
+  @override
+  String get settingsNotificationsSection => 'Notificações';
+
+  @override
+  String get settingsGoalStallReminderTitle => 'Lembrete de metas paradas';
+
+  @override
+  String get settingsGoalStallReminderSubtitle =>
+      'Uma notificação local se não actualizares uma meta há cerca de 3 semanas (usa a data da última actualização).';
+
+  @override
+  String get settingsGoalStallPermissionDenied =>
+      'Activa as notificações nas definições do sistema para receberes o lembrete.';
+
+  @override
+  String get goalStallNotifTitle => 'Metas sem movimento';
+
+  @override
+  String goalStallNotifBodySingle(String name) {
+    return '«$name» — já passou algum tempo sem actualização. Queres rever?';
+  }
+
+  @override
+  String goalStallNotifBodyTwo(String a, String b) {
+    return '«$a» e «$b» — metas há tempo sem actualização.';
+  }
+
+  @override
+  String goalStallNotifBodyMany(String first, int count) {
+    return '«$first» e mais $count — não te esqueças das metas.';
+  }
 
   @override
   String get dashMarkPaidTooltip => 'Marcar como paga';
@@ -649,6 +718,45 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get goalsAddTooltip => 'Nova meta';
+
+  @override
+  String get goalsAggregateTitle => 'Resumo';
+
+  @override
+  String goalsAggregateLine(int count, String saved, String target) {
+    return '$count metas activas · $saved de $target';
+  }
+
+  @override
+  String get goalsScreenHint =>
+      'Progresso visível e totais combinados reforçam o hábito de poupança.';
+
+  @override
+  String get goalMilestoneBannerQuarter =>
+      'Já alcançaste um quarto do objectivo — bom ritmo.';
+
+  @override
+  String get goalMilestoneBannerHalf => 'Metade do caminho. Mantém o foco.';
+
+  @override
+  String get goalMilestoneBannerAlmost =>
+      'Quase lá: falta pouco para fechares a meta.';
+
+  @override
+  String get goalMilestoneBannerComplete =>
+      'Objectivo atingido. Parabéns pela consistência.';
+
+  @override
+  String get goalMilestoneChipQuarter => '25%';
+
+  @override
+  String get goalMilestoneChipHalf => '50%';
+
+  @override
+  String get goalMilestoneChipAlmost => '90%';
+
+  @override
+  String get goalMilestoneChipComplete => 'OK';
 
   @override
   String get newGoalTitle => 'Nova meta';
@@ -750,6 +858,32 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get goalReactivatedSnackbar => 'Meta reativada.';
+
+  @override
+  String get goalLinearPaceCardTitle => 'Ritmo e previsão';
+
+  @override
+  String goalLinearPaceAvgPerMonth(String amount) {
+    return 'Ritmo médio até aqui: $amount/mês';
+  }
+
+  @override
+  String goalLinearPaceEta(String monthYear) {
+    return 'Se mantiveres este ritmo: objetivo ~até $monthYear';
+  }
+
+  @override
+  String get goalLinearPaceDisclaimer =>
+      'Estimativa simples com base no que já poupaste e na data de criação da meta; o ritmo real pode variar.';
+
+  @override
+  String goalLinearPaceListHint(String amount, String monthYear) {
+    return '~$amount/mês · meta ~$monthYear';
+  }
+
+  @override
+  String get goalLinearPaceInsufficientHistory =>
+      'Ainda não há histórico suficiente para estimar o ritmo.';
 
   @override
   String get expensePayConfirmTitle => 'Marcar como paga?';
@@ -1558,6 +1692,14 @@ class AppLocalizationsPt extends AppLocalizations {
       'Número de meses de previsão após o intervalo';
 
   @override
+  String get dashCashflowA11yForecastDecrease =>
+      'Menos meses de previsão no gráfico';
+
+  @override
+  String get dashCashflowA11yForecastIncrease =>
+      'Mais meses de previsão no gráfico';
+
+  @override
   String get dashCashflowA11yApply => 'Aplicar filtros ao histórico mensal';
 
   @override
@@ -1612,7 +1754,10 @@ class AppLocalizationsPt extends AppLocalizations {
   String get shoppingListItemLabelHint => 'Descrição do item';
 
   @override
-  String get shoppingListItemAmountOptional => 'Valor (opcional)';
+  String get shoppingListItemQuantity => 'Quantidade';
+
+  @override
+  String get shoppingListItemAmountOptional => 'Valor unitário (opcional)';
 
   @override
   String get shoppingListDeleteItem => 'Remover item';
@@ -1639,6 +1784,10 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get shoppingListMarkPaid => 'Já paguei';
+
+  @override
+  String get shoppingListExpenseFromListPaidNote =>
+      'A despesa fica como paga, sem parcelas nem recorrência. Na despesa aparecem só o nome da lista e o total.';
 
   @override
   String get shoppingListExpenseDate => 'Data da despesa';
@@ -1668,6 +1817,10 @@ class AppLocalizationsPt extends AppLocalizations {
       'Só o autor pode editar esta lista em rascunho.';
 
   @override
+  String get shoppingListCompletedEditHint =>
+      'Podes corrigir valores, quantidades e remover itens. A lista não pode ficar vazia.';
+
+  @override
   String get shoppingListNoItems =>
       'Sem itens. Adiciona produtos para planear a compra.';
 
@@ -1676,10 +1829,14 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get shoppingListFooterEstimatedNote =>
-      'Soma só dos itens com valor preenchido.';
+      'Soma de (valor unitário × quantidade) nas linhas com preço.';
 
   @override
-  String get shoppingListInlineAmountHint => 'Valor';
+  String get shoppingListFooterAddItemCompleted =>
+      'Ainda podes acrescentar itens a esta lista concluída.';
+
+  @override
+  String get shoppingListInlineAmountHint => 'Unitário';
 
   @override
   String get shoppingListEditLabelTitle => 'Nome do item';
@@ -1696,4 +1853,11 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get shoppingListCompleteSuccess =>
       'Despesa registada. A lista foi movida para o histórico.';
+
+  @override
+  String get shoppingListFlushDraftError =>
+      'Não foi possível sincronizar os itens. Verifica a ligação e tenta outra vez.';
+
+  @override
+  String get shoppingListCompleteInProgress => 'A sincronizar e a concluir…';
 }

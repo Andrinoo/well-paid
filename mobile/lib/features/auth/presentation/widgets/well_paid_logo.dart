@@ -53,14 +53,14 @@ class _FallbackMark extends StatelessWidget {
         color: WellPaidColors.loginBackground,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: WellPaidColors.brandBlue.withValues(alpha: 0.4),
+          color: WellPaidColors.gold.withValues(alpha: 0.45),
         ),
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            WellPaidColors.brandBlue,
-            WellPaidColors.brandPurple,
+            WellPaidColors.navyMid,
+            WellPaidColors.goldPressed,
           ],
         ),
       ),

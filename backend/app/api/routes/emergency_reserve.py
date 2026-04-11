@@ -4,12 +4,12 @@ from datetime import date
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response, status
-from sqlalchemy import inspect
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
+from app.core.schema_introspection import session_has_table
 from app.models.family import FamilyMember
 from app.models.user import User
 from app.schemas.emergency_reserve import (
@@ -32,12 +32,8 @@ router = APIRouter(prefix="/emergency-reserve", tags=["emergency-reserve"])
 
 
 def _tables_ready(db: Session) -> bool:
-    bind = db.get_bind()
-    if bind is None:
-        return False
-    insp = inspect(bind)
-    return insp.has_table("emergency_reserves") and insp.has_table(
-        "emergency_reserve_accruals"
+    return session_has_table(db, "emergency_reserves") and session_has_table(
+        db, "emergency_reserve_accruals"
     )
 
 

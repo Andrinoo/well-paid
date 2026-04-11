@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -37,6 +38,7 @@ class _ExpenseListPageState extends ConsumerState<ExpenseListPage> {
           year: dash.year,
           month: dash.month,
           status: s,
+          categoryId: null,
         );
       });
     }
@@ -58,6 +60,7 @@ class _ExpenseListPageState extends ConsumerState<ExpenseListPage> {
       year: y,
       month: m,
       status: f.status,
+      categoryId: null,
     );
   }
 
@@ -75,7 +78,7 @@ class _ExpenseListPageState extends ConsumerState<ExpenseListPage> {
       appBar: AppBar(
         leading: Navigator.of(context).canPop()
             ? IconButton(
-                icon: const Icon(Icons.arrow_back),
+                icon: const Icon(PhosphorIconsRegular.arrowLeft),
                 onPressed: () => context.pop(),
               )
             : null,
@@ -84,7 +87,7 @@ class _ExpenseListPageState extends ConsumerState<ExpenseListPage> {
           IconButton(
             tooltip: l10n.expensesRefresh,
             onPressed: () => ref.invalidate(expensesListProvider),
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(PhosphorIconsRegular.arrowsClockwise),
           ),
         ],
       ),
@@ -101,7 +104,7 @@ class _ExpenseListPageState extends ConsumerState<ExpenseListPage> {
                   IconButton(
                     tooltip: l10n.periodPrevMonth,
                     onPressed: () => _shiftMonth(-1),
-                    icon: const Icon(Icons.chevron_left),
+                    icon: const Icon(PhosphorIconsRegular.caretLeft),
                     color: WellPaidColors.navy,
                   ),
                   Text(
@@ -114,13 +117,60 @@ class _ExpenseListPageState extends ConsumerState<ExpenseListPage> {
                   IconButton(
                     tooltip: l10n.periodNextMonth,
                     onPressed: () => _shiftMonth(1),
-                    icon: const Icon(Icons.chevron_right),
+                    icon: const Icon(PhosphorIconsRegular.caretRight),
                     color: WellPaidColors.navy,
                   ),
                 ],
               ),
             ),
           ),
+          if (f.categoryId != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+              child: ref.watch(categoriesProvider).when(
+                    skipLoadingOnReload: true,
+                    data: (cats) {
+                      String title = l10n.expenseListFilteredByCategory;
+                      for (final c in cats) {
+                        if (c.id == f.categoryId) {
+                          title = c.name;
+                          break;
+                        }
+                      }
+                      return Material(
+                        color: WellPaidColors.gold.withValues(alpha: 0.22),
+                        borderRadius: BorderRadius.circular(12),
+                        child: ListTile(
+                          dense: true,
+                          leading: Icon(
+                            PhosphorIconsRegular.funnelSimple,
+                            color: WellPaidColors.navy.withValues(alpha: 0.85),
+                          ),
+                          title: Text(
+                            title,
+                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  color: WellPaidColors.navy,
+                                ),
+                          ),
+                          trailing: TextButton(
+                            onPressed: () {
+                              ref.read(expenseListFiltersProvider.notifier).state =
+                                  ExpenseListFilters(
+                                year: f.year,
+                                month: f.month,
+                                status: f.status,
+                              );
+                            },
+                            child: Text(l10n.expenseListClearCategoryFilter),
+                          ),
+                        ),
+                      );
+                    },
+                    loading: () => const SizedBox.shrink(),
+                    error: (_, _) => const SizedBox.shrink(),
+                  ),
+            ),
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
             child: Card(
@@ -140,7 +190,7 @@ class _ExpenseListPageState extends ConsumerState<ExpenseListPage> {
                     Expanded(
                       child: FilledButton.tonalIcon(
                         onPressed: () => context.push('/expenses/new'),
-                        icon: const Icon(Icons.receipt_long_outlined),
+                        icon: const Icon(PhosphorIconsRegular.receipt),
                         label: Text(l10n.expensesNewLong),
                         style: FilledButton.styleFrom(
                           foregroundColor: WellPaidColors.navy,
@@ -150,7 +200,7 @@ class _ExpenseListPageState extends ConsumerState<ExpenseListPage> {
                     IconButton(
                       tooltip: l10n.expensesRefreshList,
                       onPressed: () => ref.invalidate(expensesListProvider),
-                      icon: const Icon(Icons.refresh),
+                      icon: const Icon(PhosphorIconsRegular.arrowsClockwise),
                       color: WellPaidColors.navy,
                     ),
                   ],
@@ -171,6 +221,7 @@ class _ExpenseListPageState extends ConsumerState<ExpenseListPage> {
                         ExpenseListFilters(
                       year: f.year,
                       month: f.month,
+                      categoryId: f.categoryId,
                     );
                   },
                 ),
@@ -183,6 +234,7 @@ class _ExpenseListPageState extends ConsumerState<ExpenseListPage> {
                       year: f.year,
                       month: f.month,
                       status: 'pending',
+                      categoryId: f.categoryId,
                     );
                   },
                 ),
@@ -195,6 +247,7 @@ class _ExpenseListPageState extends ConsumerState<ExpenseListPage> {
                       year: f.year,
                       month: f.month,
                       status: 'paid',
+                      categoryId: f.categoryId,
                     );
                   },
                 ),
@@ -203,7 +256,32 @@ class _ExpenseListPageState extends ConsumerState<ExpenseListPage> {
           ),
           Expanded(
             child: async.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
+              skipLoadingOnReload: true,
+              loading: () => ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                children: [
+                  LinearProgressIndicator(
+                    minHeight: 3,
+                    color: WellPaidColors.gold,
+                    backgroundColor: WellPaidColors.navy.withValues(alpha: 0.08),
+                  ),
+                  const SizedBox(height: 20),
+                  ...List.generate(
+                    6,
+                    (i) => Padding(
+                      padding: const EdgeInsets.only(bottom: 14),
+                      child: Container(
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: WellPaidColors.navy.withValues(alpha: 0.06),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
               error: (e, _) => Center(
                 child: Padding(
                   padding: const EdgeInsets.all(24),

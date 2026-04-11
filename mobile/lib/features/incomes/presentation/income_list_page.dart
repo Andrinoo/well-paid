@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -62,7 +63,7 @@ class _IncomeListPageState extends ConsumerState<IncomeListPage> {
       appBar: AppBar(
         leading: Navigator.of(context).canPop()
             ? IconButton(
-                icon: const Icon(Icons.arrow_back),
+                icon: const Icon(PhosphorIconsRegular.arrowLeft),
                 onPressed: () => context.pop(),
               )
             : null,
@@ -74,7 +75,7 @@ class _IncomeListPageState extends ConsumerState<IncomeListPage> {
               ref.invalidate(incomesListProvider);
               ref.invalidate(dashboardOverviewProvider);
             },
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(PhosphorIconsRegular.arrowsClockwise),
           ),
         ],
       ),
@@ -91,7 +92,7 @@ class _IncomeListPageState extends ConsumerState<IncomeListPage> {
                   IconButton(
                     tooltip: l10n.periodPrevMonth,
                     onPressed: () => _shiftMonth(-1),
-                    icon: const Icon(Icons.chevron_left),
+                    icon: const Icon(PhosphorIconsRegular.caretLeft),
                     color: WellPaidColors.navy,
                   ),
                   Text(
@@ -104,7 +105,7 @@ class _IncomeListPageState extends ConsumerState<IncomeListPage> {
                   IconButton(
                     tooltip: l10n.periodNextMonth,
                     onPressed: () => _shiftMonth(1),
-                    icon: const Icon(Icons.chevron_right),
+                    icon: const Icon(PhosphorIconsRegular.caretRight),
                     color: WellPaidColors.navy,
                   ),
                 ],
@@ -130,7 +131,7 @@ class _IncomeListPageState extends ConsumerState<IncomeListPage> {
                     Expanded(
                       child: FilledButton.tonalIcon(
                         onPressed: () => context.push('/incomes/new'),
-                        icon: const Icon(Icons.savings_outlined),
+                        icon: const Icon(PhosphorIconsRegular.coins),
                         label: Text(l10n.incomesAddLong),
                         style: FilledButton.styleFrom(
                           foregroundColor: WellPaidColors.navy,
@@ -143,7 +144,7 @@ class _IncomeListPageState extends ConsumerState<IncomeListPage> {
                         ref.invalidate(incomesListProvider);
                         ref.invalidate(dashboardOverviewProvider);
                       },
-                      icon: const Icon(Icons.refresh),
+                      icon: const Icon(PhosphorIconsRegular.arrowsClockwise),
                       color: WellPaidColors.navy,
                     ),
                   ],
@@ -163,7 +164,32 @@ class _IncomeListPageState extends ConsumerState<IncomeListPage> {
           ),
           Expanded(
             child: async.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
+              skipLoadingOnReload: true,
+              loading: () => ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                children: [
+                  LinearProgressIndicator(
+                    minHeight: 3,
+                    color: WellPaidColors.gold,
+                    backgroundColor: WellPaidColors.navy.withValues(alpha: 0.08),
+                  ),
+                  const SizedBox(height: 20),
+                  ...List.generate(
+                    5,
+                    (i) => Padding(
+                      padding: const EdgeInsets.only(bottom: 14),
+                      child: Container(
+                        height: 52,
+                        decoration: BoxDecoration(
+                          color: WellPaidColors.navy.withValues(alpha: 0.06),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
               error: (e, _) => Center(
                 child: Padding(
                   padding: const EdgeInsets.all(24),

@@ -1,18 +1,23 @@
 import 'dart:async' show unawaited;
 
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/format/brl_cents.dart';
+import '../../../core/format/brl_currency_input_formatter.dart';
 import '../../../core/format/locale_dates.dart';
 import '../../../core/format/parse_brl_input.dart';
 import '../../../core/l10n/context_l10n.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/theme/well_paid_colors.dart';
 import '../../dashboard/application/dashboard_providers.dart';
+import '../../goals/presentation/goal_progress_milestone.dart';
 import '../application/emergency_reserve_providers.dart';
+import 'reserve_milestone_widgets.dart';
 import '../domain/emergency_reserve_accrual_item.dart';
+import '../domain/emergency_reserve_snapshot.dart';
 
 class EmergencyReservePage extends ConsumerStatefulWidget {
   const EmergencyReservePage({super.key});
@@ -126,7 +131,7 @@ class _EmergencyReservePageState extends ConsumerState<EmergencyReservePage> {
   ) async {
     final l10n = context.l10n;
     final ctrl = TextEditingController(
-      text: (item.amountCents / 100).toStringAsFixed(2),
+      text: formatBrlInputFromCents(item.amountCents),
     );
     final dialogFormKey = GlobalKey<FormState>();
     try {
@@ -143,6 +148,7 @@ class _EmergencyReservePageState extends ConsumerState<EmergencyReservePage> {
               ),
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: kBrCurrencyInputFormatters,
               autofocus: true,
               validator: (v) {
                 if (v == null || v.trim().isEmpty) {
@@ -258,7 +264,7 @@ class _EmergencyReservePageState extends ConsumerState<EmergencyReservePage> {
         _prefilled = true;
         if (snap.monthlyTargetCents > 0) {
           _amountCtrl.text =
-              (snap.monthlyTargetCents / 100).toStringAsFixed(2);
+              formatBrlInputFromCents(snap.monthlyTargetCents);
         }
       });
     });
@@ -267,7 +273,7 @@ class _EmergencyReservePageState extends ConsumerState<EmergencyReservePage> {
       appBar: AppBar(
         leading: Navigator.of(context).canPop()
             ? IconButton(
-                icon: const Icon(Icons.arrow_back),
+                icon: const Icon(PhosphorIconsRegular.arrowLeft),
                 onPressed: () => context.pop(),
               )
             : null,
@@ -275,7 +281,7 @@ class _EmergencyReservePageState extends ConsumerState<EmergencyReservePage> {
         actions: [
           if (async.hasValue && async.value!.configured)
             PopupMenuButton<int>(
-              icon: const Icon(Icons.more_vert),
+              icon: const Icon(PhosphorIconsRegular.dotsThreeVertical),
               onSelected: (v) {
                 if (v == 0) unawaited(_confirmResetEntireReserve());
               },
@@ -289,7 +295,25 @@ class _EmergencyReservePageState extends ConsumerState<EmergencyReservePage> {
         ],
       ),
       body: async.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        skipLoadingOnReload: true,
+        loading: () => ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            LinearProgressIndicator(
+              minHeight: 3,
+              color: WellPaidColors.gold,
+              backgroundColor: WellPaidColors.navy.withValues(alpha: 0.08),
+            ),
+            const SizedBox(height: 20),
+            Container(
+              height: 140,
+              decoration: BoxDecoration(
+                color: WellPaidColors.navy.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+          ],
+        ),
         error: (e, _) => Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -306,6 +330,8 @@ class _EmergencyReservePageState extends ConsumerState<EmergencyReservePage> {
             child: ListView(
               padding: const EdgeInsets.all(20),
               children: [
+                _EmergencyReserveHeroCard(snap: snap),
+                const SizedBox(height: 16),
                 Text(
                   l10n.emergencyReserveIntro,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -313,16 +339,6 @@ class _EmergencyReservePageState extends ConsumerState<EmergencyReservePage> {
                         height: 1.35,
                       ),
                 ),
-                if (snap.configured) ...[
-                  const SizedBox(height: 12),
-                  Text(
-                    '${l10n.dashEmergencyReserveBalance}: ${formatBrlFromCents(snap.balanceCents)}',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: WellPaidColors.navy.withValues(alpha: 0.8),
-                          fontWeight: FontWeight.w600,
-                        ),
-                  ),
-                ],
                 const SizedBox(height: 20),
                 TextFormField(
                   controller: _amountCtrl,
@@ -331,6 +347,7 @@ class _EmergencyReservePageState extends ConsumerState<EmergencyReservePage> {
                   ),
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: kBrCurrencyInputFormatters,
                 ),
                 const SizedBox(height: 14),
                 Text(
@@ -348,7 +365,7 @@ class _EmergencyReservePageState extends ConsumerState<EmergencyReservePage> {
                     return ActionChip(
                       label: Text(formatBrlFromCents(cents)),
                       onPressed: () {
-                        _amountCtrl.text = (cents / 100).toStringAsFixed(2);
+                        _amountCtrl.text = formatBrlInputFromCents(cents);
                       },
                     );
                   }).toList(),
@@ -368,9 +385,14 @@ class _EmergencyReservePageState extends ConsumerState<EmergencyReservePage> {
                 ),
                 const SizedBox(height: 8),
                 accrualsAsync.when(
-                  loading: () => const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 12),
-                    child: Center(child: CircularProgressIndicator()),
+                  skipLoadingOnReload: true,
+                  loading: () => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    child: LinearProgressIndicator(
+                      minHeight: 2,
+                      color: WellPaidColors.gold,
+                      backgroundColor: WellPaidColors.navy.withValues(alpha: 0.08),
+                    ),
                   ),
                   error: (e, _) => Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8),
@@ -421,7 +443,7 @@ class _EmergencyReservePageState extends ConsumerState<EmergencyReservePage> {
                                   minWidth: 40,
                                   minHeight: 40,
                                 ),
-                                child: const Icon(Icons.more_vert, size: 22),
+                                child: const Icon(PhosphorIconsRegular.dotsThreeVertical, size: 22),
                                 onSelected: (action) {
                                   if (action == 'edit') {
                                     unawaited(_editAccrual(item, monthLabel));
@@ -458,3 +480,142 @@ class _EmergencyReservePageState extends ConsumerState<EmergencyReservePage> {
     );
   }
 }
+
+class _EmergencyReserveHeroCard extends StatelessWidget {
+  const _EmergencyReserveHeroCard({required this.snap});
+
+  final EmergencyReserveSnapshot snap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final m = snap.monthlyTargetCents;
+    final annual = m * 12;
+    final pct = annual > 0
+        ? ((snap.balanceCents / annual) * 100).round().clamp(0, 100)
+        : 0;
+    final ratio = m > 0 ? snap.balanceCents / m : 0.0;
+    final milestone = m > 0
+        ? resolveGoalProgressMilestone(
+            currentCents: snap.balanceCents,
+            targetCents: annual,
+          )
+        : null;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            WellPaidColors.navy,
+            WellPaidColors.navyDeep,
+          ],
+        ),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: WellPaidColors.navy.withValues(alpha: 0.22),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(
+                    PhosphorIconsRegular.moonStars,
+                    color: WellPaidColors.gold,
+                    size: 26,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    l10n.dashEmergencyReserve,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: WellPaidColors.cream,
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
+                ),
+                if (milestone != null) ...[
+                  const SizedBox(width: 8),
+                  ReserveMilestoneChip(milestone: milestone),
+                ],
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              formatBrlFromCents(snap.balanceCents),
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    color: WellPaidColors.gold,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.5,
+                  ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              l10n.dashEmergencyReserveBalance,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: WellPaidColors.cream.withValues(alpha: 0.75),
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+            if (milestone != null) ...[
+              const SizedBox(height: 12),
+              ReserveMilestoneBanner(milestone: milestone),
+            ],
+            if (m > 0) ...[
+              const SizedBox(height: 12),
+              Text(
+                '${l10n.dashEmergencyReserveMonthly}: ${formatBrlFromCents(m)}',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: WellPaidColors.cream.withValues(alpha: 0.88),
+                    ),
+              ),
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: LinearProgressIndicator(
+                  value: pct / 100,
+                  minHeight: 10,
+                  backgroundColor: Colors.white.withValues(alpha: 0.2),
+                  color: WellPaidColors.gold,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                l10n.dashEmergencyReserveAnnualProgress(pct),
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: WellPaidColors.cream.withValues(alpha: 0.9),
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+              if (ratio > 0)
+                Text(
+                  '${ratio.toStringAsFixed(1)}× ${l10n.dashEmergencyReserveTimesTarget}',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: WellPaidColors.cream.withValues(alpha: 0.72),
+                      ),
+                ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+

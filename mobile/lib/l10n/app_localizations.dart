@@ -380,6 +380,12 @@ abstract class AppLocalizations {
   /// **'Informe a senha'**
   String get authPasswordRequired;
 
+  /// No description provided for @authRememberCredentials.
+  ///
+  /// In pt, this message translates to:
+  /// **'Lembrar e-mail e senha neste aparelho'**
+  String get authRememberCredentials;
+
   /// No description provided for @authForgotPassword.
   ///
   /// In pt, this message translates to:
@@ -661,6 +667,42 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Despesas por categoria'**
   String get dashByCategory;
+
+  /// No description provided for @dashPendingThisMonthTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Contas a pagar'**
+  String get dashPendingThisMonthTitle;
+
+  /// No description provided for @dashPendingThisMonthSubtitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Toque para rever e quitar'**
+  String get dashPendingThisMonthSubtitle;
+
+  /// No description provided for @chartViewCategoryExpenses.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ver despesas desta categoria'**
+  String get chartViewCategoryExpenses;
+
+  /// No description provided for @chartRegisterExpenseCta.
+  ///
+  /// In pt, this message translates to:
+  /// **'Registar despesa'**
+  String get chartRegisterExpenseCta;
+
+  /// No description provided for @expenseListFilteredByCategory.
+  ///
+  /// In pt, this message translates to:
+  /// **'Filtrado por categoria'**
+  String get expenseListFilteredByCategory;
+
+  /// No description provided for @expenseListClearCategoryFilter.
+  ///
+  /// In pt, this message translates to:
+  /// **'Limpar'**
+  String get expenseListClearCategoryFilter;
 
   /// No description provided for @dashToPay.
   ///
@@ -1142,11 +1184,83 @@ abstract class AppLocalizations {
   /// **'Reserva reposta.'**
   String get emergencyReserveResetSuccess;
 
+  /// No description provided for @reserveMilestoneBannerQuarter.
+  ///
+  /// In pt, this message translates to:
+  /// **'Já alcançaste um quarto do objetivo anual da reserva — bom ritmo.'**
+  String get reserveMilestoneBannerQuarter;
+
+  /// No description provided for @reserveMilestoneBannerHalf.
+  ///
+  /// In pt, this message translates to:
+  /// **'Metade do caminho em relação ao teu ano de poupança.'**
+  String get reserveMilestoneBannerHalf;
+
+  /// No description provided for @reserveMilestoneBannerAlmost.
+  ///
+  /// In pt, this message translates to:
+  /// **'Quase lá: falta pouco para fechares o objetivo anual da reserva.'**
+  String get reserveMilestoneBannerAlmost;
+
+  /// No description provided for @reserveMilestoneBannerComplete.
+  ///
+  /// In pt, this message translates to:
+  /// **'Objetivo anual da reserva atingido. Disciplina em destaque.'**
+  String get reserveMilestoneBannerComplete;
+
   /// No description provided for @settingsEmergencyReserve.
   ///
   /// In pt, this message translates to:
   /// **'Reserva de emergência'**
   String get settingsEmergencyReserve;
+
+  /// No description provided for @settingsNotificationsSection.
+  ///
+  /// In pt, this message translates to:
+  /// **'Notificações'**
+  String get settingsNotificationsSection;
+
+  /// No description provided for @settingsGoalStallReminderTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Lembrete de metas paradas'**
+  String get settingsGoalStallReminderTitle;
+
+  /// No description provided for @settingsGoalStallReminderSubtitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Uma notificação local se não actualizares uma meta há cerca de 3 semanas (usa a data da última actualização).'**
+  String get settingsGoalStallReminderSubtitle;
+
+  /// No description provided for @settingsGoalStallPermissionDenied.
+  ///
+  /// In pt, this message translates to:
+  /// **'Activa as notificações nas definições do sistema para receberes o lembrete.'**
+  String get settingsGoalStallPermissionDenied;
+
+  /// No description provided for @goalStallNotifTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Metas sem movimento'**
+  String get goalStallNotifTitle;
+
+  /// No description provided for @goalStallNotifBodySingle.
+  ///
+  /// In pt, this message translates to:
+  /// **'«{name}» — já passou algum tempo sem actualização. Queres rever?'**
+  String goalStallNotifBodySingle(String name);
+
+  /// No description provided for @goalStallNotifBodyTwo.
+  ///
+  /// In pt, this message translates to:
+  /// **'«{a}» e «{b}» — metas há tempo sem actualização.'**
+  String goalStallNotifBodyTwo(String a, String b);
+
+  /// No description provided for @goalStallNotifBodyMany.
+  ///
+  /// In pt, this message translates to:
+  /// **'«{first}» e mais {count} — não te esqueças das metas.'**
+  String goalStallNotifBodyMany(String first, int count);
 
   /// No description provided for @dashMarkPaidTooltip.
   ///
@@ -1279,6 +1393,72 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Nova meta'**
   String get goalsAddTooltip;
+
+  /// No description provided for @goalsAggregateTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Resumo'**
+  String get goalsAggregateTitle;
+
+  /// No description provided for @goalsAggregateLine.
+  ///
+  /// In pt, this message translates to:
+  /// **'{count} metas activas · {saved} de {target}'**
+  String goalsAggregateLine(int count, String saved, String target);
+
+  /// No description provided for @goalsScreenHint.
+  ///
+  /// In pt, this message translates to:
+  /// **'Progresso visível e totais combinados reforçam o hábito de poupança.'**
+  String get goalsScreenHint;
+
+  /// No description provided for @goalMilestoneBannerQuarter.
+  ///
+  /// In pt, this message translates to:
+  /// **'Já alcançaste um quarto do objectivo — bom ritmo.'**
+  String get goalMilestoneBannerQuarter;
+
+  /// No description provided for @goalMilestoneBannerHalf.
+  ///
+  /// In pt, this message translates to:
+  /// **'Metade do caminho. Mantém o foco.'**
+  String get goalMilestoneBannerHalf;
+
+  /// No description provided for @goalMilestoneBannerAlmost.
+  ///
+  /// In pt, this message translates to:
+  /// **'Quase lá: falta pouco para fechares a meta.'**
+  String get goalMilestoneBannerAlmost;
+
+  /// No description provided for @goalMilestoneBannerComplete.
+  ///
+  /// In pt, this message translates to:
+  /// **'Objectivo atingido. Parabéns pela consistência.'**
+  String get goalMilestoneBannerComplete;
+
+  /// No description provided for @goalMilestoneChipQuarter.
+  ///
+  /// In pt, this message translates to:
+  /// **'25%'**
+  String get goalMilestoneChipQuarter;
+
+  /// No description provided for @goalMilestoneChipHalf.
+  ///
+  /// In pt, this message translates to:
+  /// **'50%'**
+  String get goalMilestoneChipHalf;
+
+  /// No description provided for @goalMilestoneChipAlmost.
+  ///
+  /// In pt, this message translates to:
+  /// **'90%'**
+  String get goalMilestoneChipAlmost;
+
+  /// No description provided for @goalMilestoneChipComplete.
+  ///
+  /// In pt, this message translates to:
+  /// **'OK'**
+  String get goalMilestoneChipComplete;
 
   /// No description provided for @newGoalTitle.
   ///
@@ -1471,6 +1651,42 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Meta reativada.'**
   String get goalReactivatedSnackbar;
+
+  /// No description provided for @goalLinearPaceCardTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ritmo e previsão'**
+  String get goalLinearPaceCardTitle;
+
+  /// No description provided for @goalLinearPaceAvgPerMonth.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ritmo médio até aqui: {amount}/mês'**
+  String goalLinearPaceAvgPerMonth(String amount);
+
+  /// No description provided for @goalLinearPaceEta.
+  ///
+  /// In pt, this message translates to:
+  /// **'Se mantiveres este ritmo: objetivo ~até {monthYear}'**
+  String goalLinearPaceEta(String monthYear);
+
+  /// No description provided for @goalLinearPaceDisclaimer.
+  ///
+  /// In pt, this message translates to:
+  /// **'Estimativa simples com base no que já poupaste e na data de criação da meta; o ritmo real pode variar.'**
+  String get goalLinearPaceDisclaimer;
+
+  /// No description provided for @goalLinearPaceListHint.
+  ///
+  /// In pt, this message translates to:
+  /// **'~{amount}/mês · meta ~{monthYear}'**
+  String goalLinearPaceListHint(String amount, String monthYear);
+
+  /// No description provided for @goalLinearPaceInsufficientHistory.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ainda não há histórico suficiente para estimar o ritmo.'**
+  String get goalLinearPaceInsufficientHistory;
 
   /// No description provided for @expensePayConfirmTitle.
   ///
@@ -2946,6 +3162,18 @@ abstract class AppLocalizations {
   /// **'Número de meses de previsão após o intervalo'**
   String get dashCashflowA11yForecastDropdown;
 
+  /// No description provided for @dashCashflowA11yForecastDecrease.
+  ///
+  /// In pt, this message translates to:
+  /// **'Menos meses de previsão no gráfico'**
+  String get dashCashflowA11yForecastDecrease;
+
+  /// No description provided for @dashCashflowA11yForecastIncrease.
+  ///
+  /// In pt, this message translates to:
+  /// **'Mais meses de previsão no gráfico'**
+  String get dashCashflowA11yForecastIncrease;
+
   /// No description provided for @dashCashflowA11yApply.
   ///
   /// In pt, this message translates to:
@@ -3036,10 +3264,16 @@ abstract class AppLocalizations {
   /// **'Descrição do item'**
   String get shoppingListItemLabelHint;
 
+  /// No description provided for @shoppingListItemQuantity.
+  ///
+  /// In pt, this message translates to:
+  /// **'Quantidade'**
+  String get shoppingListItemQuantity;
+
   /// No description provided for @shoppingListItemAmountOptional.
   ///
   /// In pt, this message translates to:
-  /// **'Valor (opcional)'**
+  /// **'Valor unitário (opcional)'**
   String get shoppingListItemAmountOptional;
 
   /// No description provided for @shoppingListDeleteItem.
@@ -3090,6 +3324,12 @@ abstract class AppLocalizations {
   /// **'Já paguei'**
   String get shoppingListMarkPaid;
 
+  /// No description provided for @shoppingListExpenseFromListPaidNote.
+  ///
+  /// In pt, this message translates to:
+  /// **'A despesa fica como paga, sem parcelas nem recorrência. Na despesa aparecem só o nome da lista e o total.'**
+  String get shoppingListExpenseFromListPaidNote;
+
   /// No description provided for @shoppingListExpenseDate.
   ///
   /// In pt, this message translates to:
@@ -3138,6 +3378,12 @@ abstract class AppLocalizations {
   /// **'Só o autor pode editar esta lista em rascunho.'**
   String get shoppingListReadOnlyDraft;
 
+  /// No description provided for @shoppingListCompletedEditHint.
+  ///
+  /// In pt, this message translates to:
+  /// **'Podes corrigir valores, quantidades e remover itens. A lista não pode ficar vazia.'**
+  String get shoppingListCompletedEditHint;
+
   /// No description provided for @shoppingListNoItems.
   ///
   /// In pt, this message translates to:
@@ -3153,13 +3399,19 @@ abstract class AppLocalizations {
   /// No description provided for @shoppingListFooterEstimatedNote.
   ///
   /// In pt, this message translates to:
-  /// **'Soma só dos itens com valor preenchido.'**
+  /// **'Soma de (valor unitário × quantidade) nas linhas com preço.'**
   String get shoppingListFooterEstimatedNote;
+
+  /// No description provided for @shoppingListFooterAddItemCompleted.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ainda podes acrescentar itens a esta lista concluída.'**
+  String get shoppingListFooterAddItemCompleted;
 
   /// No description provided for @shoppingListInlineAmountHint.
   ///
   /// In pt, this message translates to:
-  /// **'Valor'**
+  /// **'Unitário'**
   String get shoppingListInlineAmountHint;
 
   /// No description provided for @shoppingListEditLabelTitle.
@@ -3191,6 +3443,18 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Despesa registada. A lista foi movida para o histórico.'**
   String get shoppingListCompleteSuccess;
+
+  /// No description provided for @shoppingListFlushDraftError.
+  ///
+  /// In pt, this message translates to:
+  /// **'Não foi possível sincronizar os itens. Verifica a ligação e tenta outra vez.'**
+  String get shoppingListFlushDraftError;
+
+  /// No description provided for @shoppingListCompleteInProgress.
+  ///
+  /// In pt, this message translates to:
+  /// **'A sincronizar e a concluir…'**
+  String get shoppingListCompleteInProgress;
 }
 
 class _AppLocalizationsDelegate

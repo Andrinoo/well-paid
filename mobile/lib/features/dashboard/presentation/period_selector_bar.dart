@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/l10n/context_l10n.dart';
@@ -9,9 +10,21 @@ import '../../../core/theme/well_paid_colors.dart';
 import '../../expenses/application/expenses_providers.dart';
 import '../../incomes/application/incomes_providers.dart';
 import '../application/dashboard_providers.dart';
+
+/// Variante visual: [light] (fundo claro) ou [dark] (sobre header navy).
+enum PeriodSelectorBarVariant { light, dark }
+
 /// Mês civil do dashboard (setas anterior / seguinte).
 class PeriodSelectorBar extends ConsumerStatefulWidget {
-  const PeriodSelectorBar({super.key});
+  const PeriodSelectorBar({
+    super.key,
+    this.variant = PeriodSelectorBarVariant.light,
+    this.dense = false,
+  });
+
+  final PeriodSelectorBarVariant variant;
+  /// Menos padding e ícones menores (ex.: header do dashboard).
+  final bool dense;
 
   @override
   ConsumerState<PeriodSelectorBar> createState() => _PeriodSelectorBarState();
@@ -29,6 +42,12 @@ class _PeriodSelectorBarState extends ConsumerState<PeriodSelectorBar> {
     final p = ref.watch(dashboardPeriodProvider);
     final loading = ref.watch(dashboardOverviewProvider).isLoading;
     final label = '${p.month.toString().padLeft(2, '0')}/${p.year}';
+    final dark = widget.variant == PeriodSelectorBarVariant.dark;
+    final fg = dark ? WellPaidColors.cream : WellPaidColors.navy;
+    final fgMuted = dark
+        ? WellPaidColors.cream.withValues(alpha: 0.75)
+        : WellPaidColors.navy.withValues(alpha: 0.7);
+    final chevron = dark ? WellPaidColors.gold : WellPaidColors.navy;
 
     // Warm up nearby months once for immediate next interactions.
     if (!_bootstrappedPrefetch) {
@@ -38,44 +57,67 @@ class _PeriodSelectorBarState extends ConsumerState<PeriodSelectorBar> {
       warmMonthlyListsForDashboardPeriod(ref);
     }
 
+    final d = widget.dense;
+    final iconSize = d ? 20.0 : 24.0;
+    final pad = d
+        ? const EdgeInsets.symmetric(horizontal: 2, vertical: 0)
+        : const EdgeInsets.symmetric(horizontal: 8, vertical: 4);
+
     return Semantics(
       label: l10n.periodSummaryA11y(label),
       child: Material(
-        color: WellPaidColors.creamMuted.withValues(alpha: 0.6),
+        color: dark ? Colors.transparent : WellPaidColors.creamMuted.withValues(alpha: 0.6),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          padding: pad,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: d ? MainAxisSize.min : MainAxisSize.max,
             children: [
               IconButton(
                 tooltip: l10n.periodPrevMonth,
                 onPressed: () => _shiftMonth(-1),
-                icon: const Icon(Icons.chevron_left),
-                color: WellPaidColors.navy,
+                icon: Icon(PhosphorIconsRegular.caretLeft, size: iconSize),
+                color: chevron,
+                style: IconButton.styleFrom(
+                  padding: d ? const EdgeInsets.all(4) : null,
+                  minimumSize: d ? const Size(32, 32) : null,
+                  tapTargetSize: d ? MaterialTapTargetSize.shrinkWrap : null,
+                  visualDensity: d ? VisualDensity.compact : null,
+                ),
               ),
               Text(
                 label,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                style: (d
+                        ? Theme.of(context).textTheme.titleSmall
+                        : Theme.of(context).textTheme.titleMedium)
+                    ?.copyWith(
                       fontWeight: FontWeight.w700,
-                      color: WellPaidColors.navy,
+                      color: fg,
+                      letterSpacing: d ? 0.2 : 0.3,
                     ),
               ),
               if (loading) ...[
-                const SizedBox(width: 8),
+                SizedBox(width: d ? 6 : 8),
                 SizedBox(
-                  width: 14,
-                  height: 14,
+                  width: d ? 12 : 14,
+                  height: d ? 12 : 14,
                   child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: WellPaidColors.navy.withValues(alpha: 0.7),
+                    strokeWidth: d ? 1.5 : 2,
+                    color: fgMuted,
                   ),
                 ),
               ],
               IconButton(
                 tooltip: l10n.periodNextMonth,
                 onPressed: () => _shiftMonth(1),
-                icon: const Icon(Icons.chevron_right),
-                color: WellPaidColors.navy,
+                icon: Icon(PhosphorIconsRegular.caretRight, size: iconSize),
+                color: chevron,
+                style: IconButton.styleFrom(
+                  padding: d ? const EdgeInsets.all(4) : null,
+                  minimumSize: d ? const Size(32, 32) : null,
+                  tapTargetSize: d ? MaterialTapTargetSize.shrinkWrap : null,
+                  visualDensity: d ? VisualDensity.compact : null,
+                ),
               ),
             ],
           ),

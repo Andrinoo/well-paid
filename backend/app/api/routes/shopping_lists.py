@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -84,11 +84,64 @@ def _default_expense_description(store_name: str | None, expense_date: object) -
     return f"Compras — {ds}"
 
 
+def _expense_description_for_list(row: ShoppingList, expense_date: date) -> str:
+    t = (row.title or "").strip()
+    if t:
+        return t[:500]
+    return _default_expense_description(row.store_name, expense_date)
+
+
+def _recompute_list_total_cents(
+    items: list[ShoppingListItem],
+    *,
+    fallback_total_cents: int | None,
+) -> int:
+    line_extensions = [
+        (i.line_amount_cents, int(i.quantity) if i.quantity is not None else 1)
+        for i in items
+    ]
+    try:
+        return resolve_checkout_total_cents(
+            line_extensions=line_extensions,
+            total_cents_override=None,
+        )
+    except ValueError:
+        if fallback_total_cents is not None and int(fallback_total_cents) > 0:
+            return int(fallback_total_cents)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Indique valores nas linhas para recalcular o total",
+        ) from None
+
+
+def _sync_completed_expense(db: Session, row: ShoppingList) -> None:
+    if row.status != STATUS_COMPLETED or row.expense_id is None:
+        return
+    row = db.scalar(
+        select(ShoppingList)
+        .options(selectinload(ShoppingList.items))
+        .where(ShoppingList.id == row.id)
+    )
+    if row is None or row.expense_id is None:
+        return
+    items = sorted(row.items, key=lambda x: x.sort_order)
+    total = _recompute_list_total_cents(items, fallback_total_cents=row.total_cents)
+    row.total_cents = total
+    exp = db.get(Expense, row.expense_id)
+    if exp is None:
+        return
+    exp.amount_cents = total
+    exp.description = _expense_description_for_list(row, exp.expense_date)[:500]
+    db.add(exp)
+    db.add(row)
+
+
 def _to_item(row: ShoppingListItem) -> ShoppingListItemResponse:
     return ShoppingListItemResponse(
         id=row.id,
         sort_order=row.sort_order,
         label=row.label,
+        quantity=int(row.quantity) if getattr(row, "quantity", None) is not None else 1,
         line_amount_cents=int(row.line_amount_cents)
         if row.line_amount_cents is not None
         else None,
@@ -205,15 +258,26 @@ def patch_shopping_list(
     row = _owned_list(db, list_id, user.id)
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lista não encontrada")
-    if row.status != STATUS_DRAFT:
+    if row.status == STATUS_DRAFT:
+        data = body.model_dump(exclude_unset=True)
+        for k, v in data.items():
+            setattr(row, k, v)
+        db.commit()
+    elif row.status == STATUS_COMPLETED:
+        data = body.model_dump(exclude_unset=True)
+        if not data:
+            pass
+        else:
+            for k, v in data.items():
+                setattr(row, k, v)
+            db.flush()
+            _sync_completed_expense(db, row)
+            db.commit()
+    else:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Só é possível editar listas em rascunho",
+            detail="Estado de lista inválido",
         )
-    data = body.model_dump(exclude_unset=True)
-    for k, v in data.items():
-        setattr(row, k, v)
-    db.commit()
     row = db.scalar(
         select(ShoppingList)
         .options(selectinload(ShoppingList.items))
@@ -255,10 +319,10 @@ def add_shopping_list_item(
     row = _owned_list(db, list_id, user.id)
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lista não encontrada")
-    if row.status != STATUS_DRAFT:
+    if row.status not in (STATUS_DRAFT, STATUS_COMPLETED):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Só é possível editar listas em rascunho",
+            detail="Lista não pode ser editada",
         )
     max_ord = db.scalar(
         select(func.max(ShoppingListItem.sort_order)).where(ShoppingListItem.list_id == list_id)
@@ -268,9 +332,13 @@ def add_shopping_list_item(
         list_id=list_id,
         sort_order=next_ord,
         label=body.label,
+        quantity=body.quantity,
         line_amount_cents=body.line_amount_cents,
     )
     db.add(item)
+    db.flush()
+    if row.status == STATUS_COMPLETED:
+        _sync_completed_expense(db, row)
     db.commit()
     row = db.scalar(
         select(ShoppingList)
@@ -292,10 +360,10 @@ def patch_shopping_list_item(
     row = _owned_list(db, list_id, user.id)
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lista não encontrada")
-    if row.status != STATUS_DRAFT:
+    if row.status not in (STATUS_DRAFT, STATUS_COMPLETED):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Só é possível editar listas em rascunho",
+            detail="Lista não pode ser editada",
         )
     item = db.scalar(
         select(ShoppingListItem).where(
@@ -308,6 +376,9 @@ def patch_shopping_list_item(
     data = body.model_dump(exclude_unset=True)
     for k, v in data.items():
         setattr(item, k, v)
+    db.flush()
+    if row.status == STATUS_COMPLETED:
+        _sync_completed_expense(db, row)
     db.commit()
     row = db.scalar(
         select(ShoppingList)
@@ -328,10 +399,22 @@ def delete_shopping_list_item(
     row = _owned_list(db, list_id, user.id)
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lista não encontrada")
-    if row.status != STATUS_DRAFT:
+    if row.status not in (STATUS_DRAFT, STATUS_COMPLETED):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Só é possível editar listas em rascunho",
+            detail="Lista não pode ser editada",
+        )
+    row = db.scalar(
+        select(ShoppingList)
+        .options(selectinload(ShoppingList.items))
+        .where(ShoppingList.id == list_id)
+    )
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lista não encontrada")
+    if len(row.items) <= 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A lista deve manter pelo menos um item",
         )
     item = db.scalar(
         select(ShoppingListItem).where(
@@ -342,6 +425,9 @@ def delete_shopping_list_item(
     if item is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item não encontrado")
     db.delete(item)
+    db.flush()
+    if row.status == STATUS_COMPLETED:
+        _sync_completed_expense(db, row)
     db.commit()
     row = db.scalar(
         select(ShoppingList)
@@ -378,10 +464,13 @@ def complete_shopping_list(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Adicione pelo menos um item antes de fechar a compra",
         )
-    line_amounts = [i.line_amount_cents for i in row.items]
+    line_extensions = [
+        (i.line_amount_cents, int(i.quantity) if i.quantity is not None else 1)
+        for i in row.items
+    ]
     try:
         total = resolve_checkout_total_cents(
-            line_amounts=line_amounts,
+            line_extensions=line_extensions,
             total_cents_override=body.total_cents,
         )
     except ValueError as e:
@@ -403,12 +492,11 @@ def complete_shopping_list(
             detail=str(err),
         ) from err
 
-    desc = body.description
-    if not desc:
-        desc = _default_expense_description(row.store_name, body.expense_date)
+    desc = _expense_description_for_list(row, body.expense_date)
 
     now = datetime.now(UTC)
-    paid_at = now if body.status == ExpenseStatus.PAID else None
+    # Listas de compras: despesa sempre paga, sem parcelas/recorrência (Ordems §6.2.2).
+    paid_at = now
 
     expense = Expense(
         owner_user_id=user.id,
@@ -416,7 +504,7 @@ def complete_shopping_list(
         amount_cents=total,
         expense_date=body.expense_date,
         due_date=None,
-        status=body.status.value,
+        status=ExpenseStatus.PAID.value,
         category_id=body.category_id,
         installment_total=1,
         installment_number=1,

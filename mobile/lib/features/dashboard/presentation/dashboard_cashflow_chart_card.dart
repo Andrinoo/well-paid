@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -26,12 +29,13 @@ class DashboardCashflowChartCard extends ConsumerWidget {
       skipLoadingOnReload: true,
       loading: () => _CashflowShell(
         title: l10n.dashCashflowTitle,
+        belowTitle: const _CashflowCompactQueryBar(),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 24),
+          padding: const EdgeInsets.symmetric(vertical: 16),
           child: Center(
             child: reduceMotion
                 ? Icon(
-                    Icons.show_chart_outlined,
+                    PhosphorIconsRegular.chartLineUp,
                     size: 32,
                     color: WellPaidColors.navy.withValues(alpha: 0.35),
                   )
@@ -45,6 +49,7 @@ class DashboardCashflowChartCard extends ConsumerWidget {
       ),
       error: (e, _) => _CashflowShell(
         title: l10n.dashCashflowTitle,
+        belowTitle: const _CashflowCompactQueryBar(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -67,34 +72,10 @@ class DashboardCashflowChartCard extends ConsumerWidget {
       ),
       data: (d) => _CashflowShell(
         title: l10n.dashCashflowTitle,
+        belowTitle: const _CashflowCompactQueryBar(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Theme(
-              data: Theme.of(context).copyWith(
-                dividerColor: Colors.transparent,
-                listTileTheme: ListTileThemeData(
-                  dense: true,
-                  visualDensity: const VisualDensity(horizontal: 0, vertical: -2),
-                  minVerticalPadding: 0,
-                  contentPadding: EdgeInsets.zero,
-                  titleTextStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: WellPaidColors.navy,
-                      ),
-                ),
-              ),
-              child: ExpansionTile(
-                tilePadding: EdgeInsets.zero,
-                childrenPadding: const EdgeInsets.only(top: 2, bottom: 6),
-                initiallyExpanded: false,
-                title: Text(l10n.dashCashflowChartOptions),
-                children: const [
-                  _CashflowQueryControls(),
-                ],
-              ),
-            ),
-            const SizedBox(height: 4),
             if (d.months.isEmpty)
               Text(
                 l10n.dashCashflowEmpty,
@@ -104,7 +85,7 @@ class DashboardCashflowChartCard extends ConsumerWidget {
               )
             else
               _CashflowLineChartBody(data: d),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             _CashflowSummaryFooter(data: d),
           ],
         ),
@@ -113,25 +94,239 @@ class DashboardCashflowChartCard extends ConsumerWidget {
   }
 }
 
+void _applyCashflowRequest(
+  WidgetRef ref, {
+  required bool isDynamic,
+  required int forecastMonths,
+}) {
+  final f = forecastMonths.clamp(1, 12);
+  if (isDynamic) {
+    ref.read(dashboardCashflowRequestProvider.notifier).state =
+        DashboardCashflowRequest(
+      isDynamicWindow: true,
+      forecastMonths: f,
+    );
+    return;
+  }
+  final p = ref.read(dashboardPeriodProvider);
+  final s = _addCalendarMonths(p.year, p.month, -5);
+  ref.read(dashboardCashflowRequestProvider.notifier).state =
+      DashboardCashflowRequest(
+    isDynamicWindow: false,
+    startYear: s.$1,
+    startMonth: s.$2,
+    endYear: p.year,
+    endMonth: p.month,
+    forecastMonths: f,
+  );
+}
+
+/// Controlos compactos: modo dinâmico; previsão com setas (sem campo de texto).
+/// Sem novo toque nas setas durante [kForecastPreviewIdle], repõe os meses de
+/// previsão ao valor em que a sessão começou (gráfico “volta ao normal”).
+class _CashflowCompactQueryBar extends ConsumerStatefulWidget {
+  const _CashflowCompactQueryBar();
+
+  @override
+  ConsumerState<_CashflowCompactQueryBar> createState() =>
+      _CashflowCompactQueryBarState();
+}
+
+class _CashflowCompactQueryBarState extends ConsumerState<_CashflowCompactQueryBar> {
+  static const Duration kForecastPreviewIdle = Duration(seconds: 5);
+
+  Timer? _previewIdleTimer;
+  /// Valor de `forecastMonths` antes do primeiro toque nas setas nesta sessão.
+  int? _previewRestoreForecastMonths;
+  bool _suppressExternalForecastListen = false;
+
+  @override
+  void dispose() {
+    _previewIdleTimer?.cancel();
+    super.dispose();
+  }
+
+  void _cancelForecastPreviewSession() {
+    _previewIdleTimer?.cancel();
+    _previewIdleTimer = null;
+    _previewRestoreForecastMonths = null;
+  }
+
+  void _applyForecastNudge(int delta) {
+    final current = ref.read(dashboardCashflowRequestProvider);
+    final before = current.forecastMonths.clamp(1, 12);
+    final next = (before + delta).clamp(1, 12);
+
+    _previewIdleTimer?.cancel();
+
+    _previewRestoreForecastMonths ??= before;
+
+    if (next == before) {
+      _armPreviewIdleTimer();
+      return;
+    }
+
+    _suppressExternalForecastListen = true;
+    _applyCashflowRequest(
+      ref,
+      isDynamic: current.isDynamicWindow,
+      forecastMonths: next,
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _suppressExternalForecastListen = false;
+    });
+
+    if (_previewRestoreForecastMonths != null &&
+        next == _previewRestoreForecastMonths) {
+      _cancelForecastPreviewSession();
+      return;
+    }
+    _armPreviewIdleTimer();
+  }
+
+  void _armPreviewIdleTimer() {
+    _previewIdleTimer?.cancel();
+    _previewIdleTimer = Timer(kForecastPreviewIdle, () {
+      if (!mounted) return;
+      final restore = _previewRestoreForecastMonths;
+      if (restore == null) return;
+      _previewRestoreForecastMonths = null;
+      _previewIdleTimer = null;
+      final cur = ref.read(dashboardCashflowRequestProvider);
+      if (cur.forecastMonths == restore) return;
+      _suppressExternalForecastListen = true;
+      _applyCashflowRequest(
+        ref,
+        isDynamic: cur.isDynamicWindow,
+        forecastMonths: restore,
+      );
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _suppressExternalForecastListen = false;
+      });
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final req = ref.watch(dashboardCashflowRequestProvider);
+
+    ref.listen<DashboardCashflowRequest>(dashboardCashflowRequestProvider, (prev, next) {
+      if (_suppressExternalForecastListen) return;
+      if (prev?.forecastMonths != next.forecastMonths) {
+        _cancelForecastPreviewSession();
+      }
+    });
+
+    final fc = req.forecastMonths.clamp(1, 12);
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Tooltip(
+          message: l10n.dashCashflowDynamicMode,
+          child: Text(
+            'Din',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: WellPaidColors.navy.withValues(alpha: 0.75),
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+        ),
+        const SizedBox(width: 4),
+        Transform.scale(
+          scale: 0.82,
+          alignment: Alignment.centerLeft,
+          child: Switch(
+            value: req.isDynamicWindow,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            onChanged: (v) {
+              _cancelForecastPreviewSession();
+              _applyCashflowRequest(
+                ref,
+                isDynamic: v,
+                forecastMonths: fc,
+              );
+            },
+            activeThumbColor: WellPaidColors.gold,
+            activeTrackColor: WellPaidColors.gold.withValues(alpha: 0.45),
+          ),
+        ),
+        const Spacer(),
+        Tooltip(
+          message: l10n.dashCashflowForecastMonths,
+          child: Text(
+            'prev',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: WellPaidColors.navy.withValues(alpha: 0.75),
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+        ),
+        const SizedBox(width: 2),
+        IconButton(
+          tooltip: l10n.dashCashflowA11yForecastDecrease,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          iconSize: 22,
+          onPressed: () => _applyForecastNudge(-1),
+          icon: Icon(
+            PhosphorIconsRegular.caretLeft,
+            color: WellPaidColors.navy.withValues(alpha: 0.75),
+          ),
+        ),
+        SizedBox(
+          width: 22,
+          child: Text(
+            '$fc',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: WellPaidColors.navy,
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+        ),
+        IconButton(
+          tooltip: l10n.dashCashflowA11yForecastIncrease,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          iconSize: 22,
+          onPressed: () => _applyForecastNudge(1),
+          icon: Icon(
+            PhosphorIconsRegular.caretRight,
+            color: WellPaidColors.navy.withValues(alpha: 0.75),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _CashflowShell extends StatelessWidget {
-  const _CashflowShell({required this.title, required this.child});
+  const _CashflowShell({
+    required this.title,
+    required this.child,
+    this.belowTitle,
+  });
 
   final String title;
   final Widget child;
+  final Widget? belowTitle;
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      elevation: 0,
+      elevation: 2,
+      shadowColor: WellPaidColors.navy.withValues(alpha: 0.1),
       color: Colors.white,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         side: BorderSide(
-          color: WellPaidColors.navy.withValues(alpha: 0.08),
+          color: WellPaidColors.navy.withValues(alpha: 0.06),
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+        padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -140,7 +335,7 @@ class _CashflowShell extends StatelessWidget {
               child: Row(
                 children: [
                   Icon(
-                    Icons.show_chart_outlined,
+                    PhosphorIconsRegular.chartLineUp,
                     size: 20,
                     color: WellPaidColors.navy.withValues(alpha: 0.85),
                   ),
@@ -158,7 +353,11 @@ class _CashflowShell extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 6),
+            if (belowTitle != null) ...[
+              const SizedBox(height: 4),
+              belowTitle!,
+            ],
+            const SizedBox(height: 4),
             child,
           ],
         ),
@@ -179,268 +378,6 @@ class _CashflowShell extends StatelessWidget {
     y -= 1;
   }
   return (y, m);
-}
-
-/// Controlos F4: janela dinâmica, intervalo manual, meses de previsão, [Aplicar].
-class _CashflowQueryControls extends ConsumerStatefulWidget {
-  const _CashflowQueryControls();
-
-  @override
-  ConsumerState<_CashflowQueryControls> createState() =>
-      _CashflowQueryControlsState();
-}
-
-class _CashflowQueryControlsState extends ConsumerState<_CashflowQueryControls> {
-  late bool _dynamicWindow;
-  late int _startYear;
-  late int _startMonth;
-  late int _endYear;
-  late int _endMonth;
-  late int _forecastMonths;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadFromRequest(ref.read(dashboardCashflowRequestProvider));
-  }
-
-  void _loadFromRequest(DashboardCashflowRequest r) {
-    _dynamicWindow = r.isDynamicWindow;
-    _forecastMonths = r.forecastMonths.clamp(1, 12);
-    if (!r.isDynamicWindow &&
-        r.startYear != null &&
-        r.startMonth != null &&
-        r.endYear != null &&
-        r.endMonth != null) {
-      _startYear = r.startYear!;
-      _startMonth = r.startMonth!;
-      _endYear = r.endYear!;
-      _endMonth = r.endMonth!;
-    } else {
-      _seedManualFromDashboardPeriod();
-    }
-  }
-
-  void _seedManualFromDashboardPeriod() {
-    final p = ref.read(dashboardPeriodProvider);
-    _endYear = p.year;
-    _endMonth = p.month;
-    final s = _addCalendarMonths(p.year, p.month, -5);
-    _startYear = s.$1;
-    _startMonth = s.$2;
-  }
-
-  Future<void> _pickMonth({
-    required bool isStart,
-  }) async {
-    final l10n = context.l10n;
-    final y = isStart ? _startYear : _endYear;
-    final m = isStart ? _startMonth : _endMonth;
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime(y, m),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(DateTime.now().year + 2, 12, 31),
-      helpText: isStart ? l10n.dashCashflowStartMonth : l10n.dashCashflowEndMonth,
-    );
-    if (picked == null || !mounted) return;
-    setState(() {
-      if (isStart) {
-        _startYear = picked.year;
-        _startMonth = picked.month;
-      } else {
-        _endYear = picked.year;
-        _endMonth = picked.month;
-      }
-    });
-  }
-
-  void _apply() {
-    final l10n = context.l10n;
-    if (!_dynamicWindow) {
-      final startBeforeEnd = _startYear < _endYear ||
-          (_startYear == _endYear && _startMonth <= _endMonth);
-      if (!startBeforeEnd) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.dashCashflowRangeInvalid)),
-        );
-        return;
-      }
-    }
-    ref.read(dashboardCashflowRequestProvider.notifier).state =
-        DashboardCashflowRequest(
-      isDynamicWindow: _dynamicWindow,
-      startYear: _dynamicWindow ? null : _startYear,
-      startMonth: _dynamicWindow ? null : _startMonth,
-      endYear: _dynamicWindow ? null : _endYear,
-      endMonth: _dynamicWindow ? null : _endMonth,
-      forecastMonths: _forecastMonths,
-    );
-  }
-
-  String _monthButtonLabel(BuildContext context, int y, int mo) {
-    final tag = intlDateTagForUi(context);
-    return DateFormat.yMMM(tag).format(DateTime(y, mo));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final narrow = constraints.maxWidth < 400;
-        final startLabel =
-            '${l10n.dashCashflowStartMonth}: ${_monthButtonLabel(context, _startYear, _startMonth)}';
-        final endLabel =
-            '${l10n.dashCashflowEndMonth}: ${_monthButtonLabel(context, _endYear, _endMonth)}';
-
-        final startBtn = Semantics(
-          label: l10n.dashCashflowA11yPickStartMonth,
-          child: SizedBox(
-            width: narrow ? double.infinity : null,
-            child: OutlinedButton(
-              onPressed: () => _pickMonth(isStart: true),
-              child: Text(
-                startLabel,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ),
-        );
-        final endBtn = Semantics(
-          label: l10n.dashCashflowA11yPickEndMonth,
-          child: SizedBox(
-            width: narrow ? double.infinity : null,
-            child: OutlinedButton(
-              onPressed: () => _pickMonth(isStart: false),
-              child: Text(
-                endLabel,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ),
-        );
-
-        final forecastDropdown = Semantics(
-          label: l10n.dashCashflowA11yForecastDropdown,
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<int>(
-              isExpanded: narrow,
-              value: _forecastMonths,
-              items: [
-                for (var i = 1; i <= 12; i++)
-                  DropdownMenuItem(value: i, child: Text('$i')),
-              ],
-              onChanged: (v) {
-                if (v != null) setState(() => _forecastMonths = v);
-              },
-            ),
-          ),
-        );
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Material(
-              color: WellPaidColors.navy.withValues(alpha: 0.04),
-              borderRadius: BorderRadius.circular(12),
-              child: SwitchListTile(
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-                title: Text(
-                  l10n.dashCashflowDynamicMode,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: WellPaidColors.navy,
-                      ),
-                ),
-                value: _dynamicWindow,
-                activeThumbColor: WellPaidColors.gold,
-                activeTrackColor: WellPaidColors.gold.withValues(alpha: 0.45),
-                onChanged: (v) {
-                  setState(() {
-                    _dynamicWindow = v;
-                    if (!v) {
-                      _seedManualFromDashboardPeriod();
-                    }
-                  });
-                },
-              ),
-            ),
-            if (!_dynamicWindow) ...[
-              const SizedBox(height: 10),
-              if (narrow) ...[
-                startBtn,
-                const SizedBox(height: 8),
-                endBtn,
-              ] else
-                Row(
-                  children: [
-                    Expanded(child: startBtn),
-                    const SizedBox(width: 8),
-                    Expanded(child: endBtn),
-                  ],
-                ),
-            ],
-            const SizedBox(height: 10),
-            if (narrow)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    l10n.dashCashflowForecastMonths,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: WellPaidColors.navy.withValues(alpha: 0.85),
-                          fontWeight: FontWeight.w600,
-                        ),
-                  ),
-                  const SizedBox(height: 6),
-                  forecastDropdown,
-                ],
-              )
-            else
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      l10n.dashCashflowForecastMonths,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: WellPaidColors.navy.withValues(alpha: 0.85),
-                            fontWeight: FontWeight.w600,
-                          ),
-                    ),
-                  ),
-                  forecastDropdown,
-                ],
-              ),
-            const SizedBox(height: 10),
-            Semantics(
-              label: l10n.dashCashflowA11yApply,
-              child: narrow
-                  ? SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.tonal(
-                        onPressed: _apply,
-                        child: Text(l10n.dashCashflowApply),
-                      ),
-                    )
-                  : Align(
-                      alignment: Alignment.centerRight,
-                      child: FilledButton.tonal(
-                        onPressed: _apply,
-                        child: Text(l10n.dashCashflowApply),
-                      ),
-                    ),
-            ),
-          ],
-        );
-      },
-    );
-  }
 }
 
 class _CashflowSummaryFooter extends StatelessWidget {
@@ -530,12 +467,8 @@ class _CashflowLineChartBodyState extends State<_CashflowLineChartBody> {
     final tag = intlDateTagForUi(context);
     final monthFmt = DateFormat.MMM(tag);
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
-    final screenW = MediaQuery.sizeOf(context).width;
-    final chartHeight = screenW < 340
-        ? 232.0
-        : screenW < 420
-            ? 252.0
-            : 268.0;
+    /// Alinhado à altura visual do donut de categorias (~238); eixo + legenda ficam compactos.
+    const chartHeight = 200.0;
     final chartDuration = reduceMotion
         ? Duration.zero
         : const Duration(milliseconds: 380);
@@ -637,42 +570,47 @@ class _CashflowLineChartBodyState extends State<_CashflowLineChartBody> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Wrap(
-            spacing: 6,
-            runSpacing: 4,
-            alignment: WrapAlignment.start,
-            children: [
-              _LegendChip(
-                color: _income,
-                label: l10n.dashCashflowLegendIncome,
-                semanticsHint: l10n.dashCashflowA11ySeriesToggle(
-                  l10n.dashCashflowLegendIncome,
-                ),
-                active: _showIncome,
-                onTap: () => setState(() => _showIncome = !_showIncome),
+          SizedBox(
+            height: 28,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _LegendChip(
+                    color: _income,
+                    label: l10n.dashCashflowLegendIncome,
+                    semanticsHint: l10n.dashCashflowA11ySeriesToggle(
+                      l10n.dashCashflowLegendIncome,
+                    ),
+                    active: _showIncome,
+                    onTap: () => setState(() => _showIncome = !_showIncome),
+                  ),
+                  const SizedBox(width: 5),
+                  _LegendChip(
+                    color: _paid,
+                    label: l10n.dashCashflowLegendExpensePaid,
+                    semanticsHint: l10n.dashCashflowA11ySeriesToggle(
+                      l10n.dashCashflowLegendExpensePaid,
+                    ),
+                    active: _showPaid,
+                    onTap: () => setState(() => _showPaid = !_showPaid),
+                  ),
+                  const SizedBox(width: 5),
+                  _LegendChip(
+                    color: _forecast,
+                    label: l10n.dashCashflowLegendExpenseForecast,
+                    semanticsHint: l10n.dashCashflowA11ySeriesToggle(
+                      l10n.dashCashflowLegendExpenseForecast,
+                    ),
+                    active: _showForecast,
+                    dashed: true,
+                    onTap: () => setState(() => _showForecast = !_showForecast),
+                  ),
+                ],
               ),
-              _LegendChip(
-                color: _paid,
-                label: l10n.dashCashflowLegendExpensePaid,
-                semanticsHint: l10n.dashCashflowA11ySeriesToggle(
-                  l10n.dashCashflowLegendExpensePaid,
-                ),
-                active: _showPaid,
-                onTap: () => setState(() => _showPaid = !_showPaid),
-              ),
-              _LegendChip(
-                color: _forecast,
-                label: l10n.dashCashflowLegendExpenseForecast,
-                semanticsHint: l10n.dashCashflowA11ySeriesToggle(
-                  l10n.dashCashflowLegendExpenseForecast,
-                ),
-                active: _showForecast,
-                dashed: true,
-                onTap: () => setState(() => _showForecast = !_showForecast),
-              ),
-            ],
+            ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           SizedBox(
             height: chartHeight,
             child: LineChart(
@@ -714,7 +652,7 @@ class _CashflowLineChartBodyState extends State<_CashflowLineChartBody> {
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      reservedSize: 44,
+                      reservedSize: 34,
                       interval: maxY > 0 ? maxY / 4 : null,
                       getTitlesWidget: (value, meta) {
                         final c = value.round();
@@ -847,9 +785,9 @@ class _LegendChip extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(12),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
               border: Border.all(
                 color:
                     WellPaidColors.navy.withValues(alpha: active ? 0.14 : 0.08),
@@ -860,7 +798,7 @@ class _LegendChip extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 SizedBox(
-                  width: 14,
+                  width: 12,
                   height: 2,
                   child: CustomPaint(
                     painter: _LegendLinePainter(
@@ -869,15 +807,15 @@ class _LegendChip extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: 5),
+                const SizedBox(width: 4),
                 Text(
                   label,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: WellPaidColors.navy
                             .withValues(alpha: active ? 0.9 : 0.45),
                         fontWeight: FontWeight.w600,
-                        fontSize: 10.5,
-                        height: 1.1,
+                        fontSize: 9.5,
+                        height: 1.05,
                       ),
                 ),
               ],

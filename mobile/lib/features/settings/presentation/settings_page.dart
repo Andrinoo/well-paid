@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +8,7 @@ import '../../../core/l10n/context_l10n.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../core/locale/app_locale_provider.dart';
 import '../../../core/theme/well_paid_colors.dart';
+import 'goal_stall_reminder_settings_tile.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -21,7 +23,7 @@ class SettingsPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(PhosphorIconsRegular.arrowLeft),
           onPressed: () => context.pop(),
         ),
         title: Text(l10n.settingsTitle),
@@ -32,7 +34,7 @@ class SettingsPage extends ConsumerWidget {
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: Icon(
-              Icons.shield_outlined,
+              PhosphorIconsRegular.shield,
               color: WellPaidColors.navy.withValues(alpha: 0.85),
             ),
             title: Text(
@@ -42,10 +44,22 @@ class SettingsPage extends ConsumerWidget {
                 color: WellPaidColors.navy,
               ),
             ),
-            trailing: const Icon(Icons.chevron_right),
+            trailing: const Icon(PhosphorIconsRegular.caretRight),
             onTap: () => context.push('/emergency-reserve'),
           ),
           const SizedBox(height: 16),
+          Divider(height: 1, color: WellPaidColors.navy.withValues(alpha: 0.12)),
+          const SizedBox(height: 20),
+          Text(
+            l10n.settingsNotificationsSection,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: WellPaidColors.navy,
+                ),
+          ),
+          const SizedBox(height: 6),
+          const GoalStallReminderSettingsTile(),
+          const SizedBox(height: 20),
           Divider(height: 1, color: WellPaidColors.navy.withValues(alpha: 0.12)),
           const SizedBox(height: 20),
           Text(

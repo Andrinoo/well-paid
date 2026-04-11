@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -29,7 +30,7 @@ class IncomeDetailPage extends ConsumerWidget {
       loading: () => Scaffold(
         appBar: AppBar(
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
+            icon: const Icon(PhosphorIconsRegular.arrowLeft),
             onPressed: () => context.pop(),
           ),
           title: Text(l10n.incomeDetailTitle),
@@ -39,7 +40,7 @@ class IncomeDetailPage extends ConsumerWidget {
       error: (e, _) => Scaffold(
         appBar: AppBar(
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
+            icon: const Icon(PhosphorIconsRegular.arrowLeft),
             onPressed: () => context.pop(),
           ),
           title: Text(l10n.incomeDetailTitle),
@@ -114,7 +115,7 @@ class _DetailScaffold extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(PhosphorIconsRegular.arrowLeft),
           onPressed: () => context.pop(),
         ),
         title: Text(l10n.incomeDetailTitle),
@@ -122,7 +123,7 @@ class _DetailScaffold extends ConsumerWidget {
           if (!readOnly)
             IconButton(
               tooltip: l10n.expenseEdit,
-              icon: const Icon(Icons.edit_outlined),
+              icon: const Icon(PhosphorIconsRegular.pencilSimple),
               onPressed: () => context.push('/incomes/$incomeId/edit'),
             ),
         ],
@@ -140,7 +141,7 @@ class _DetailScaffold extends ConsumerWidget {
                   padding: const EdgeInsets.all(12),
                   child: Row(
                     children: [
-                      Icon(Icons.info_outline,
+                      Icon(PhosphorIconsRegular.info,
                           color: WellPaidColors.navy.withValues(alpha: 0.8)),
                       const SizedBox(width: 10),
                       Expanded(
@@ -184,7 +185,7 @@ class _DetailScaffold extends ConsumerWidget {
           if (!readOnly) ...[
             OutlinedButton.icon(
               onPressed: () => context.push('/incomes/$incomeId/edit'),
-              icon: const Icon(Icons.edit_outlined),
+              icon: const Icon(PhosphorIconsRegular.pencilSimple),
               label: Text(l10n.expenseEdit),
             ),
             const SizedBox(height: 12),
@@ -194,7 +195,7 @@ class _DetailScaffold extends ConsumerWidget {
                 foregroundColor: const Color(0xFFB71C1C),
                 side: const BorderSide(color: Color(0xFFB71C1C)),
               ),
-              icon: const Icon(Icons.delete_outline),
+              icon: const Icon(PhosphorIconsRegular.trash),
               label: Text(l10n.expenseDelete),
             ),
           ],

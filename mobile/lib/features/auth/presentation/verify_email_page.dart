@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -180,8 +181,8 @@ class _VerifyEmailPageState extends ConsumerState<VerifyEmailPage> {
         title: l10n.authVerifyEmailTitle,
         subtitle: l10n.authVerifyEmailFromLink,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
-          color: WellPaidColors.brandBlue,
+          icon: const Icon(PhosphorIconsRegular.arrowLeft),
+          color: WellPaidColors.gold,
           onPressed: () => setState(() {
             _autoFromLink = false;
             _busy = false;
@@ -200,8 +201,8 @@ class _VerifyEmailPageState extends ConsumerState<VerifyEmailPage> {
       title: l10n.authVerifyEmailTitle,
       subtitle: l10n.authVerifyEmailSubtitle,
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back_rounded),
-        color: WellPaidColors.brandBlue,
+        icon: const Icon(PhosphorIconsRegular.arrowLeft),
+        color: WellPaidColors.gold,
         onPressed: _busy ? null : () => context.pop(),
       ),
       formBody: Form(
@@ -261,7 +262,7 @@ class _VerifyEmailPageState extends ConsumerState<VerifyEmailPage> {
       ),
       footer: TextButton(
         style: TextButton.styleFrom(
-          foregroundColor: WellPaidColors.brandBlue,
+          foregroundColor: WellPaidColors.gold,
         ),
         onPressed: _busy ? null : () => context.go('/login'),
         child: Text(l10n.authBackToLogin),

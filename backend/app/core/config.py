@@ -94,12 +94,23 @@ def _ensure_tls_query(url: str) -> str:
     return url
 
 
-class Settings(BaseSettings):
-    model_config = SettingsConfigDict(
+def _build_settings_config() -> SettingsConfigDict:
+    """Em Vercel não há .env no bundle: usar só `os.environ` evita interacções estranhas com `env_file`."""
+    if os.getenv("VERCEL"):
+        return SettingsConfigDict(
+            env_file=None,
+            env_file_encoding=_ENV_ENCODING,
+            extra="ignore",
+        )
+    return SettingsConfigDict(
         env_file=_env_files(),
         env_file_encoding=_ENV_ENCODING,
         extra="ignore",
     )
+
+
+class Settings(BaseSettings):
+    model_config = _build_settings_config()
 
     database_url: str
     secret_key: str
@@ -159,16 +170,35 @@ def _settings_hint() -> str:
     custom = os.getenv("WELL_PAID_DOTENV", "").strip() or os.getenv(
         "ONE_PAY_DOTENV", ""
     ).strip()
+    on_vercel = bool(os.getenv("VERCEL"))
     lines = [
-        "DATABASE_URL e SECRET_KEY são obrigatórios: valores reais no .env (não placeholders do exemplo).",
-        "Cria ou edita o .env com essas chaves (sem aspas em volta da linha inteira).",
-        "Ficheiros .env (só estes são carregados pelo backend; não usamos cwd):",
-        f"  WELL_PAID_DOTENV -> {custom or '(não definida)'}",
-        f"  {_b / '.env'} -> {(_b / '.env').resolve().is_file()}",
-        f"  {_r / '.env'} -> {(_r / '.env').resolve().is_file()}",
-        f"cwd (só informativo): {cwd}",
-        "Nota: no Explorador, .env.txt nao conta - o nome tem de ser exatamente .env",
+        "DATABASE_URL e SECRET_KEY são obrigatórios (valores reais, não placeholders do .env.example).",
     ]
+    if on_vercel:
+        v_url = os.getenv("VERCEL_URL", "(não definida)")
+        v_pid = os.getenv("VERCEL_PROJECT_ID", "(não definida)")
+        v_env = os.getenv("VERCEL_ENV", "(não definida)")
+        lines.extend(
+            [
+                "Ambiente Vercel detetado: não há .env no servidor. Define no painel do projeto:",
+                "  Vercel → Settings → Environment Variables → DATABASE_URL e SECRET_KEY (Production).",
+                "Redeploy só envia código; não cria estas variáveis. Ver Ordems 1.md §2.5.",
+                f"  (diagnóstico) VERCEL_URL={v_url} VERCEL_PROJECT_ID={v_pid} VERCEL_ENV={v_env}",
+                "  Confirma no dashboard que estas variáveis existem neste mesmo projeto (ex.: well-paid-psi).",
+            ]
+        )
+    else:
+        lines.extend(
+            [
+                "Local: cria ou edita o .env com essas chaves (sem aspas em volta da linha inteira).",
+                "Ficheiros .env (só estes são carregados pelo backend; não usamos cwd):",
+                f"  WELL_PAID_DOTENV -> {custom or '(não definida)'}",
+                f"  {_b / '.env'} -> {(_b / '.env').resolve().is_file()}",
+                f"  {_r / '.env'} -> {(_r / '.env').resolve().is_file()}",
+                f"cwd (só informativo): {cwd}",
+                "Nota: no Explorador, .env.txt nao conta - o nome tem de ser exatamente .env",
+            ]
+        )
     return "\n".join(lines)
 
 

@@ -1,10 +1,17 @@
+import 'dart:async' show unawaited;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
+import '../../../core/locale/app_locale_provider.dart';
 import '../../../core/l10n/context_l10n.dart';
 import '../../../core/navigation/list_data_warmup.dart';
+import '../../../core/notifications/goal_stall_reminder_service.dart';
 import '../../../core/theme/well_paid_colors.dart';
+import '../../goals/application/goals_providers.dart';
+import '../../goals/domain/goal_item.dart';
 import 'shell_quick_panel.dart';
 
 /// Shell with bottom [NavigationBar] for primary app sections.
@@ -20,15 +27,6 @@ class MainShell extends ConsumerStatefulWidget {
 class _MainShellState extends ConsumerState<MainShell> {
   bool _quickPanelExpanded = false;
 
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      scheduleShellDataWarmup(ref);
-    });
-  }
-
   void _setQuickExpanded(bool v) {
     if (_quickPanelExpanded == v) return;
     setState(() => _quickPanelExpanded = v);
@@ -37,6 +35,13 @@ class _MainShellState extends ConsumerState<MainShell> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    ref.listen<AsyncValue<List<GoalItem>>>(goalsListProvider, (prev, next) {
+      next.whenData((goals) {
+        final loc =
+            ref.read(appLocaleProvider).valueOrNull ?? const Locale('pt');
+        unawaited(GoalStallReminderService.syncFromGoals(goals, locale: loc));
+      });
+    });
     final navigationShell = widget.navigationShell;
     final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     final expandDuration = Duration(milliseconds: reduceMotion ? 1 : 220);
@@ -105,7 +110,7 @@ class _MainShellState extends ConsumerState<MainShell> {
                               duration: expandDuration,
                               turns: _quickPanelExpanded ? 0.5 : 0,
                               child: Icon(
-                                Icons.keyboard_arrow_up_rounded,
+                                PhosphorIconsRegular.caretUp,
                                 size: 22,
                                 color: WellPaidColors.navy.withValues(alpha: 0.5),
                               ),
@@ -127,28 +132,28 @@ class _MainShellState extends ConsumerState<MainShell> {
                       _onDestinationSelected(navigationShell, i),
                   destinations: [
                     NavigationDestination(
-                      icon: const Icon(Icons.dashboard_outlined),
-                      selectedIcon: const Icon(Icons.dashboard),
+                      icon: const Icon(PhosphorIconsRegular.house),
+                      selectedIcon: const Icon(PhosphorIconsFill.house),
                       label: l10n.navHome,
                     ),
                     NavigationDestination(
-                      icon: const Icon(Icons.receipt_long_outlined),
-                      selectedIcon: const Icon(Icons.receipt_long),
+                      icon: const Icon(PhosphorIconsRegular.receipt),
+                      selectedIcon: const Icon(PhosphorIconsFill.receipt),
                       label: l10n.navExpenses,
                     ),
                     NavigationDestination(
-                      icon: const Icon(Icons.savings_outlined),
-                      selectedIcon: const Icon(Icons.savings),
+                      icon: const Icon(PhosphorIconsRegular.coins),
+                      selectedIcon: const Icon(PhosphorIconsFill.coins),
                       label: l10n.navIncomes,
                     ),
                     NavigationDestination(
-                      icon: const Icon(Icons.flag_outlined),
-                      selectedIcon: const Icon(Icons.flag),
+                      icon: const Icon(PhosphorIconsRegular.flag),
+                      selectedIcon: const Icon(PhosphorIconsFill.flag),
                       label: l10n.navGoals,
                     ),
                     NavigationDestination(
-                      icon: const Icon(Icons.shield_outlined),
-                      selectedIcon: const Icon(Icons.shield),
+                      icon: const Icon(PhosphorIconsRegular.shield),
+                      selectedIcon: const Icon(PhosphorIconsFill.shield),
                       label: l10n.navReserve,
                     ),
                   ],

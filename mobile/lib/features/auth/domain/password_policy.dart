@@ -62,7 +62,7 @@ InputDecoration authFieldDecoration(
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(10),
       borderSide: const BorderSide(
-        color: WellPaidColors.brandBlue,
+        color: WellPaidColors.gold,
         width: 1.5,
       ),
     ),
@@ -84,7 +84,7 @@ InputDecoration authFieldDecoration(
       fontSize: 13,
     ),
     floatingLabelStyle: const TextStyle(
-      color: WellPaidColors.brandBlue,
+      color: WellPaidColors.gold,
       fontWeight: FontWeight.w600,
       fontSize: 13,
     ),

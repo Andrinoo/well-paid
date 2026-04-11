@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -235,7 +236,7 @@ class _FamilyPageState extends ConsumerState<FamilyPage> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(PhosphorIconsRegular.arrowLeft),
           onPressed: () => context.pop(),
         ),
         title: Text(l10n.familyTitle),
@@ -243,7 +244,7 @@ class _FamilyPageState extends ConsumerState<FamilyPage> {
           IconButton(
             tooltip: l10n.expensesRefresh,
             onPressed: _busy ? null : () => ref.invalidate(familyMeProvider),
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(PhosphorIconsRegular.arrowsClockwise),
           ),
         ],
       ),
@@ -342,7 +343,7 @@ class _FamilyPageState extends ConsumerState<FamilyPage> {
                         IconButton(
                           tooltip: l10n.famEditNameTooltip,
                           onPressed: _busy ? null : () => _renameFamily(fam.name),
-                          icon: const Icon(Icons.edit_outlined),
+                          icon: const Icon(PhosphorIconsRegular.pencilSimple),
                         ),
                     ],
                   ),
@@ -356,7 +357,7 @@ class _FamilyPageState extends ConsumerState<FamilyPage> {
                   if (isOwner)
                     FilledButton.icon(
                       onPressed: _busy ? null : _showInviteDialog,
-                      icon: const Icon(Icons.qr_code_2_outlined),
+                      icon: const Icon(PhosphorIconsRegular.qrCode),
                       label: Text(l10n.famInviteQr),
                       style: FilledButton.styleFrom(
                         backgroundColor: WellPaidColors.gold,
@@ -366,7 +367,7 @@ class _FamilyPageState extends ConsumerState<FamilyPage> {
                   if (isOwner) const SizedBox(height: 12),
                   OutlinedButton.icon(
                     onPressed: _busy ? null : _leave,
-                    icon: const Icon(Icons.logout),
+                    icon: const Icon(PhosphorIconsRegular.signOut),
                     label: Text(l10n.famLeave),
                   ),
                   const SizedBox(height: 24),
@@ -395,7 +396,7 @@ class _FamilyPageState extends ConsumerState<FamilyPage> {
                         ),
                         trailing: isOwner && !m.isSelf
                             ? IconButton(
-                                icon: const Icon(Icons.person_remove_outlined),
+                                icon: const Icon(PhosphorIconsRegular.userMinus),
                                 onPressed: _busy ? null : () => _removeMember(m),
                               )
                             : null,

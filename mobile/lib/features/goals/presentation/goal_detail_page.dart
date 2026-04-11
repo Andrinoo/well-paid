@@ -1,9 +1,11 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/format/brl_cents.dart';
+import '../../../core/format/brl_currency_input_formatter.dart';
 import '../../../core/format/locale_dates.dart';
 import '../../../core/format/parse_brl_input.dart';
 import '../../../core/l10n/context_l10n.dart';
@@ -12,6 +14,9 @@ import '../../../core/theme/well_paid_colors.dart';
 import '../../dashboard/application/dashboard_providers.dart';
 import '../application/goals_providers.dart';
 import '../domain/goal_item.dart';
+import 'goal_linear_pace_section.dart';
+import 'goal_milestone_widgets.dart';
+import 'goal_progress_milestone.dart';
 
 class GoalDetailPage extends ConsumerWidget {
   const GoalDetailPage({super.key, required this.goalId});
@@ -60,6 +65,10 @@ class _GoalDetailBody extends ConsumerWidget {
         : 0.0;
     final remaining = (goal.targetCents - goal.currentCents).clamp(0, 1 << 62);
     final completed = goal.currentCents >= goal.targetCents && goal.targetCents > 0;
+    final milestone = resolveGoalProgressMilestone(
+      currentCents: goal.currentCents,
+      targetCents: goal.targetCents,
+    );
 
     Future<void> onArchive() async {
       final ok = await showDialog<bool>(
@@ -200,6 +209,10 @@ class _GoalDetailBody extends ConsumerWidget {
                 backgroundColor: WellPaidColors.navy.withValues(alpha: 0.08),
               ),
             ),
+          if (milestone != null) ...[
+            GoalMilestoneBanner(milestone: milestone),
+            const SizedBox(height: 16),
+          ],
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: LinearProgressIndicator(
@@ -224,11 +237,15 @@ class _GoalDetailBody extends ConsumerWidget {
                   color: WellPaidColors.navy.withValues(alpha: 0.72),
                 ),
           ),
+          if (!completed && goal.isActive) ...[
+            const SizedBox(height: 16),
+            GoalLinearPaceSection(goal: goal),
+          ],
           if (goal.isMine && goal.isActive) ...[
             const SizedBox(height: 20),
             FilledButton.icon(
               onPressed: () => _openContributeSheet(context, ref, goalId),
-              icon: const Icon(Icons.add),
+              icon: const Icon(PhosphorIconsRegular.plus),
               label: Text(l10n.goalContribute),
             ),
           ],
@@ -395,6 +412,15 @@ class _ContributeSheetState extends ConsumerState<_ContributeSheet> {
                   labelText: l10n.goalContributeAmountLabel,
                 ),
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: kBrCurrencyInputFormatters,
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) {
+                    return l10n.requiredField;
+                  }
+                  final c = parseInputToCents(v);
+                  if (c == null || c <= 0) return l10n.valueInvalid;
+                  return null;
+                },
               ),
               const SizedBox(height: 12),
               TextFormField(

@@ -89,6 +89,7 @@ class ShoppingListsRepository {
   Future<ShoppingListDetail> addItem(
     String listId, {
     required String label,
+    int quantity = 1,
     int? lineAmountCents,
   }) async {
     try {
@@ -96,6 +97,7 @@ class ShoppingListsRepository {
         '/shopping-lists/$listId/items',
         data: {
           'label': label,
+          'quantity': quantity,
           if (lineAmountCents != null) 'line_amount_cents': lineAmountCents,
         },
       );
@@ -110,11 +112,13 @@ class ShoppingListsRepository {
     String listId,
     String itemId, {
     String? label,
+    int? quantity,
     int? lineAmountCents,
     bool clearLineAmount = false,
   }) async {
     final body = <String, dynamic>{};
     if (label != null) body['label'] = label;
+    if (quantity != null) body['quantity'] = quantity;
     if (clearLineAmount) {
       body['line_amount_cents'] = null;
     } else if (lineAmountCents != null) {
@@ -148,8 +152,6 @@ class ShoppingListsRepository {
     String listId, {
     required String categoryId,
     required DateTime expenseDate,
-    required bool markPaid,
-    String? description,
     int? totalCents,
     bool isShared = false,
     String? sharedWithUserId,
@@ -161,8 +163,7 @@ class ShoppingListsRepository {
           'category_id': categoryId,
           'expense_date':
               '${expenseDate.year.toString().padLeft(4, '0')}-${expenseDate.month.toString().padLeft(2, '0')}-${expenseDate.day.toString().padLeft(2, '0')}',
-          'status': markPaid ? 'paid' : 'pending',
-          if (description != null && description.isNotEmpty) 'description': description,
+          'status': 'paid',
           if (totalCents != null) 'total_cents': totalCents,
           'is_shared': isShared,
           if (sharedWithUserId != null) 'shared_with_user_id': sharedWithUserId,

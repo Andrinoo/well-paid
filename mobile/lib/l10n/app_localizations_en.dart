@@ -155,6 +155,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authPasswordRequired => 'Enter your password';
 
   @override
+  String get authRememberCredentials =>
+      'Remember email and password on this device';
+
+  @override
   String get authForgotPassword => 'Forgot password?';
 
   @override
@@ -302,6 +306,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dashByCategory => 'Spending by category';
+
+  @override
+  String get dashPendingThisMonthTitle => 'Bills to pay';
+
+  @override
+  String get dashPendingThisMonthSubtitle => 'Tap to review and settle';
+
+  @override
+  String get chartViewCategoryExpenses => 'View expenses in this category';
+
+  @override
+  String get chartRegisterExpenseCta => 'Add expense';
+
+  @override
+  String get expenseListFilteredByCategory => 'Filtered by category';
+
+  @override
+  String get expenseListClearCategoryFilter => 'Clear';
 
   @override
   String get dashToPay => 'To pay';
@@ -571,7 +593,55 @@ class AppLocalizationsEn extends AppLocalizations {
   String get emergencyReserveResetSuccess => 'Reserve cleared.';
 
   @override
+  String get reserveMilestoneBannerQuarter =>
+      'You’ve reached a quarter of your reserve’s yearly goal — nice pace.';
+
+  @override
+  String get reserveMilestoneBannerHalf =>
+      'Halfway through your saving year for the reserve.';
+
+  @override
+  String get reserveMilestoneBannerAlmost =>
+      'Almost there: just a little left to hit the reserve’s yearly goal.';
+
+  @override
+  String get reserveMilestoneBannerComplete =>
+      'Yearly reserve goal reached. Strong consistency.';
+
+  @override
   String get settingsEmergencyReserve => 'Emergency reserve';
+
+  @override
+  String get settingsNotificationsSection => 'Notifications';
+
+  @override
+  String get settingsGoalStallReminderTitle => 'Stalled goals reminder';
+
+  @override
+  String get settingsGoalStallReminderSubtitle =>
+      'A local notification if you have not updated a goal for about 3 weeks (based on last update time).';
+
+  @override
+  String get settingsGoalStallPermissionDenied =>
+      'Enable notifications in system settings to receive the reminder.';
+
+  @override
+  String get goalStallNotifTitle => 'Goals without recent activity';
+
+  @override
+  String goalStallNotifBodySingle(String name) {
+    return '“$name” — it’s been a while without an update. Time to check in?';
+  }
+
+  @override
+  String goalStallNotifBodyTwo(String a, String b) {
+    return '“$a” and “$b” — goals without updates for a while.';
+  }
+
+  @override
+  String goalStallNotifBodyMany(String first, int count) {
+    return '“$first” and $count more — don’t forget your goals.';
+  }
 
   @override
   String get dashMarkPaidTooltip => 'Mark as paid';
@@ -646,6 +716,45 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get goalsAddTooltip => 'New goal';
+
+  @override
+  String get goalsAggregateTitle => 'Overview';
+
+  @override
+  String goalsAggregateLine(int count, String saved, String target) {
+    return '$count active goals · $saved of $target';
+  }
+
+  @override
+  String get goalsScreenHint =>
+      'Visible progress and combined totals help reinforce saving habits.';
+
+  @override
+  String get goalMilestoneBannerQuarter =>
+      'You’ve reached a quarter of the goal — nice pace.';
+
+  @override
+  String get goalMilestoneBannerHalf => 'Halfway there. Keep the momentum.';
+
+  @override
+  String get goalMilestoneBannerAlmost =>
+      'Almost there: just a little left to hit the goal.';
+
+  @override
+  String get goalMilestoneBannerComplete =>
+      'Goal reached. Well done staying consistent.';
+
+  @override
+  String get goalMilestoneChipQuarter => '25%';
+
+  @override
+  String get goalMilestoneChipHalf => '50%';
+
+  @override
+  String get goalMilestoneChipAlmost => '90%';
+
+  @override
+  String get goalMilestoneChipComplete => 'OK';
 
   @override
   String get newGoalTitle => 'New goal';
@@ -747,6 +856,32 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get goalReactivatedSnackbar => 'Goal reactivated.';
+
+  @override
+  String get goalLinearPaceCardTitle => 'Pace and forecast';
+
+  @override
+  String goalLinearPaceAvgPerMonth(String amount) {
+    return 'Average pace so far: $amount/mo';
+  }
+
+  @override
+  String goalLinearPaceEta(String monthYear) {
+    return 'At this pace: goal ~by $monthYear';
+  }
+
+  @override
+  String get goalLinearPaceDisclaimer =>
+      'Simple estimate from what you’ve saved so far and the goal’s creation date; real pace may vary.';
+
+  @override
+  String goalLinearPaceListHint(String amount, String monthYear) {
+    return '~$amount/mo · goal ~$monthYear';
+  }
+
+  @override
+  String get goalLinearPaceInsufficientHistory =>
+      'Not enough history yet to estimate pace.';
 
   @override
   String get expensePayConfirmTitle => 'Mark as paid?';
@@ -1551,6 +1686,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'Number of forecast months after the range';
 
   @override
+  String get dashCashflowA11yForecastDecrease => 'Show fewer forecast months';
+
+  @override
+  String get dashCashflowA11yForecastIncrease => 'Show more forecast months';
+
+  @override
   String get dashCashflowA11yApply => 'Apply filters to monthly history';
 
   @override
@@ -1605,7 +1746,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shoppingListItemLabelHint => 'Item description';
 
   @override
-  String get shoppingListItemAmountOptional => 'Amount (optional)';
+  String get shoppingListItemQuantity => 'Quantity';
+
+  @override
+  String get shoppingListItemAmountOptional => 'Unit price (optional)';
 
   @override
   String get shoppingListDeleteItem => 'Remove item';
@@ -1632,6 +1776,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get shoppingListMarkPaid => 'Already paid';
+
+  @override
+  String get shoppingListExpenseFromListPaidNote =>
+      'The expense is saved as paid, with no installments or recurrence. Only the list name and total appear on the expense.';
 
   @override
   String get shoppingListExpenseDate => 'Expense date';
@@ -1661,6 +1809,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Only the author can edit this draft list.';
 
   @override
+  String get shoppingListCompletedEditHint =>
+      'You can fix amounts, quantities, and remove items. The list cannot be empty.';
+
+  @override
   String get shoppingListNoItems =>
       'No items yet. Add products to plan your trip.';
 
@@ -1669,10 +1821,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get shoppingListFooterEstimatedNote =>
-      'Sum of lines with a price only.';
+      'Sum of (unit price × quantity) for lines with a price.';
 
   @override
-  String get shoppingListInlineAmountHint => 'Amount';
+  String get shoppingListFooterAddItemCompleted =>
+      'You can still add items to this completed list.';
+
+  @override
+  String get shoppingListInlineAmountHint => 'Unit';
 
   @override
   String get shoppingListEditLabelTitle => 'Item name';
@@ -1690,4 +1846,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get shoppingListCompleteSuccess =>
       'Expense saved. The list is now in history.';
+
+  @override
+  String get shoppingListFlushDraftError =>
+      'Could not sync list items. Check your connection and try again.';
+
+  @override
+  String get shoppingListCompleteInProgress => 'Syncing and completing…';
 }

@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -93,8 +94,8 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
       title: l10n.authForgotTitle,
       subtitle: l10n.authForgotSubtitle,
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back_rounded),
-        color: WellPaidColors.brandBlue,
+        icon: const Icon(PhosphorIconsRegular.arrowLeft),
+        color: WellPaidColors.gold,
         onPressed: _busy ? null : () => context.pop(),
       ),
       formBody: Form(
@@ -128,7 +129,7 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
       ),
       footer: TextButton(
         style: TextButton.styleFrom(
-          foregroundColor: WellPaidColors.brandBlue,
+          foregroundColor: WellPaidColors.gold,
         ),
         onPressed: _busy ? null : () => context.pop(),
         child: Text(l10n.authBackToLogin),

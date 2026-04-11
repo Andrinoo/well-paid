@@ -34,18 +34,21 @@ final categoriesProvider = FutureProvider.autoDispose<List<CategoryOption>>(
   },
 );
 
-/// Filtros da lista de despesas (mês + status opcional).
+/// Filtros da lista de despesas (mês + status opcional + categoria opcional).
 class ExpenseListFilters {
   const ExpenseListFilters({
     required this.year,
     required this.month,
     this.status,
+    this.categoryId,
   });
 
   final int year;
   final int month;
   /// `null` = todas; `pending` | `paid`
   final String? status;
+  /// `null` = todas as categorias (pedido à API com `category_id` quando definido).
+  final String? categoryId;
 }
 
 final expenseListFiltersProvider =
@@ -64,6 +67,7 @@ final expensesListProvider =
         year: f.year,
         month: f.month,
         status: f.status,
+        categoryId: f.categoryId,
       );
   return r.items;
 });

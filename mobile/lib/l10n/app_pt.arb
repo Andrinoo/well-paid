@@ -47,6 +47,7 @@
   "authShowPassword": "Mostrar senha",
   "authHidePassword": "Ocultar senha",
   "authPasswordRequired": "Informe a senha",
+  "authRememberCredentials": "Lembrar e-mail e senha neste aparelho",
   "authForgotPassword": "Esqueceu a senha?",
   "authEnter": "Entrar",
   "authLoginError": "Erro ao entrar",
@@ -105,6 +106,12 @@
   "dashExpenses": "Despesas",
   "dashBalance": "Saldo",
   "dashByCategory": "Despesas por categoria",
+  "dashPendingThisMonthTitle": "Contas a pagar",
+  "dashPendingThisMonthSubtitle": "Toque para rever e quitar",
+  "chartViewCategoryExpenses": "Ver despesas desta categoria",
+  "chartRegisterExpenseCta": "Registar despesa",
+  "expenseListFilteredByCategory": "Filtrado por categoria",
+  "expenseListClearCategoryFilter": "Limpar",
   "dashToPay": "A pagar",
   "toPayScreenSubtitle": "Todas as despesas pendentes por ordem cronológica de vencimento. Parcelas aparecem em linhas separadas. As cores indicam a proximidade do vencimento.",
   "toPayViewAllExpenses": "Todas as despesas",
@@ -230,7 +237,36 @@
   "emergencyReserveResetBody": "Remove a meta, o saldo e todos os créditos mensais. Esta acção não se pode desfazer.",
   "emergencyReserveResetConfirm": "Limpar",
   "emergencyReserveResetSuccess": "Reserva reposta.",
+  "reserveMilestoneBannerQuarter": "Já alcançaste um quarto do objetivo anual da reserva — bom ritmo.",
+  "reserveMilestoneBannerHalf": "Metade do caminho em relação ao teu ano de poupança.",
+  "reserveMilestoneBannerAlmost": "Quase lá: falta pouco para fechares o objetivo anual da reserva.",
+  "reserveMilestoneBannerComplete": "Objetivo anual da reserva atingido. Disciplina em destaque.",
   "settingsEmergencyReserve": "Reserva de emergência",
+  "settingsNotificationsSection": "Notificações",
+  "settingsGoalStallReminderTitle": "Lembrete de metas paradas",
+  "settingsGoalStallReminderSubtitle": "Uma notificação local se não actualizares uma meta há cerca de 3 semanas (usa a data da última actualização).",
+  "settingsGoalStallPermissionDenied": "Activa as notificações nas definições do sistema para receberes o lembrete.",
+  "goalStallNotifTitle": "Metas sem movimento",
+  "goalStallNotifBodySingle": "«{name}» — já passou algum tempo sem actualização. Queres rever?",
+  "@goalStallNotifBodySingle": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "goalStallNotifBodyTwo": "«{a}» e «{b}» — metas há tempo sem actualização.",
+  "@goalStallNotifBodyTwo": {
+    "placeholders": {
+      "a": {"type": "String"},
+      "b": {"type": "String"}
+    }
+  },
+  "goalStallNotifBodyMany": "«{first}» e mais {count} — não te esqueças das metas.",
+  "@goalStallNotifBodyMany": {
+    "placeholders": {
+      "first": {"type": "String"},
+      "count": {"type": "int"}
+    }
+  },
   "dashMarkPaidTooltip": "Marcar como paga",
   "dashDueShort": "Venc.",
   "dashDueVerb": "Vence",
@@ -270,6 +306,24 @@
   "goalsLoadError": "Erro ao carregar metas.",
   "goalsEmpty": "Sem metas ativas ainda.",
   "goalsAddTooltip": "Nova meta",
+  "goalsAggregateTitle": "Resumo",
+  "goalsAggregateLine": "{count} metas activas · {saved} de {target}",
+  "@goalsAggregateLine": {
+    "placeholders": {
+      "count": {"type": "int"},
+      "saved": {"type": "String"},
+      "target": {"type": "String"}
+    }
+  },
+  "goalsScreenHint": "Progresso visível e totais combinados reforçam o hábito de poupança.",
+  "goalMilestoneBannerQuarter": "Já alcançaste um quarto do objectivo — bom ritmo.",
+  "goalMilestoneBannerHalf": "Metade do caminho. Mantém o foco.",
+  "goalMilestoneBannerAlmost": "Quase lá: falta pouco para fechares a meta.",
+  "goalMilestoneBannerComplete": "Objectivo atingido. Parabéns pela consistência.",
+  "goalMilestoneChipQuarter": "25%",
+  "goalMilestoneChipHalf": "50%",
+  "goalMilestoneChipAlmost": "90%",
+  "goalMilestoneChipComplete": "OK",
   "newGoalTitle": "Nova meta",
   "goalFormTitleLabel": "Nome da meta",
   "goalFormTargetLabel": "Objetivo (valor a atingir)",
@@ -302,6 +356,28 @@
   "goalInactiveBadge": "Arquivada",
   "goalReactivate": "Reativar",
   "goalReactivatedSnackbar": "Meta reativada.",
+  "goalLinearPaceCardTitle": "Ritmo e previsão",
+  "goalLinearPaceAvgPerMonth": "Ritmo médio até aqui: {amount}/mês",
+  "@goalLinearPaceAvgPerMonth": {
+    "placeholders": {
+      "amount": {"type": "String"}
+    }
+  },
+  "goalLinearPaceEta": "Se mantiveres este ritmo: objetivo ~até {monthYear}",
+  "@goalLinearPaceEta": {
+    "placeholders": {
+      "monthYear": {"type": "String"}
+    }
+  },
+  "goalLinearPaceDisclaimer": "Estimativa simples com base no que já poupaste e na data de criação da meta; o ritmo real pode variar.",
+  "goalLinearPaceListHint": "~{amount}/mês · meta ~{monthYear}",
+  "@goalLinearPaceListHint": {
+    "placeholders": {
+      "amount": {"type": "String"},
+      "monthYear": {"type": "String"}
+    }
+  },
+  "goalLinearPaceInsufficientHistory": "Ainda não há histórico suficiente para estimar o ritmo.",
   "expensePayConfirmTitle": "Marcar como paga?",
   "expensePayConflict": "Esta despesa já não pode ser quitada (por exemplo, já está paga).",
   "expensePayInstallmentLine": "Parcela {current} de {total}",
@@ -650,6 +726,8 @@
   "dashCashflowA11yPickStartMonth": "Escolher mês inicial do intervalo",
   "dashCashflowA11yPickEndMonth": "Escolher mês final do intervalo",
   "dashCashflowA11yForecastDropdown": "Número de meses de previsão após o intervalo",
+  "dashCashflowA11yForecastDecrease": "Menos meses de previsão no gráfico",
+  "dashCashflowA11yForecastIncrease": "Mais meses de previsão no gráfico",
   "dashCashflowA11yApply": "Aplicar filtros ao histórico mensal",
   "dashCashflowA11ySeriesToggle": "{name}. Toque para mostrar ou ocultar no gráfico.",
   "@dashCashflowA11ySeriesToggle": {
@@ -686,7 +764,8 @@
   "shoppingListNoPriceYet": "Sem valor (preencher na loja)",
   "shoppingListAddItem": "Adicionar item",
   "shoppingListItemLabelHint": "Descrição do item",
-  "shoppingListItemAmountOptional": "Valor (opcional)",
+  "shoppingListItemQuantity": "Quantidade",
+  "shoppingListItemAmountOptional": "Valor unitário (opcional)",
   "shoppingListDeleteItem": "Remover item",
   "shoppingListConfirmDeleteDraftTitle": "Apagar lista?",
   "shoppingListConfirmDeleteDraftBody": "Esta lista em rascunho será eliminada. Esta ação não pode ser desfeita.",
@@ -695,6 +774,7 @@
   "shoppingListTotalOverrideHint": "Total manual (opcional)",
   "shoppingListDescriptionOptional": "Descrição da despesa (opcional)",
   "shoppingListMarkPaid": "Já paguei",
+  "shoppingListExpenseFromListPaidNote": "A despesa fica como paga, sem parcelas nem recorrência. Na despesa aparecem só o nome da lista e o total.",
   "shoppingListExpenseDate": "Data da despesa",
   "shoppingListViewExpense": "Ver despesa",
   "shoppingListCompletedOn": "Concluída em {date}",
@@ -708,13 +788,17 @@
   "shoppingListStoreOptional": "Loja (opcional)",
   "shoppingListErrorLoad": "Não foi possível carregar as listas.",
   "shoppingListReadOnlyDraft": "Só o autor pode editar esta lista em rascunho.",
+  "shoppingListCompletedEditHint": "Podes corrigir valores, quantidades e remover itens. A lista não pode ficar vazia.",
   "shoppingListNoItems": "Sem itens. Adiciona produtos para planear a compra.",
   "shoppingListFooterEstimatedTotal": "Total estimado",
-  "shoppingListFooterEstimatedNote": "Soma só dos itens com valor preenchido.",
-  "shoppingListInlineAmountHint": "Valor",
+  "shoppingListFooterEstimatedNote": "Soma de (valor unitário × quantidade) nas linhas com preço.",
+  "shoppingListFooterAddItemCompleted": "Ainda podes acrescentar itens a esta lista concluída.",
+  "shoppingListInlineAmountHint": "Unitário",
   "shoppingListEditLabelTitle": "Nome do item",
   "shoppingListConfirmRemoveItemTitle": "Remover item?",
   "shoppingListConfirmRemoveItemBody": "Este produto sai da lista.",
   "shoppingListEditItemTitle": "Editar item",
-  "shoppingListCompleteSuccess": "Despesa registada. A lista foi movida para o histórico."
+  "shoppingListCompleteSuccess": "Despesa registada. A lista foi movida para o histórico.",
+  "shoppingListFlushDraftError": "Não foi possível sincronizar os itens. Verifica a ligação e tenta outra vez.",
+  "shoppingListCompleteInProgress": "A sincronizar e a concluir…"
 }

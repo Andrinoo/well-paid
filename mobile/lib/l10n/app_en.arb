@@ -47,6 +47,7 @@
   "authShowPassword": "Show password",
   "authHidePassword": "Hide password",
   "authPasswordRequired": "Enter your password",
+  "authRememberCredentials": "Remember email and password on this device",
   "authForgotPassword": "Forgot password?",
   "authEnter": "Sign in",
   "authLoginError": "Could not sign in",
@@ -105,6 +106,12 @@
   "dashExpenses": "Expenses",
   "dashBalance": "Balance",
   "dashByCategory": "Spending by category",
+  "dashPendingThisMonthTitle": "Bills to pay",
+  "dashPendingThisMonthSubtitle": "Tap to review and settle",
+  "chartViewCategoryExpenses": "View expenses in this category",
+  "chartRegisterExpenseCta": "Add expense",
+  "expenseListFilteredByCategory": "Filtered by category",
+  "expenseListClearCategoryFilter": "Clear",
   "dashToPay": "To pay",
   "toPayScreenSubtitle": "All pending expenses in chronological order by due date. Installments appear as separate lines. Colors show how close the due date is.",
   "toPayViewAllExpenses": "All expenses",
@@ -230,7 +237,36 @@
   "emergencyReserveResetBody": "Removes the target, balance, and all monthly credits. This cannot be undone.",
   "emergencyReserveResetConfirm": "Clear",
   "emergencyReserveResetSuccess": "Reserve cleared.",
+  "reserveMilestoneBannerQuarter": "You’ve reached a quarter of your reserve’s yearly goal — nice pace.",
+  "reserveMilestoneBannerHalf": "Halfway through your saving year for the reserve.",
+  "reserveMilestoneBannerAlmost": "Almost there: just a little left to hit the reserve’s yearly goal.",
+  "reserveMilestoneBannerComplete": "Yearly reserve goal reached. Strong consistency.",
   "settingsEmergencyReserve": "Emergency reserve",
+  "settingsNotificationsSection": "Notifications",
+  "settingsGoalStallReminderTitle": "Stalled goals reminder",
+  "settingsGoalStallReminderSubtitle": "A local notification if you have not updated a goal for about 3 weeks (based on last update time).",
+  "settingsGoalStallPermissionDenied": "Enable notifications in system settings to receive the reminder.",
+  "goalStallNotifTitle": "Goals without recent activity",
+  "goalStallNotifBodySingle": "“{name}” — it’s been a while without an update. Time to check in?",
+  "@goalStallNotifBodySingle": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "goalStallNotifBodyTwo": "“{a}” and “{b}” — goals without updates for a while.",
+  "@goalStallNotifBodyTwo": {
+    "placeholders": {
+      "a": {"type": "String"},
+      "b": {"type": "String"}
+    }
+  },
+  "goalStallNotifBodyMany": "“{first}” and {count} more — don’t forget your goals.",
+  "@goalStallNotifBodyMany": {
+    "placeholders": {
+      "first": {"type": "String"},
+      "count": {"type": "int"}
+    }
+  },
   "dashMarkPaidTooltip": "Mark as paid",
   "dashDueShort": "Due",
   "dashDueVerb": "Due",
@@ -270,6 +306,24 @@
   "goalsLoadError": "Could not load goals.",
   "goalsEmpty": "No active goals yet.",
   "goalsAddTooltip": "New goal",
+  "goalsAggregateTitle": "Overview",
+  "goalsAggregateLine": "{count} active goals · {saved} of {target}",
+  "@goalsAggregateLine": {
+    "placeholders": {
+      "count": {"type": "int"},
+      "saved": {"type": "String"},
+      "target": {"type": "String"}
+    }
+  },
+  "goalsScreenHint": "Visible progress and combined totals help reinforce saving habits.",
+  "goalMilestoneBannerQuarter": "You’ve reached a quarter of the goal — nice pace.",
+  "goalMilestoneBannerHalf": "Halfway there. Keep the momentum.",
+  "goalMilestoneBannerAlmost": "Almost there: just a little left to hit the goal.",
+  "goalMilestoneBannerComplete": "Goal reached. Well done staying consistent.",
+  "goalMilestoneChipQuarter": "25%",
+  "goalMilestoneChipHalf": "50%",
+  "goalMilestoneChipAlmost": "90%",
+  "goalMilestoneChipComplete": "OK",
   "newGoalTitle": "New goal",
   "goalFormTitleLabel": "Goal name",
   "goalFormTargetLabel": "Target amount",
@@ -302,6 +356,28 @@
   "goalInactiveBadge": "Archived",
   "goalReactivate": "Reactivate",
   "goalReactivatedSnackbar": "Goal reactivated.",
+  "goalLinearPaceCardTitle": "Pace and forecast",
+  "goalLinearPaceAvgPerMonth": "Average pace so far: {amount}/mo",
+  "@goalLinearPaceAvgPerMonth": {
+    "placeholders": {
+      "amount": {"type": "String"}
+    }
+  },
+  "goalLinearPaceEta": "At this pace: goal ~by {monthYear}",
+  "@goalLinearPaceEta": {
+    "placeholders": {
+      "monthYear": {"type": "String"}
+    }
+  },
+  "goalLinearPaceDisclaimer": "Simple estimate from what you’ve saved so far and the goal’s creation date; real pace may vary.",
+  "goalLinearPaceListHint": "~{amount}/mo · goal ~{monthYear}",
+  "@goalLinearPaceListHint": {
+    "placeholders": {
+      "amount": {"type": "String"},
+      "monthYear": {"type": "String"}
+    }
+  },
+  "goalLinearPaceInsufficientHistory": "Not enough history yet to estimate pace.",
   "expensePayConfirmTitle": "Mark as paid?",
   "expensePayConflict": "This expense can no longer be paid (for example, it is already paid).",
   "expensePayInstallmentLine": "Installment {current} of {total}",
@@ -650,6 +726,8 @@
   "dashCashflowA11yPickStartMonth": "Choose start month of the range",
   "dashCashflowA11yPickEndMonth": "Choose end month of the range",
   "dashCashflowA11yForecastDropdown": "Number of forecast months after the range",
+  "dashCashflowA11yForecastDecrease": "Show fewer forecast months",
+  "dashCashflowA11yForecastIncrease": "Show more forecast months",
   "dashCashflowA11yApply": "Apply filters to monthly history",
   "dashCashflowA11ySeriesToggle": "{name}. Tap to show or hide on the chart.",
   "@dashCashflowA11ySeriesToggle": {
@@ -686,7 +764,8 @@
   "shoppingListNoPriceYet": "No price yet (add in store)",
   "shoppingListAddItem": "Add item",
   "shoppingListItemLabelHint": "Item description",
-  "shoppingListItemAmountOptional": "Amount (optional)",
+  "shoppingListItemQuantity": "Quantity",
+  "shoppingListItemAmountOptional": "Unit price (optional)",
   "shoppingListDeleteItem": "Remove item",
   "shoppingListConfirmDeleteDraftTitle": "Delete list?",
   "shoppingListConfirmDeleteDraftBody": "This draft list will be removed. This cannot be undone.",
@@ -695,6 +774,7 @@
   "shoppingListTotalOverrideHint": "Manual total (optional)",
   "shoppingListDescriptionOptional": "Expense description (optional)",
   "shoppingListMarkPaid": "Already paid",
+  "shoppingListExpenseFromListPaidNote": "The expense is saved as paid, with no installments or recurrence. Only the list name and total appear on the expense.",
   "shoppingListExpenseDate": "Expense date",
   "shoppingListViewExpense": "View expense",
   "shoppingListCompletedOn": "Completed on {date}",
@@ -708,13 +788,17 @@
   "shoppingListStoreOptional": "Store (optional)",
   "shoppingListErrorLoad": "Could not load shopping lists.",
   "shoppingListReadOnlyDraft": "Only the author can edit this draft list.",
+  "shoppingListCompletedEditHint": "You can fix amounts, quantities, and remove items. The list cannot be empty.",
   "shoppingListNoItems": "No items yet. Add products to plan your trip.",
   "shoppingListFooterEstimatedTotal": "Estimated total",
-  "shoppingListFooterEstimatedNote": "Sum of lines with a price only.",
-  "shoppingListInlineAmountHint": "Amount",
+  "shoppingListFooterEstimatedNote": "Sum of (unit price × quantity) for lines with a price.",
+  "shoppingListFooterAddItemCompleted": "You can still add items to this completed list.",
+  "shoppingListInlineAmountHint": "Unit",
   "shoppingListEditLabelTitle": "Item name",
   "shoppingListConfirmRemoveItemTitle": "Remove item?",
   "shoppingListConfirmRemoveItemBody": "This product will be removed from the list.",
   "shoppingListEditItemTitle": "Edit item",
-  "shoppingListCompleteSuccess": "Expense saved. The list is now in history."
+  "shoppingListCompleteSuccess": "Expense saved. The list is now in history.",
+  "shoppingListFlushDraftError": "Could not sync list items. Check your connection and try again.",
+  "shoppingListCompleteInProgress": "Syncing and completing…"
 }

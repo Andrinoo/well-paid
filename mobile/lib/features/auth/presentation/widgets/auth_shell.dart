@@ -53,16 +53,16 @@ class AuthShell extends StatelessWidget {
           displayColor: WellPaidColors.authOnCard,
         ),
         textSelectionTheme: TextSelectionThemeData(
-          cursorColor: WellPaidColors.brandBlue,
-          selectionColor: WellPaidColors.brandBlue.withValues(alpha: 0.35),
-          selectionHandleColor: WellPaidColors.brandBlue,
+          cursorColor: WellPaidColors.gold,
+          selectionColor: WellPaidColors.gold.withValues(alpha: 0.35),
+          selectionHandleColor: WellPaidColors.gold,
         ),
       ),
       child: DefaultTextStyle(
         style: WellPaidColors.authInputTextStyle,
         child: IconTheme(
           data: IconThemeData(
-            color: WellPaidColors.brandBlue.withValues(alpha: 0.92),
+            color: WellPaidColors.gold.withValues(alpha: 0.92),
             size: 20,
           ),
           child: Column(
@@ -125,7 +125,7 @@ class AuthShell extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18),
         side: BorderSide(
-          color: WellPaidColors.brandBlue.withValues(alpha: 0.32),
+          color: WellPaidColors.authCardBorder.withValues(alpha: 0.55),
         ),
       ),
       child: Padding(

@@ -20,6 +20,7 @@ class ShoppingListItem(Base, TimestampMixin):
     )
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False)
     label: Mapped[str] = mapped_column(String(500), nullable=False)
+    quantity: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     line_amount_cents: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
 
     shopping_list: Mapped["ShoppingList"] = relationship(

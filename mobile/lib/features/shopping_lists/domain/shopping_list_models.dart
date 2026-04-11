@@ -3,19 +3,31 @@ class ShoppingListItemRow {
     required this.id,
     required this.sortOrder,
     required this.label,
+    required this.quantity,
     required this.lineAmountCents,
   });
 
   final String id;
   final int sortOrder;
   final String label;
+  /// Quantidade (≥1).
+  final int quantity;
+  /// Preço unitário em centavos; [lineTotalCents] = unitário × quantidade.
   final int? lineAmountCents;
+
+  /// Total da linha (centavos), se existir preço unitário.
+  int? get lineTotalCents {
+    final u = lineAmountCents;
+    if (u == null) return null;
+    return u * quantity;
+  }
 
   factory ShoppingListItemRow.fromJson(Map<String, dynamic> j) {
     return ShoppingListItemRow(
       id: j['id'] as String,
       sortOrder: (j['sort_order'] as num).toInt(),
       label: j['label'] as String,
+      quantity: j['quantity'] == null ? 1 : (j['quantity'] as num).toInt(),
       lineAmountCents: j['line_amount_cents'] == null
           ? null
           : (j['line_amount_cents'] as num).toInt(),
@@ -110,9 +122,26 @@ class ShoppingListDetail {
   bool get isCompleted => status == 'completed';
 
   int get sumLineCents => items
-      .map((e) => e.lineAmountCents)
+      .map((e) => e.lineTotalCents)
       .whereType<int>()
       .fold<int>(0, (a, b) => a + b);
+
+  ShoppingListDetail copyWith({List<ShoppingListItemRow>? items}) {
+    return ShoppingListDetail(
+      id: id,
+      ownerUserId: ownerUserId,
+      isMine: isMine,
+      title: title,
+      storeName: storeName,
+      status: status,
+      completedAt: completedAt,
+      expenseId: expenseId,
+      totalCents: totalCents,
+      items: items ?? this.items,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
+  }
 
   factory ShoppingListDetail.fromJson(Map<String, dynamic> j) {
     final rawItems = j['items'] as List<dynamic>? ?? const [];

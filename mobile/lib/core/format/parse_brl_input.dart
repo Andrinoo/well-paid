@@ -1,4 +1,7 @@
 /// Converte texto livre (ex. `12,50`, `1.234,56`) em centavos. `null` se inválido.
+///
+/// Em campos de formulário, use `kBrCurrencyInputFormatters` (ficheiro
+/// `brl_currency_input_formatter.dart`) para formatar enquanto se digita.
 int? parseInputToCents(String raw) {
   var s = raw.trim();
   if (s.isEmpty) return null;

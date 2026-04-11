@@ -1,11 +1,13 @@
 import 'dart:async' show unawaited;
 
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/format/brl_cents.dart';
+import '../../../core/format/brl_currency_input_formatter.dart';
 import '../../../core/format/parse_brl_input.dart';
 import '../../../core/l10n/context_l10n.dart';
 import '../../../core/network/dio_client.dart';
@@ -15,23 +17,38 @@ import '../../expenses/presentation/widgets/expense_category_dropdown.dart';
 import '../../expenses/presentation/widgets/expense_share_form_section.dart';
 import '../application/shopping_lists_providers.dart';
 import '../domain/shopping_list_models.dart';
+import 'shopping_list_text_utils.dart';
 
-void _scheduleShoppingListRefresh(WidgetRef ref, String listId) {
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    ref.invalidate(shoppingListDetailProvider(listId));
-    ref.invalidate(shoppingListsProvider);
-  });
+void _applyListDetailAndRefreshIndex(WidgetRef ref, ShoppingListDetail detail) {
+  ref.read(shoppingListDetailProvider(detail.id).notifier).applyDetail(detail);
+  ref.invalidate(shoppingListsProvider);
 }
 
-class ShoppingListDetailPage extends ConsumerWidget {
+class ShoppingListDetailPage extends ConsumerStatefulWidget {
   const ShoppingListDetailPage({super.key, required this.listId});
 
   final String listId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ShoppingListDetailPage> createState() =>
+      _ShoppingListDetailPageState();
+}
+
+class _ShoppingListDetailPageState extends ConsumerState<ShoppingListDetailPage> {
+  @override
+  void dispose() {
+    unawaited(
+      ref
+          .read(shoppingListDetailProvider(widget.listId).notifier)
+          .flushDraftPatchesToServer(),
+    );
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final async = ref.watch(shoppingListDetailProvider(listId));
+    final async = ref.watch(shoppingListDetailProvider(widget.listId));
 
     return async.when(
       loading: () => Scaffold(
@@ -66,24 +83,25 @@ class _DetailScaffold extends ConsumerWidget {
     final title = (detail.title != null && detail.title!.trim().isNotEmpty)
         ? detail.title!.trim()
         : l10n.shoppingListUntitled;
-    final canEdit = detail.isDraft && detail.isMine;
+    final canEditDraft = detail.isDraft && detail.isMine;
+    final canEditCompleted = detail.isCompleted && detail.isMine;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(title),
         actions: [
-          if (canEdit) ...[
+          if (canEditDraft || canEditCompleted)
             IconButton(
               tooltip: l10n.shoppingListEditMetaTitle,
-              icon: const Icon(Icons.tune_outlined),
+              icon: const Icon(PhosphorIconsRegular.slidersHorizontal),
               onPressed: () => _editMeta(context, ref, detail),
             ),
+          if (canEditDraft)
             IconButton(
               tooltip: l10n.delete,
-              icon: const Icon(Icons.delete_outline),
+              icon: const Icon(PhosphorIconsRegular.trash),
               onPressed: () => _confirmDeleteDraft(context, ref, detail),
             ),
-          ],
         ],
       ),
       body: Column(
@@ -127,7 +145,7 @@ class _DetailScaffold extends ConsumerWidget {
                     FilledButton.tonalIcon(
                       onPressed: () =>
                           context.push('/expenses/${detail.expenseId}'),
-                      icon: const Icon(Icons.receipt_long_outlined),
+                      icon: const Icon(PhosphorIconsRegular.receipt),
                       label: Text(l10n.shoppingListViewExpense),
                     ),
                   ],
@@ -143,20 +161,35 @@ class _DetailScaffold extends ConsumerWidget {
                 style: TextStyle(color: WellPaidColors.navy.withValues(alpha: 0.7)),
               ),
             ),
+          if (canEditCompleted)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Text(
+                l10n.shoppingListCompletedEditHint,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: WellPaidColors.navy.withValues(alpha: 0.72),
+                ),
+              ),
+            ),
           Expanded(
             child: detail.items.isEmpty
                 ? Center(child: Text(l10n.shoppingListNoItems))
-                : ListView.separated(
+                : GestureDetector(
+                    behavior: HitTestBehavior.deferToChild,
+                    onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+                    child: ListView.separated(
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                     itemCount: detail.items.length,
                     separatorBuilder: (context, index) =>
                         const SizedBox(height: 8),
                     itemBuilder: (context, i) {
                       final it = detail.items[i];
-                      if (canEdit) {
+                      if (canEditDraft || canEditCompleted) {
                         return _DraftItemLine(
                           listId: detail.id,
                           item: it,
+                          useLocalDraftEdits: canEditDraft,
                           onEditLabel: () =>
                               _editItemLabel(context, ref, detail, it),
                           onRequestRemove: () =>
@@ -165,14 +198,19 @@ class _DetailScaffold extends ConsumerWidget {
                       }
                       return _ReadOnlyItemLine(item: it);
                     },
+                    ),
                   ),
           ),
-          if (canEdit && detail.isDraft)
+          if (canEditDraft && detail.isDraft)
             _DraftListFooter(
               sumLineCents: detail.sumLineCents,
               hasItems: detail.items.isNotEmpty,
               onAdd: () => _addItem(context, ref, detail),
               onComplete: () => _openCompleteSheet(context, ref, detail),
+            ),
+          if (canEditCompleted)
+            _CompletedOwnerFooter(
+              onAdd: () => _addItem(context, ref, detail),
             ),
         ],
       ),
@@ -199,14 +237,14 @@ class _DetailScaffold extends ConsumerWidget {
     );
     if (result == null || !context.mounted) return;
     try {
-      await ref.read(shoppingListsRepositoryProvider).patchList(
+      final updated = await ref.read(shoppingListsRepositoryProvider).patchList(
             detail.id,
             setTitle: true,
             title: result.title,
             setStore: true,
             storeName: result.storeName,
           );
-      _scheduleShoppingListRefresh(ref, detail.id);
+      _applyListDetailAndRefreshIndex(ref, updated);
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -257,18 +295,24 @@ class _DetailScaffold extends ConsumerWidget {
     ShoppingListDetail detail,
   ) async {
     final l10n = context.l10n;
+    final seeds = <String>{...kShoppingListLabelSeeds};
+    for (final it in detail.items) {
+      if (it.label.trim().isNotEmpty) seeds.add(it.label.trim());
+    }
+    final sorted = seeds.toList()..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
     final result = await showDialog<_AddItemDialogResult>(
       context: context,
-      builder: (ctx) => const _ShoppingListAddItemDialog(),
+      builder: (ctx) => _ShoppingListAddItemDialog(suggestions: sorted),
     );
     if (result == null || !context.mounted) return;
     try {
-      await ref.read(shoppingListsRepositoryProvider).addItem(
+      final updated = await ref.read(shoppingListsRepositoryProvider).addItem(
             detail.id,
             label: result.label,
+            quantity: result.quantity,
             lineAmountCents: result.lineAmountCents,
           );
-      _scheduleShoppingListRefresh(ref, detail.id);
+      _applyListDetailAndRefreshIndex(ref, updated);
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -289,15 +333,15 @@ class _DetailScaffold extends ConsumerWidget {
       builder: (ctx) => _EditItemLabelDialog(initialLabel: item.label),
     );
     if (newLabel == null || !context.mounted) return;
-    final trimmed = newLabel.trim();
+    final trimmed = shoppingListFormatSentenceCase(newLabel.trim());
     if (trimmed.isEmpty || trimmed == item.label) return;
     try {
-      await ref.read(shoppingListsRepositoryProvider).patchItem(
+      final updated = await ref.read(shoppingListsRepositoryProvider).patchItem(
             detail.id,
             item.id,
             label: trimmed,
           );
-      _scheduleShoppingListRefresh(ref, detail.id);
+      _applyListDetailAndRefreshIndex(ref, updated);
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -332,8 +376,9 @@ class _DetailScaffold extends ConsumerWidget {
     );
     if (ok != true || !context.mounted) return;
     try {
-      await ref.read(shoppingListsRepositoryProvider).deleteItem(detail.id, item.id);
-      _scheduleShoppingListRefresh(ref, detail.id);
+      final updated =
+          await ref.read(shoppingListsRepositoryProvider).deleteItem(detail.id, item.id);
+      _applyListDetailAndRefreshIndex(ref, updated);
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -350,12 +395,8 @@ class _DetailScaffold extends ConsumerWidget {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (ctx) => _CompleteShoppingSheet(
-        listId: detail.id,
-        sumLineCents: detail.sumLineCents,
-      ),
+      builder: (ctx) => _CompleteShoppingSheet(listId: detail.id),
     );
-    _scheduleShoppingListRefresh(ref, detail.id);
   }
 }
 
@@ -408,11 +449,13 @@ class _ShoppingListEditMetaDialogState extends State<_ShoppingListEditMetaDialog
         children: [
           TextField(
             controller: _titleCtrl,
+            textCapitalization: TextCapitalization.sentences,
             decoration: InputDecoration(labelText: l10n.shoppingListTitleOptional),
           ),
           const SizedBox(height: 12),
           TextField(
             controller: _storeCtrl,
+            textCapitalization: TextCapitalization.sentences,
             decoration: InputDecoration(labelText: l10n.shoppingListStoreOptional),
           ),
         ],
@@ -426,8 +469,8 @@ class _ShoppingListEditMetaDialogState extends State<_ShoppingListEditMetaDialog
           onPressed: () => Navigator.pop(
             context,
             _MetaDialogResult(
-              title: _titleCtrl.text,
-              storeName: _storeCtrl.text,
+              title: shoppingListFormatSentenceCase(_titleCtrl.text.trim()),
+              storeName: shoppingListFormatSentenceCase(_storeCtrl.text.trim()),
             ),
           ),
           child: Text(l10n.save),
@@ -469,6 +512,7 @@ class _EditItemLabelDialogState extends State<_EditItemLabelDialog> {
       content: TextField(
         controller: _ctrl,
         autofocus: true,
+        textCapitalization: TextCapitalization.sentences,
         decoration: InputDecoration(labelText: l10n.shoppingListItemLabelHint),
         onSubmitted: (_) {
           if (_ctrl.text.trim().isNotEmpty) {
@@ -496,15 +540,19 @@ class _EditItemLabelDialogState extends State<_EditItemLabelDialog> {
 class _AddItemDialogResult {
   const _AddItemDialogResult({
     required this.label,
+    required this.quantity,
     this.lineAmountCents,
   });
 
   final String label;
+  final int quantity;
   final int? lineAmountCents;
 }
 
 class _ShoppingListAddItemDialog extends StatefulWidget {
-  const _ShoppingListAddItemDialog();
+  const _ShoppingListAddItemDialog({required this.suggestions});
+
+  final List<String> suggestions;
 
   @override
   State<_ShoppingListAddItemDialog> createState() =>
@@ -513,13 +561,15 @@ class _ShoppingListAddItemDialog extends StatefulWidget {
 
 class _ShoppingListAddItemDialogState extends State<_ShoppingListAddItemDialog> {
   final _formKey = GlobalKey<FormState>();
-  final _labelCtrl = TextEditingController();
   final _amountCtrl = TextEditingController();
+  final _qtyCtrl = TextEditingController(text: '1');
+  /// Preenchido pelo [Autocomplete.fieldViewBuilder]; não fazer dispose (pertence ao Autocomplete).
+  TextEditingController? _labelFieldController;
 
   @override
   void dispose() {
-    _labelCtrl.dispose();
     _amountCtrl.dispose();
+    _qtyCtrl.dispose();
     super.dispose();
   }
 
@@ -533,13 +583,45 @@ class _ShoppingListAddItemDialogState extends State<_ShoppingListAddItemDialog> 
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            Autocomplete<String>(
+              displayStringForOption: (s) => s,
+              optionsBuilder: (value) {
+                final q = value.text.trim().toLowerCase();
+                if (q.isEmpty) return const Iterable<String>.empty();
+                return widget.suggestions
+                    .where((s) => s.toLowerCase().startsWith(q))
+                    .take(12);
+              },
+              fieldViewBuilder: (context, textController, focusNode, onSubmit) {
+                _labelFieldController = textController;
+                return TextFormField(
+                  controller: textController,
+                  focusNode: focusNode,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: InputDecoration(
+                    labelText: l10n.shoppingListItemLabelHint,
+                  ),
+                  validator: (v) =>
+                      v == null || v.trim().isEmpty ? l10n.requiredField : null,
+                  onFieldSubmitted: (_) => onSubmit(),
+                );
+              },
+              onSelected: (s) {},
+            ),
+            const SizedBox(height: 12),
             TextFormField(
-              controller: _labelCtrl,
+              controller: _qtyCtrl,
               decoration: InputDecoration(
-                labelText: l10n.shoppingListItemLabelHint,
+                labelText: l10n.shoppingListItemQuantity,
               ),
-              validator: (v) =>
-                  v == null || v.trim().isEmpty ? l10n.requiredField : null,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) return l10n.requiredField;
+                final n = int.tryParse(v.trim());
+                if (n == null || n < 1) return l10n.valueInvalid;
+                return null;
+              },
             ),
             const SizedBox(height: 12),
             TextFormField(
@@ -549,9 +631,7 @@ class _ShoppingListAddItemDialogState extends State<_ShoppingListAddItemDialog> 
               ),
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[\d,]')),
-              ],
+              inputFormatters: kBrCurrencyInputFormatters,
               validator: (v) {
                 if (v == null || v.trim().isEmpty) return null;
                 final c = parseInputToCents(v);
@@ -570,14 +650,18 @@ class _ShoppingListAddItemDialogState extends State<_ShoppingListAddItemDialog> 
         FilledButton(
           onPressed: () {
             if (_formKey.currentState?.validate() != true) return;
+            final labelText = _labelFieldController?.text.trim() ?? '';
+            if (labelText.isEmpty) return;
             int? cents;
             if (_amountCtrl.text.trim().isNotEmpty) {
               cents = parseInputToCents(_amountCtrl.text);
             }
+            final qty = int.parse(_qtyCtrl.text.trim());
             Navigator.pop(
               context,
               _AddItemDialogResult(
-                label: _labelCtrl.text.trim(),
+                label: shoppingListFormatSentenceCase(labelText.trim()),
+                quantity: qty,
                 lineAmountCents: cents,
               ),
             );
@@ -597,9 +681,17 @@ class _ReadOnlyItemLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final sub = item.lineAmountCents != null
-        ? formatBrlFromCents(item.lineAmountCents!)
-        : l10n.shoppingListNoPriceYet;
+    final unit = item.lineAmountCents;
+    final lineTotal = item.lineTotalCents;
+    final String sub;
+    if (unit == null) {
+      sub = l10n.shoppingListNoPriceYet;
+    } else if (item.quantity > 1 && lineTotal != null) {
+      sub =
+          '${formatBrlFromCents(unit)} × ${item.quantity} = ${formatBrlFromCents(lineTotal)}';
+    } else {
+      sub = formatBrlFromCents(unit);
+    }
     return Material(
       color: WellPaidColors.creamMuted.withValues(alpha: 0.35),
       borderRadius: BorderRadius.circular(12),
@@ -612,7 +704,9 @@ class _ReadOnlyItemLine extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    item.label,
+                    item.quantity > 1
+                        ? '${item.label}  ×${item.quantity}'
+                        : item.label,
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                   Text(
@@ -636,12 +730,15 @@ class _DraftItemLine extends ConsumerStatefulWidget {
   const _DraftItemLine({
     required this.listId,
     required this.item,
+    required this.useLocalDraftEdits,
     required this.onEditLabel,
     required this.onRequestRemove,
   });
 
   final String listId;
   final ShoppingListItemRow item;
+  /// Rascunho: quantidade/valor só em memória até flush (fechar compra / sair).
+  final bool useLocalDraftEdits;
   final VoidCallback onEditLabel;
   final VoidCallback onRequestRemove;
 
@@ -651,14 +748,18 @@ class _DraftItemLine extends ConsumerStatefulWidget {
 
 class _DraftItemLineState extends ConsumerState<_DraftItemLine> {
   late final TextEditingController _amountCtrl;
+  late final TextEditingController _qtyCtrl;
   final FocusNode _amountFocus = FocusNode();
+  final FocusNode _qtyFocus = FocusNode();
 
   @override
   void initState() {
     super.initState();
     _amountCtrl = TextEditingController();
+    _qtyCtrl = TextEditingController(text: '${widget.item.quantity}');
     _syncAmountFromItem();
     _amountFocus.addListener(_onAmountFocusChange);
+    _qtyFocus.addListener(_onQtyFocusChange);
   }
 
   @override
@@ -667,6 +768,9 @@ class _DraftItemLineState extends ConsumerState<_DraftItemLine> {
     if (oldWidget.item.lineAmountCents != widget.item.lineAmountCents &&
         !_amountFocus.hasFocus) {
       _syncAmountFromItem();
+    }
+    if (oldWidget.item.quantity != widget.item.quantity && !_qtyFocus.hasFocus) {
+      _qtyCtrl.text = '${widget.item.quantity}';
     }
   }
 
@@ -679,6 +783,12 @@ class _DraftItemLineState extends ConsumerState<_DraftItemLine> {
   void _onAmountFocusChange() {
     if (!_amountFocus.hasFocus) {
       unawaited(_commitAmountIfChanged());
+    }
+  }
+
+  void _onQtyFocusChange() {
+    if (!_qtyFocus.hasFocus) {
+      unawaited(_commitQuantityIfChanged());
     }
   }
 
@@ -704,15 +814,23 @@ class _DraftItemLineState extends ConsumerState<_DraftItemLine> {
       }
       if (newCents == current) return;
     }
+    if (widget.useLocalDraftEdits) {
+      ref.read(shoppingListDetailProvider(widget.listId).notifier).applyLocalItemLineDraft(
+            itemId: widget.item.id,
+            lineAmountCents: clear ? null : newCents,
+            clearLineAmount: clear,
+          );
+      return;
+    }
     try {
-      await ref.read(shoppingListsRepositoryProvider).patchItem(
+      final updated = await ref.read(shoppingListsRepositoryProvider).patchItem(
             widget.listId,
             widget.item.id,
             lineAmountCents: newCents,
             clearLineAmount: clear,
           );
       if (!mounted) return;
-      _scheduleShoppingListRefresh(ref, widget.listId);
+      _applyListDetailAndRefreshIndex(ref, updated);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -722,11 +840,52 @@ class _DraftItemLineState extends ConsumerState<_DraftItemLine> {
     }
   }
 
+  Future<void> _commitQuantityIfChanged() async {
+    final l10n = context.l10n;
+    final trimmed = _qtyCtrl.text.trim();
+    final n = int.tryParse(trimmed);
+    if (n == null || n < 1) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.valueInvalid)),
+        );
+      }
+      _qtyCtrl.text = '${widget.item.quantity}';
+      return;
+    }
+    if (n == widget.item.quantity) return;
+    if (widget.useLocalDraftEdits) {
+      ref.read(shoppingListDetailProvider(widget.listId).notifier).applyLocalItemLineDraft(
+            itemId: widget.item.id,
+            quantity: n,
+          );
+      return;
+    }
+    try {
+      final updated = await ref.read(shoppingListsRepositoryProvider).patchItem(
+            widget.listId,
+            widget.item.id,
+            quantity: n,
+          );
+      if (!mounted) return;
+      _applyListDetailAndRefreshIndex(ref, updated);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(messageFromDio(e, l10n) ?? l10n.errorGeneric)),
+      );
+      _qtyCtrl.text = '${widget.item.quantity}';
+    }
+  }
+
   @override
   void dispose() {
     _amountFocus.removeListener(_onAmountFocusChange);
+    _qtyFocus.removeListener(_onQtyFocusChange);
     _amountFocus.dispose();
+    _qtyFocus.dispose();
     _amountCtrl.dispose();
+    _qtyCtrl.dispose();
     super.dispose();
   }
 
@@ -751,12 +910,23 @@ class _DraftItemLineState extends ConsumerState<_DraftItemLine> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        widget.item.label,
+                        widget.item.quantity > 1
+                            ? '${widget.item.label}  ×${widget.item.quantity}'
+                            : widget.item.label,
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
                       if (widget.item.lineAmountCents == null)
                         Text(
                           l10n.shoppingListNoPriceYet,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: WellPaidColors.navy.withValues(alpha: 0.55),
+                          ),
+                        )
+                      else if (widget.item.quantity > 1 &&
+                          widget.item.lineTotalCents != null)
+                        Text(
+                          '${formatBrlFromCents(widget.item.lineAmountCents!)} × ${widget.item.quantity} = ${formatBrlFromCents(widget.item.lineTotalCents!)}',
                           style: TextStyle(
                             fontSize: 12,
                             color: WellPaidColors.navy.withValues(alpha: 0.55),
@@ -768,7 +938,33 @@ class _DraftItemLineState extends ConsumerState<_DraftItemLine> {
               ),
             ),
             SizedBox(
-              width: 100,
+              width: 44,
+              child: TextField(
+                controller: _qtyCtrl,
+                focusNode: _qtyFocus,
+                decoration: InputDecoration(
+                  isDense: true,
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
+                  hintText: '1',
+                  border: const OutlineInputBorder(),
+                ),
+                style: const TextStyle(fontSize: 14),
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                textAlign: TextAlign.center,
+                textInputAction: TextInputAction.next,
+                onTapOutside: (_) =>
+                    FocusManager.instance.primaryFocus?.unfocus(),
+                onEditingComplete: () {
+                  _qtyFocus.unfocus();
+                  _amountFocus.requestFocus();
+                },
+              ),
+            ),
+            const SizedBox(width: 6),
+            SizedBox(
+              width: 92,
               child: TextField(
                 controller: _amountCtrl,
                 focusNode: _amountFocus,
@@ -782,10 +978,10 @@ class _DraftItemLineState extends ConsumerState<_DraftItemLine> {
                 style: const TextStyle(fontSize: 14),
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[\d,]')),
-                ],
+                inputFormatters: kBrCurrencyInputFormatters,
                 textInputAction: TextInputAction.done,
+                onTapOutside: (_) =>
+                    FocusManager.instance.primaryFocus?.unfocus(),
                 onEditingComplete: () {
                   _amountFocus.unfocus();
                 },
@@ -793,7 +989,7 @@ class _DraftItemLineState extends ConsumerState<_DraftItemLine> {
             ),
             PopupMenuButton<String>(
               icon: Icon(
-                Icons.more_vert,
+                PhosphorIconsRegular.dotsThreeVertical,
                 color: WellPaidColors.navy.withValues(alpha: 0.45),
               ),
               onSelected: (v) {
@@ -885,7 +1081,7 @@ class _DraftListFooter extends StatelessWidget {
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: onAdd,
-                      icon: const Icon(Icons.add, size: 20),
+                      icon: const Icon(PhosphorIconsRegular.plus, size: 20),
                       label: Text(l10n.shoppingListAddItem),
                     ),
                   ),
@@ -906,14 +1102,50 @@ class _DraftListFooter extends StatelessWidget {
   }
 }
 
+class _CompletedOwnerFooter extends StatelessWidget {
+  const _CompletedOwnerFooter({required this.onAdd});
+
+  final VoidCallback onAdd;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Material(
+      elevation: 8,
+      shadowColor: Colors.black26,
+      color: Theme.of(context).colorScheme.surface,
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                l10n.shoppingListFooterAddItemCompleted,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: WellPaidColors.navy.withValues(alpha: 0.65),
+                    ),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: onAdd,
+                icon: const Icon(PhosphorIconsRegular.plus, size: 20),
+                label: Text(l10n.shoppingListAddItem),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _CompleteShoppingSheet extends ConsumerStatefulWidget {
-  const _CompleteShoppingSheet({
-    required this.listId,
-    required this.sumLineCents,
-  });
+  const _CompleteShoppingSheet({required this.listId});
 
   final String listId;
-  final int sumLineCents;
 
   @override
   ConsumerState<_CompleteShoppingSheet> createState() =>
@@ -923,17 +1155,22 @@ class _CompleteShoppingSheet extends ConsumerStatefulWidget {
 class _CompleteShoppingSheetState extends ConsumerState<_CompleteShoppingSheet> {
   final _formKey = GlobalKey<FormState>();
   final _totalOverrideCtrl = TextEditingController();
-  final _descCtrl = TextEditingController();
-  DateTime _expenseDate = DateTime.now();
-  bool _markPaid = false;
+  late DateTime _expenseDate;
   String? _categoryId;
   bool _isShared = false;
   String? _sharedWithUserId;
+  bool _submitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final n = DateTime.now();
+    _expenseDate = DateTime(n.year, n.month, n.day);
+  }
 
   @override
   void dispose() {
     _totalOverrideCtrl.dispose();
-    _descCtrl.dispose();
     super.dispose();
   }
 
@@ -969,31 +1206,39 @@ class _CompleteShoppingSheetState extends ConsumerState<_CompleteShoppingSheet> 
         return;
       }
     }
-    final desc = _descCtrl.text.trim();
+    setState(() => _submitting = true);
+    final notifier = ref.read(shoppingListDetailProvider(widget.listId).notifier);
+    final flushed = await notifier.flushDraftPatchesToServer();
+    if (!flushed) {
+      if (mounted) {
+        setState(() => _submitting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.shoppingListFlushDraftError)),
+        );
+      }
+      return;
+    }
     try {
-      await ref.read(shoppingListsRepositoryProvider).completeList(
+      final updated = await ref.read(shoppingListsRepositoryProvider).completeList(
             widget.listId,
             categoryId: _categoryId!,
             expenseDate: _expenseDate,
-            markPaid: _markPaid,
-            description: desc.isEmpty ? null : desc,
             totalCents: totalOverride,
             isShared: _isShared,
             sharedWithUserId: _sharedWithUserId,
           );
       if (!mounted) return;
+      ref.read(shoppingListDetailProvider(widget.listId).notifier).applyDetail(updated);
+      ref.invalidate(expensesListProvider);
+      ref.invalidate(shoppingListsProvider);
       final messenger = ScaffoldMessenger.of(context);
       Navigator.pop(context);
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ref.invalidate(expensesListProvider);
-        ref.invalidate(shoppingListDetailProvider(widget.listId));
-        ref.invalidate(shoppingListsProvider);
-      });
       messenger.showSnackBar(
         SnackBar(content: Text(l10n.shoppingListCompleteSuccess)),
       );
     } catch (e) {
       if (!mounted) return;
+      setState(() => _submitting = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(messageFromDio(e, l10n) ?? l10n.errorGeneric)),
       );
@@ -1005,6 +1250,13 @@ class _CompleteShoppingSheetState extends ConsumerState<_CompleteShoppingSheet> 
     final l10n = context.l10n;
     final cats = ref.watch(categoriesProvider);
     final pad = MediaQuery.viewInsetsOf(context).bottom;
+    final sumLineCents = ref
+            .watch(shoppingListDetailProvider(widget.listId))
+            .valueOrNull
+            ?.sumLineCents ??
+        0;
+
+    final scheme = Theme.of(context).colorScheme;
 
     return Padding(
       padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + pad),
@@ -1015,78 +1267,114 @@ class _CompleteShoppingSheetState extends ConsumerState<_CompleteShoppingSheet> 
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                l10n.shoppingListCompleteTitle,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              AbsorbPointer(
+                absorbing: _submitting,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      l10n.shoppingListCompleteTitle,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if (sumLineCents > 0) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        l10n.shoppingListSubtotal(
+                          formatBrlFromCents(sumLineCents),
+                        ),
+                        style: TextStyle(
+                          color: WellPaidColors.navy.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 8),
+                    Text(
+                      l10n.shoppingListExpenseFromListPaidNote,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: WellPaidColors.navy.withValues(alpha: 0.65),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    cats.when(
+                      loading: () => const LinearProgressIndicator(),
+                      error: (_, _) => Text(l10n.errorGeneric),
+                      data: (list) => ExpenseCategoryDropdown(
+                        categories: list,
+                        value: _categoryId,
+                        onChanged: (v) => setState(() => _categoryId = v),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(l10n.shoppingListExpenseDate),
+                      subtitle: Text(_dmY(_expenseDate)),
+                      trailing: const Icon(PhosphorIconsRegular.calendar),
+                      onTap: _pickDate,
+                    ),
+                    TextFormField(
+                      controller: _totalOverrideCtrl,
+                      decoration: InputDecoration(
+                        labelText: l10n.shoppingListTotalOverrideHint,
+                      ),
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: kBrCurrencyInputFormatters,
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) return null;
+                        final c = parseInputToCents(v);
+                        if (c == null || c <= 0) return l10n.valueInvalid;
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    ExpenseShareFormSection(
+                      isShared: _isShared,
+                      sharedWithUserId: _sharedWithUserId,
+                      onSharedChanged: (v) => setState(() => _isShared = v),
+                      onPeerChanged: (v) =>
+                          setState(() => _sharedWithUserId = v),
+                    ),
+                  ],
+                ),
               ),
-              if (widget.sumLineCents > 0) ...[
-                const SizedBox(height: 8),
-                Text(
-                  l10n.shoppingListSubtotal(formatBrlFromCents(widget.sumLineCents)),
-                  style: TextStyle(
-                    color: WellPaidColors.navy.withValues(alpha: 0.7),
+              const SizedBox(height: 16),
+              if (_submitting) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    minHeight: 3,
+                    backgroundColor:
+                        scheme.primaryContainer.withValues(alpha: 0.35),
                   ),
                 ),
+                const SizedBox(height: 10),
+                Text(
+                  l10n.shoppingListCompleteInProgress,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: WellPaidColors.navy.withValues(alpha: 0.72),
+                      ),
+                ),
+                const SizedBox(height: 12),
               ],
-              const SizedBox(height: 16),
-              cats.when(
-                loading: () => const LinearProgressIndicator(),
-                error: (_, _) => Text(l10n.errorGeneric),
-                data: (list) => ExpenseCategoryDropdown(
-                  categories: list,
-                  value: _categoryId,
-                  onChanged: (v) => setState(() => _categoryId = v),
-                ),
-              ),
-              const SizedBox(height: 12),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(l10n.shoppingListExpenseDate),
-                subtitle: Text(_dmY(_expenseDate)),
-                trailing: const Icon(Icons.calendar_today_outlined),
-                onTap: _pickDate,
-              ),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(l10n.shoppingListMarkPaid),
-                value: _markPaid,
-                onChanged: (v) => setState(() => _markPaid = v),
-              ),
-              TextFormField(
-                controller: _totalOverrideCtrl,
-                decoration: InputDecoration(
-                  labelText: l10n.shoppingListTotalOverrideHint,
-                ),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[\d,]')),
-                ],
-                validator: (v) {
-                  if (v == null || v.trim().isEmpty) return null;
-                  final c = parseInputToCents(v);
-                  if (c == null || c <= 0) return l10n.valueInvalid;
-                  return null;
-                },
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _descCtrl,
-                decoration: InputDecoration(
-                  labelText: l10n.shoppingListDescriptionOptional,
-                ),
-                maxLines: 2,
-              ),
-              const SizedBox(height: 8),
-              ExpenseShareFormSection(
-                isShared: _isShared,
-                sharedWithUserId: _sharedWithUserId,
-                onSharedChanged: (v) => setState(() => _isShared = v),
-                onPeerChanged: (v) => setState(() => _sharedWithUserId = v),
-              ),
-              const SizedBox(height: 16),
               FilledButton(
-                onPressed: _submit,
-                child: Text(l10n.shoppingListComplete),
+                onPressed: _submitting ? null : _submit,
+                child: _submitting
+                    ? SizedBox(
+                        height: 22,
+                        width: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: scheme.onPrimary,
+                        ),
+                      )
+                    : Text(l10n.shoppingListComplete),
               ),
               const SizedBox(height: 8),
             ],

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/format/brl_cents.dart';
+import '../../../core/format/brl_currency_input_formatter.dart';
 import '../../../core/format/parse_brl_input.dart';
 import '../../../core/l10n/context_l10n.dart';
 import '../../../core/network/dio_client.dart';
@@ -28,7 +30,7 @@ class ExpenseEditPage extends ConsumerWidget {
         return Scaffold(
           appBar: AppBar(
             leading: IconButton(
-              icon: const Icon(Icons.close),
+              icon: const Icon(PhosphorIconsRegular.x),
               onPressed: () => context.pop(),
             ),
             title: Text(l10n.editExpenseTitle),
@@ -41,7 +43,7 @@ class ExpenseEditPage extends ConsumerWidget {
         return Scaffold(
           appBar: AppBar(
             leading: IconButton(
-              icon: const Icon(Icons.close),
+              icon: const Icon(PhosphorIconsRegular.x),
               onPressed: () => context.pop(),
             ),
             title: Text(l10n.editExpenseTitle),
@@ -60,7 +62,7 @@ class ExpenseEditPage extends ConsumerWidget {
           return Scaffold(
             appBar: AppBar(
               leading: IconButton(
-                icon: const Icon(Icons.close),
+                icon: const Icon(PhosphorIconsRegular.x),
                 onPressed: () => context.pop(),
               ),
               title: Text(l10n.editExpenseTitle),
@@ -212,7 +214,7 @@ class _ExpenseEditFormState extends ConsumerState<_ExpenseEditForm> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.close),
+                icon: const Icon(PhosphorIconsRegular.x),
           onPressed: () => context.pop(),
         ),
         title: Text(l10n.editExpenseTitle),
@@ -232,7 +234,7 @@ class _ExpenseEditFormState extends ConsumerState<_ExpenseEditForm> {
                     padding: const EdgeInsets.all(12),
                     child: Row(
                       children: [
-                        Icon(Icons.layers_outlined, color: WellPaidColors.navy),
+                        Icon(PhosphorIconsRegular.stackSimple, color: WellPaidColors.navy),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
@@ -264,7 +266,7 @@ class _ExpenseEditFormState extends ConsumerState<_ExpenseEditForm> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Icon(
-                          Icons.autorenew,
+                          PhosphorIconsRegular.repeat,
                           color: WellPaidColors.navy.withValues(alpha: 0.75),
                         ),
                         const SizedBox(width: 10),
@@ -300,6 +302,7 @@ class _ExpenseEditFormState extends ConsumerState<_ExpenseEditForm> {
                 hintText: l10n.expFormAmountHint,
               ),
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: kBrCurrencyInputFormatters,
               validator: (v) {
                 if (v == null || v.trim().isEmpty) return l10n.requiredField;
                 final c = parseInputToCents(v);
@@ -312,7 +315,7 @@ class _ExpenseEditFormState extends ConsumerState<_ExpenseEditForm> {
               contentPadding: EdgeInsets.zero,
               title: Text(l10n.expEditExpenseDate),
               subtitle: Text(_dmY(_expenseDate)),
-              trailing: const Icon(Icons.calendar_today_outlined),
+              trailing: const Icon(PhosphorIconsRegular.calendar),
               onTap: _pickExpenseDate,
             ),
             ListTile(
@@ -324,10 +327,10 @@ class _ExpenseEditFormState extends ConsumerState<_ExpenseEditForm> {
                 children: [
                   if (_dueDate != null)
                     IconButton(
-                      icon: const Icon(Icons.clear),
+                      icon: const Icon(PhosphorIconsRegular.xCircle),
                       onPressed: () => setState(() => _dueDate = null),
                     ),
-                  const Icon(Icons.event_outlined),
+                  const Icon(PhosphorIconsRegular.calendarBlank),
                 ],
               ),
               onTap: _pickDueDate,

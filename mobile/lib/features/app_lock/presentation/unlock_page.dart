@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -162,7 +163,7 @@ class _UnlockPageState extends ConsumerState<UnlockPage> {
                 const SizedBox(height: 16),
                 OutlinedButton.icon(
                   onPressed: _busy ? null : _tryBio,
-                  icon: const Icon(Icons.fingerprint),
+                  icon: const Icon(PhosphorIconsRegular.fingerprint),
                   label: Text(l10n.unlockUseBiometric),
                 ),
               ],

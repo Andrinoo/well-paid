@@ -57,12 +57,12 @@ class _AuthGradientButtonState extends State<AuthGradientButton> {
             gradient: LinearGradient(
               colors: disabled
                   ? [
-                      WellPaidColors.brandBlue.withValues(alpha: 0.45),
-                      WellPaidColors.brandPurple.withValues(alpha: 0.45),
+                      WellPaidColors.navyMid.withValues(alpha: 0.55),
+                      WellPaidColors.gold.withValues(alpha: 0.45),
                     ]
                   : const [
-                      WellPaidColors.brandBlue,
-                      WellPaidColors.brandPurple,
+                      WellPaidColors.navyMid,
+                      WellPaidColors.gold,
                     ],
             ),
             borderRadius: BorderRadius.circular(12),
@@ -70,7 +70,7 @@ class _AuthGradientButtonState extends State<AuthGradientButton> {
                 ? null
                 : [
                     BoxShadow(
-                      color: WellPaidColors.brandPurple.withValues(alpha: 0.35),
+                      color: WellPaidColors.gold.withValues(alpha: 0.28),
                       blurRadius: 14,
                       offset: const Offset(0, 6),
                     ),

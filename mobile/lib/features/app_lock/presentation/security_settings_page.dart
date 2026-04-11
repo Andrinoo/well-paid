@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -171,7 +172,7 @@ class _SecuritySettingsPageState extends ConsumerState<SecuritySettingsPage> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(PhosphorIconsRegular.arrowLeft),
           onPressed: () => context.pop(),
         ),
         title: Text(l10n.secAppTitle),
@@ -209,7 +210,7 @@ class _SecuritySettingsPageState extends ConsumerState<SecuritySettingsPage> {
           if (pinOn)
             ListTile(
               title: Text(l10n.secChangePin),
-              leading: const Icon(Icons.pin_outlined),
+              leading: const Icon(PhosphorIconsRegular.keyboard),
               onTap: () => _promptNewPin(enabling: false),
             ),
         ],

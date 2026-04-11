@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -166,19 +167,19 @@ class _ToPayPageState extends ConsumerState<ToPayPage> {
       appBar: AppBar(
         title: Text(l10n.dashToPay),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(PhosphorIconsRegular.arrowLeft),
           onPressed: () => context.pop(),
         ),
         actions: [
           IconButton(
             tooltip: l10n.toPayLegendTitle,
             onPressed: () => _showLegend(context),
-            icon: const Icon(Icons.palette_outlined),
+            icon: const Icon(PhosphorIconsRegular.palette),
           ),
           IconButton(
             tooltip: l10n.expensesRefresh,
             onPressed: () => ref.invalidate(toPayListProvider),
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(PhosphorIconsRegular.arrowsClockwise),
           ),
         ],
       ),
@@ -193,7 +194,7 @@ class _ToPayPageState extends ConsumerState<ToPayPage> {
                 child: Row(
                   children: [
                     Icon(
-                      Icons.cloud_off_outlined,
+                      PhosphorIconsRegular.cloudSlash,
                       size: 20,
                       color: WellPaidColors.navy.withValues(alpha: 0.75),
                     ),
@@ -256,7 +257,7 @@ class _ToPayPageState extends ConsumerState<ToPayPage> {
                       Center(
                         child: TextButton.icon(
                           onPressed: () => context.push('/expenses'),
-                          icon: const Icon(Icons.receipt_long_outlined),
+                          icon: const Icon(PhosphorIconsRegular.receipt),
                           label: Text(l10n.toPayViewAllExpenses),
                         ),
                       ),
@@ -366,7 +367,7 @@ class _ToPayPageState extends ConsumerState<ToPayPage> {
                       Center(
                         child: TextButton.icon(
                           onPressed: () => context.push('/expenses'),
-                          icon: const Icon(Icons.receipt_long_outlined),
+                          icon: const Icon(PhosphorIconsRegular.receipt),
                           label: Text(l10n.toPayViewAllExpenses),
                         ),
                       ),

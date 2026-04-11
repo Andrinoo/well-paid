@@ -3,7 +3,7 @@
 /// - Android emulator → default `http://10.0.2.2:8000` (localhost do PC).
 /// - APK release (telefone real, API na Vercel): **só a origem** — HTTPS, **sem** barra no fim e
 ///   **sem** path (não uses `.../auth` nem `.../api`). Ex.:
-///   `flutter build apk --release --dart-define=API_BASE_URL=https://teu-projeto.vercel.app`
+///   `flutter build apk --release --dart-define=API_BASE_URL=https://well-paid-psi.vercel.app`
 /// - Windows desktop: `flutter run -d windows --dart-define=API_BASE_URL=http://127.0.0.1:8000`
 /// - Telemóvel na Wi‑Fi (backend local): `http://IP_DO_PC:8000`
 class ApiConfig {

@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../../core/l10n/context_l10n.dart';
 import '../../../core/theme/well_paid_colors.dart';
 import '../../dashboard/application/dashboard_providers.dart';
 import '../../dashboard/presentation/due_urgency.dart';
 
-/// Atalhos extra: **A pagar** (despesas pendentes) e **listas de compras**.
-/// Mesmo padrão visual da [NavigationBar] (ícone em cima, rótulo em baixo).
+/// Atalhos extra: **A pagar** e **listas de compras** (Reserva fica só na barra inferior).
 class ShellQuickPanel extends ConsumerWidget {
   const ShellQuickPanel({super.key});
 
@@ -27,12 +27,12 @@ class ShellQuickPanel extends ConsumerWidget {
     final hasPending = overview != null && overview.pendingPreview.isNotEmpty;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 4, 4, 6),
+      padding: const EdgeInsets.fromLTRB(12, 4, 12, 6),
       child: Row(
         children: [
           Expanded(
             child: _NavLikeShortcut(
-              icon: Icons.payments_outlined,
+              icon: PhosphorIconsRegular.invoice,
               label: l10n.dashToPay,
               dotColor: hasCritical
                   ? const Color(0xFFB00020)
@@ -44,7 +44,7 @@ class ShellQuickPanel extends ConsumerWidget {
           ),
           Expanded(
             child: _NavLikeShortcut(
-              icon: Icons.shopping_cart_outlined,
+              icon: PhosphorIconsRegular.shoppingCartSimple,
               label: l10n.shoppingListsTitle,
               onTap: () => context.push('/shopping-lists'),
             ),
