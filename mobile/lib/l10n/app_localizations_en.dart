@@ -108,6 +108,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navReserve => 'Reserve';
 
   @override
+  String get navQuickPanelToggleHint =>
+      'Pull up or tap for To pay and Shopping lists shortcuts';
+
+  @override
   String get menuMoreTooltip => 'More options';
 
   @override
@@ -303,6 +307,122 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashToPay => 'To pay';
 
   @override
+  String get toPayScreenSubtitle =>
+      'All pending expenses in chronological order by due date. Installments appear as separate lines. Colors show how close the due date is.';
+
+  @override
+  String get toPayViewAllExpenses => 'All expenses';
+
+  @override
+  String toPayDueOn(String date) {
+    return 'Due $date';
+  }
+
+  @override
+  String toPayCompetenceOn(String date) {
+    return 'Booked $date (no due date)';
+  }
+
+  @override
+  String get toPayProjectedHint =>
+      'Scheduled — will appear as a charge a few days before the due date.';
+
+  @override
+  String get toPayOfflineCacheBanner =>
+      'Showing saved data — the list may be incomplete until you are back online.';
+
+  @override
+  String toPayPendingTotal(String amount) {
+    return 'Pending total: $amount';
+  }
+
+  @override
+  String get toPayFilterAll => 'All';
+
+  @override
+  String get toPayFilterOverdue => 'Overdue';
+
+  @override
+  String get toPayFilterThisWeek => 'This week';
+
+  @override
+  String get toPaySectionOverdue => 'Overdue';
+
+  @override
+  String get toPaySectionThisWeek => 'Due this week';
+
+  @override
+  String get toPaySectionLater => 'Later';
+
+  @override
+  String get toPayFilterEmpty => 'Nothing matches this filter.';
+
+  @override
+  String get toPayLegendTitle => 'Due date colors';
+
+  @override
+  String get toPayLegendOverdue => 'Past due date';
+
+  @override
+  String get toPayLegendDueToday => 'Due today';
+
+  @override
+  String get toPayLegendDueSoon => 'Due in 1–3 days';
+
+  @override
+  String get toPayLegendUpcoming => 'Due in 4–10 days';
+
+  @override
+  String get toPayLegendSafe => 'Due in 11 or more days';
+
+  @override
+  String get toPayQuickPaySwitchTooltip =>
+      'Turn on to confirm payment; the list updates after success. If something fails, the switch turns off again.';
+
+  @override
+  String expenseListNextInstallmentLine(String date) {
+    return 'Next: $date';
+  }
+
+  @override
+  String get expenseTagPar => 'PAR';
+
+  @override
+  String get expenseTagParA11y => 'Installment plan';
+
+  @override
+  String get expenseTagRec => 'REC';
+
+  @override
+  String get expenseTagRecA11y => 'Recurring expense';
+
+  @override
+  String get expenseNextDueSectionTitle => 'Next occurrence';
+
+  @override
+  String expenseNextDueCompetenceLine(String date) {
+    return 'Booking date: $date';
+  }
+
+  @override
+  String expenseNextDueDateLine(String date) {
+    return 'Due: $date';
+  }
+
+  @override
+  String get expenseInstallmentNextSectionTitle => 'Next installment';
+
+  @override
+  String get expenseInstallmentLastSectionTitle => 'Last installment';
+
+  @override
+  String get expensePayEarlyTitle => 'Pay in advance?';
+
+  @override
+  String get expensePayEarlyBody =>
+      'This expense is for a month after the current one. Are you sure you want to mark it as paid now?';
+
+  @override
   String get dashNothingPending => 'Nothing pending.';
 
   @override
@@ -406,6 +526,51 @@ class AppLocalizationsEn extends AppLocalizations {
   String get emergencyReserveAccrualListCredit => 'Credit applied';
 
   @override
+  String get emergencyReserveAccrualEdit => 'Edit credit';
+
+  @override
+  String get emergencyReserveAccrualDelete => 'Remove credit';
+
+  @override
+  String emergencyReserveAccrualDeleteTitle(String month) {
+    return 'Remove credit for $month?';
+  }
+
+  @override
+  String get emergencyReserveAccrualDeleteBody =>
+      'The balance will be adjusted. This month will not get automatic credit again (you can add it back manually).';
+
+  @override
+  String get emergencyReserveAccrualDeleteConfirm => 'Remove';
+
+  @override
+  String emergencyReserveAccrualEditTitle(String month) {
+    return 'Credit for $month';
+  }
+
+  @override
+  String get emergencyReserveAccrualUpdatedSnackbar => 'Credit updated.';
+
+  @override
+  String get emergencyReserveAccrualRemovedSnackbar => 'Credit removed.';
+
+  @override
+  String get emergencyReserveResetAction => 'Clear reserve and history';
+
+  @override
+  String get emergencyReserveResetTitle => 'Clear everything?';
+
+  @override
+  String get emergencyReserveResetBody =>
+      'Removes the target, balance, and all monthly credits. This cannot be undone.';
+
+  @override
+  String get emergencyReserveResetConfirm => 'Clear';
+
+  @override
+  String get emergencyReserveResetSuccess => 'Reserve cleared.';
+
+  @override
   String get settingsEmergencyReserve => 'Emergency reserve';
 
   @override
@@ -460,6 +625,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get chartCategoriesHint =>
       'Categories appear when there are expenses this month.';
+
+  @override
+  String get chartDonutTapHint => 'Tap a slice to see the category.';
 
   @override
   String get chartCategoryOther => 'Other';
@@ -1317,6 +1485,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashCashflowTitle => 'Monthly history';
 
   @override
+  String get dashCashflowChartOptions => 'Period & forecast';
+
+  @override
   String get dashCashflowDynamicMode => 'Dynamic mode';
 
   @override
@@ -1492,6 +1663,26 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get shoppingListNoItems =>
       'No items yet. Add products to plan your trip.';
+
+  @override
+  String get shoppingListFooterEstimatedTotal => 'Estimated total';
+
+  @override
+  String get shoppingListFooterEstimatedNote =>
+      'Sum of lines with a price only.';
+
+  @override
+  String get shoppingListInlineAmountHint => 'Amount';
+
+  @override
+  String get shoppingListEditLabelTitle => 'Item name';
+
+  @override
+  String get shoppingListConfirmRemoveItemTitle => 'Remove item?';
+
+  @override
+  String get shoppingListConfirmRemoveItemBody =>
+      'This product will be removed from the list.';
 
   @override
   String get shoppingListEditItemTitle => 'Edit item';

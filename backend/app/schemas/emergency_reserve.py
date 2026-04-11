@@ -25,3 +25,10 @@ class EmergencyReserveAccrualItem(BaseModel):
         default=None,
         description="Data de registo do crédito (quando disponível).",
     )
+
+
+class EmergencyReserveAccrualPatch(BaseModel):
+    amount_cents: int = Field(
+        ge=0,
+        description="Valor do crédito mensal em centavos; 0 remove o crédito desse mês.",
+    )

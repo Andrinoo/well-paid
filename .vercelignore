@@ -1,0 +1,11 @@
+# Limitar upload (<100MB); API só precisa de backend/
+mobile/
+.git/
+.cursor/
+**/.venv/
+**/__pycache__/
+**/*.pyc
+**/.pytest_cache/
+**/node_modules/
+*.md
+!backend/**/*.md

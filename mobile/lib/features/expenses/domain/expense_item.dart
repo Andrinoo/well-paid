@@ -24,6 +24,7 @@ class ExpenseItem {
     required this.updatedAt,
     this.installmentPlanHasPaid,
     this.paidAt,
+    this.isProjected = false,
   });
 
   final String id;
@@ -54,6 +55,9 @@ class ExpenseItem {
 
   /// Preenchido quando a despesa foi quitada (servidor).
   final DateTime? paidAt;
+
+  /// Ocorrência recorrente ainda não persistida (só API / lista).
+  final bool isProjected;
 
   bool get isPending => status == 'pending';
 
@@ -96,6 +100,7 @@ class ExpenseItem {
       paidAt: json['paid_at'] == null
           ? null
           : DateTime.parse(json['paid_at'] as String),
+      isProjected: json['is_projected'] as bool? ?? false,
     );
   }
 
@@ -128,6 +133,7 @@ class ExpenseItem {
       if (installmentPlanHasPaid != null)
         'installment_plan_has_paid': installmentPlanHasPaid,
       if (paidAt != null) 'paid_at': paidAt!.toUtc().toIso8601String(),
+      'is_projected': isProjected,
     };
   }
 
@@ -156,6 +162,7 @@ class ExpenseItem {
     DateTime? updatedAt,
     bool? installmentPlanHasPaid,
     DateTime? paidAt,
+    bool? isProjected,
   }) {
     return ExpenseItem(
       id: id ?? this.id,
@@ -182,6 +189,7 @@ class ExpenseItem {
       updatedAt: updatedAt ?? this.updatedAt,
       installmentPlanHasPaid: installmentPlanHasPaid ?? this.installmentPlanHasPaid,
       paidAt: paidAt ?? this.paidAt,
+      isProjected: isProjected ?? this.isProjected,
     );
   }
 }

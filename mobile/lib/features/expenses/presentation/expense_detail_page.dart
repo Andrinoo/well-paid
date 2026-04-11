@@ -4,17 +4,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/date/calendar_month.dart';
 import '../../../core/format/brl_cents.dart';
 import '../../../core/l10n/context_l10n.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/theme/well_paid_colors.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../dashboard/application/dashboard_providers.dart';
+import '../../dashboard/presentation/due_urgency.dart';
 import '../application/expenses_providers.dart';
 import '../domain/expense_delete_options.dart';
 import '../domain/expense_item.dart';
 import 'expense_recurring_label.dart';
 import 'pay_expense_flow.dart';
+import 'widgets/expense_type_tags.dart';
 
 typedef _DeleteParams = ({
   ExpenseDeleteTarget target,
@@ -331,6 +334,7 @@ class _DetailBody extends ConsumerWidget {
             scope: params.scope,
           );
       ref.invalidate(expensesListProvider);
+      ref.invalidate(toPayListProvider);
       ref.invalidate(dashboardOverviewProvider);
       ref.invalidate(expenseDetailProvider(expenseId));
       if (context.mounted) {
@@ -372,6 +376,41 @@ class _DetailBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final rec = expenseRecurringLabel(e, l10n);
+    final today = DateTime.now();
+    final DueUrgency? urgencyNextInstallment =
+        e.isInstallmentPlan && e.installmentNumber < e.installmentTotal
+            ? dueUrgencyFor(
+                e.dueDate != null
+                    ? addCalendarMonths(e.dueDate!, 1)
+                    : addCalendarMonths(e.expenseDate, 1),
+                today,
+              )
+            : null;
+    final DueUrgency? urgencyLastInstallment = e.isInstallmentPlan
+        ? dueUrgencyFor(
+            e.dueDate != null
+                ? addCalendarMonths(
+                    e.dueDate!,
+                    e.installmentTotal - e.installmentNumber,
+                  )
+                : addCalendarMonths(
+                    e.expenseDate,
+                    e.installmentTotal - e.installmentNumber,
+                  ),
+            today,
+          )
+        : null;
+    final DueUrgency? urgencyRecurringNext =
+        !e.isInstallmentPlan &&
+                e.recurringSeriesId != null &&
+                e.recurringSeriesId!.isNotEmpty
+            ? dueUrgencyFor(
+                e.dueDate != null
+                    ? addCalendarMonths(e.dueDate!, 1)
+                    : addCalendarMonths(e.expenseDate, 1),
+                today,
+              )
+            : null;
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -436,13 +475,15 @@ class _DetailBody extends ConsumerWidget {
             label: Text(e.categoryName),
             backgroundColor: WellPaidColors.creamMuted,
           ),
+          if (!e.isInstallmentPlan &&
+              e.recurringSeriesId != null &&
+              e.recurringSeriesId!.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            ExpenseTypeTags(item: e),
+          ],
           const SizedBox(height: 16),
           _row(context, l10n.expenseCompetence, ExpenseDetailPage._dmY(e.expenseDate)),
-          _row(
-            context,
-            l10n.expenseDue,
-            e.dueDate == null ? l10n.noneDash : ExpenseDetailPage._dmY(e.dueDate!),
-          ),
+          _dueRow(context, l10n, e, today),
           _row(
             context,
             l10n.expenseStatusLabel,
@@ -464,6 +505,186 @@ class _DetailBody extends ConsumerWidget {
                   ? l10n.expenseShareWith(e.sharedWithLabel!)
                   : l10n.expenseShareFamily,
             ),
+          if (e.isInstallmentPlan) ...[
+            const SizedBox(height: 16),
+            Material(
+              color: WellPaidColors.creamMuted.withValues(alpha: 0.75),
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (e.installmentNumber < e.installmentTotal) ...[
+                      Text(
+                        l10n.expenseInstallmentNextSectionTitle,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              color: WellPaidColors.navy,
+                            ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        l10n.expenseInstallmentChip(
+                          e.installmentNumber + 1,
+                          e.installmentTotal,
+                        ),
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: WellPaidColors.navy.withValues(alpha: 0.9),
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        l10n.expenseNextDueCompetenceLine(
+                          ExpenseDetailPage._dmY(
+                            addCalendarMonths(e.expenseDate, 1),
+                          ),
+                        ),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: dueUrgencyOnLightBackground(
+                                urgencyNextInstallment!,
+                              ),
+                              fontWeight: FontWeight.w500,
+                            ),
+                      ),
+                      if (e.dueDate != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          l10n.expenseNextDueDateLine(
+                            ExpenseDetailPage._dmY(
+                              addCalendarMonths(e.dueDate!, 1),
+                            ),
+                          ),
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                fontWeight: dueUrgencyValueWeight(
+                                  urgencyNextInstallment!,
+                                ),
+                                color: dueUrgencyOnLightBackground(
+                                  urgencyNextInstallment,
+                                ),
+                              ),
+                        ),
+                      ],
+                      const SizedBox(height: 14),
+                    ],
+                    Text(
+                      l10n.expenseInstallmentLastSectionTitle,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: WellPaidColors.navy,
+                          ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      l10n.expenseInstallmentChip(
+                        e.installmentTotal,
+                        e.installmentTotal,
+                      ),
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: WellPaidColors.navy.withValues(alpha: 0.9),
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      l10n.expenseNextDueCompetenceLine(
+                        ExpenseDetailPage._dmY(
+                          addCalendarMonths(
+                            e.expenseDate,
+                            e.installmentTotal - e.installmentNumber,
+                          ),
+                        ),
+                      ),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: dueUrgencyOnLightBackground(
+                              urgencyLastInstallment!,
+                            ),
+                            fontWeight: FontWeight.w500,
+                          ),
+                    ),
+                    if (e.dueDate != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        l10n.expenseNextDueDateLine(
+                          ExpenseDetailPage._dmY(
+                            addCalendarMonths(
+                              e.dueDate!,
+                              e.installmentTotal - e.installmentNumber,
+                            ),
+                          ),
+                        ),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontWeight: dueUrgencyValueWeight(
+                                urgencyLastInstallment!,
+                              ),
+                              color: dueUrgencyOnLightBackground(
+                                urgencyLastInstallment,
+                              ),
+                            ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+          if (!e.isInstallmentPlan &&
+              e.recurringSeriesId != null &&
+              e.recurringSeriesId!.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Material(
+              color: WellPaidColors.creamMuted.withValues(alpha: 0.75),
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.expenseNextDueSectionTitle,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: WellPaidColors.navy,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      l10n.expenseNextDueCompetenceLine(
+                        ExpenseDetailPage._dmY(
+                          addCalendarMonths(e.expenseDate, 1),
+                        ),
+                      ),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: dueUrgencyOnLightBackground(
+                              urgencyRecurringNext!,
+                            ),
+                            fontWeight: FontWeight.w500,
+                          ),
+                    ),
+                    if (e.dueDate != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        l10n.expenseNextDueDateLine(
+                          ExpenseDetailPage._dmY(
+                            addCalendarMonths(e.dueDate!, 1),
+                          ),
+                        ),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontWeight: dueUrgencyValueWeight(
+                                urgencyRecurringNext!,
+                              ),
+                              color: dueUrgencyOnLightBackground(
+                                urgencyRecurringNext,
+                              ),
+                            ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 32),
           if (!readOnly && e.isPending) ...[
             FilledButton.icon(
@@ -495,7 +716,42 @@ class _DetailBody extends ConsumerWidget {
     );
   }
 
-  static Widget _row(BuildContext context, String k, String v) {
+  static Widget _dueRow(
+    BuildContext context,
+    AppLocalizations l10n,
+    ExpenseItem e,
+    DateTime today,
+  ) {
+    if (e.dueDate == null) {
+      return _row(
+        context,
+        l10n.expenseDue,
+        l10n.noneDash,
+        valueColor: WellPaidColors.navy.withValues(alpha: 0.55),
+        valueWeight: FontWeight.w500,
+      );
+    }
+    final due = e.dueDate!;
+    final u = dueUrgencyFor(due, today);
+    return _row(
+      context,
+      l10n.expenseDue,
+      ExpenseDetailPage._dmY(due),
+      valueColor: e.isPending
+          ? dueUrgencyOnLightBackground(u)
+          : WellPaidColors.navy,
+      valueWeight:
+          e.isPending ? dueUrgencyValueWeight(u) : FontWeight.w600,
+    );
+  }
+
+  static Widget _row(
+    BuildContext context,
+    String k,
+    String v, {
+    Color? valueColor,
+    FontWeight? valueWeight,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
@@ -514,8 +770,8 @@ class _DetailBody extends ConsumerWidget {
             child: Text(
               v,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: WellPaidColors.navy,
+                    fontWeight: valueWeight ?? FontWeight.w600,
+                    color: valueColor ?? WellPaidColors.navy,
                   ),
             ),
           ),

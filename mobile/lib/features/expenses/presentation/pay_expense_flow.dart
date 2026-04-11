@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/date/calendar_month.dart';
 import '../../../core/format/brl_cents.dart';
 import '../../../core/l10n/context_l10n.dart';
 import '../../../core/network/dio_client.dart';
@@ -26,6 +27,7 @@ Future<void> confirmAndPayExpense(
     amountCents: expense.amountCents,
     installmentNumber: expense.installmentNumber,
     installmentTotal: expense.installmentTotal,
+    earlyCheckReference: expense.dueDate ?? expense.expenseDate,
     onPaid: onPaid,
   );
 }
@@ -39,10 +41,39 @@ Future<void> confirmAndPayExpenseById(
   required int amountCents,
   int installmentNumber = 1,
   int installmentTotal = 1,
+  DateTime? earlyCheckReference,
   void Function(WidgetRef ref)? onPaid,
 }) async {
   final l10n = context.l10n;
   final messenger = ScaffoldMessenger.maybeOf(context);
+
+  if (earlyCheckReference != null) {
+    final now = DateTime.now();
+    if (expenseReferenceMonthIsAfterCurrentCalendarMonth(
+      earlyCheckReference,
+      now,
+    )) {
+      final earlyOk = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(l10n.expensePayEarlyTitle),
+          content: Text(l10n.expensePayEarlyBody),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(l10n.confirm),
+            ),
+          ],
+        ),
+      );
+      if (earlyOk != true || !context.mounted) return;
+    }
+  }
+
   final amount = formatBrlFromCents(amountCents);
   var body = '$description\n$amount';
   if (installmentTotal > 1) {
@@ -71,6 +102,7 @@ Future<void> confirmAndPayExpenseById(
     await ref.read(expensesRepositoryProvider).payExpense(expenseId);
     ref.invalidate(dashboardOverviewProvider);
     ref.invalidate(expensesListProvider);
+    ref.invalidate(toPayListProvider);
     onPaid?.call(ref);
     if (context.mounted) {
       messenger?.showSnackBar(SnackBar(content: Text(l10n.expenseMarkedPaid)));

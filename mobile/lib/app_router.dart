@@ -17,6 +17,7 @@ import 'features/expenses/presentation/expense_detail_page.dart';
 import 'features/expenses/presentation/expense_edit_page.dart';
 import 'features/expenses/presentation/expense_list_page.dart';
 import 'features/expenses/presentation/new_expense_page.dart';
+import 'features/expenses/presentation/to_pay_page.dart';
 import 'features/family/presentation/family_page.dart';
 import 'features/goals/presentation/goal_detail_page.dart';
 import 'features/goals/presentation/goals_placeholder_page.dart';
@@ -256,6 +257,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => FamilyPage(
           initialInviteToken: state.uri.queryParameters['token'],
         ),
+      ),
+      GoRoute(
+        path: '/to-pay',
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const ToPayPage(),
       ),
       GoRoute(
         path: '/shopping-lists',

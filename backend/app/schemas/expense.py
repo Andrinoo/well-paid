@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import date, datetime
+from typing import Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -31,7 +32,7 @@ class ExpenseCreate(BaseModel):
         return v
 
     @model_validator(mode="after")
-    def parcelas_ou_recorrente(self) -> ExpenseCreate:
+    def parcelas_ou_recorrente(self) -> Self:
         if self.installment_total > 1 and self.recurring_frequency is not None:
             raise ValueError(
                 "Use parcelas OU recorrência, não ambos (Telas §5.6)."
@@ -66,7 +67,7 @@ class ExpenseUpdate(BaseModel):
         return v
 
     @model_validator(mode="after")
-    def share_update_consistency(self) -> ExpenseUpdate:
+    def share_update_consistency(self) -> Self:
         if self.is_shared is False and self.shared_with_user_id is not None:
             raise ValueError("Não uses shared_with_user_id com is_shared false")
         return self
@@ -105,6 +106,10 @@ class ExpenseResponse(BaseModel):
     installment_plan_has_paid: bool | None = Field(
         default=None,
         description="Só em GET /expenses/{id}: se há parcelas pagas no plano.",
+    )
+    is_projected: bool = Field(
+        default=False,
+        description="Ocorrência recorrente mensal ainda não persistida (pré-visualização).",
     )
 
 

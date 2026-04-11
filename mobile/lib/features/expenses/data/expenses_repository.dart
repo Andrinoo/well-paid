@@ -6,6 +6,17 @@ import '../domain/expense_delete_options.dart';
 import '../domain/expense_item.dart';
 import 'expenses_local_store.dart';
 
+/// Resultado de [ExpensesRepository.listExpenses]: itens e se vieram só da cache local (rede falhou).
+class ExpenseListResult {
+  const ExpenseListResult({
+    required this.items,
+    this.servedFromLocalCache = false,
+  });
+
+  final List<ExpenseItem> items;
+  final bool servedFromLocalCache;
+}
+
 class ExpensesRepository {
   ExpensesRepository(this._dio, this._local);
 
@@ -45,7 +56,7 @@ class ExpensesRepository {
     }
   }
 
-  Future<List<ExpenseItem>> listExpenses({
+  Future<ExpenseListResult> listExpenses({
     int? year,
     int? month,
     String? status,
@@ -73,17 +84,21 @@ class ExpensesRepository {
           .toList();
       _sortExpensesNewestFirst(parsed);
       _local.upsertMany(parsed);
-      return parsed;
+      return ExpenseListResult(items: parsed);
     } on DioException catch (e, st) {
       logDioException(e, st);
       final localItems = _local.readAll();
       if (localItems.isNotEmpty) {
-        return _filterLocal(
+        final filtered = _filterLocal(
           localItems,
           year: year,
           month: month,
           status: status,
           categoryId: categoryId,
+        );
+        return ExpenseListResult(
+          items: filtered,
+          servedFromLocalCache: true,
         );
       }
       rethrow;

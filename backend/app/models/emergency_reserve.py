@@ -1,8 +1,8 @@
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import BigInteger, Date, DateTime, ForeignKey, Integer, UniqueConstraint, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import BigInteger, Date, DateTime, ForeignKey, Integer, UniqueConstraint, func, text
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
@@ -31,6 +31,13 @@ class EmergencyReserve(Base, TimestampMixin):
     monthly_target_cents: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
     balance_cents: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
     tracking_start: Mapped[date] = mapped_column(Date, nullable=False)
+    # Meses (chave "YYYY-MM") em que não deve ser criado crédito automático após remoção manual.
+    accrual_skip_months: Mapped[list[str]] = mapped_column(
+        JSONB,
+        nullable=False,
+        default=list,
+        server_default=text("'[]'::jsonb"),
+    )
 
     accruals: Mapped[list["EmergencyReserveAccrual"]] = relationship(
         "EmergencyReserveAccrual",

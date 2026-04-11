@@ -1,3 +1,5 @@
+import 'dart:async' show unawaited;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +12,7 @@ import '../../../core/network/dio_client.dart';
 import '../../../core/theme/well_paid_colors.dart';
 import '../../dashboard/application/dashboard_providers.dart';
 import '../application/emergency_reserve_providers.dart';
+import '../domain/emergency_reserve_accrual_item.dart';
 
 class EmergencyReservePage extends ConsumerStatefulWidget {
   const EmergencyReservePage({super.key});
@@ -31,6 +34,14 @@ class _EmergencyReservePageState extends ConsumerState<EmergencyReservePage> {
     super.dispose();
   }
 
+  void _invalidateEmergencyAndDashboard() {
+    ref.invalidate(emergencyReserveSnapshotProvider);
+    ref.invalidate(emergencyReserveAccrualsProvider);
+    final period = ref.read(dashboardPeriodProvider);
+    ref.invalidate(dashboardOverviewByPeriodProvider(period));
+    ref.invalidate(dashboardOverviewProvider);
+  }
+
   Future<void> _submit() async {
     final l10n = context.l10n;
     if (!_formKey.currentState!.validate()) return;
@@ -45,16 +56,185 @@ class _EmergencyReservePageState extends ConsumerState<EmergencyReservePage> {
     final messenger = ScaffoldMessenger.of(context);
     try {
       await ref.read(emergencyReserveRepositoryProvider).updateMonthlyTarget(cents);
-      ref.invalidate(emergencyReserveSnapshotProvider);
-      ref.invalidate(emergencyReserveAccrualsProvider);
-      final period = ref.read(dashboardPeriodProvider);
-      ref.invalidate(dashboardOverviewByPeriodProvider(period));
-      ref.invalidate(dashboardOverviewProvider);
+      _invalidateEmergencyAndDashboard();
       if (mounted) {
         messenger.showSnackBar(
           SnackBar(content: Text(l10n.emergencyReserveSavedSnackbar)),
         );
         if (Navigator.of(context).canPop()) context.pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(messageFromDio(e, l10n) ?? l10n.emergencyReserveError),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _confirmAndDeleteAccrual(
+    EmergencyReserveAccrualItem item,
+    String monthLabel,
+  ) async {
+    final l10n = context.l10n;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.emergencyReserveAccrualDeleteTitle(monthLabel)),
+        content: Text(l10n.emergencyReserveAccrualDeleteBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.emergencyReserveAccrualDeleteConfirm),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(emergencyReserveRepositoryProvider).deleteAccrual(
+            year: item.year,
+            month: item.month,
+          );
+      _invalidateEmergencyAndDashboard();
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(l10n.emergencyReserveAccrualRemovedSnackbar)),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(messageFromDio(e, l10n) ?? l10n.emergencyReserveError),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _editAccrual(
+    EmergencyReserveAccrualItem item,
+    String monthLabel,
+  ) async {
+    final l10n = context.l10n;
+    final ctrl = TextEditingController(
+      text: (item.amountCents / 100).toStringAsFixed(2),
+    );
+    final dialogFormKey = GlobalKey<FormState>();
+    try {
+      final submitted = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(l10n.emergencyReserveAccrualEditTitle(monthLabel)),
+          content: Form(
+            key: dialogFormKey,
+            child: TextFormField(
+              controller: ctrl,
+              decoration: InputDecoration(
+                labelText: l10n.emergencyReserveMonthlyLabel,
+              ),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              autofocus: true,
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) {
+                  return l10n.valueInvalid;
+                }
+                final c = parseInputToCents(v);
+                if (c == null || c < 0) return l10n.valueInvalid;
+                return null;
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (dialogFormKey.currentState?.validate() != true) return;
+                Navigator.pop(ctx, true);
+              },
+              child: Text(l10n.save),
+            ),
+          ],
+        ),
+      );
+      if (submitted != true || !mounted) return;
+      final cents = parseInputToCents(ctrl.text);
+      if (cents == null || cents < 0) return;
+      final messenger = ScaffoldMessenger.of(context);
+      try {
+        await ref.read(emergencyReserveRepositoryProvider).patchAccrual(
+              year: item.year,
+              month: item.month,
+              amountCents: cents,
+            );
+        _invalidateEmergencyAndDashboard();
+        if (mounted) {
+          messenger.showSnackBar(
+            SnackBar(content: Text(l10n.emergencyReserveAccrualUpdatedSnackbar)),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          messenger.showSnackBar(
+            SnackBar(
+              content:
+                  Text(messageFromDio(e, l10n) ?? l10n.emergencyReserveError),
+            ),
+          );
+        }
+      }
+    } finally {
+      ctrl.dispose();
+    }
+  }
+
+  Future<void> _confirmResetEntireReserve() async {
+    final l10n = context.l10n;
+    final scheme = Theme.of(context).colorScheme;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.emergencyReserveResetTitle),
+        content: Text(l10n.emergencyReserveResetBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: scheme.error,
+              foregroundColor: scheme.onError,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.emergencyReserveResetConfirm),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(emergencyReserveRepositoryProvider).deleteEntireReserve();
+      _invalidateEmergencyAndDashboard();
+      setState(() => _prefilled = false);
+      _amountCtrl.clear();
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(l10n.emergencyReserveResetSuccess)),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -92,6 +272,21 @@ class _EmergencyReservePageState extends ConsumerState<EmergencyReservePage> {
               )
             : null,
         title: Text(l10n.emergencyReserveTitle),
+        actions: [
+          if (async.hasValue && async.value!.configured)
+            PopupMenuButton<int>(
+              icon: const Icon(Icons.more_vert),
+              onSelected: (v) {
+                if (v == 0) unawaited(_confirmResetEntireReserve());
+              },
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  value: 0,
+                  child: Text(l10n.emergencyReserveResetAction),
+                ),
+              ],
+            ),
+        ],
       ),
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -207,12 +402,48 @@ class _EmergencyReservePageState extends ConsumerState<EmergencyReservePage> {
                           dense: true,
                           title: Text(monthLabel),
                           subtitle: Text(l10n.emergencyReserveAccrualListCredit),
-                          trailing: Text(
-                            formatBrlFromCents(item.amountCents),
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: WellPaidColors.navy,
-                                  fontWeight: FontWeight.w700,
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                formatBrlFromCents(item.amountCents),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      color: WellPaidColors.navy,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                              ),
+                              PopupMenuButton<String>(
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(
+                                  minWidth: 40,
+                                  minHeight: 40,
                                 ),
+                                child: const Icon(Icons.more_vert, size: 22),
+                                onSelected: (action) {
+                                  if (action == 'edit') {
+                                    unawaited(_editAccrual(item, monthLabel));
+                                  } else if (action == 'delete') {
+                                    unawaited(
+                                      _confirmAndDeleteAccrual(item, monthLabel),
+                                    );
+                                  }
+                                },
+                                itemBuilder: (context) => [
+                                  PopupMenuItem(
+                                    value: 'edit',
+                                    child: Text(l10n.emergencyReserveAccrualEdit),
+                                  ),
+                                  PopupMenuItem(
+                                    value: 'delete',
+                                    child:
+                                        Text(l10n.emergencyReserveAccrualDelete),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                         );
                       }).toList(),

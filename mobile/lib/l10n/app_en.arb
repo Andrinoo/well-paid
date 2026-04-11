@@ -32,6 +32,7 @@
   "navIncomes": "Income",
   "navGoals": "Goals",
   "navReserve": "Reserve",
+  "navQuickPanelToggleHint": "Pull up or tap for To pay and Shopping lists shortcuts",
   "menuMoreTooltip": "More options",
   "logoutConfirmTitle": "Log out?",
   "logoutConfirmBody": "You will need to sign in again to access your account.",
@@ -105,6 +106,69 @@
   "dashBalance": "Balance",
   "dashByCategory": "Spending by category",
   "dashToPay": "To pay",
+  "toPayScreenSubtitle": "All pending expenses in chronological order by due date. Installments appear as separate lines. Colors show how close the due date is.",
+  "toPayViewAllExpenses": "All expenses",
+  "toPayDueOn": "Due {date}",
+  "@toPayDueOn": {
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  },
+  "toPayCompetenceOn": "Booked {date} (no due date)",
+  "@toPayCompetenceOn": {
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  },
+  "toPayProjectedHint": "Scheduled — will appear as a charge a few days before the due date.",
+  "toPayOfflineCacheBanner": "Showing saved data — the list may be incomplete until you are back online.",
+  "toPayPendingTotal": "Pending total: {amount}",
+  "@toPayPendingTotal": {
+    "placeholders": {
+      "amount": {"type": "String"}
+    }
+  },
+  "toPayFilterAll": "All",
+  "toPayFilterOverdue": "Overdue",
+  "toPayFilterThisWeek": "This week",
+  "toPaySectionOverdue": "Overdue",
+  "toPaySectionThisWeek": "Due this week",
+  "toPaySectionLater": "Later",
+  "toPayFilterEmpty": "Nothing matches this filter.",
+  "toPayLegendTitle": "Due date colors",
+  "toPayLegendOverdue": "Past due date",
+  "toPayLegendDueToday": "Due today",
+  "toPayLegendDueSoon": "Due in 1–3 days",
+  "toPayLegendUpcoming": "Due in 4–10 days",
+  "toPayLegendSafe": "Due in 11 or more days",
+  "toPayQuickPaySwitchTooltip": "Turn on to confirm payment; the list updates after success. If something fails, the switch turns off again.",
+  "expenseListNextInstallmentLine": "Next: {date}",
+  "@expenseListNextInstallmentLine": {
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  },
+  "expenseTagPar": "PAR",
+  "expenseTagParA11y": "Installment plan",
+  "expenseTagRec": "REC",
+  "expenseTagRecA11y": "Recurring expense",
+  "expenseNextDueSectionTitle": "Next occurrence",
+  "expenseNextDueCompetenceLine": "Booking date: {date}",
+  "@expenseNextDueCompetenceLine": {
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  },
+  "expenseNextDueDateLine": "Due: {date}",
+  "@expenseNextDueDateLine": {
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  },
+  "expenseInstallmentNextSectionTitle": "Next installment",
+  "expenseInstallmentLastSectionTitle": "Last installment",
+  "expensePayEarlyTitle": "Pay in advance?",
+  "expensePayEarlyBody": "This expense is for a month after the current one. Are you sure you want to mark it as paid now?",
   "dashNothingPending": "Nothing pending.",
   "dashPendingTotal": "Total pending",
   "dashSeeAll": "See all",
@@ -143,6 +207,29 @@
   "emergencyReserveAccrualListTitle": "Monthly credits",
   "emergencyReserveAccrualListEmpty": "No monthly credits yet.",
   "emergencyReserveAccrualListCredit": "Credit applied",
+  "emergencyReserveAccrualEdit": "Edit credit",
+  "emergencyReserveAccrualDelete": "Remove credit",
+  "emergencyReserveAccrualDeleteTitle": "Remove credit for {month}?",
+  "@emergencyReserveAccrualDeleteTitle": {
+    "placeholders": {
+      "month": {"type": "String"}
+    }
+  },
+  "emergencyReserveAccrualDeleteBody": "The balance will be adjusted. This month will not get automatic credit again (you can add it back manually).",
+  "emergencyReserveAccrualDeleteConfirm": "Remove",
+  "emergencyReserveAccrualEditTitle": "Credit for {month}",
+  "@emergencyReserveAccrualEditTitle": {
+    "placeholders": {
+      "month": {"type": "String"}
+    }
+  },
+  "emergencyReserveAccrualUpdatedSnackbar": "Credit updated.",
+  "emergencyReserveAccrualRemovedSnackbar": "Credit removed.",
+  "emergencyReserveResetAction": "Clear reserve and history",
+  "emergencyReserveResetTitle": "Clear everything?",
+  "emergencyReserveResetBody": "Removes the target, balance, and all monthly credits. This cannot be undone.",
+  "emergencyReserveResetConfirm": "Clear",
+  "emergencyReserveResetSuccess": "Reserve cleared.",
   "settingsEmergencyReserve": "Emergency reserve",
   "dashMarkPaidTooltip": "Mark as paid",
   "dashDueShort": "Due",
@@ -176,6 +263,7 @@
   },
   "chartSemanticsNoData": "Category spending chart, no data this month",
   "chartCategoriesHint": "Categories appear when there are expenses this month.",
+  "chartDonutTapHint": "Tap a slice to see the category.",
   "chartCategoryOther": "Other",
   "goalsTitle": "Goals",
   "goalsRefresh": "Refresh",
@@ -528,6 +616,7 @@
   "famYouSuffix": " (you)",
   "famEditNameTooltip": "Edit name",
   "dashCashflowTitle": "Monthly history",
+  "dashCashflowChartOptions": "Period & forecast",
   "dashCashflowDynamicMode": "Dynamic mode",
   "dashCashflowStartMonth": "Start",
   "dashCashflowEndMonth": "End",
@@ -620,6 +709,12 @@
   "shoppingListErrorLoad": "Could not load shopping lists.",
   "shoppingListReadOnlyDraft": "Only the author can edit this draft list.",
   "shoppingListNoItems": "No items yet. Add products to plan your trip.",
+  "shoppingListFooterEstimatedTotal": "Estimated total",
+  "shoppingListFooterEstimatedNote": "Sum of lines with a price only.",
+  "shoppingListInlineAmountHint": "Amount",
+  "shoppingListEditLabelTitle": "Item name",
+  "shoppingListConfirmRemoveItemTitle": "Remove item?",
+  "shoppingListConfirmRemoveItemBody": "This product will be removed from the list.",
   "shoppingListEditItemTitle": "Edit item",
   "shoppingListCompleteSuccess": "Expense saved. The list is now in history."
 }

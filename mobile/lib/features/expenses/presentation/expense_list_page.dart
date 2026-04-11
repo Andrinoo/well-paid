@@ -2,15 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/date/calendar_month.dart';
 import '../../../core/format/brl_cents.dart';
 import '../../../core/l10n/context_l10n.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/theme/well_paid_colors.dart';
 import '../../dashboard/application/dashboard_providers.dart';
+import '../../dashboard/presentation/due_urgency.dart';
 import '../application/expenses_providers.dart';
 import '../domain/expense_item.dart';
 import 'expense_recurring_label.dart';
 import 'pay_expense_flow.dart';
+import 'widgets/expense_type_tags.dart';
 
 class ExpenseListPage extends ConsumerStatefulWidget {
   const ExpenseListPage({super.key, this.initialStatus});
@@ -273,6 +276,20 @@ class _ExpenseTile extends StatelessWidget {
         : l10n.expenseTileFamilyCategory(item.categoryName);
     final statusLabel =
         item.isPending ? l10n.expenseStatusPending : l10n.expenseStatusPaid;
+    final today = DateTime.now();
+    final anchorThisLine = item.dueDate ?? item.expenseDate;
+    final pendingUrgency = item.isPending
+        ? dueUrgencyFor(anchorThisLine, today)
+        : null;
+    final dateLineColor = pendingUrgency != null
+        ? dueUrgencyOnLightBackground(pendingUrgency)
+        : WellPaidColors.navy.withValues(alpha: 0.55);
+    final DateTime? nextInstallmentDue = item.isInstallmentPlan &&
+            item.installmentNumber < item.installmentTotal
+        ? (item.dueDate != null
+            ? addCalendarMonths(item.dueDate!, 1)
+            : addCalendarMonths(item.expenseDate, 1))
+        : null;
 
     return Semantics(
       label:
@@ -289,12 +306,24 @@ class _ExpenseTile extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      item.description,
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: WellPaidColors.navy,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            item.description,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyLarge
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: WellPaidColors.navy,
+                                ),
                           ),
+                        ),
+                        const SizedBox(width: 8),
+                        ExpenseTypeTags(item: item, compact: true),
+                      ],
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -348,10 +377,34 @@ class _ExpenseTile extends StatelessWidget {
                           ],
                         ),
                       ),
+                    if (nextInstallmentDue != null) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Text(
+                          l10n.expenseListNextInstallmentLine(
+                            _dmY(nextInstallmentDue),
+                          ),
+                          style: Theme.of(context)
+                              .textTheme
+                              .labelSmall
+                              ?.copyWith(
+                                color: dueUrgencyOnLightBackground(
+                                  dueUrgencyFor(nextInstallmentDue, today),
+                                ),
+                                fontWeight: dueUrgencyValueWeight(
+                                  dueUrgencyFor(nextInstallmentDue, today),
+                                ),
+                              ),
+                        ),
+                      ),
+                    ],
                     Text(
                       l10n.expenseTileDateLine(_dmY(item.expenseDate), statusLabel),
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: WellPaidColors.navy.withValues(alpha: 0.55),
+                            color: dateLineColor,
+                            fontWeight: pendingUrgency != null
+                                ? dueUrgencyValueWeight(pendingUrgency)
+                                : null,
                           ),
                     ),
                   ],

@@ -13,6 +13,13 @@ String formatMonthYearUi(BuildContext context, DateTime d) {
   return DateFormat.yMMMM(tag).format(DateTime(d.year, d.month));
 }
 
+/// Cabeçalho de mês na UI: garante maiúscula inicial (ex.: `fevereiro` → `Fevereiro`).
+String formatMonthYearUiHeading(BuildContext context, DateTime d) {
+  final s = formatMonthYearUi(context, d);
+  if (s.isEmpty) return s;
+  return s[0].toUpperCase() + s.substring(1);
+}
+
 String formatDateTimeUi(BuildContext context, DateTime d) {
   final tag = intlDateTagForUi(context);
   return DateFormat.yMMMd(tag).add_Hm().format(d.toLocal());

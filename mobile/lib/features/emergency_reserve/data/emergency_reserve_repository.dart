@@ -49,4 +49,45 @@ class EmergencyReserveRepository {
       rethrow;
     }
   }
+
+  Future<EmergencyReserveSnapshot> patchAccrual({
+    required int year,
+    required int month,
+    required int amountCents,
+  }) async {
+    try {
+      final res = await _dio.patch<Map<String, dynamic>>(
+        '/emergency-reserve/accruals/$year/$month',
+        data: {'amount_cents': amountCents},
+      );
+      return EmergencyReserveSnapshot.fromJson(res.data!);
+    } on DioException catch (e, st) {
+      logDioException(e, st);
+      rethrow;
+    }
+  }
+
+  Future<EmergencyReserveSnapshot> deleteAccrual({
+    required int year,
+    required int month,
+  }) async {
+    try {
+      final res = await _dio.delete<Map<String, dynamic>>(
+        '/emergency-reserve/accruals/$year/$month',
+      );
+      return EmergencyReserveSnapshot.fromJson(res.data!);
+    } on DioException catch (e, st) {
+      logDioException(e, st);
+      rethrow;
+    }
+  }
+
+  Future<void> deleteEntireReserve() async {
+    try {
+      await _dio.delete<void>('/emergency-reserve');
+    } on DioException catch (e, st) {
+      logDioException(e, st);
+      rethrow;
+    }
+  }
 }

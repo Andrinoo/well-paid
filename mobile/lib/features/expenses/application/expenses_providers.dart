@@ -8,6 +8,7 @@ import '../data/expenses_local_store.dart';
 import '../data/expenses_repository.dart';
 import '../domain/category_option.dart';
 import '../domain/expense_item.dart';
+import 'to_pay_filter.dart';
 
 final expensesLocalStoreProvider = Provider<ExpensesLocalStore>((ref) {
   return ExpensesLocalStore(
@@ -59,11 +60,28 @@ final expensesListProvider =
   final timer = Timer(const Duration(minutes: 3), link.close);
   ref.onDispose(timer.cancel);
   final f = ref.watch(expenseListFiltersProvider);
-  return ref.watch(expensesRepositoryProvider).listExpenses(
+  final r = await ref.watch(expensesRepositoryProvider).listExpenses(
         year: f.year,
         month: f.month,
         status: f.status,
       );
+  return r.items;
+});
+
+/// Todas as despesas pendentes (cada parcela é uma linha), por ordem cronológica de vencimento.
+final toPayListProvider =
+    FutureProvider.autoDispose<ToPaySnapshot>((ref) async {
+  final link = ref.keepAlive();
+  final timer = Timer(const Duration(minutes: 3), link.close);
+  ref.onDispose(timer.cancel);
+  final result = await ref
+      .watch(expensesRepositoryProvider)
+      .listExpenses(status: 'pending');
+  final sorted = [...result.items]..sort(compareToPayChronological);
+  return ToPaySnapshot(
+    items: sorted,
+    servedFromLocalCache: result.servedFromLocalCache,
+  );
 });
 
 final expenseDetailProvider =

@@ -39,3 +39,6 @@ backend/.venv/
 
 # Logs locais
 *.log
+
+# Vercel (ligação local na raiz; `npx vercel link` se necessário)
+.vercel/

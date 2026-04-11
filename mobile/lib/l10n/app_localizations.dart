@@ -290,6 +290,12 @@ abstract class AppLocalizations {
   /// **'Reserva'**
   String get navReserve;
 
+  /// No description provided for @navQuickPanelToggleHint.
+  ///
+  /// In pt, this message translates to:
+  /// **'Puxar ou tocar para atalhos A pagar e Listas de compras'**
+  String get navQuickPanelToggleHint;
+
   /// No description provided for @menuMoreTooltip.
   ///
   /// In pt, this message translates to:
@@ -662,6 +668,204 @@ abstract class AppLocalizations {
   /// **'A pagar'**
   String get dashToPay;
 
+  /// No description provided for @toPayScreenSubtitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Todas as despesas pendentes por ordem cronológica de vencimento. Parcelas aparecem em linhas separadas. As cores indicam a proximidade do vencimento.'**
+  String get toPayScreenSubtitle;
+
+  /// No description provided for @toPayViewAllExpenses.
+  ///
+  /// In pt, this message translates to:
+  /// **'Todas as despesas'**
+  String get toPayViewAllExpenses;
+
+  /// No description provided for @toPayDueOn.
+  ///
+  /// In pt, this message translates to:
+  /// **'Vence {date}'**
+  String toPayDueOn(String date);
+
+  /// No description provided for @toPayCompetenceOn.
+  ///
+  /// In pt, this message translates to:
+  /// **'Competência {date} (sem data de vencimento)'**
+  String toPayCompetenceOn(String date);
+
+  /// No description provided for @toPayProjectedHint.
+  ///
+  /// In pt, this message translates to:
+  /// **'Prevista — a linha efetiva surge alguns dias antes do vencimento.'**
+  String get toPayProjectedHint;
+
+  /// No description provided for @toPayOfflineCacheBanner.
+  ///
+  /// In pt, this message translates to:
+  /// **'A mostrar dados guardados — a lista pode estar incompleta até voltar a ter rede.'**
+  String get toPayOfflineCacheBanner;
+
+  /// No description provided for @toPayPendingTotal.
+  ///
+  /// In pt, this message translates to:
+  /// **'Total pendente: {amount}'**
+  String toPayPendingTotal(String amount);
+
+  /// No description provided for @toPayFilterAll.
+  ///
+  /// In pt, this message translates to:
+  /// **'Todas'**
+  String get toPayFilterAll;
+
+  /// No description provided for @toPayFilterOverdue.
+  ///
+  /// In pt, this message translates to:
+  /// **'Atrasadas'**
+  String get toPayFilterOverdue;
+
+  /// No description provided for @toPayFilterThisWeek.
+  ///
+  /// In pt, this message translates to:
+  /// **'Esta semana'**
+  String get toPayFilterThisWeek;
+
+  /// No description provided for @toPaySectionOverdue.
+  ///
+  /// In pt, this message translates to:
+  /// **'Atrasadas'**
+  String get toPaySectionOverdue;
+
+  /// No description provided for @toPaySectionThisWeek.
+  ///
+  /// In pt, this message translates to:
+  /// **'Vencem esta semana'**
+  String get toPaySectionThisWeek;
+
+  /// No description provided for @toPaySectionLater.
+  ///
+  /// In pt, this message translates to:
+  /// **'Mais tarde'**
+  String get toPaySectionLater;
+
+  /// No description provided for @toPayFilterEmpty.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nada corresponde a este filtro.'**
+  String get toPayFilterEmpty;
+
+  /// No description provided for @toPayLegendTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Cores do vencimento'**
+  String get toPayLegendTitle;
+
+  /// No description provided for @toPayLegendOverdue.
+  ///
+  /// In pt, this message translates to:
+  /// **'Já passou a data de vencimento'**
+  String get toPayLegendOverdue;
+
+  /// No description provided for @toPayLegendDueToday.
+  ///
+  /// In pt, this message translates to:
+  /// **'Vence hoje'**
+  String get toPayLegendDueToday;
+
+  /// No description provided for @toPayLegendDueSoon.
+  ///
+  /// In pt, this message translates to:
+  /// **'Vence em 1–3 dias'**
+  String get toPayLegendDueSoon;
+
+  /// No description provided for @toPayLegendUpcoming.
+  ///
+  /// In pt, this message translates to:
+  /// **'Vence em 4–10 dias'**
+  String get toPayLegendUpcoming;
+
+  /// No description provided for @toPayLegendSafe.
+  ///
+  /// In pt, this message translates to:
+  /// **'Vence daqui a 11 dias ou mais'**
+  String get toPayLegendSafe;
+
+  /// No description provided for @toPayQuickPaySwitchTooltip.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ligue para confirmar o pagamento; a lista atualiza após sucesso. Se falhar, o interruptor volta a desligar.'**
+  String get toPayQuickPaySwitchTooltip;
+
+  /// No description provided for @expenseListNextInstallmentLine.
+  ///
+  /// In pt, this message translates to:
+  /// **'Próx.: {date}'**
+  String expenseListNextInstallmentLine(String date);
+
+  /// No description provided for @expenseTagPar.
+  ///
+  /// In pt, this message translates to:
+  /// **'PAR'**
+  String get expenseTagPar;
+
+  /// No description provided for @expenseTagParA11y.
+  ///
+  /// In pt, this message translates to:
+  /// **'Despesa parcelada'**
+  String get expenseTagParA11y;
+
+  /// No description provided for @expenseTagRec.
+  ///
+  /// In pt, this message translates to:
+  /// **'REC'**
+  String get expenseTagRec;
+
+  /// No description provided for @expenseTagRecA11y.
+  ///
+  /// In pt, this message translates to:
+  /// **'Despesa recorrente'**
+  String get expenseTagRecA11y;
+
+  /// No description provided for @expenseNextDueSectionTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Próxima ocorrência'**
+  String get expenseNextDueSectionTitle;
+
+  /// No description provided for @expenseNextDueCompetenceLine.
+  ///
+  /// In pt, this message translates to:
+  /// **'Competência: {date}'**
+  String expenseNextDueCompetenceLine(String date);
+
+  /// No description provided for @expenseNextDueDateLine.
+  ///
+  /// In pt, this message translates to:
+  /// **'Vencimento: {date}'**
+  String expenseNextDueDateLine(String date);
+
+  /// No description provided for @expenseInstallmentNextSectionTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Próxima parcela'**
+  String get expenseInstallmentNextSectionTitle;
+
+  /// No description provided for @expenseInstallmentLastSectionTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Última parcela'**
+  String get expenseInstallmentLastSectionTitle;
+
+  /// No description provided for @expensePayEarlyTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Pagar antecipadamente?'**
+  String get expensePayEarlyTitle;
+
+  /// No description provided for @expensePayEarlyBody.
+  ///
+  /// In pt, this message translates to:
+  /// **'Esta despesa é de um mês posterior ao atual. Tem a certeza de que quer marcá-la como paga agora?'**
+  String get expensePayEarlyBody;
+
   /// No description provided for @dashNothingPending.
   ///
   /// In pt, this message translates to:
@@ -860,6 +1064,84 @@ abstract class AppLocalizations {
   /// **'Crédito aplicado'**
   String get emergencyReserveAccrualListCredit;
 
+  /// No description provided for @emergencyReserveAccrualEdit.
+  ///
+  /// In pt, this message translates to:
+  /// **'Editar crédito'**
+  String get emergencyReserveAccrualEdit;
+
+  /// No description provided for @emergencyReserveAccrualDelete.
+  ///
+  /// In pt, this message translates to:
+  /// **'Remover crédito'**
+  String get emergencyReserveAccrualDelete;
+
+  /// No description provided for @emergencyReserveAccrualDeleteTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Remover crédito de {month}?'**
+  String emergencyReserveAccrualDeleteTitle(String month);
+
+  /// No description provided for @emergencyReserveAccrualDeleteBody.
+  ///
+  /// In pt, this message translates to:
+  /// **'O saldo será ajustado. Este mês deixa de receber crédito automático (podes voltar a acrescentar manualmente).'**
+  String get emergencyReserveAccrualDeleteBody;
+
+  /// No description provided for @emergencyReserveAccrualDeleteConfirm.
+  ///
+  /// In pt, this message translates to:
+  /// **'Remover'**
+  String get emergencyReserveAccrualDeleteConfirm;
+
+  /// No description provided for @emergencyReserveAccrualEditTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Crédito de {month}'**
+  String emergencyReserveAccrualEditTitle(String month);
+
+  /// No description provided for @emergencyReserveAccrualUpdatedSnackbar.
+  ///
+  /// In pt, this message translates to:
+  /// **'Crédito actualizado.'**
+  String get emergencyReserveAccrualUpdatedSnackbar;
+
+  /// No description provided for @emergencyReserveAccrualRemovedSnackbar.
+  ///
+  /// In pt, this message translates to:
+  /// **'Crédito removido.'**
+  String get emergencyReserveAccrualRemovedSnackbar;
+
+  /// No description provided for @emergencyReserveResetAction.
+  ///
+  /// In pt, this message translates to:
+  /// **'Limpar reserva e histórico'**
+  String get emergencyReserveResetAction;
+
+  /// No description provided for @emergencyReserveResetTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Limpar tudo?'**
+  String get emergencyReserveResetTitle;
+
+  /// No description provided for @emergencyReserveResetBody.
+  ///
+  /// In pt, this message translates to:
+  /// **'Remove a meta, o saldo e todos os créditos mensais. Esta acção não se pode desfazer.'**
+  String get emergencyReserveResetBody;
+
+  /// No description provided for @emergencyReserveResetConfirm.
+  ///
+  /// In pt, this message translates to:
+  /// **'Limpar'**
+  String get emergencyReserveResetConfirm;
+
+  /// No description provided for @emergencyReserveResetSuccess.
+  ///
+  /// In pt, this message translates to:
+  /// **'Reserva reposta.'**
+  String get emergencyReserveResetSuccess;
+
   /// No description provided for @settingsEmergencyReserve.
   ///
   /// In pt, this message translates to:
@@ -955,6 +1237,12 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'As categorias aparecem quando existirem despesas neste mês.'**
   String get chartCategoriesHint;
+
+  /// No description provided for @chartDonutTapHint.
+  ///
+  /// In pt, this message translates to:
+  /// **'Toque numa fatia para ver a categoria.'**
+  String get chartDonutTapHint;
 
   /// No description provided for @chartCategoryOther.
   ///
@@ -2544,6 +2832,12 @@ abstract class AppLocalizations {
   /// **'Histórico mensal'**
   String get dashCashflowTitle;
 
+  /// No description provided for @dashCashflowChartOptions.
+  ///
+  /// In pt, this message translates to:
+  /// **'Período e previsão'**
+  String get dashCashflowChartOptions;
+
   /// No description provided for @dashCashflowDynamicMode.
   ///
   /// In pt, this message translates to:
@@ -2849,6 +3143,42 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Sem itens. Adiciona produtos para planear a compra.'**
   String get shoppingListNoItems;
+
+  /// No description provided for @shoppingListFooterEstimatedTotal.
+  ///
+  /// In pt, this message translates to:
+  /// **'Total estimado'**
+  String get shoppingListFooterEstimatedTotal;
+
+  /// No description provided for @shoppingListFooterEstimatedNote.
+  ///
+  /// In pt, this message translates to:
+  /// **'Soma só dos itens com valor preenchido.'**
+  String get shoppingListFooterEstimatedNote;
+
+  /// No description provided for @shoppingListInlineAmountHint.
+  ///
+  /// In pt, this message translates to:
+  /// **'Valor'**
+  String get shoppingListInlineAmountHint;
+
+  /// No description provided for @shoppingListEditLabelTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nome do item'**
+  String get shoppingListEditLabelTitle;
+
+  /// No description provided for @shoppingListConfirmRemoveItemTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Remover item?'**
+  String get shoppingListConfirmRemoveItemTitle;
+
+  /// No description provided for @shoppingListConfirmRemoveItemBody.
+  ///
+  /// In pt, this message translates to:
+  /// **'Este produto sai da lista.'**
+  String get shoppingListConfirmRemoveItemBody;
 
   /// No description provided for @shoppingListEditItemTitle.
   ///

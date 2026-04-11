@@ -34,6 +34,13 @@ from app.services.expense_delete import (
     propagate_recurring_template_amount,
 )
 from app.services.recurrence import add_months, iter_occurrence_dates
+from app.services.recurring_projection import (
+    build_projected_expense_response,
+    find_anchor_and_occurrence_for_projected_id,
+    materialize_recurring_occurrence,
+    monthly_occurrence_on_calendar_month,
+    projected_recurring_uuid,
+)
 
 router = APIRouter(prefix="/expenses", tags=["expenses"])
 
@@ -58,6 +65,7 @@ def _to_response(
     viewer_id: uuid.UUID,
     *,
     installment_plan_has_paid: bool | None = None,
+    is_projected: bool = False,
 ) -> ExpenseResponse:
     return ExpenseResponse(
         id=e.id,
@@ -85,6 +93,7 @@ def _to_response(
         updated_at=e.updated_at,
         paid_at=e.paid_at,
         installment_plan_has_paid=installment_plan_has_paid,
+        is_projected=is_projected,
     )
 
 
@@ -131,10 +140,10 @@ def _ensure_category(db: Session, category_id: uuid.UUID) -> None:
         )
 
 
-def _ensure_recurring_generated(db: Session, user: User, until: date) -> None:
+def _ensure_recurring_generated(db: Session, owner_user_id: uuid.UUID, until: date) -> None:
     anchors = db.scalars(
         select(Expense).where(
-            Expense.owner_user_id == user.id,
+            Expense.owner_user_id == owner_user_id,
             Expense.installment_total == 1,
             Expense.installment_number == 1,
             Expense.recurring_frequency.isnot(None),
@@ -157,42 +166,129 @@ def _ensure_recurring_generated(db: Session, user: User, until: date) -> None:
             frequency=freq,
             until=until,
         ):
+            if next_day > until:
+                break
             exists = db.scalar(
                 select(Expense.id).where(
-                    Expense.owner_user_id == user.id,
+                    Expense.owner_user_id == owner_user_id,
                     Expense.recurring_series_id == series_id,
                     Expense.expense_date == next_day,
+                    Expense.deleted_at.is_(None),
                 )
             )
-            if exists is None:
-                generated_due = (
-                    next_day + timedelta(days=due_delta) if due_delta is not None else None
-                )
-                db.add(
-                    Expense(
-                        owner_user_id=a.owner_user_id,
-                        description=a.description,
-                        amount_cents=int(a.amount_cents),
-                        expense_date=next_day,
-                        due_date=generated_due,
-                        status=ExpenseStatus.PENDING.value,
-                        category_id=a.category_id,
-                        sync_status=0,
-                        installment_total=1,
-                        installment_number=1,
-                        installment_group_id=None,
-                        recurring_frequency=None,
-                        recurring_series_id=series_id,
-                        recurring_generated_until=None,
-                        is_shared=a.is_shared,
-                        shared_with_user_id=a.shared_with_user_id,
-                    )
-                )
+            if exists is not None:
+                if a.recurring_generated_until is None or next_day > a.recurring_generated_until:
+                    a.recurring_generated_until = next_day
                 changed = True
+                continue
+
+            generated_due = (
+                next_day + timedelta(days=due_delta) if due_delta is not None else None
+            )
+            ref = generated_due if generated_due is not None else next_day
+            if date.today() < ref - timedelta(days=3):
+                break
+
+            row_id = projected_recurring_uuid(series_id, next_day)
+            db.add(
+                Expense(
+                    id=row_id,
+                    owner_user_id=a.owner_user_id,
+                    description=a.description,
+                    amount_cents=int(a.amount_cents),
+                    expense_date=next_day,
+                    due_date=generated_due,
+                    status=ExpenseStatus.PENDING.value,
+                    category_id=a.category_id,
+                    sync_status=0,
+                    installment_total=1,
+                    installment_number=1,
+                    installment_group_id=None,
+                    recurring_frequency=None,
+                    recurring_series_id=series_id,
+                    recurring_generated_until=None,
+                    is_shared=a.is_shared,
+                    shared_with_user_id=a.shared_with_user_id,
+                )
+            )
             a.recurring_generated_until = next_day
             changed = True
     if changed:
         db.commit()
+
+
+def _merge_projected_recurring_month(
+    db: Session,
+    *,
+    viewer_id: uuid.UUID,
+    peer_ids: list[uuid.UUID],
+    year: int,
+    month: int,
+    db_rows: list[Expense],
+) -> list[ExpenseResponse]:
+    keys_existing = {
+        (e.recurring_series_id, e.expense_date)
+        for e in db_rows
+        if e.recurring_series_id is not None
+    }
+    seen_ids: set[uuid.UUID] = {e.id for e in db_rows}
+
+    anchors = db.scalars(
+        select(Expense)
+        .options(
+            joinedload(Expense.category),
+            joinedload(Expense.shared_with_user),
+        )
+        .where(
+            Expense.owner_user_id.in_(peer_ids),
+            Expense.installment_total == 1,
+            Expense.installment_number == 1,
+            Expense.recurring_frequency == "monthly",
+            Expense.recurring_series_id.isnot(None),
+            Expense.deleted_at.is_(None),
+        )
+    ).unique().all()
+
+    projected: list[ExpenseResponse] = []
+    for a in anchors:
+        occ = monthly_occurrence_on_calendar_month(a.expense_date, year, month)
+        if occ is None or occ < a.expense_date:
+            continue
+        sid = a.recurring_series_id
+        assert sid is not None
+        if (sid, occ) in keys_existing:
+            continue
+        exists = db.scalar(
+            select(Expense.id).where(
+                Expense.owner_user_id == a.owner_user_id,
+                Expense.recurring_series_id == sid,
+                Expense.expense_date == occ,
+                Expense.deleted_at.is_(None),
+            )
+        )
+        if exists is not None:
+            continue
+        due_delta = (
+            (a.due_date - a.expense_date).days if a.due_date is not None else None
+        )
+        gen_due = occ + timedelta(days=due_delta) if due_delta is not None else None
+        ref = gen_due if gen_due is not None else occ
+        if date.today() >= ref - timedelta(days=3):
+            continue
+        pr = build_projected_expense_response(
+            a,
+            occ,
+            viewer_id,
+            shared_with_label=_shared_with_label(a),
+        )
+        if pr.id not in seen_ids:
+            projected.append(pr)
+            seen_ids.add(pr.id)
+
+    out = [_to_response(e, viewer_id) for e in db_rows]
+    out.extend(projected)
+    out.sort(key=lambda r: (r.expense_date, r.created_at), reverse=True)
+    return out
 
 
 @router.get("", response_model=list[ExpenseResponse])
@@ -205,11 +301,14 @@ def list_expenses(
     status_filter: Annotated[ExpenseStatus | None, Query(alias="status")] = None,
     installment_group_id: Annotated[uuid.UUID | None, Query()] = None,
 ) -> list[ExpenseResponse]:
+    today = date.today()
+    until_h = today + timedelta(days=450)
     if year is not None and month is not None:
-        _, end = _month_bounds(year, month)
-        _ensure_recurring_generated(db, user, end)
-
+        _, end_m = _month_bounds(year, month)
+        until_h = max(until_h, end_m)
     peer_ids = family_peer_user_ids(db, user.id)
+    for uid in peer_ids:
+        _ensure_recurring_generated(db, uid, until_h)
     stmt = (
         select(Expense)
         .options(
@@ -233,6 +332,48 @@ def list_expenses(
         stmt = stmt.where(Expense.installment_group_id == installment_group_id)
 
     rows = db.scalars(stmt).unique().all()
+    if (
+        year is not None
+        and month is not None
+        and installment_group_id is None
+        and status_filter != ExpenseStatus.PAID
+    ):
+        return _merge_projected_recurring_month(
+            db,
+            viewer_id=user.id,
+            peer_ids=peer_ids,
+            year=year,
+            month=month,
+            db_rows=list(rows),
+        )
+    if (
+        status_filter == ExpenseStatus.PENDING
+        and year is None
+        and month is None
+        and installment_group_id is None
+    ):
+        base = [_to_response(e, user.id) for e in rows]
+        seen: set[uuid.UUID] = {r.id for r in base}
+        extra: list[ExpenseResponse] = []
+        cy, cm = today.year, today.month
+        for _ in range(7):
+            for r in _merge_projected_recurring_month(
+                db,
+                viewer_id=user.id,
+                peer_ids=peer_ids,
+                year=cy,
+                month=cm,
+                db_rows=[],
+            ):
+                if r.id not in seen:
+                    seen.add(r.id)
+                    extra.append(r)
+            if cm == 12:
+                cy += 1
+                cm = 1
+            else:
+                cm += 1
+        return base + extra
     return [_to_response(e, user.id) for e in rows]
 
 
@@ -351,6 +492,17 @@ def get_expense(
 ) -> ExpenseResponse:
     e = _get_visible_in_family(db, expense_id, user.id)
     if e is None:
+        peer_ids = family_peer_user_ids(db, user.id)
+        for uid in peer_ids:
+            hit = find_anchor_and_occurrence_for_projected_id(db, uid, expense_id)
+            if hit is not None:
+                anchor, occ = hit
+                return build_projected_expense_response(
+                    anchor,
+                    occ,
+                    user.id,
+                    shared_with_label=_shared_with_label(anchor),
+                )
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Despesa não encontrada")
     has_paid: bool | None = None
     if e.installment_group_id is not None:
@@ -480,6 +632,12 @@ def pay_expense(
     db: Annotated[Session, Depends(get_db)],
 ) -> ExpenseResponse:
     e = _get_owned(db, expense_id, user.id)
+    if e is None:
+        hit = find_anchor_and_occurrence_for_projected_id(db, user.id, expense_id)
+        if hit is not None:
+            e = materialize_recurring_occurrence(db, hit[0], hit[1])
+            db.commit()
+            e = _get_owned(db, expense_id, user.id)
     if e is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Despesa não encontrada")
     if e.status != ExpenseStatus.PENDING.value:

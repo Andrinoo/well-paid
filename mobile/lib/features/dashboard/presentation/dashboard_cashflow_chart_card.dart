@@ -70,8 +70,31 @@ class DashboardCashflowChartCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const _CashflowQueryControls(),
-            const SizedBox(height: 12),
+            Theme(
+              data: Theme.of(context).copyWith(
+                dividerColor: Colors.transparent,
+                listTileTheme: ListTileThemeData(
+                  dense: true,
+                  visualDensity: const VisualDensity(horizontal: 0, vertical: -2),
+                  minVerticalPadding: 0,
+                  contentPadding: EdgeInsets.zero,
+                  titleTextStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: WellPaidColors.navy,
+                      ),
+                ),
+              ),
+              child: ExpansionTile(
+                tilePadding: EdgeInsets.zero,
+                childrenPadding: const EdgeInsets.only(top: 2, bottom: 6),
+                initiallyExpanded: false,
+                title: Text(l10n.dashCashflowChartOptions),
+                children: const [
+                  _CashflowQueryControls(),
+                ],
+              ),
+            ),
+            const SizedBox(height: 4),
             if (d.months.isEmpty)
               Text(
                 l10n.dashCashflowEmpty,
@@ -108,7 +131,7 @@ class _CashflowShell extends StatelessWidget {
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+        padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -118,7 +141,7 @@ class _CashflowShell extends StatelessWidget {
                 children: [
                   Icon(
                     Icons.show_chart_outlined,
-                    size: 22,
+                    size: 20,
                     color: WellPaidColors.navy.withValues(alpha: 0.85),
                   ),
                   const SizedBox(width: 8),
@@ -128,13 +151,14 @@ class _CashflowShell extends StatelessWidget {
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.w700,
                             color: WellPaidColors.navy,
+                            fontSize: 15,
                           ),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 6),
             child,
           ],
         ),
@@ -444,24 +468,34 @@ class _CashflowSummaryFooter extends StatelessWidget {
             thickness: 1,
             color: WellPaidColors.navy.withValues(alpha: 0.1),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           ExcludeSemantics(
-            child: Text(
-              l10n.dashCashflowFooterForecastTotal(forecastStr),
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: WellPaidColors.navy.withValues(alpha: 0.82),
-                    fontWeight: FontWeight.w600,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    l10n.dashCashflowFooterForecastTotal(forecastStr),
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: WellPaidColors.navy.withValues(alpha: 0.82),
+                          fontWeight: FontWeight.w600,
+                          height: 1.25,
+                        ),
                   ),
-            ),
-          ),
-          const SizedBox(height: 4),
-          ExcludeSemantics(
-            child: Text(
-              l10n.dashCashflowFooterBalance(balanceStr),
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: balanceColor,
-                    fontWeight: FontWeight.w700,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    l10n.dashCashflowFooterBalance(balanceStr),
+                    textAlign: TextAlign.end,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: balanceColor,
+                          fontWeight: FontWeight.w800,
+                          height: 1.25,
+                        ),
                   ),
+                ),
+              ],
             ),
           ),
         ],
@@ -498,10 +532,10 @@ class _CashflowLineChartBodyState extends State<_CashflowLineChartBody> {
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
     final screenW = MediaQuery.sizeOf(context).width;
     final chartHeight = screenW < 340
-        ? 196.0
+        ? 232.0
         : screenW < 420
-            ? 214.0
-            : 228.0;
+            ? 252.0
+            : 268.0;
     final chartDuration = reduceMotion
         ? Duration.zero
         : const Duration(milliseconds: 380);
@@ -604,8 +638,9 @@ class _CashflowLineChartBodyState extends State<_CashflowLineChartBody> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: 6,
+            runSpacing: 4,
+            alignment: WrapAlignment.start,
             children: [
               _LegendChip(
                 color: _income,
@@ -637,7 +672,7 @@ class _CashflowLineChartBodyState extends State<_CashflowLineChartBody> {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           SizedBox(
             height: chartHeight,
             child: LineChart(
@@ -810,11 +845,11 @@ class _LegendChip extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(12),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color:
                     WellPaidColors.navy.withValues(alpha: active ? 0.14 : 0.08),
@@ -825,8 +860,8 @@ class _LegendChip extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 SizedBox(
-                  width: 18,
-                  height: 3,
+                  width: 14,
+                  height: 2,
                   child: CustomPaint(
                     painter: _LegendLinePainter(
                       color: c,
@@ -834,14 +869,15 @@ class _LegendChip extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 5),
                 Text(
                   label,
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: WellPaidColors.navy
                             .withValues(alpha: active ? 0.9 : 0.45),
                         fontWeight: FontWeight.w600,
-                        fontSize: 12,
+                        fontSize: 10.5,
+                        height: 1.1,
                       ),
                 ),
               ],
@@ -863,7 +899,7 @@ class _LegendLinePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..color = color
-      ..strokeWidth = 3
+      ..strokeWidth = 2
       ..strokeCap = StrokeCap.round;
     if (dashed) {
       var x = 0.0;

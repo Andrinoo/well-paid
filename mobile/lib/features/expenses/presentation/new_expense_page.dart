@@ -216,6 +216,8 @@ class _NewExpensePageState extends ConsumerState<NewExpensePage> {
                   }
                   if (_kind != _ExpenseKind.recurring) {
                     _recurring = null;
+                  } else {
+                    _recurring ??= 'monthly';
                   }
                 });
               },

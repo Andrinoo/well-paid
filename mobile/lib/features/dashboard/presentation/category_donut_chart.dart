@@ -34,13 +34,37 @@ const _categoryIcons = <String, IconData>{
   'outros': Icons.category_outlined,
 };
 
-const double _chartBox = 220;
+const double _chartBox = 238;
 const double _sliceRadius = 54;
 const double _centerHole = 58;
 
 enum _DonutDepthPreset { soft, medium }
 
 const _donutDepthPreset = _DonutDepthPreset.soft;
+
+Widget _donutSliceBadge(IconData icon, Color base, bool selected) {
+  return Container(
+    width: 18,
+    height: 18,
+    alignment: Alignment.center,
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      color: WellPaidColors.cream.withValues(alpha: 0.94),
+      border: Border.all(
+        color: base,
+        width: selected ? 1.55 : 1.0,
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.08),
+          blurRadius: 2,
+          offset: const Offset(0, 1),
+        ),
+      ],
+    ),
+    child: Icon(icon, size: 10, color: base),
+  );
+}
 
 /// Ordena por valor e mantém no máximo [_kMaxDonutSlices] fatias; o resto vira uma linha "Outros".
 List<CategorySpend> _aggregateSpendingForDonut(
@@ -157,14 +181,13 @@ class _CategoryDonutChartState extends State<CategoryDonutChart>
       ];
     }
     final out = <PieChartSectionData>[];
-    final total = widget.monthExpenseTotalCents;
     for (var i = 0; i < rows.length; i++) {
       final c = rows[i];
       final base = _palette[i % _palette.length];
       final touched = _touchedIndex == i;
       final scaled = c.amountCents * introT;
-      final pct = total > 0 ? ((c.amountCents * 100) ~/ total) : 0;
       final glowA = (0.42 + 0.58 * introT).clamp(0.0, 1.0) / _depthStrength;
+      final icon = _categoryIcons[c.categoryKey] ?? Icons.category_outlined;
       out.add(
         PieChartSectionData(
           gradient: LinearGradient(
@@ -178,22 +201,21 @@ class _CategoryDonutChartState extends State<CategoryDonutChart>
             stops: const [0.0, 0.5, 1.0],
           ),
           value: scaled < 0.001 ? 0.001 : scaled,
-          title: touched ? '$pct%' : '',
-          showTitle: touched,
+          title: '',
+          showTitle: false,
           radius: touched ? _sliceRadius + 10 : _sliceRadius,
-          titleStyle: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w800,
-            color: WellPaidColors.cream,
-            shadows: const [
-              Shadow(
-                color: Colors.black54,
-                blurRadius: 3,
-                offset: Offset(0, 1),
-              ),
-            ],
+          badgeWidget: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () {
+              if (_touchedIndex == i) {
+                _setTouched(null);
+              } else {
+                _setTouched(i);
+              }
+            },
+            child: _donutSliceBadge(icon, base, touched),
           ),
-          titlePositionPercentageOffset: 0.62,
+          badgePositionPercentageOffset: 0.91,
           borderSide: BorderSide(
             color: WellPaidColors.cream.withValues(alpha: touched ? 0.95 : 0.88),
             width: (touched ? 2.5 : 1.8) * _depthStrength,
@@ -251,58 +273,65 @@ class _CategoryDonutChartState extends State<CategoryDonutChart>
   }) {
     final p = widget.period;
     final periodLine = p != null && p.month >= 1 && p.month <= 12
-        ? formatMonthYearUi(context, DateTime(p.year, p.month))
+        ? formatMonthYearUiHeading(context, DateTime(p.year, p.month))
         : null;
 
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 118),
+    final maxW = _centerHole * 2 - 24;
+
+    return SizedBox(
+      width: maxW,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (periodLine != null)
             Padding(
-              padding: const EdgeInsets.only(bottom: 4),
+              padding: const EdgeInsets.only(bottom: 3),
               child: Text(
                 periodLine,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      fontSize: 10,
                       color: WellPaidColors.navy.withValues(alpha: 0.58),
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: 0.2,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.15,
                     ),
                 textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           Text(
             l10n.chartTotalExpenses,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  fontSize: 10,
                   color: WellPaidColors.navy.withValues(alpha: 0.62),
                   fontWeight: FontWeight.w500,
                 ),
+            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 2),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              totalLabel,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: WellPaidColors.navy,
-                    height: 1.1,
-                  ),
-              textAlign: TextAlign.center,
-              maxLines: 1,
+          Text(
+            totalLabel,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: WellPaidColors.navy,
+              height: 1.2,
             ),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
           if (!hasData) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Text(
               periodLine != null
                   ? l10n.chartNoExpensesRegistered
                   : l10n.chartNoExpensesThisMonth,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    fontSize: 10,
                     color: WellPaidColors.navy.withValues(alpha: 0.52),
-                    height: 1.3,
+                    height: 1.25,
                   ),
             ),
           ],
@@ -393,7 +422,10 @@ class _CategoryDonutChartState extends State<CategoryDonutChart>
                     _setTouched(null);
                     return;
                   }
-                  _setTouched(sec.touchedSectionIndex);
+                  final idx = sec.touchedSectionIndex;
+                  // Toque no badge costuma vir com índice -1; o badge usa GestureDetector.
+                  if (idx < 0) return;
+                  _setTouched(idx);
                 },
               ),
               startDegreeOffset: -90 + (1 - introT) * (6 * _depthStrength),
@@ -430,174 +462,91 @@ class _CategoryDonutChartState extends State<CategoryDonutChart>
         final shadows = _shadowSections(hasData, introT, rows);
 
         CategorySpend? selectedCategory;
-        if (hasData && _touchedIndex != null && _touchedIndex! < rows.length) {
+        if (hasData &&
+            _touchedIndex != null &&
+            _touchedIndex! >= 0 &&
+            _touchedIndex! < rows.length) {
           selectedCategory = rows[_touchedIndex!];
         }
 
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            final narrow = constraints.maxWidth < 340;
-            final legend = hasData
-                ? narrow
-                    ? _LegendWrap(
-                        rows: rows,
-                        monthTotal: widget.monthExpenseTotalCents,
-                        selectedIndex: _touchedIndex,
-                        introT: introT,
-                        onSelect: (i) {
-                          if (_touchedIndex == i) {
-                            _setTouched(null);
-                          } else {
-                            _setTouched(i);
-                          }
-                        },
-                      )
-                    : _LegendList(
-                        rows: rows,
-                        monthTotal: widget.monthExpenseTotalCents,
-                        selectedIndex: _touchedIndex,
-                        introT: introT,
-                        onSelect: (i) {
-                          if (_touchedIndex == i) {
-                            _setTouched(null);
-                          } else {
-                            _setTouched(i);
-                          }
-                        },
-                      )
-                : Padding(
-                    padding: EdgeInsets.only(
-                      left: narrow ? 0 : 4,
-                      top: narrow ? 8 : 0,
-                    ),
-                    child: Text(
-                      l10n.chartCategoriesHint,
-                      textAlign:
-                          narrow ? TextAlign.center : TextAlign.start,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color:
-                                WellPaidColors.navy.withValues(alpha: 0.62),
-                            height: 1.35,
-                          ),
-                    ),
-                  );
-
-            final chartCol = Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Center(
-                  child: _chartStack(
-                    context,
-                    l10n: l10n,
-                    hasData: hasData,
-                    introT: introT,
-                    sections: sections,
-                    shadows: shadows,
-                    totalLabel: totalLabel,
+        final Widget footerHint;
+        if (!hasData) {
+          footerHint = Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              l10n.chartCategoriesHint,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: WellPaidColors.navy.withValues(alpha: 0.62),
+                    height: 1.35,
                   ),
-                ),
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 200),
-                  switchInCurve: Curves.easeOutCubic,
-                  switchOutCurve: Curves.easeInCubic,
-                  child: selectedCategory == null
-                      ? const SizedBox(height: 10)
-                      : Padding(
-                          key: ValueKey<String>(selectedCategory.categoryKey),
-                          padding: const EdgeInsets.only(top: 10),
-                          child: _SelectedCategoryBadge(
-                            category: selectedCategory,
-                            monthTotal: widget.monthExpenseTotalCents,
-                            color: _palette[_touchedIndex! % _palette.length],
-                          ),
-                        ),
-                ),
-              ],
-            );
+            ),
+          );
+        } else if (selectedCategory == null) {
+          footerHint = Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+              l10n.chartDonutTapHint,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontSize: 11,
+                    color: WellPaidColors.navy.withValues(alpha: 0.5),
+                    height: 1.25,
+                  ),
+            ),
+          );
+        } else {
+          footerHint = const SizedBox.shrink();
+        }
 
-            return Semantics(
-              label: hasData
-                  ? l10n.chartSemanticsWithData(totalLabel)
-                  : l10n.chartSemanticsNoData,
-              child: narrow
-                  ? Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        chartCol,
-                        const SizedBox(height: 12),
-                        legend,
-                      ],
-                    )
-                  : SizedBox(
-                      height: selectedCategory != null ? 298 : 266,
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Expanded(flex: 3, child: chartCol),
-                          Expanded(flex: 2, child: legend),
-                        ],
+        final chartCol = Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Center(
+              child: _chartStack(
+                context,
+                l10n: l10n,
+                hasData: hasData,
+                introT: introT,
+                sections: sections,
+                shadows: shadows,
+                totalLabel: totalLabel,
+              ),
+            ),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              child: selectedCategory == null
+                  ? const SizedBox(height: 10)
+                  : Padding(
+                      key: ValueKey<String>(selectedCategory.categoryKey),
+                      padding: const EdgeInsets.only(top: 20),
+                      child: Center(
+                        child: _SelectedCategoryBadge(
+                          category: selectedCategory,
+                          monthTotal: widget.monthExpenseTotalCents,
+                          color: _palette[_touchedIndex! % _palette.length],
+                        ),
                       ),
                     ),
-            );
-          },
+            ),
+          ],
+        );
+
+        return Semantics(
+          label: hasData
+              ? l10n.chartSemanticsWithData(totalLabel)
+              : l10n.chartSemanticsNoData,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              chartCol,
+              footerHint,
+            ],
+          ),
         );
       },
-    );
-  }
-}
-
-class _LegendList extends StatelessWidget {
-  const _LegendList({
-    required this.rows,
-    required this.monthTotal,
-    required this.selectedIndex,
-    required this.introT,
-    required this.onSelect,
-  });
-
-  final List<CategorySpend> rows;
-  final int monthTotal;
-  final int? selectedIndex;
-  final double introT;
-  final ValueChanged<int> onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: rows.length,
-      itemBuilder: (context, i) =>
-          _legendRow(context, rows[i], i, monthTotal, selectedIndex, introT, onSelect),
-    );
-  }
-}
-
-class _LegendWrap extends StatelessWidget {
-  const _LegendWrap({
-    required this.rows,
-    required this.monthTotal,
-    required this.selectedIndex,
-    required this.introT,
-    required this.onSelect,
-  });
-
-  final List<CategorySpend> rows;
-  final int monthTotal;
-  final int? selectedIndex;
-  final double introT;
-  final ValueChanged<int> onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      alignment: WrapAlignment.center,
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        for (var i = 0; i < rows.length; i++)
-          _legendChip(context, rows[i], i, monthTotal, selectedIndex, introT, onSelect),
-      ],
     );
   }
 }
@@ -617,182 +566,58 @@ class _SelectedCategoryBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final icon = _categoryIcons[category.categoryKey] ?? Icons.category_outlined;
     final pct = monthTotal > 0 ? ((category.amountCents * 100) ~/ monthTotal) : 0;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        gradient: LinearGradient(
-          colors: [
-            color.withValues(alpha: 0.22),
-            color.withValues(alpha: 0.1),
-          ],
-        ),
-        border: Border.all(color: color.withValues(alpha: 0.45)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _swatch(icon, color, true, compact: true),
-            const SizedBox(width: 6),
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 120),
-              child: Text(
-                category.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: WellPaidColors.navy,
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-            ),
-            const SizedBox(width: 6),
-            Text(
-              '$pct%',
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: WellPaidColors.navy.withValues(alpha: 0.78),
-                    fontWeight: FontWeight.w800,
-                  ),
-            ),
-            const SizedBox(width: 6),
-            Text(
-              formatBrlFromCents(category.amountCents),
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: WellPaidColors.navy,
-                    fontWeight: FontWeight.w800,
-                  ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-Widget _legendRow(
-  BuildContext context,
-  CategorySpend c,
-  int i,
-  int monthTotal,
-  int? selectedIndex,
-  double introT,
-  ValueChanged<int> onSelect,
-) {
-  final pct = monthTotal > 0 ? ((c.amountCents * 100) ~/ monthTotal) : 0;
-  final icon = _categoryIcons[c.categoryKey] ?? Icons.category_outlined;
-  final base = _palette[i % _palette.length];
-  final selected = selectedIndex == i;
-  return Opacity(
-    opacity: 0.4 + 0.6 * introT,
-    child: Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => onSelect(i),
-          borderRadius: BorderRadius.circular(10),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 4),
-            child: Row(
-              children: [
-                _swatch(icon, base, selected),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    c.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: const Color(0xFF0F2238),
-                          fontWeight:
-                              selected ? FontWeight.w700 : FontWeight.w500,
-                        ),
-                  ),
-                ),
-                Text(
-                  '$pct%',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: WellPaidColors.navy.withValues(alpha: 0.78),
-                        fontWeight: FontWeight.w700,
-                      ),
-                ),
-              ],
-            ),
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 288),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            colors: [
+              color.withValues(alpha: 0.22),
+              color.withValues(alpha: 0.1),
+            ],
           ),
+          border: Border.all(color: color.withValues(alpha: 0.45)),
         ),
-      ),
-    ),
-  );
-}
-
-Widget _legendChip(
-  BuildContext context,
-  CategorySpend c,
-  int i,
-  int monthTotal,
-  int? selectedIndex,
-  double introT,
-  ValueChanged<int> onSelect,
-) {
-  final pct = monthTotal > 0 ? ((c.amountCents * 100) ~/ monthTotal) : 0;
-  final icon = _categoryIcons[c.categoryKey] ?? Icons.category_outlined;
-  final base = _palette[i % _palette.length];
-  final selected = selectedIndex == i;
-  return Opacity(
-    opacity: 0.4 + 0.6 * introT,
-    child: Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => onSelect(i),
-        borderRadius: BorderRadius.circular(20),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: selected
-                ? base.withValues(alpha: 0.16)
-                : WellPaidColors.creamMuted.withValues(alpha: 0.55),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: selected
-                  ? base
-                  : WellPaidColors.navy.withValues(alpha: 0.1),
-              width: selected ? 2 : 1,
-            ),
-          ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(
-            mainAxisSize: MainAxisSize.min,
             children: [
-              _swatch(icon, base, selected, compact: true),
+              _swatch(icon, color, true, compact: true),
               const SizedBox(width: 6),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 100),
+              Expanded(
                 child: Text(
-                  c.name,
-                  maxLines: 1,
+                  category.name,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         color: WellPaidColors.navy,
-                        fontWeight:
-                            selected ? FontWeight.w700 : FontWeight.w500,
+                        fontWeight: FontWeight.w800,
                       ),
                 ),
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: 6),
               Text(
                 '$pct%',
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: WellPaidColors.navy.withValues(alpha: 0.75),
-                      fontWeight: FontWeight.w700,
+                      color: WellPaidColors.navy.withValues(alpha: 0.78),
+                      fontWeight: FontWeight.w800,
+                    ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                formatBrlFromCents(category.amountCents),
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: WellPaidColors.navy,
+                      fontWeight: FontWeight.w800,
                     ),
               ),
             ],
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 Widget _swatch(IconData icon, Color base, bool selected, {bool compact = false}) {
