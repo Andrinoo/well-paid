@@ -771,12 +771,24 @@
   "shoppingListConfirmDeleteDraftBody": "Esta lista em rascunho será eliminada. Esta ação não pode ser desfeita.",
   "shoppingListComplete": "Fechar compra",
   "shoppingListCompleteTitle": "Lançar despesa",
-  "shoppingListTotalOverrideHint": "Total manual (opcional)",
+  "shoppingListTotalOverrideHint": "Total pago na loja (opcional — substitui soma e desconto)",
+  "shoppingListDiscountHint": "Desconto (opcional — subtrai da soma; incompatível com total manual)",
+  "shoppingListDiscountOverrideConflict": "Preenche só o total manual ou só o desconto, não ambos.",
+  "shoppingListTotalMismatchTitle": "Total diferente da soma das linhas",
+  "shoppingListTotalMismatchBody": "Indicaste {manual} mas o subtotal das linhas é {subtotal}. A despesa usará o valor que indicaste. Continuar?",
+  "@shoppingListTotalMismatchBody": {
+    "placeholders": {
+      "manual": { "type": "String" },
+      "subtotal": { "type": "String" }
+    }
+  },
   "shoppingListDescriptionOptional": "Descrição da despesa (opcional)",
   "shoppingListMarkPaid": "Já paguei",
   "shoppingListExpenseFromListPaidNote": "A despesa fica como paga, sem parcelas nem recorrência. Na despesa aparecem só o nome da lista e o total.",
   "shoppingListExpenseDate": "Data da despesa",
   "shoppingListViewExpense": "Ver despesa",
+  "shoppingListAlignTotalToLinesButton": "Atualizar despesa para a soma das linhas",
+  "shoppingListAlignTotalSuccess": "Total da despesa atualizado para coincidir com as linhas.",
   "shoppingListCompletedOn": "Concluída em {date}",
   "@shoppingListCompletedOn": {
     "placeholders": {
@@ -792,6 +804,12 @@
   "shoppingListNoItems": "Sem itens. Adiciona produtos para planear a compra.",
   "shoppingListFooterEstimatedTotal": "Total estimado",
   "shoppingListFooterEstimatedNote": "Soma de (valor unitário × quantidade) nas linhas com preço.",
+  "shoppingListFooterUnitsSummary": "{unitCount} itens no total",
+  "@shoppingListFooterUnitsSummary": {
+    "placeholders": {
+      "unitCount": { "type": "int" }
+    }
+  },
   "shoppingListFooterAddItemCompleted": "Ainda podes acrescentar itens a esta lista concluída.",
   "shoppingListInlineAmountHint": "Unitário",
   "shoppingListEditLabelTitle": "Nome do item",

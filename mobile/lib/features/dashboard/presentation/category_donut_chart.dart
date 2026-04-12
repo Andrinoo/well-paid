@@ -35,7 +35,8 @@ const _categoryIcons = <String, IconData>{
   'outros': PhosphorIconsRegular.squaresFour,
 };
 
-const double _chartBox = 238;
+/// Tamanho de referência (largura/altura do quadrado do gráfico em dp “grandes”).
+const double _refChartBox = 238;
 const double _sliceRadius = 54;
 const double _centerHole = 58;
 
@@ -51,10 +52,7 @@ Widget _donutSliceBadge(IconData icon, Color base, bool selected) {
     decoration: BoxDecoration(
       shape: BoxShape.circle,
       color: WellPaidColors.cream.withValues(alpha: 0.94),
-      border: Border.all(
-        color: base,
-        width: selected ? 1.55 : 1.0,
-      ),
+      border: Border.all(color: base, width: selected ? 1.55 : 1.0),
       boxShadow: [
         BoxShadow(
           color: Colors.black.withValues(alpha: 0.08),
@@ -110,8 +108,10 @@ class CategoryDonutChart extends StatefulWidget {
   final List<CategorySpend> categories;
   final int monthExpenseTotalCents;
   final PeriodMonth? period;
+
   /// Abre a lista de despesas filtrada pela categoria selecionada no donut.
   final ValueChanged<CategorySpend>? onViewCategoryExpenses;
+
   /// CTA quando não há despesas no mês (ex.: nova despesa).
   final VoidCallback? onRegisterExpense;
 
@@ -174,14 +174,16 @@ class _CategoryDonutChartState extends State<CategoryDonutChart>
     bool hasData,
     double introT,
     List<CategorySpend> rows,
+    double g,
   ) {
+    final sliceR = _sliceRadius * g;
     if (!hasData || introT < 0.002) {
       return [
         PieChartSectionData(
           color: WellPaidColors.navy.withValues(alpha: 0.12 + 0.08 * introT),
           value: 1,
           title: '',
-          radius: _sliceRadius,
+          radius: sliceR,
           showTitle: false,
           borderSide: BorderSide.none,
         ),
@@ -194,7 +196,8 @@ class _CategoryDonutChartState extends State<CategoryDonutChart>
       final touched = _touchedIndex == i;
       final scaled = c.amountCents * introT;
       final glowA = (0.42 + 0.58 * introT).clamp(0.0, 1.0) / _depthStrength;
-      final icon = _categoryIcons[c.categoryKey] ?? PhosphorIconsRegular.squaresFour;
+      final icon =
+          _categoryIcons[c.categoryKey] ?? PhosphorIconsRegular.squaresFour;
       out.add(
         PieChartSectionData(
           gradient: LinearGradient(
@@ -210,7 +213,7 @@ class _CategoryDonutChartState extends State<CategoryDonutChart>
           value: scaled < 0.001 ? 0.001 : scaled,
           title: '',
           showTitle: false,
-          radius: touched ? _sliceRadius + 10 : _sliceRadius,
+          radius: touched ? sliceR + 10 * g : sliceR,
           badgeWidget: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: () {
@@ -224,7 +227,9 @@ class _CategoryDonutChartState extends State<CategoryDonutChart>
           ),
           badgePositionPercentageOffset: 0.91,
           borderSide: BorderSide(
-            color: WellPaidColors.cream.withValues(alpha: touched ? 0.95 : 0.88),
+            color: WellPaidColors.cream.withValues(
+              alpha: touched ? 0.95 : 0.88,
+            ),
             width: (touched ? 2.5 : 1.8) * _depthStrength,
           ),
         ),
@@ -237,14 +242,16 @@ class _CategoryDonutChartState extends State<CategoryDonutChart>
     bool hasData,
     double introT,
     List<CategorySpend> rows,
+    double g,
   ) {
+    final sliceR = _sliceRadius * g;
     if (!hasData || introT < 0.002) {
       return [
         PieChartSectionData(
           color: Colors.black.withValues(alpha: 0.06),
           value: 1,
           title: '',
-          radius: _sliceRadius,
+          radius: sliceR,
           showTitle: false,
           borderSide: BorderSide.none,
         ),
@@ -263,7 +270,7 @@ class _CategoryDonutChartState extends State<CategoryDonutChart>
           }(),
           title: '',
           showTitle: false,
-          radius: _sliceRadius,
+          radius: sliceR,
           borderSide: BorderSide(
             color: Colors.black.withValues(alpha: 0.15),
             width: 1,
@@ -277,13 +284,14 @@ class _CategoryDonutChartState extends State<CategoryDonutChart>
     required AppLocalizations l10n,
     required bool hasData,
     required String totalLabel,
+    required double g,
   }) {
     final p = widget.period;
     final periodLine = p != null && p.month >= 1 && p.month <= 12
         ? formatMonthYearUiHeading(context, DateTime(p.year, p.month))
         : null;
 
-    final maxW = _centerHole * 2 - 24;
+    final maxW = (_centerHole * g) * 2 - (18 + 6 * g);
 
     return SizedBox(
       width: maxW,
@@ -296,11 +304,11 @@ class _CategoryDonutChartState extends State<CategoryDonutChart>
               child: Text(
                 periodLine,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      fontSize: 10,
-                      color: WellPaidColors.navy.withValues(alpha: 0.58),
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.15,
-                    ),
+                  fontSize: 10,
+                  color: WellPaidColors.navy.withValues(alpha: 0.58),
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.15,
+                ),
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -309,10 +317,10 @@ class _CategoryDonutChartState extends State<CategoryDonutChart>
           Text(
             l10n.chartTotalExpenses,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  fontSize: 10,
-                  color: WellPaidColors.navy.withValues(alpha: 0.62),
-                  fontWeight: FontWeight.w500,
-                ),
+              fontSize: 10,
+              color: WellPaidColors.navy.withValues(alpha: 0.62),
+              fontWeight: FontWeight.w500,
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 2),
@@ -336,10 +344,10 @@ class _CategoryDonutChartState extends State<CategoryDonutChart>
                   : l10n.chartNoExpensesThisMonth,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    fontSize: 10,
-                    color: WellPaidColors.navy.withValues(alpha: 0.52),
-                    height: 1.25,
-                  ),
+                fontSize: 10,
+                color: WellPaidColors.navy.withValues(alpha: 0.52),
+                height: 1.25,
+              ),
             ),
           ],
         ],
@@ -355,10 +363,13 @@ class _CategoryDonutChartState extends State<CategoryDonutChart>
     required List<PieChartSectionData> sections,
     required List<PieChartSectionData> shadows,
     required String totalLabel,
+    required double side,
+    required double g,
   }) {
+    final hole = _centerHole * g;
     return SizedBox(
-      width: _chartBox,
-      height: _chartBox,
+      width: side,
+      height: side,
       child: Stack(
         alignment: Alignment.center,
         clipBehavior: Clip.none,
@@ -374,23 +385,26 @@ class _CategoryDonutChartState extends State<CategoryDonutChart>
               ),
               border: Border.all(
                 color: WellPaidColors.navy.withValues(alpha: 0.14),
-                width: 1.2 * _depthStrength,
+                width: 1.2 * _depthStrength * g.clamp(0.85, 1.0),
               ),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.1),
-                  blurRadius: 16 * _depthStrength,
-                  offset: Offset(2 * _depthStrength, 8 * _depthStrength),
+                  blurRadius: 16 * _depthStrength * g,
+                  offset: Offset(
+                    2 * _depthStrength * g,
+                    8 * _depthStrength * g,
+                  ),
                 ),
               ],
             ),
-            child: const SizedBox(width: _chartBox, height: _chartBox),
+            child: SizedBox(width: side, height: side),
           ),
           // Camada de realce superior para reforçar o efeito 3D.
           IgnorePointer(
             child: Container(
-              width: _chartBox - 10,
-              height: _chartBox - 10,
+              width: side - 10 * g,
+              height: side - 10 * g,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: LinearGradient(
@@ -405,11 +419,11 @@ class _CategoryDonutChartState extends State<CategoryDonutChart>
             ),
           ),
           Transform.translate(
-            offset: const Offset(2, 4),
+            offset: Offset(2 * g, 4 * g),
             child: PieChart(
               PieChartData(
                 sectionsSpace: hasData && introT > 0.01 ? 2.2 : 0,
-                centerSpaceRadius: _centerHole,
+                centerSpaceRadius: hole,
                 sections: shadows,
                 pieTouchData: PieTouchData(enabled: false),
                 startDegreeOffset: -90 + (1 - introT) * 6,
@@ -419,7 +433,7 @@ class _CategoryDonutChartState extends State<CategoryDonutChart>
           PieChart(
             PieChartData(
               sectionsSpace: hasData && introT > 0.01 ? 2.2 : 0,
-              centerSpaceRadius: _centerHole,
+              centerSpaceRadius: hole,
               sections: sections,
               pieTouchData: PieTouchData(
                 enabled: hasData && introT > 0.05,
@@ -443,6 +457,7 @@ class _CategoryDonutChartState extends State<CategoryDonutChart>
             l10n: l10n,
             hasData: hasData,
             totalLabel: totalLabel,
+            g: g,
           ),
         ],
       ),
@@ -454,128 +469,146 @@ class _CategoryDonutChartState extends State<CategoryDonutChart>
     return AnimatedBuilder(
       animation: _intro,
       builder: (context, _) {
-        final l10n = context.l10n;
-        final rows = _aggregateSpendingForDonut(
-          widget.categories,
-          widget.monthExpenseTotalCents,
-          l10n.chartCategoryOther,
-        );
-        final hasData =
-            rows.isNotEmpty && widget.monthExpenseTotalCents > 0;
-        final totalLabel =
-            formatBrlFromCents(hasData ? widget.monthExpenseTotalCents : 0);
-        final introT = Curves.easeOutCubic.transform(_intro.value);
-        final sections = _sections(hasData, introT, rows);
-        final shadows = _shadowSections(hasData, introT, rows);
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final l10n = context.l10n;
+            final rows = _aggregateSpendingForDonut(
+              widget.categories,
+              widget.monthExpenseTotalCents,
+              l10n.chartCategoryOther,
+            );
+            final hasData =
+                rows.isNotEmpty && widget.monthExpenseTotalCents > 0;
+            final totalLabel = formatBrlFromCents(
+              hasData ? widget.monthExpenseTotalCents : 0,
+            );
+            final introT = Curves.easeOutCubic.transform(_intro.value);
+            final rawW = constraints.maxWidth;
+            final side = rawW.isFinite
+                ? rawW.clamp(158.0, _refChartBox)
+                : _refChartBox;
+            final g = side / _refChartBox;
+            final sections = _sections(hasData, introT, rows, g);
+            final shadows = _shadowSections(hasData, introT, rows, g);
 
-        CategorySpend? selectedCategory;
-        if (hasData &&
-            _touchedIndex != null &&
-            _touchedIndex! >= 0 &&
-            _touchedIndex! < rows.length) {
-          selectedCategory = rows[_touchedIndex!];
-        }
+            CategorySpend? selectedCategory;
+            if (hasData &&
+                _touchedIndex != null &&
+                _touchedIndex! >= 0 &&
+                _touchedIndex! < rows.length) {
+              selectedCategory = rows[_touchedIndex!];
+            }
 
-        final Widget footerHint;
-        if (!hasData) {
-          footerHint = Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  l10n.chartCategoriesHint,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            final Widget footerHint;
+            if (!hasData) {
+              footerHint = Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      l10n.chartCategoriesHint,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: WellPaidColors.navy.withValues(alpha: 0.62),
                         height: 1.35,
                       ),
-                ),
-                if (widget.onRegisterExpense != null) ...[
-                  const SizedBox(height: 12),
-                  Center(
-                    child: FilledButton.tonalIcon(
-                      onPressed: widget.onRegisterExpense,
-                      icon: Icon(
-                        PhosphorIconsRegular.plusCircle,
-                        color: WellPaidColors.navy.withValues(alpha: 0.9),
-                      ),
-                      label: Text(l10n.chartRegisterExpenseCta),
-                      style: FilledButton.styleFrom(
-                        foregroundColor: WellPaidColors.navy,
-                      ),
                     ),
-                  ),
-                ],
-              ],
-            ),
-          );
-        } else {
-          footerHint = const SizedBox.shrink();
-        }
-
-        final chartCol = Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Center(
-              child: _chartStack(
-                context,
-                l10n: l10n,
-                hasData: hasData,
-                introT: introT,
-                sections: sections,
-                shadows: shadows,
-                totalLabel: totalLabel,
-              ),
-            ),
-            if (hasData)
-              SizedBox(
-                height: 40,
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 200),
-                  switchInCurve: Curves.easeOutCubic,
-                  switchOutCurve: Curves.easeInCubic,
-                  child: selectedCategory == null
-                      ? Center(
-                          key: const ValueKey<String>('cat-hint'),
-                          child: Text(
-                            l10n.chartDonutTapHint,
-                            textAlign: TextAlign.center,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                  fontSize: 10,
-                                  color: WellPaidColors.navy.withValues(alpha: 0.48),
-                                ),
+                    if (widget.onRegisterExpense != null) ...[
+                      const SizedBox(height: 12),
+                      Center(
+                        child: FilledButton.tonalIcon(
+                          onPressed: widget.onRegisterExpense,
+                          icon: Icon(
+                            PhosphorIconsRegular.plusCircle,
+                            color: WellPaidColors.navy.withValues(alpha: 0.9),
                           ),
-                        )
-                      : Center(
-                          key: ValueKey<String>(selectedCategory.categoryKey),
-                          child: _SelectedCategoryBadge(
-                            category: selectedCategory,
-                            monthTotal: widget.monthExpenseTotalCents,
-                            color: _palette[_touchedIndex! % _palette.length],
-                            onOpenExpenses: widget.onViewCategoryExpenses != null
-                                ? () => widget.onViewCategoryExpenses!(selectedCategory!)
-                                : null,
+                          label: Text(l10n.chartRegisterExpenseCta),
+                          style: FilledButton.styleFrom(
+                            foregroundColor: WellPaidColors.navy,
                           ),
                         ),
+                      ),
+                    ],
+                  ],
                 ),
-              ),
-          ],
-        );
+              );
+            } else {
+              footerHint = const SizedBox.shrink();
+            }
 
-        return Semantics(
-          label: hasData
-              ? l10n.chartSemanticsWithData(totalLabel)
-              : l10n.chartSemanticsNoData,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              chartCol,
-              footerHint,
-            ],
-          ),
+            final chartCol = Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Center(
+                  child: _chartStack(
+                    context,
+                    l10n: l10n,
+                    hasData: hasData,
+                    introT: introT,
+                    sections: sections,
+                    shadows: shadows,
+                    totalLabel: totalLabel,
+                    side: side,
+                    g: g,
+                  ),
+                ),
+                if (hasData)
+                  SizedBox(
+                    height: 40,
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 200),
+                      switchInCurve: Curves.easeOutCubic,
+                      switchOutCurve: Curves.easeInCubic,
+                      child: selectedCategory == null
+                          ? Center(
+                              key: const ValueKey<String>('cat-hint'),
+                              child: Text(
+                                l10n.chartDonutTapHint,
+                                textAlign: TextAlign.center,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.labelSmall
+                                    ?.copyWith(
+                                      fontSize: 10,
+                                      color: WellPaidColors.navy.withValues(
+                                        alpha: 0.48,
+                                      ),
+                                    ),
+                              ),
+                            )
+                          : Center(
+                              key: ValueKey<String>(
+                                selectedCategory.categoryKey,
+                              ),
+                              child: _SelectedCategoryBadge(
+                                category: selectedCategory,
+                                monthTotal: widget.monthExpenseTotalCents,
+                                color:
+                                    _palette[_touchedIndex! % _palette.length],
+                                onOpenExpenses:
+                                    widget.onViewCategoryExpenses != null
+                                    ? () => widget.onViewCategoryExpenses!(
+                                        selectedCategory!,
+                                      )
+                                    : null,
+                              ),
+                            ),
+                    ),
+                  ),
+              ],
+            );
+
+            return Semantics(
+              label: hasData
+                  ? l10n.chartSemanticsWithData(totalLabel)
+                  : l10n.chartSemanticsNoData,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [chartCol, footerHint],
+              ),
+            );
+          },
         );
       },
     );
@@ -597,8 +630,12 @@ class _SelectedCategoryBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final icon = _categoryIcons[category.categoryKey] ?? PhosphorIconsRegular.squaresFour;
-    final pct = monthTotal > 0 ? ((category.amountCents * 100) ~/ monthTotal) : 0;
+    final icon =
+        _categoryIcons[category.categoryKey] ??
+        PhosphorIconsRegular.squaresFour;
+    final pct = monthTotal > 0
+        ? ((category.amountCents * 100) ~/ monthTotal)
+        : 0;
     final row = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -610,29 +647,29 @@ class _SelectedCategoryBadge extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: WellPaidColors.navy,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 12,
-                ),
+              color: WellPaidColors.navy,
+              fontWeight: FontWeight.w800,
+              fontSize: 12,
+            ),
           ),
         ),
         const SizedBox(width: 5),
         Text(
           '$pct%',
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: WellPaidColors.navy.withValues(alpha: 0.72),
-                fontWeight: FontWeight.w800,
-                fontSize: 10,
-              ),
+            color: WellPaidColors.navy.withValues(alpha: 0.72),
+            fontWeight: FontWeight.w800,
+            fontSize: 10,
+          ),
         ),
         const SizedBox(width: 5),
         Text(
           formatBrlFromCents(category.amountCents),
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: WellPaidColors.navy,
-                fontWeight: FontWeight.w800,
-                fontSize: 11,
-              ),
+            color: WellPaidColors.navy,
+            fontWeight: FontWeight.w800,
+            fontSize: 11,
+          ),
         ),
       ],
     );
@@ -640,10 +677,7 @@ class _SelectedCategoryBadge extends StatelessWidget {
     final decoration = BoxDecoration(
       borderRadius: BorderRadius.circular(12),
       gradient: LinearGradient(
-        colors: [
-          color.withValues(alpha: 0.2),
-          color.withValues(alpha: 0.08),
-        ],
+        colors: [color.withValues(alpha: 0.2), color.withValues(alpha: 0.08)],
       ),
       border: Border.all(color: color.withValues(alpha: 0.4)),
     );

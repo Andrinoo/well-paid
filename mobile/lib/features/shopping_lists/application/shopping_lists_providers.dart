@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/authorized_dio_provider.dart';
@@ -62,7 +63,14 @@ class ShoppingListDetailNotifier
             clearLineAmount ? null : (lineAmountCents ?? e.lineAmountCents),
       );
     }).toList();
-    _dirtyItemIds.add(itemId);
+    final changed = nextItems.any((e) {
+      if (e.id != itemId) return false;
+      final o = d.items.firstWhere((x) => x.id == itemId);
+      return e.quantity != o.quantity || e.lineAmountCents != o.lineAmountCents;
+    });
+    if (changed) {
+      _dirtyItemIds.add(itemId);
+    }
     state = AsyncData(d.copyWith(items: nextItems));
   }
 
@@ -70,13 +78,25 @@ class ShoppingListDetailNotifier
       state.valueOrNull?.isDraft == true && _dirtyItemIds.isNotEmpty;
 
   /// Envia alterações pendentes das linhas para o servidor (rascunho).
+  ///
+  /// Garante que campos ainda focados (quantidade/valor) são consolidados antes
+  /// do envio: sem isto, o utilizador podia alterar a quantidade e fechar a
+  /// compra sem perder o foco, e o servidor recebia quantidades antigas.
   Future<bool> flushDraftPatchesToServer() async {
     final d = state.valueOrNull;
-    if (d == null || !d.isDraft || _dirtyItemIds.isEmpty) return true;
+    if (d == null || !d.isDraft) return true;
+
+    FocusManager.instance.primaryFocus?.unfocus();
+    await WidgetsBinding.instance.endOfFrame;
+
+    final latest = state.valueOrNull;
+    if (latest == null || !latest.isDraft || _dirtyItemIds.isEmpty) {
+      return true;
+    }
 
     final repo = ref.read(shoppingListsRepositoryProvider);
     try {
-      var current = d;
+      var current = latest;
       final ids = List<String>.from(_dirtyItemIds);
       for (final itemId in ids) {
         ShoppingListItemRow? row;

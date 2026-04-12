@@ -53,6 +53,7 @@ class ShoppingListsRepository {
     String? title,
     required bool setStore,
     String? storeName,
+    bool syncTotalFromLineItems = false,
   }) async {
     final body = <String, dynamic>{};
     if (setTitle) {
@@ -61,6 +62,9 @@ class ShoppingListsRepository {
     if (setStore) {
       body['store_name'] =
           (storeName == null || storeName.isEmpty) ? null : storeName;
+    }
+    if (syncTotalFromLineItems) {
+      body['sync_total_from_line_items'] = true;
     }
     if (body.isEmpty) {
       return fetchDetail(listId);
@@ -153,6 +157,7 @@ class ShoppingListsRepository {
     required String categoryId,
     required DateTime expenseDate,
     int? totalCents,
+    int? discountCents,
     bool isShared = false,
     String? sharedWithUserId,
   }) async {
@@ -165,6 +170,8 @@ class ShoppingListsRepository {
               '${expenseDate.year.toString().padLeft(4, '0')}-${expenseDate.month.toString().padLeft(2, '0')}-${expenseDate.day.toString().padLeft(2, '0')}',
           'status': 'paid',
           if (totalCents != null) 'total_cents': totalCents,
+          if (discountCents != null && discountCents > 0)
+            'discount_cents': discountCents,
           'is_shared': isShared,
           if (sharedWithUserId != null) 'shared_with_user_id': sharedWithUserId,
         },

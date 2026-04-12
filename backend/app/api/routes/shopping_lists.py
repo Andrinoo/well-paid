@@ -260,17 +260,20 @@ def patch_shopping_list(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lista não encontrada")
     if row.status == STATUS_DRAFT:
         data = body.model_dump(exclude_unset=True)
+        data.pop("sync_total_from_line_items", None)
         for k, v in data.items():
             setattr(row, k, v)
         db.commit()
     elif row.status == STATUS_COMPLETED:
         data = body.model_dump(exclude_unset=True)
-        if not data:
+        sync_flag = data.pop("sync_total_from_line_items", None) is True
+        if not sync_flag and not data:
             pass
         else:
             for k, v in data.items():
                 setattr(row, k, v)
-            db.flush()
+            if data:
+                db.flush()
             _sync_completed_expense(db, row)
             db.commit()
     else:
@@ -472,11 +475,16 @@ def complete_shopping_list(
         total = resolve_checkout_total_cents(
             line_extensions=line_extensions,
             total_cents_override=body.total_cents,
+            discount_cents=body.discount_cents,
         )
     except ValueError as e:
         code = str(e)
         if code == "shopping_list_total_empty":
-            msg = "Indique valores nas linhas ou um total manual"
+            msg = "Indique valores nas linhas, um total manual ou um desconto compatível com a soma"
+        elif code == "shopping_list_discount_invalid":
+            msg = "Desconto inválido"
+        elif code == "shopping_list_total_after_discount_invalid":
+            msg = "Com este desconto o total seria zero ou negativo; ajusta o desconto ou as linhas"
         else:
             msg = "Total inválido"
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=msg) from e
@@ -493,6 +501,11 @@ def complete_shopping_list(
         ) from err
 
     desc = _expense_description_for_list(row, body.expense_date)
+    disc = int(body.discount_cents or 0)
+    if disc > 0:
+        brl = f"{disc // 100},{disc % 100:02d}"
+        extra = f" · Desconto R$ {brl}"
+        desc = f"{desc}{extra}"[:500]
 
     now = datetime.now(UTC)
     # Listas de compras: despesa sempre paga, sem parcelas/recorrência (Ordems §6.2.2).

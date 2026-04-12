@@ -126,6 +126,10 @@ class ShoppingListDetail {
       .whereType<int>()
       .fold<int>(0, (a, b) => a + b);
 
+  /// Soma das quantidades de todas as linhas (para conferência na loja).
+  int get totalQuantityUnits =>
+      items.fold<int>(0, (a, e) => a + e.quantity);
+
   ShoppingListDetail copyWith({List<ShoppingListItemRow>? items}) {
     return ShoppingListDetail(
       id: id,

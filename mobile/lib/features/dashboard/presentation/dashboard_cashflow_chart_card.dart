@@ -23,7 +23,8 @@ class DashboardCashflowChartCard extends ConsumerWidget {
     final l10n = context.l10n;
     final async = ref.watch(dashboardCashflowProvider);
 
-    final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    final reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
 
     return async.when(
       skipLoadingOnReload: true,
@@ -56,8 +57,8 @@ class DashboardCashflowChartCard extends ConsumerWidget {
             Text(
               messageFromDio(e, l10n) ?? l10n.dashCashflowError,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: WellPaidColors.navy.withValues(alpha: 0.8),
-                  ),
+                color: WellPaidColors.navy.withValues(alpha: 0.8),
+              ),
             ),
             const SizedBox(height: 12),
             Align(
@@ -80,8 +81,8 @@ class DashboardCashflowChartCard extends ConsumerWidget {
               Text(
                 l10n.dashCashflowEmpty,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: WellPaidColors.navy.withValues(alpha: 0.75),
-                    ),
+                  color: WellPaidColors.navy.withValues(alpha: 0.75),
+                ),
               )
             else
               _CashflowLineChartBody(data: d),
@@ -102,16 +103,14 @@ void _applyCashflowRequest(
   final f = forecastMonths.clamp(1, 12);
   if (isDynamic) {
     ref.read(dashboardCashflowRequestProvider.notifier).state =
-        DashboardCashflowRequest(
-      isDynamicWindow: true,
-      forecastMonths: f,
-    );
+        DashboardCashflowRequest(isDynamicWindow: true, forecastMonths: f);
     return;
   }
   final p = ref.read(dashboardPeriodProvider);
   final s = _addCalendarMonths(p.year, p.month, -5);
-  ref.read(dashboardCashflowRequestProvider.notifier).state =
-      DashboardCashflowRequest(
+  ref
+      .read(dashboardCashflowRequestProvider.notifier)
+      .state = DashboardCashflowRequest(
     isDynamicWindow: false,
     startYear: s.$1,
     startMonth: s.$2,
@@ -132,10 +131,12 @@ class _CashflowCompactQueryBar extends ConsumerStatefulWidget {
       _CashflowCompactQueryBarState();
 }
 
-class _CashflowCompactQueryBarState extends ConsumerState<_CashflowCompactQueryBar> {
+class _CashflowCompactQueryBarState
+    extends ConsumerState<_CashflowCompactQueryBar> {
   static const Duration kForecastPreviewIdle = Duration(seconds: 5);
 
   Timer? _previewIdleTimer;
+
   /// Valor de `forecastMonths` antes do primeiro toque nas setas nesta sessão.
   int? _previewRestoreForecastMonths;
   bool _suppressExternalForecastListen = false;
@@ -211,7 +212,10 @@ class _CashflowCompactQueryBarState extends ConsumerState<_CashflowCompactQueryB
     final l10n = context.l10n;
     final req = ref.watch(dashboardCashflowRequestProvider);
 
-    ref.listen<DashboardCashflowRequest>(dashboardCashflowRequestProvider, (prev, next) {
+    ref.listen<DashboardCashflowRequest>(dashboardCashflowRequestProvider, (
+      prev,
+      next,
+    ) {
       if (_suppressExternalForecastListen) return;
       if (prev?.forecastMonths != next.forecastMonths) {
         _cancelForecastPreviewSession();
@@ -228,9 +232,9 @@ class _CashflowCompactQueryBarState extends ConsumerState<_CashflowCompactQueryB
           child: Text(
             'Din',
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: WellPaidColors.navy.withValues(alpha: 0.75),
-                  fontWeight: FontWeight.w700,
-                ),
+              color: WellPaidColors.navy.withValues(alpha: 0.75),
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
         const SizedBox(width: 4),
@@ -242,11 +246,7 @@ class _CashflowCompactQueryBarState extends ConsumerState<_CashflowCompactQueryB
             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             onChanged: (v) {
               _cancelForecastPreviewSession();
-              _applyCashflowRequest(
-                ref,
-                isDynamic: v,
-                forecastMonths: fc,
-              );
+              _applyCashflowRequest(ref, isDynamic: v, forecastMonths: fc);
             },
             activeThumbColor: WellPaidColors.gold,
             activeTrackColor: WellPaidColors.gold.withValues(alpha: 0.45),
@@ -258,9 +258,9 @@ class _CashflowCompactQueryBarState extends ConsumerState<_CashflowCompactQueryB
           child: Text(
             'prev',
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: WellPaidColors.navy.withValues(alpha: 0.75),
-                  fontWeight: FontWeight.w700,
-                ),
+              color: WellPaidColors.navy.withValues(alpha: 0.75),
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
         const SizedBox(width: 2),
@@ -281,9 +281,9 @@ class _CashflowCompactQueryBarState extends ConsumerState<_CashflowCompactQueryB
             '$fc',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: WellPaidColors.navy,
-                  fontWeight: FontWeight.w800,
-                ),
+              color: WellPaidColors.navy,
+              fontWeight: FontWeight.w800,
+            ),
           ),
         ),
         IconButton(
@@ -321,9 +321,7 @@ class _CashflowShell extends StatelessWidget {
       color: Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: BorderSide(
-          color: WellPaidColors.navy.withValues(alpha: 0.06),
-        ),
+        side: BorderSide(color: WellPaidColors.navy.withValues(alpha: 0.06)),
       ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
@@ -344,19 +342,16 @@ class _CashflowShell extends StatelessWidget {
                     child: Text(
                       title,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: WellPaidColors.navy,
-                            fontSize: 15,
-                          ),
+                        fontWeight: FontWeight.w700,
+                        color: WellPaidColors.navy,
+                        fontSize: 15,
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
-            if (belowTitle != null) ...[
-              const SizedBox(height: 4),
-              belowTitle!,
-            ],
+            if (belowTitle != null) ...[const SizedBox(height: 4), belowTitle!],
             const SizedBox(height: 4),
             child,
           ],
@@ -414,10 +409,10 @@ class _CashflowSummaryFooter extends StatelessWidget {
                   child: Text(
                     l10n.dashCashflowFooterForecastTotal(forecastStr),
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: WellPaidColors.navy.withValues(alpha: 0.82),
-                          fontWeight: FontWeight.w600,
-                          height: 1.25,
-                        ),
+                      color: WellPaidColors.navy.withValues(alpha: 0.82),
+                      fontWeight: FontWeight.w600,
+                      height: 1.25,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -426,10 +421,10 @@ class _CashflowSummaryFooter extends StatelessWidget {
                     l10n.dashCashflowFooterBalance(balanceStr),
                     textAlign: TextAlign.end,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: balanceColor,
-                          fontWeight: FontWeight.w800,
-                          height: 1.25,
-                        ),
+                      color: balanceColor,
+                      fontWeight: FontWeight.w800,
+                      height: 1.25,
+                    ),
                   ),
                 ),
               ],
@@ -467,8 +462,15 @@ class _CashflowLineChartBodyState extends State<_CashflowLineChartBody> {
     final tag = intlDateTagForUi(context);
     final monthFmt = DateFormat.MMM(tag);
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
-    /// Alinhado à altura visual do donut de categorias (~238); eixo + legenda ficam compactos.
-    const chartHeight = 200.0;
+    final mq = MediaQuery.sizeOf(context);
+    final shortSide = mq.shortestSide;
+    final screenW = mq.width;
+
+    /// Altura adaptativa: ecrãs pequenos ou baixos evitam cortar curvas / eixo X.
+    final chartHeight = (shortSide * 0.38).clamp(152.0, 228.0);
+    final leftAxisReserved = screenW < 340 ? 30.0 : 34.0;
+    final bottomAxisReserved = shortSide < 640 ? 22.0 : 28.0;
+    final bottomLabelSize = shortSide < 640 ? 9.5 : 10.0;
     final chartDuration = reduceMotion
         ? Duration.zero
         : const Duration(milliseconds: 380);
@@ -489,8 +491,7 @@ class _CashflowLineChartBodyState extends State<_CashflowLineChartBody> {
       seriesValues.add(cents);
       barLabels.add(label);
       final spots = <FlSpot>[
-        for (var i = 0; i < n; i++)
-          FlSpot(i.toDouble(), cents[i].toDouble()),
+        for (var i = 0; i < n; i++) FlSpot(i.toDouble(), cents[i].toDouble()),
       ];
       bars.add(
         LineChartBarData(
@@ -543,17 +544,19 @@ class _CashflowLineChartBodyState extends State<_CashflowLineChartBody> {
       return Text(
         l10n.dashCashflowEmpty,
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: WellPaidColors.navy.withValues(alpha: 0.75),
-            ),
+          color: WellPaidColors.navy.withValues(alpha: 0.75),
+        ),
       );
     }
 
     var maxCents = 1;
     for (var i = 0; i < n; i++) {
-      if (_showIncome) maxCents = maxCents > d.incomeCents[i] ? maxCents : d.incomeCents[i];
+      if (_showIncome)
+        maxCents = maxCents > d.incomeCents[i] ? maxCents : d.incomeCents[i];
       if (_showPaid) {
-        maxCents =
-            maxCents > d.expensePaidCents[i] ? maxCents : d.expensePaidCents[i];
+        maxCents = maxCents > d.expensePaidCents[i]
+            ? maxCents
+            : d.expensePaidCents[i];
       }
       if (_showForecast) {
         maxCents = maxCents > d.expenseForecastCents[i]
@@ -611,131 +614,145 @@ class _CashflowLineChartBodyState extends State<_CashflowLineChartBody> {
             ),
           ),
           const SizedBox(height: 6),
-          SizedBox(
-            height: chartHeight,
-            child: LineChart(
-              duration: chartDuration,
-              curve: chartCurve,
-              LineChartData(
-                minX: 0,
-                maxX: (n - 1).toDouble(),
-                minY: 0,
-                maxY: maxY.toDouble(),
-                clipData: const FlClipData.all(),
-                gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: false,
-                  horizontalInterval: maxY > 0 ? maxY / 4 : null,
-                  getDrawingHorizontalLine: (value) => FlLine(
-                    color: WellPaidColors.navy.withValues(alpha: 0.06),
-                    strokeWidth: 1,
+          Padding(
+            padding: const EdgeInsets.only(bottom: 2),
+            child: SizedBox(
+              height: chartHeight,
+              child: LineChart(
+                LineChartData(
+                  minX: 0,
+                  maxX: (n - 1).toDouble(),
+                  minY: 0,
+                  maxY: maxY.toDouble(),
+                  clipData: const FlClipData(
+                    top: true,
+                    left: true,
+                    right: true,
+                    bottom: false,
                   ),
-                ),
-                borderData: FlBorderData(
-                  show: true,
-                  border: Border(
-                    bottom: BorderSide(
-                      color: WellPaidColors.navy.withValues(alpha: 0.12),
-                    ),
-                    left: BorderSide(
-                      color: WellPaidColors.navy.withValues(alpha: 0.12),
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: false,
+                    horizontalInterval: maxY > 0 ? maxY / 4 : null,
+                    getDrawingHorizontalLine: (value) => FlLine(
+                      color: WellPaidColors.navy.withValues(alpha: 0.06),
+                      strokeWidth: 1,
                     ),
                   ),
-                ),
-                titlesData: FlTitlesData(
-                  topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
+                  borderData: FlBorderData(
+                    show: true,
+                    border: Border(
+                      bottom: BorderSide(
+                        color: WellPaidColors.navy.withValues(alpha: 0.12),
+                      ),
+                      left: BorderSide(
+                        color: WellPaidColors.navy.withValues(alpha: 0.12),
+                      ),
+                    ),
                   ),
-                  rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 34,
-                      interval: maxY > 0 ? maxY / 4 : null,
-                      getTitlesWidget: (value, meta) {
-                        final c = value.round();
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 6),
-                          child: Text(
-                            _compactAxisLabel(c),
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: WellPaidColors.navy.withValues(alpha: 0.55),
-                              fontWeight: FontWeight.w500,
+                  titlesData: FlTitlesData(
+                    topTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: leftAxisReserved,
+                        interval: maxY > 0 ? maxY / 4 : null,
+                        getTitlesWidget: (value, meta) {
+                          final c = value.round();
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: Text(
+                              _compactAxisLabel(c),
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: WellPaidColors.navy.withValues(
+                                  alpha: 0.55,
+                                ),
+                                fontWeight: FontWeight.w500,
+                              ),
+                              textAlign: TextAlign.right,
                             ),
-                            textAlign: TextAlign.right,
-                          ),
-                        );
-                      },
+                          );
+                        },
+                      ),
+                    ),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: bottomAxisReserved,
+                        interval: xInterval,
+                        getTitlesWidget: (value, meta) {
+                          final i = value.round();
+                          if (i < 0 || i >= n) {
+                            return const SizedBox.shrink();
+                          }
+                          if (xInterval >= 2 && i % 2 != 0) {
+                            return const SizedBox.shrink();
+                          }
+                          final m = d.months[i];
+                          final t = monthFmt.format(DateTime(m.year, m.month));
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(
+                              t,
+                              style: TextStyle(
+                                fontSize: bottomLabelSize,
+                                color: WellPaidColors.navy.withValues(
+                                  alpha: 0.65,
+                                ),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
                     ),
                   ),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 28,
-                      interval: xInterval,
-                      getTitlesWidget: (value, meta) {
-                        final i = value.round();
-                        if (i < 0 || i >= n) {
-                          return const SizedBox.shrink();
-                        }
-                        if (xInterval >= 2 && i % 2 != 0) {
-                          return const SizedBox.shrink();
-                        }
-                        final m = d.months[i];
-                        final t = monthFmt.format(DateTime(m.year, m.month));
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 6),
-                          child: Text(
-                            t,
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: WellPaidColors.navy.withValues(alpha: 0.65),
+                  lineTouchData: LineTouchData(
+                    enabled: true,
+                    handleBuiltInTouches: true,
+                    touchTooltipData: LineTouchTooltipData(
+                      fitInsideHorizontally: true,
+                      fitInsideVertically: true,
+                      getTooltipColor: (_) => Colors.white,
+                      tooltipBorder: BorderSide(
+                        color: WellPaidColors.navy.withValues(alpha: 0.12),
+                      ),
+                      tooltipRoundedRadius: 10,
+                      tooltipPadding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                      getTooltipItems: (touchedSpots) {
+                        return touchedSpots.map((s) {
+                          final bi = s.barIndex;
+                          if (bi < 0 || bi >= seriesValues.length) {
+                            return null;
+                          }
+                          final xi = s.x.round().clamp(0, n - 1);
+                          final cents = seriesValues[bi][xi];
+                          final name = barLabels[bi];
+                          return LineTooltipItem(
+                            '$name\n${formatBrlFromCents(cents)}',
+                            TextStyle(
+                              color: WellPaidColors.navy.withValues(
+                                alpha: 0.92,
+                              ),
                               fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                              height: 1.35,
                             ),
-                          ),
-                        );
+                          );
+                        }).toList();
                       },
                     ),
                   ),
+                  lineBarsData: bars,
                 ),
-                lineTouchData: LineTouchData(
-                  enabled: true,
-                  handleBuiltInTouches: true,
-                  touchTooltipData: LineTouchTooltipData(
-                    fitInsideHorizontally: true,
-                    fitInsideVertically: true,
-                    getTooltipColor: (_) => Colors.white,
-                    tooltipBorder: BorderSide(
-                      color: WellPaidColors.navy.withValues(alpha: 0.12),
-                    ),
-                    tooltipRoundedRadius: 10,
-                    tooltipPadding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-                    getTooltipItems: (touchedSpots) {
-                      return touchedSpots.map((s) {
-                        final bi = s.barIndex;
-                        if (bi < 0 || bi >= seriesValues.length) {
-                          return null;
-                        }
-                        final xi = s.x.round().clamp(0, n - 1);
-                        final cents = seriesValues[bi][xi];
-                        final name = barLabels[bi];
-                        return LineTooltipItem(
-                          '$name\n${formatBrlFromCents(cents)}',
-                          TextStyle(
-                            color: WellPaidColors.navy.withValues(alpha: 0.92),
-                            fontWeight: FontWeight.w600,
-                            fontSize: 12,
-                            height: 1.35,
-                          ),
-                        );
-                      }).toList();
-                    },
-                  ),
-                ),
-                lineBarsData: bars,
+                duration: chartDuration,
+                curve: chartCurve,
               ),
             ),
           ),
@@ -789,10 +806,13 @@ class _LegendChip extends StatelessWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
-                color:
-                    WellPaidColors.navy.withValues(alpha: active ? 0.14 : 0.08),
+                color: WellPaidColors.navy.withValues(
+                  alpha: active ? 0.14 : 0.08,
+                ),
               ),
-              color: WellPaidColors.navy.withValues(alpha: active ? 0.04 : 0.02),
+              color: WellPaidColors.navy.withValues(
+                alpha: active ? 0.04 : 0.02,
+              ),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -801,22 +821,20 @@ class _LegendChip extends StatelessWidget {
                   width: 12,
                   height: 2,
                   child: CustomPaint(
-                    painter: _LegendLinePainter(
-                      color: c,
-                      dashed: dashed,
-                    ),
+                    painter: _LegendLinePainter(color: c, dashed: dashed),
                   ),
                 ),
                 const SizedBox(width: 4),
                 Text(
                   label,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: WellPaidColors.navy
-                            .withValues(alpha: active ? 0.9 : 0.45),
-                        fontWeight: FontWeight.w600,
-                        fontSize: 9.5,
-                        height: 1.05,
-                      ),
+                    color: WellPaidColors.navy.withValues(
+                      alpha: active ? 0.9 : 0.45,
+                    ),
+                    fontWeight: FontWeight.w600,
+                    fontSize: 9.5,
+                    height: 1.05,
+                  ),
                 ),
               ],
             ),
@@ -842,7 +860,11 @@ class _LegendLinePainter extends CustomPainter {
     if (dashed) {
       var x = 0.0;
       while (x < size.width) {
-        canvas.drawLine(Offset(x, size.height / 2), Offset(x + 4, size.height / 2), paint);
+        canvas.drawLine(
+          Offset(x, size.height / 2),
+          Offset(x + 4, size.height / 2),
+          paint,
+        );
         x += 7;
       }
     } else {

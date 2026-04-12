@@ -124,6 +124,35 @@ class _DetailScaffold extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (detail.items.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Text(
+                        l10n.shoppingListFooterUnitsSummary(
+                          detail.totalQuantityUnits,
+                        ),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: WellPaidColors.navy.withValues(alpha: 0.65),
+                        ),
+                      ),
+                    ),
+                  if (detail.sumLineCents > 0 &&
+                      (detail.totalCents == null ||
+                          detail.totalCents != detail.sumLineCents))
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Text(
+                        l10n.shoppingListSubtotal(
+                          formatBrlFromCents(detail.sumLineCents),
+                        ),
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: WellPaidColors.navy.withValues(alpha: 0.85),
+                        ),
+                      ),
+                    ),
                   if (detail.totalCents != null)
                     Text(
                       formatBrlFromCents(detail.totalCents!),
@@ -131,7 +160,30 @@ class _DetailScaffold extends ConsumerWidget {
                         fontSize: 22,
                         fontWeight: FontWeight.w700,
                       ),
+                    )
+                  else if (detail.sumLineCents > 0)
+                    Text(
+                      formatBrlFromCents(detail.sumLineCents),
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
+                  if (canEditCompleted &&
+                      detail.totalCents != null &&
+                      detail.sumLineCents > 0 &&
+                      detail.totalCents != detail.sumLineCents) ...[
+                    const SizedBox(height: 10),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: FilledButton.tonalIcon(
+                        onPressed: () =>
+                            _alignExpenseTotalToLines(context, ref, detail),
+                        icon: const Icon(PhosphorIconsRegular.arrowsClockwise),
+                        label: Text(l10n.shoppingListAlignTotalToLinesButton),
+                      ),
+                    ),
+                  ],
                   if (detail.completedAt != null)
                     Text(
                       l10n.shoppingListCompletedOn(_formatCompleted(detail.completedAt!)),
@@ -205,11 +257,15 @@ class _DetailScaffold extends ConsumerWidget {
             _DraftListFooter(
               sumLineCents: detail.sumLineCents,
               hasItems: detail.items.isNotEmpty,
+              totalQuantityUnits: detail.totalQuantityUnits,
               onAdd: () => _addItem(context, ref, detail),
               onComplete: () => _openCompleteSheet(context, ref, detail),
             ),
           if (canEditCompleted)
             _CompletedOwnerFooter(
+              hasItems: detail.items.isNotEmpty,
+              totalQuantityUnits: detail.totalQuantityUnits,
+              sumLineCents: detail.sumLineCents,
               onAdd: () => _addItem(context, ref, detail),
             ),
         ],
@@ -220,6 +276,35 @@ class _DetailScaffold extends ConsumerWidget {
   String _formatCompleted(DateTime d) {
     final local = d.toLocal();
     return '${local.day.toString().padLeft(2, '0')}/${local.month.toString().padLeft(2, '0')}/${local.year}';
+  }
+
+  Future<void> _alignExpenseTotalToLines(
+    BuildContext context,
+    WidgetRef ref,
+    ShoppingListDetail detail,
+  ) async {
+    final l10n = context.l10n;
+    try {
+      final updated = await ref.read(shoppingListsRepositoryProvider).patchList(
+            detail.id,
+            setTitle: false,
+            title: null,
+            setStore: false,
+            storeName: null,
+            syncTotalFromLineItems: true,
+          );
+      if (!context.mounted) return;
+      _applyListDetailAndRefreshIndex(ref, updated);
+      ref.invalidate(expensesListProvider);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.shoppingListAlignTotalSuccess)),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(messageFromDio(e, l10n) ?? l10n.errorGeneric)),
+      );
+    }
   }
 
   Future<void> _editMeta(
@@ -956,6 +1041,21 @@ class _DraftItemLineState extends ConsumerState<_DraftItemLine> {
                 textInputAction: TextInputAction.next,
                 onTapOutside: (_) =>
                     FocusManager.instance.primaryFocus?.unfocus(),
+                onChanged: widget.useLocalDraftEdits
+                    ? (value) {
+                        final t = value.trim();
+                        if (t.isEmpty) return;
+                        final n = int.tryParse(t);
+                        if (n == null || n < 1) return;
+                        if (n == widget.item.quantity) return;
+                        ref
+                            .read(shoppingListDetailProvider(widget.listId).notifier)
+                            .applyLocalItemLineDraft(
+                              itemId: widget.item.id,
+                              quantity: n,
+                            );
+                      }
+                    : null,
                 onEditingComplete: () {
                   _qtyFocus.unfocus();
                   _amountFocus.requestFocus();
@@ -1018,12 +1118,14 @@ class _DraftListFooter extends StatelessWidget {
   const _DraftListFooter({
     required this.sumLineCents,
     required this.hasItems,
+    required this.totalQuantityUnits,
     required this.onAdd,
     required this.onComplete,
   });
 
   final int sumLineCents;
   final bool hasItems;
+  final int totalQuantityUnits;
   final VoidCallback onAdd;
   final VoidCallback onComplete;
 
@@ -1042,6 +1144,16 @@ class _DraftListFooter extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (hasItems)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    l10n.shoppingListFooterUnitsSummary(totalQuantityUnits),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: WellPaidColors.navy.withValues(alpha: 0.65),
+                        ),
+                  ),
+                ),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1103,8 +1215,16 @@ class _DraftListFooter extends StatelessWidget {
 }
 
 class _CompletedOwnerFooter extends StatelessWidget {
-  const _CompletedOwnerFooter({required this.onAdd});
+  const _CompletedOwnerFooter({
+    required this.hasItems,
+    required this.totalQuantityUnits,
+    required this.sumLineCents,
+    required this.onAdd,
+  });
 
+  final bool hasItems;
+  final int totalQuantityUnits;
+  final int sumLineCents;
   final VoidCallback onAdd;
 
   @override
@@ -1122,6 +1242,25 @@ class _CompletedOwnerFooter extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (hasItems) ...[
+                Text(
+                  l10n.shoppingListFooterUnitsSummary(totalQuantityUnits),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: WellPaidColors.navy.withValues(alpha: 0.65),
+                      ),
+                ),
+                if (sumLineCents > 0) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    l10n.shoppingListSubtotal(formatBrlFromCents(sumLineCents)),
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: WellPaidColors.navy,
+                        ),
+                  ),
+                ],
+                const SizedBox(height: 10),
+              ],
               Text(
                 l10n.shoppingListFooterAddItemCompleted,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -1155,6 +1294,7 @@ class _CompleteShoppingSheet extends ConsumerStatefulWidget {
 class _CompleteShoppingSheetState extends ConsumerState<_CompleteShoppingSheet> {
   final _formKey = GlobalKey<FormState>();
   final _totalOverrideCtrl = TextEditingController();
+  final _discountCtrl = TextEditingController();
   late DateTime _expenseDate;
   String? _categoryId;
   bool _isShared = false;
@@ -1171,6 +1311,7 @@ class _CompleteShoppingSheetState extends ConsumerState<_CompleteShoppingSheet> 
   @override
   void dispose() {
     _totalOverrideCtrl.dispose();
+    _discountCtrl.dispose();
     super.dispose();
   }
 
@@ -1187,6 +1328,33 @@ class _CompleteShoppingSheetState extends ConsumerState<_CompleteShoppingSheet> 
     if (d != null) setState(() => _expenseDate = d);
   }
 
+  Future<bool> _confirmTotalMismatch(int manualCents, int subtotalCents) async {
+    final l10n = context.l10n;
+    final r = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.shoppingListTotalMismatchTitle),
+        content: Text(
+          l10n.shoppingListTotalMismatchBody(
+            formatBrlFromCents(manualCents),
+            formatBrlFromCents(subtotalCents),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.confirm),
+          ),
+        ],
+      ),
+    );
+    return r ?? false;
+  }
+
   Future<void> _submit() async {
     final l10n = context.l10n;
     if (!_formKey.currentState!.validate()) return;
@@ -1196,10 +1364,28 @@ class _CompleteShoppingSheetState extends ConsumerState<_CompleteShoppingSheet> 
       );
       return;
     }
+    final totalTrim = _totalOverrideCtrl.text.trim();
+    final discountTrim = _discountCtrl.text.trim();
+    if (totalTrim.isNotEmpty && discountTrim.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.shoppingListDiscountOverrideConflict)),
+      );
+      return;
+    }
     int? totalOverride;
-    if (_totalOverrideCtrl.text.trim().isNotEmpty) {
+    if (totalTrim.isNotEmpty) {
       totalOverride = parseInputToCents(_totalOverrideCtrl.text);
       if (totalOverride == null || totalOverride <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.valueInvalid)),
+        );
+        return;
+      }
+    }
+    int? discountCents;
+    if (discountTrim.isNotEmpty) {
+      discountCents = parseInputToCents(_discountCtrl.text);
+      if (discountCents == null || discountCents <= 0) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.valueInvalid)),
         );
@@ -1218,12 +1404,56 @@ class _CompleteShoppingSheetState extends ConsumerState<_CompleteShoppingSheet> 
       }
       return;
     }
+    ref.invalidate(shoppingListDetailProvider(widget.listId));
+    ShoppingListDetail synced;
+    try {
+      synced = await ref.read(shoppingListDetailProvider(widget.listId).future);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _submitting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.shoppingListErrorLoad)),
+        );
+      }
+      return;
+    }
+    final sumAfterFlush = synced.sumLineCents;
+    if (discountCents != null) {
+      if (sumAfterFlush <= 0) {
+        if (mounted) {
+          setState(() => _submitting = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.valueInvalid)),
+          );
+        }
+        return;
+      }
+      if (discountCents >= sumAfterFlush) {
+        if (mounted) {
+          setState(() => _submitting = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.valueInvalid)),
+          );
+        }
+        return;
+      }
+    }
+    if (totalOverride != null &&
+        sumAfterFlush > 0 &&
+        totalOverride != sumAfterFlush) {
+      final proceed = await _confirmTotalMismatch(totalOverride, sumAfterFlush);
+      if (!proceed) {
+        if (mounted) setState(() => _submitting = false);
+        return;
+      }
+    }
     try {
       final updated = await ref.read(shoppingListsRepositoryProvider).completeList(
             widget.listId,
             categoryId: _categoryId!,
             expenseDate: _expenseDate,
             totalCents: totalOverride,
+            discountCents: discountCents,
             isShared: _isShared,
             sharedWithUserId: _sharedWithUserId,
           );
@@ -1321,6 +1551,22 @@ class _CompleteShoppingSheetState extends ConsumerState<_CompleteShoppingSheet> 
                       controller: _totalOverrideCtrl,
                       decoration: InputDecoration(
                         labelText: l10n.shoppingListTotalOverrideHint,
+                      ),
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: kBrCurrencyInputFormatters,
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) return null;
+                        final c = parseInputToCents(v);
+                        if (c == null || c <= 0) return l10n.valueInvalid;
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _discountCtrl,
+                      decoration: InputDecoration(
+                        labelText: l10n.shoppingListDiscountHint,
                       ),
                       keyboardType:
                           const TextInputType.numberWithOptions(decimal: true),

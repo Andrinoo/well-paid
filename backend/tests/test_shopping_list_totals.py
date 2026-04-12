@@ -50,3 +50,35 @@ def test_resolve_invalid_override_raises() -> None:
             line_extensions=[(100, 1)],
             total_cents_override=0,
         )
+
+
+def test_resolve_discount_subtracts_from_sum() -> None:
+    assert (
+        resolve_checkout_total_cents(
+            line_extensions=[(100, 2), (50, 1)],
+            total_cents_override=None,
+            discount_cents=50,
+        )
+        == 200
+    )
+
+
+def test_resolve_discount_full_sum_raises() -> None:
+    with pytest.raises(ValueError, match="shopping_list_total_after_discount_invalid"):
+        resolve_checkout_total_cents(
+            line_extensions=[(100, 1)],
+            total_cents_override=None,
+            discount_cents=100,
+        )
+
+
+def test_resolve_override_ignores_discount() -> None:
+    """Total manual substitui soma e desconto."""
+    assert (
+        resolve_checkout_total_cents(
+            line_extensions=[(100, 1)],
+            total_cents_override=777,
+            discount_cents=50,
+        )
+        == 777
+    )

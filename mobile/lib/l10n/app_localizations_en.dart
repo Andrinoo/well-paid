@@ -1768,7 +1768,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shoppingListCompleteTitle => 'Create expense';
 
   @override
-  String get shoppingListTotalOverrideHint => 'Manual total (optional)';
+  String get shoppingListTotalOverrideHint =>
+      'Amount paid at store (optional — replaces sum and discount)';
+
+  @override
+  String get shoppingListDiscountHint =>
+      'Discount (optional — subtracts from line sum; not with manual total)';
+
+  @override
+  String get shoppingListDiscountOverrideConflict =>
+      'Fill either the manual total or the discount, not both.';
+
+  @override
+  String get shoppingListTotalMismatchTitle => 'Total differs from line sum';
+
+  @override
+  String shoppingListTotalMismatchBody(String manual, String subtotal) {
+    return 'You entered $manual but the line subtotal is $subtotal. The expense will use your amount. Continue?';
+  }
 
   @override
   String get shoppingListDescriptionOptional =>
@@ -1786,6 +1803,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get shoppingListViewExpense => 'View expense';
+
+  @override
+  String get shoppingListAlignTotalToLinesButton =>
+      'Update expense to line sum';
+
+  @override
+  String get shoppingListAlignTotalSuccess =>
+      'Expense total updated to match the lines.';
 
   @override
   String shoppingListCompletedOn(String date) {
@@ -1822,6 +1847,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get shoppingListFooterEstimatedNote =>
       'Sum of (unit price × quantity) for lines with a price.';
+
+  @override
+  String shoppingListFooterUnitsSummary(int unitCount) {
+    return '$unitCount items total';
+  }
 
   @override
   String get shoppingListFooterAddItemCompleted =>

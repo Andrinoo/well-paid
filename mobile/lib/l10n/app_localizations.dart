@@ -3309,8 +3309,32 @@ abstract class AppLocalizations {
   /// No description provided for @shoppingListTotalOverrideHint.
   ///
   /// In pt, this message translates to:
-  /// **'Total manual (opcional)'**
+  /// **'Total pago na loja (opcional — substitui soma e desconto)'**
   String get shoppingListTotalOverrideHint;
+
+  /// No description provided for @shoppingListDiscountHint.
+  ///
+  /// In pt, this message translates to:
+  /// **'Desconto (opcional — subtrai da soma; incompatível com total manual)'**
+  String get shoppingListDiscountHint;
+
+  /// No description provided for @shoppingListDiscountOverrideConflict.
+  ///
+  /// In pt, this message translates to:
+  /// **'Preenche só o total manual ou só o desconto, não ambos.'**
+  String get shoppingListDiscountOverrideConflict;
+
+  /// No description provided for @shoppingListTotalMismatchTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Total diferente da soma das linhas'**
+  String get shoppingListTotalMismatchTitle;
+
+  /// No description provided for @shoppingListTotalMismatchBody.
+  ///
+  /// In pt, this message translates to:
+  /// **'Indicaste {manual} mas o subtotal das linhas é {subtotal}. A despesa usará o valor que indicaste. Continuar?'**
+  String shoppingListTotalMismatchBody(String manual, String subtotal);
 
   /// No description provided for @shoppingListDescriptionOptional.
   ///
@@ -3341,6 +3365,18 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Ver despesa'**
   String get shoppingListViewExpense;
+
+  /// No description provided for @shoppingListAlignTotalToLinesButton.
+  ///
+  /// In pt, this message translates to:
+  /// **'Atualizar despesa para a soma das linhas'**
+  String get shoppingListAlignTotalToLinesButton;
+
+  /// No description provided for @shoppingListAlignTotalSuccess.
+  ///
+  /// In pt, this message translates to:
+  /// **'Total da despesa atualizado para coincidir com as linhas.'**
+  String get shoppingListAlignTotalSuccess;
 
   /// No description provided for @shoppingListCompletedOn.
   ///
@@ -3401,6 +3437,12 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Soma de (valor unitário × quantidade) nas linhas com preço.'**
   String get shoppingListFooterEstimatedNote;
+
+  /// No description provided for @shoppingListFooterUnitsSummary.
+  ///
+  /// In pt, this message translates to:
+  /// **'{unitCount} itens no total'**
+  String shoppingListFooterUnitsSummary(int unitCount);
 
   /// No description provided for @shoppingListFooterAddItemCompleted.
   ///

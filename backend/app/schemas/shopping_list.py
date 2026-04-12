@@ -25,6 +25,10 @@ class ShoppingListCreate(BaseModel):
 class ShoppingListPatch(BaseModel):
     title: str | None = Field(default=None, max_length=200)
     store_name: str | None = Field(default=None, max_length=200)
+    sync_total_from_line_items: bool | None = Field(
+        default=None,
+        description="Só em listas concluídas: recalcula total_cents e amount_cents da despesa a partir das linhas com preço.",
+    )
 
     @field_validator("title", "store_name", mode="before")
     @classmethod
@@ -134,7 +138,16 @@ class ShoppingListComplete(BaseModel):
     expense_date: date
     status: ExpenseStatus = ExpenseStatus.PAID
     description: str | None = Field(default=None, max_length=500)
-    total_cents: int | None = Field(default=None, gt=0)
+    total_cents: int | None = Field(
+        default=None,
+        gt=0,
+        description="Total pago na loja (opcional). Se definido, substitui a soma das linhas e ignora desconto.",
+    )
+    discount_cents: int | None = Field(
+        default=None,
+        ge=0,
+        description="Desconto em centavos (opcional). Só com total_cents omitido; subtrai da soma das linhas.",
+    )
     is_shared: bool = False
     shared_with_user_id: uuid.UUID | None = None
 
@@ -152,4 +165,10 @@ class ShoppingListComplete(BaseModel):
     def share_consistency(self) -> Self:
         if not self.is_shared and self.shared_with_user_id is not None:
             raise ValueError("shared_with_user_id exige is_shared true")
+        return self
+
+    @model_validator(mode="after")
+    def total_vs_discount(self) -> Self:
+        if self.total_cents is not None and self.discount_cents is not None and self.discount_cents > 0:
+            raise ValueError("total_cents e discount_cents não podem ser usados em conjunto")
         return self

@@ -1776,7 +1776,25 @@ class AppLocalizationsPt extends AppLocalizations {
   String get shoppingListCompleteTitle => 'Lançar despesa';
 
   @override
-  String get shoppingListTotalOverrideHint => 'Total manual (opcional)';
+  String get shoppingListTotalOverrideHint =>
+      'Total pago na loja (opcional — substitui soma e desconto)';
+
+  @override
+  String get shoppingListDiscountHint =>
+      'Desconto (opcional — subtrai da soma; incompatível com total manual)';
+
+  @override
+  String get shoppingListDiscountOverrideConflict =>
+      'Preenche só o total manual ou só o desconto, não ambos.';
+
+  @override
+  String get shoppingListTotalMismatchTitle =>
+      'Total diferente da soma das linhas';
+
+  @override
+  String shoppingListTotalMismatchBody(String manual, String subtotal) {
+    return 'Indicaste $manual mas o subtotal das linhas é $subtotal. A despesa usará o valor que indicaste. Continuar?';
+  }
 
   @override
   String get shoppingListDescriptionOptional =>
@@ -1794,6 +1812,14 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get shoppingListViewExpense => 'Ver despesa';
+
+  @override
+  String get shoppingListAlignTotalToLinesButton =>
+      'Atualizar despesa para a soma das linhas';
+
+  @override
+  String get shoppingListAlignTotalSuccess =>
+      'Total da despesa atualizado para coincidir com as linhas.';
 
   @override
   String shoppingListCompletedOn(String date) {
@@ -1830,6 +1856,11 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get shoppingListFooterEstimatedNote =>
       'Soma de (valor unitário × quantidade) nas linhas com preço.';
+
+  @override
+  String shoppingListFooterUnitsSummary(int unitCount) {
+    return '$unitCount itens no total';
+  }
 
   @override
   String get shoppingListFooterAddItemCompleted =>

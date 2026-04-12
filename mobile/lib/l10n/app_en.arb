@@ -771,12 +771,24 @@
   "shoppingListConfirmDeleteDraftBody": "This draft list will be removed. This cannot be undone.",
   "shoppingListComplete": "Check out",
   "shoppingListCompleteTitle": "Create expense",
-  "shoppingListTotalOverrideHint": "Manual total (optional)",
+  "shoppingListTotalOverrideHint": "Amount paid at store (optional — replaces sum and discount)",
+  "shoppingListDiscountHint": "Discount (optional — subtracts from line sum; not with manual total)",
+  "shoppingListDiscountOverrideConflict": "Fill either the manual total or the discount, not both.",
+  "shoppingListTotalMismatchTitle": "Total differs from line sum",
+  "shoppingListTotalMismatchBody": "You entered {manual} but the line subtotal is {subtotal}. The expense will use your amount. Continue?",
+  "@shoppingListTotalMismatchBody": {
+    "placeholders": {
+      "manual": { "type": "String" },
+      "subtotal": { "type": "String" }
+    }
+  },
   "shoppingListDescriptionOptional": "Expense description (optional)",
   "shoppingListMarkPaid": "Already paid",
   "shoppingListExpenseFromListPaidNote": "The expense is saved as paid, with no installments or recurrence. Only the list name and total appear on the expense.",
   "shoppingListExpenseDate": "Expense date",
   "shoppingListViewExpense": "View expense",
+  "shoppingListAlignTotalToLinesButton": "Update expense to line sum",
+  "shoppingListAlignTotalSuccess": "Expense total updated to match the lines.",
   "shoppingListCompletedOn": "Completed on {date}",
   "@shoppingListCompletedOn": {
     "placeholders": {
@@ -792,6 +804,12 @@
   "shoppingListNoItems": "No items yet. Add products to plan your trip.",
   "shoppingListFooterEstimatedTotal": "Estimated total",
   "shoppingListFooterEstimatedNote": "Sum of (unit price × quantity) for lines with a price.",
+  "shoppingListFooterUnitsSummary": "{unitCount} items total",
+  "@shoppingListFooterUnitsSummary": {
+    "placeholders": {
+      "unitCount": { "type": "int" }
+    }
+  },
   "shoppingListFooterAddItemCompleted": "You can still add items to this completed list.",
   "shoppingListInlineAmountHint": "Unit",
   "shoppingListEditLabelTitle": "Item name",

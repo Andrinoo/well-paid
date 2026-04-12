@@ -21,12 +21,26 @@ def resolve_checkout_total_cents(
     *,
     line_extensions: list[tuple[int | None, int]],
     total_cents_override: int | None,
+    discount_cents: int | None = None,
 ) -> int:
+    """Define o total da compra.
+
+    Prioridade: ``total_cents_override`` (valor pago na caixa, ignora soma).
+    Senão: soma das linhas menos ``discount_cents`` (≥ 0), ou só a soma.
+    """
     summed = sum_line_extensions_cents(line_extensions)
     if total_cents_override is not None:
         if total_cents_override <= 0:
             raise ValueError("shopping_list_total_invalid")
         return int(total_cents_override)
+    discount = int(discount_cents) if discount_cents is not None else 0
+    if discount < 0:
+        raise ValueError("shopping_list_discount_invalid")
+    if discount > 0:
+        total = summed - discount
+        if total <= 0:
+            raise ValueError("shopping_list_total_after_discount_invalid")
+        return total
     if summed <= 0:
         raise ValueError("shopping_list_total_empty")
     return summed
