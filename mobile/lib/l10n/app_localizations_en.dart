@@ -308,6 +308,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashByCategory => 'Spending by category';
 
   @override
+  String get dashHomeChartTabCategory => 'Categories';
+
+  @override
+  String get dashHomeChartTabCashflow => 'Cash flow';
+
+  @override
   String get dashPendingThisMonthTitle => 'Bills to pay';
 
   @override
@@ -697,7 +703,15 @@ class AppLocalizationsEn extends AppLocalizations {
       'Categories appear when there are expenses this month.';
 
   @override
-  String get chartDonutTapHint => 'Tap a slice to see the category.';
+  String get chartDonutTapHint => 'Slice or grid — tap to highlight.';
+
+  @override
+  String get chartDonutSelectedHeading => 'Selected category';
+
+  @override
+  String chartDonutPctOfTotal(int pct) {
+    return '$pct% of total';
+  }
 
   @override
   String get chartCategoryOther => 'Other';
@@ -1239,15 +1253,15 @@ class AppLocalizationsEn extends AppLocalizations {
       'Off — only your online session (login) protects the app.';
 
   @override
-  String get secBiometricTitle => 'Offer biometrics to unlock';
+  String get secBiometricTitle => 'Unlock with face or fingerprint';
 
   @override
   String get secBiometricOnSub =>
-      'Fingerprint or face, if your phone supports it.';
+      'Uses Face ID, face unlock, or fingerprint — your device picks the method you enrolled with.';
 
   @override
   String get secBiometricOffSub =>
-      'This device does not expose biometrics to the app.';
+      'This device does not expose biometrics or face unlock to the app.';
 
   @override
   String get secChangePin => 'Change PIN';
@@ -1260,6 +1274,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get unlockUseBiometric => 'Use biometrics';
+
+  @override
+  String get unlockUseFaceRecognition => 'Use face recognition';
+
+  @override
+  String get unlockUseFingerprint => 'Use fingerprint';
+
+  @override
+  String get unlockUseBiometricMixed => 'Use face or fingerprint';
 
   @override
   String get authResetSubtitle => 'Paste the code you received by email.';
@@ -1531,7 +1554,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get unlockPinTooShort => 'PIN must be at least 4 digits';
 
   @override
-  String get unlockBioReason => 'Unlock Well Paid';
+  String get unlockBioReason => 'Confirm your identity to unlock Well Paid';
 
   @override
   String get unlockBioUnavailable => 'Biometrics unavailable';
@@ -1650,6 +1673,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dashCashflowEmpty => 'No data for this period.';
 
   @override
+  String get dashCashflowTouchChartHint =>
+      'Tap the chart to pick a month. Default: month with the most activity.';
+
+  @override
+  String dashCashflowInsightPeakPaid(String month, String amount) {
+    return 'Peak paid spending: $month · $amount';
+  }
+
+  @override
   String get dashCashflowError => 'Could not load monthly history.';
 
   @override
@@ -1703,6 +1735,32 @@ class AppLocalizationsEn extends AppLocalizations {
   String dashCashflowA11ySummary(String forecast, String balance) {
     return 'Period totals. Forecast: $forecast. Balance: $balance.';
   }
+
+  @override
+  String get dashCashflowDynamicWindowTooltip =>
+      'On: chart uses the server’s rolling window (recent months, not tied only to the header month). Off: fixed 6 months — from the header month back 5 months. Right: how many future months show forecast spending (works in both modes).';
+
+  @override
+  String get dashCashflowBarRollingLabel => 'Auto';
+
+  @override
+  String get dashCashflowBarFixedLabel => 'Header';
+
+  @override
+  String get dashCashflowForecastBarShort => 'Ahead';
+
+  @override
+  String get dashCashflowForecastBarTooltip =>
+      'Future months on the axis with forecast spending (beyond the loaded history).';
+
+  @override
+  String dashCashflowInsightPeakIncome(String month, String amount) {
+    return 'Peak income: $month · $amount';
+  }
+
+  @override
+  String get dashHomeCategoriesFootnote =>
+      'Category totals match the month selected in the header.';
 
   @override
   String get shoppingListsTitle => 'Shopping lists';

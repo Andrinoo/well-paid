@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
@@ -9,19 +10,29 @@ import 'package:intl/intl.dart';
 import '../../../core/format/brl_cents.dart';
 import '../../../core/format/locale_dates.dart';
 import '../../../core/l10n/context_l10n.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../core/network/dio_client.dart';
 import '../../../core/theme/well_paid_colors.dart';
 import '../application/dashboard_providers.dart';
 import '../domain/dashboard_cashflow.dart';
 
 /// Card **Histórico mensal**: `LineChart` (F3) + legenda tocável + tooltips em BRL.
+///
+/// Quando [embeddedInHomeTabs] é true, omite o cabeçalho duplicado (o tab já
+/// identifica a vista) e dá mais altura ao gráfico.
 class DashboardCashflowChartCard extends ConsumerWidget {
-  const DashboardCashflowChartCard({super.key});
+  const DashboardCashflowChartCard({
+    super.key,
+    this.embeddedInHomeTabs = false,
+  });
+
+  final bool embeddedInHomeTabs;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final async = ref.watch(dashboardCashflowProvider);
+    final showTitleHeader = !embeddedInHomeTabs;
 
     final reduceMotion =
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
@@ -30,6 +41,7 @@ class DashboardCashflowChartCard extends ConsumerWidget {
       skipLoadingOnReload: true,
       loading: () => _CashflowShell(
         title: l10n.dashCashflowTitle,
+        showTitleHeader: showTitleHeader,
         belowTitle: const _CashflowCompactQueryBar(),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 16),
@@ -50,6 +62,7 @@ class DashboardCashflowChartCard extends ConsumerWidget {
       ),
       error: (e, _) => _CashflowShell(
         title: l10n.dashCashflowTitle,
+        showTitleHeader: showTitleHeader,
         belowTitle: const _CashflowCompactQueryBar(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -73,6 +86,7 @@ class DashboardCashflowChartCard extends ConsumerWidget {
       ),
       data: (d) => _CashflowShell(
         title: l10n.dashCashflowTitle,
+        showTitleHeader: showTitleHeader,
         belowTitle: const _CashflowCompactQueryBar(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -85,11 +99,118 @@ class DashboardCashflowChartCard extends ConsumerWidget {
                 ),
               )
             else
-              _CashflowLineChartBody(data: d),
+              _CashflowLineChartBody(
+                data: d,
+                embeddedInHomeTabs: embeddedInHomeTabs,
+              ),
             const SizedBox(height: 8),
             _CashflowSummaryFooter(data: d),
+            if (embeddedInHomeTabs) ...[
+              const SizedBox(height: 10),
+              _CashflowHomeInsightCard(data: d),
+            ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Resumo útil no espaço abaixo do rodapé do gráfico (tab Início).
+class _CashflowHomeInsightCard extends StatelessWidget {
+  const _CashflowHomeInsightCard({required this.data});
+
+  final DashboardCashflow data;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final n = data.months.length;
+    if (n == 0) return const SizedBox.shrink();
+
+    var bestI = 0;
+    var bestV = 0;
+    for (var i = 0; i < n; i++) {
+      final v = data.expensePaidCents[i];
+      if (v > bestV) {
+        bestV = v;
+        bestI = i;
+      }
+    }
+    var bestIncI = 0;
+    var bestIncV = 0;
+    for (var i = 0; i < n; i++) {
+      final v = data.incomeCents[i];
+      if (v > bestIncV) {
+        bestIncV = v;
+        bestIncI = i;
+      }
+    }
+
+    if (bestV <= 0 && bestIncV <= 0) return const SizedBox.shrink();
+
+    final tag = intlDateTagForUi(context);
+    final monthFmt = DateFormat.MMM(tag);
+    String monthLabel(int idx) {
+      final m = data.months[idx];
+      return '${monthFmt.format(DateTime(m.year, m.month))} ${m.year}';
+    }
+
+    Widget lineRow(String text) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            PhosphorIconsRegular.chartLine,
+            size: 22,
+            color: WellPaidColors.navy.withValues(alpha: 0.72),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                height: 1.3,
+                color: WellPaidColors.navy.withValues(alpha: 0.9),
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: WellPaidColors.gold.withValues(alpha: 0.11),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: WellPaidColors.navy.withValues(alpha: 0.08),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (bestV > 0)
+            lineRow(
+              l10n.dashCashflowInsightPeakPaid(
+                monthLabel(bestI),
+                formatBrlFromCents(bestV),
+              ),
+            ),
+          if (bestV > 0 && bestIncV > 0) const SizedBox(height: 10),
+          if (bestIncV > 0)
+            lineRow(
+              l10n.dashCashflowInsightPeakIncome(
+                monthLabel(bestIncI),
+                formatBrlFromCents(bestIncV),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -223,21 +344,23 @@ class _CashflowCompactQueryBarState
     });
 
     final fc = req.forecastMonths.clamp(1, 12);
+    final labelStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
+      color: WellPaidColors.navy.withValues(alpha: 0.78),
+      fontWeight: FontWeight.w700,
+    );
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Tooltip(
-          message: l10n.dashCashflowDynamicMode,
-          child: Text(
-            'Din',
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: WellPaidColors.navy.withValues(alpha: 0.75),
-              fontWeight: FontWeight.w700,
-            ),
+          message: l10n.dashCashflowDynamicWindowTooltip,
+          child: Icon(
+            PhosphorIconsRegular.arrowsClockwise,
+            size: 17,
+            color: WellPaidColors.navy.withValues(alpha: 0.62),
           ),
         ),
-        const SizedBox(width: 4),
+        const SizedBox(width: 2),
         Transform.scale(
           scale: 0.82,
           alignment: Alignment.centerLeft,
@@ -252,15 +375,26 @@ class _CashflowCompactQueryBarState
             activeTrackColor: WellPaidColors.gold.withValues(alpha: 0.45),
           ),
         ),
-        const Spacer(),
-        Tooltip(
-          message: l10n.dashCashflowForecastMonths,
-          child: Text(
-            'prev',
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: WellPaidColors.navy.withValues(alpha: 0.75),
-              fontWeight: FontWeight.w700,
+        Expanded(
+          child: Tooltip(
+            message: l10n.dashCashflowDynamicWindowTooltip,
+            child: Text(
+              req.isDynamicWindow
+                  ? l10n.dashCashflowBarRollingLabel
+                  : l10n.dashCashflowBarFixedLabel,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: labelStyle,
             ),
+          ),
+        ),
+        Tooltip(
+          message: l10n.dashCashflowForecastBarTooltip,
+          child: Text(
+            l10n.dashCashflowForecastBarShort,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: labelStyle,
           ),
         ),
         const SizedBox(width: 2),
@@ -307,11 +441,13 @@ class _CashflowShell extends StatelessWidget {
     required this.title,
     required this.child,
     this.belowTitle,
+    this.showTitleHeader = true,
   });
 
   final String title;
   final Widget child;
   final Widget? belowTitle;
+  final bool showTitleHeader;
 
   @override
   Widget build(BuildContext context) {
@@ -324,34 +460,39 @@ class _CashflowShell extends StatelessWidget {
         side: BorderSide(color: WellPaidColors.navy.withValues(alpha: 0.06)),
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+        padding: const EdgeInsets.fromLTRB(10, 6, 10, 8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Semantics(
-              header: true,
-              child: Row(
-                children: [
-                  Icon(
-                    PhosphorIconsRegular.chartLineUp,
-                    size: 20,
-                    color: WellPaidColors.navy.withValues(alpha: 0.85),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: WellPaidColors.navy,
-                        fontSize: 15,
+            if (showTitleHeader)
+              Semantics(
+                header: true,
+                child: Row(
+                  children: [
+                    Icon(
+                      PhosphorIconsRegular.chartLineUp,
+                      size: 20,
+                      color: WellPaidColors.navy.withValues(alpha: 0.85),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: WellPaidColors.navy,
+                          fontSize: 15,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            if (belowTitle != null) ...[const SizedBox(height: 4), belowTitle!],
+            if (belowTitle != null) ...[
+              if (showTitleHeader) const SizedBox(height: 4),
+              if (!showTitleHeader) const SizedBox(height: 2),
+              belowTitle!,
+            ],
             const SizedBox(height: 4),
             child,
           ],
@@ -437,9 +578,13 @@ class _CashflowSummaryFooter extends StatelessWidget {
 }
 
 class _CashflowLineChartBody extends StatefulWidget {
-  const _CashflowLineChartBody({required this.data});
+  const _CashflowLineChartBody({
+    required this.data,
+    this.embeddedInHomeTabs = false,
+  });
 
   final DashboardCashflow data;
+  final bool embeddedInHomeTabs;
 
   @override
   State<_CashflowLineChartBody> createState() => _CashflowLineChartBodyState();
@@ -454,6 +599,141 @@ class _CashflowLineChartBodyState extends State<_CashflowLineChartBody> {
   bool _showPaid = true;
   bool _showForecast = true;
 
+  /// `null` → painel usa o mês com mais movimento nas séries visíveis (evita último mês com tudo a zero).
+  int? _touchedMonthIndex;
+
+  @override
+  void didUpdateWidget(covariant _CashflowLineChartBody oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.data.months.length != widget.data.months.length) {
+      _touchedMonthIndex = null;
+    }
+  }
+
+  /// Mês com maior soma (séries visíveis) — alinha ao “pico” do gráfico em vez do fim do eixo.
+  int _defaultMonthIndexByVisibleActivity(int n) {
+    final d = widget.data;
+    var bestI = 0;
+    var bestScore = -1;
+    for (var i = 0; i < n; i++) {
+      var s = 0;
+      if (_showIncome) s += d.incomeCents[i];
+      if (_showPaid) s += d.expensePaidCents[i];
+      if (_showForecast) s += d.expenseForecastCents[i];
+      if (s > bestScore) {
+        bestScore = s;
+        bestI = i;
+      }
+    }
+    return bestI;
+  }
+
+  int _monthIndexForPanel(int n) {
+    if (n <= 0) return 0;
+    final t = _touchedMonthIndex;
+    if (t != null) return t.clamp(0, n - 1);
+    return _defaultMonthIndexByVisibleActivity(n);
+  }
+
+  Widget _monthDetailPanel(
+    BuildContext context,
+    AppLocalizations l10n, {
+    required DateFormat monthFmt,
+    required int n,
+    required List<Color> barAccentColors,
+    required List<List<int>> seriesValues,
+    required List<String> barLabels,
+  }) {
+    final d = widget.data;
+    final i = _monthIndexForPanel(n);
+    final m = d.months[i];
+    final title = monthFmt.format(DateTime(m.year, m.month));
+
+    final rows = <Widget>[
+      Text(
+        title,
+        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+          fontWeight: FontWeight.w800,
+          color: WellPaidColors.navy,
+          fontSize: 14,
+        ),
+      ),
+      if (_touchedMonthIndex == null)
+        Padding(
+          padding: const EdgeInsets.only(top: 3),
+          child: Text(
+            l10n.dashCashflowTouchChartHint,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: WellPaidColors.navy.withValues(alpha: 0.5),
+              height: 1.25,
+              fontSize: 10,
+            ),
+          ),
+        ),
+      const SizedBox(height: 6),
+    ];
+
+    for (var bi = 0; bi < barLabels.length; bi++) {
+      final color = barAccentColors[bi];
+      rows.add(
+        Padding(
+          padding: EdgeInsets.only(bottom: bi < barLabels.length - 1 ? 6 : 0),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 3,
+                height: 16,
+                margin: const EdgeInsets.only(top: 2),
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  barLabels[bi],
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: WellPaidColors.navy.withValues(alpha: 0.88),
+                    height: 1.2,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+              Text(
+                formatBrlFromCents(seriesValues[bi][i]),
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: WellPaidColors.navy,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Semantics(
+      container: true,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+        decoration: BoxDecoration(
+          color: WellPaidColors.navy.withValues(alpha: 0.045),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: WellPaidColors.navy.withValues(alpha: 0.1)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: rows,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -465,11 +745,20 @@ class _CashflowLineChartBodyState extends State<_CashflowLineChartBody> {
     final mq = MediaQuery.sizeOf(context);
     final shortSide = mq.shortestSide;
     final screenW = mq.width;
+    final screenH = mq.height;
 
-    /// Altura adaptativa: ecrãs pequenos ou baixos evitam cortar curvas / eixo X.
-    final chartHeight = (shortSide * 0.38).clamp(152.0, 228.0);
-    final leftAxisReserved = screenW < 340 ? 30.0 : 34.0;
-    final bottomAxisReserved = shortSide < 640 ? 22.0 : 28.0;
+    /// Evita altura demasiado baixa em telemóveis altos e estreitos (ex.: Poco X7 Pro),
+    /// onde só `shortSide` subdimensionava a área útil e cortava o gráfico.
+    /// No Início com tabs, um só gráfico por vista → mais altura útil.
+    final chartHeight = widget.embeddedInHomeTabs
+        ? math
+              .max(shortSide * 0.42, screenH * 0.24)
+              .clamp(200.0, 320.0)
+        : math
+              .max(shortSide * 0.36, screenH * 0.195)
+              .clamp(186.0, 276.0);
+    final leftAxisReserved = screenW < 340 ? 28.0 : 32.0;
+    final bottomAxisReserved = shortSide < 640 ? 26.0 : 30.0;
     final bottomLabelSize = shortSide < 640 ? 9.5 : 10.0;
     final chartDuration = reduceMotion
         ? Duration.zero
@@ -479,6 +768,7 @@ class _CashflowLineChartBodyState extends State<_CashflowLineChartBody> {
     final seriesValues = <List<int>>[];
     final barLabels = <String>[];
     final bars = <LineChartBarData>[];
+    final barAccentColors = <Color>[];
 
     void addSeries({
       required bool show,
@@ -490,6 +780,7 @@ class _CashflowLineChartBodyState extends State<_CashflowLineChartBody> {
       if (!show) return;
       seriesValues.add(cents);
       barLabels.add(label);
+      barAccentColors.add(color);
       final spots = <FlSpot>[
         for (var i = 0; i < n; i++) FlSpot(i.toDouble(), cents[i].toDouble()),
       ];
@@ -501,8 +792,26 @@ class _CashflowLineChartBodyState extends State<_CashflowLineChartBody> {
           isCurved: !reduceMotion,
           curveSmoothness: reduceMotion ? 0 : 0.32,
           preventCurveOverShooting: !reduceMotion,
-          dotData: const FlDotData(show: false),
           dashArray: dashed ? [7, 5] : null,
+          dotData: FlDotData(
+            show: true,
+            getDotPainter: (spot, percent, barData, index) {
+              if (dashed) {
+                return FlDotCirclePainter(
+                  radius: 4.5,
+                  color: Colors.transparent,
+                  strokeWidth: 2,
+                  strokeColor: color,
+                );
+              }
+              return FlDotCirclePainter(
+                radius: 5,
+                color: color,
+                strokeWidth: 1.5,
+                strokeColor: Colors.white,
+              );
+            },
+          ),
           belowBarData: BarAreaData(
             show: !dashed,
             gradient: LinearGradient(
@@ -551,8 +860,9 @@ class _CashflowLineChartBodyState extends State<_CashflowLineChartBody> {
 
     var maxCents = 1;
     for (var i = 0; i < n; i++) {
-      if (_showIncome)
+      if (_showIncome) {
         maxCents = maxCents > d.incomeCents[i] ? maxCents : d.incomeCents[i];
+      }
       if (_showPaid) {
         maxCents = maxCents > d.expensePaidCents[i]
             ? maxCents
@@ -573,63 +883,88 @@ class _CashflowLineChartBodyState extends State<_CashflowLineChartBody> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SizedBox(
-            height: 28,
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(2, 8, 2, 0),
+            child: SizedBox(
+              height: 30,
               child: Row(
                 children: [
-                  _LegendChip(
-                    color: _income,
-                    label: l10n.dashCashflowLegendIncome,
-                    semanticsHint: l10n.dashCashflowA11ySeriesToggle(
-                      l10n.dashCashflowLegendIncome,
+                  Expanded(
+                    child: Center(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: _LegendChip(
+                          color: _income,
+                          label: l10n.dashCashflowLegendIncome,
+                          semanticsHint: l10n.dashCashflowA11ySeriesToggle(
+                            l10n.dashCashflowLegendIncome,
+                          ),
+                          active: _showIncome,
+                          onTap: () => setState(() {
+                            _showIncome = !_showIncome;
+                            _touchedMonthIndex = null;
+                          }),
+                        ),
+                      ),
                     ),
-                    active: _showIncome,
-                    onTap: () => setState(() => _showIncome = !_showIncome),
                   ),
-                  const SizedBox(width: 5),
-                  _LegendChip(
-                    color: _paid,
-                    label: l10n.dashCashflowLegendExpensePaid,
-                    semanticsHint: l10n.dashCashflowA11ySeriesToggle(
-                      l10n.dashCashflowLegendExpensePaid,
+                  Expanded(
+                    child: Center(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: _LegendChip(
+                          color: _paid,
+                          label: l10n.dashCashflowLegendExpensePaid,
+                          semanticsHint: l10n.dashCashflowA11ySeriesToggle(
+                            l10n.dashCashflowLegendExpensePaid,
+                          ),
+                          active: _showPaid,
+                          onTap: () => setState(() {
+                            _showPaid = !_showPaid;
+                            _touchedMonthIndex = null;
+                          }),
+                        ),
+                      ),
                     ),
-                    active: _showPaid,
-                    onTap: () => setState(() => _showPaid = !_showPaid),
                   ),
-                  const SizedBox(width: 5),
-                  _LegendChip(
-                    color: _forecast,
-                    label: l10n.dashCashflowLegendExpenseForecast,
-                    semanticsHint: l10n.dashCashflowA11ySeriesToggle(
-                      l10n.dashCashflowLegendExpenseForecast,
+                  Expanded(
+                    child: Center(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: _LegendChip(
+                          color: _forecast,
+                          label: l10n.dashCashflowLegendExpenseForecast,
+                          semanticsHint: l10n.dashCashflowA11ySeriesToggle(
+                            l10n.dashCashflowLegendExpenseForecast,
+                          ),
+                          active: _showForecast,
+                          dashed: true,
+                          onTap: () => setState(() {
+                            _showForecast = !_showForecast;
+                            _touchedMonthIndex = null;
+                          }),
+                        ),
+                      ),
                     ),
-                    active: _showForecast,
-                    dashed: true,
-                    onTap: () => setState(() => _showForecast = !_showForecast),
                   ),
                 ],
               ),
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 14),
           Padding(
-            padding: const EdgeInsets.only(bottom: 2),
+            padding: const EdgeInsets.only(bottom: 6),
             child: SizedBox(
               height: chartHeight,
-              child: LineChart(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: LineChart(
                 LineChartData(
                   minX: 0,
                   maxX: (n - 1).toDouble(),
                   minY: 0,
                   maxY: maxY.toDouble(),
-                  clipData: const FlClipData(
-                    top: true,
-                    left: true,
-                    right: true,
-                    bottom: false,
-                  ),
+                  clipData: const FlClipData.none(),
                   gridData: FlGridData(
                     show: true,
                     drawVerticalLine: false,
@@ -716,37 +1051,24 @@ class _CashflowLineChartBodyState extends State<_CashflowLineChartBody> {
                   lineTouchData: LineTouchData(
                     enabled: true,
                     handleBuiltInTouches: true,
+                    touchSpotThreshold: 22,
+                    touchCallback: (event, response) {
+                      final spots = response?.lineBarSpots;
+                      if (spots == null || spots.isEmpty) return;
+                      // O ponto mais próximo em 2D pode ser a linha no zero (ex. previsto).
+                      // Usar o spot com maior Y → mês do pico visível, alinhado aos valores reais.
+                      TouchLineBarSpot? peak;
+                      for (final s in spots) {
+                        if (peak == null || s.y > peak.y) peak = s;
+                      }
+                      final xi = peak!.x.round().clamp(0, n - 1);
+                      setState(() => _touchedMonthIndex = xi);
+                    },
                     touchTooltipData: LineTouchTooltipData(
                       fitInsideHorizontally: true,
                       fitInsideVertically: true,
-                      getTooltipColor: (_) => Colors.white,
-                      tooltipBorder: BorderSide(
-                        color: WellPaidColors.navy.withValues(alpha: 0.12),
-                      ),
-                      tooltipRoundedRadius: 10,
-                      tooltipPadding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-                      getTooltipItems: (touchedSpots) {
-                        return touchedSpots.map((s) {
-                          final bi = s.barIndex;
-                          if (bi < 0 || bi >= seriesValues.length) {
-                            return null;
-                          }
-                          final xi = s.x.round().clamp(0, n - 1);
-                          final cents = seriesValues[bi][xi];
-                          final name = barLabels[bi];
-                          return LineTooltipItem(
-                            '$name\n${formatBrlFromCents(cents)}',
-                            TextStyle(
-                              color: WellPaidColors.navy.withValues(
-                                alpha: 0.92,
-                              ),
-                              fontWeight: FontWeight.w600,
-                              fontSize: 12,
-                              height: 1.35,
-                            ),
-                          );
-                        }).toList();
-                      },
+                      getTooltipItems: (touchedSpots) =>
+                          touchedSpots.map((_) => null).toList(),
                     ),
                   ),
                   lineBarsData: bars,
@@ -755,6 +1077,17 @@ class _CashflowLineChartBodyState extends State<_CashflowLineChartBody> {
                 curve: chartCurve,
               ),
             ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          _monthDetailPanel(
+            context,
+            l10n,
+            monthFmt: monthFmt,
+            n: n,
+            barAccentColors: barAccentColors,
+            seriesValues: seriesValues,
+            barLabels: barLabels,
           ),
         ],
       ),

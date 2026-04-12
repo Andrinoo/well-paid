@@ -106,6 +106,8 @@
   "dashExpenses": "Despesas",
   "dashBalance": "Saldo",
   "dashByCategory": "Despesas por categoria",
+  "dashHomeChartTabCategory": "Categorias",
+  "dashHomeChartTabCashflow": "Fluxo",
   "dashPendingThisMonthTitle": "Contas a pagar",
   "dashPendingThisMonthSubtitle": "Toque para rever e quitar",
   "chartViewCategoryExpenses": "Ver despesas desta categoria",
@@ -299,7 +301,14 @@
   },
   "chartSemanticsNoData": "Gráfico de despesas por categoria, sem dados no mês",
   "chartCategoriesHint": "As categorias aparecem quando existirem despesas neste mês.",
-  "chartDonutTapHint": "Toque numa fatia para ver a categoria.",
+  "chartDonutTapHint": "Fatia ou grelha — toque para destacar.",
+  "chartDonutSelectedHeading": "Categoria selecionada",
+  "chartDonutPctOfTotal": "{pct}% do total",
+  "@chartDonutPctOfTotal": {
+    "placeholders": {
+      "pct": {"type": "int"}
+    }
+  },
   "chartCategoryOther": "Outros",
   "goalsTitle": "Metas",
   "goalsRefresh": "Atualizar",
@@ -530,13 +539,16 @@
   "secLockWithPin": "Bloquear com PIN",
   "secLockPinOnSub": "Ao minimizar, a app pede o PIN ao voltar.",
   "secLockPinOffSub": "Desligado — só a sessão online (login) protege.",
-  "secBiometricTitle": "Oferecer biometria no desbloqueio",
-  "secBiometricOnSub": "Impressão digital ou rosto, se o telemóvel permitir.",
-  "secBiometricOffSub": "Este dispositivo não expõe biometria à app.",
+  "secBiometricTitle": "Desbloquear com rosto ou impressão digital",
+  "secBiometricOnSub": "Usa Face ID, reconhecimento facial ou impressão digital do telemóvel — o sistema escolhe o método em que estás registado.",
+  "secBiometricOffSub": "Este dispositivo não expõe biometria ou rosto à app.",
   "secChangePin": "Alterar PIN",
   "unlockIntro": "Introduz o PIN da app para continuar.",
   "unlockPinLabel": "PIN",
   "unlockUseBiometric": "Usar biometria",
+  "unlockUseFaceRecognition": "Usar reconhecimento facial",
+  "unlockUseFingerprint": "Usar impressão digital",
+  "unlockUseBiometricMixed": "Usar rosto ou impressão digital",
   "authResetSubtitle": "Cola o código que recebeste por e-mail.",
   "authResetTokenLabel": "Código de recuperação",
   "authResetTokenHint": "Cole o token completo",
@@ -649,7 +661,7 @@
   "incomeDetailNotesLabel": "Notas",
   "incomeDeleteError": "Erro ao eliminar.",
   "unlockPinTooShort": "PIN com pelo menos 4 dígitos",
-  "unlockBioReason": "Desbloquear o Well Paid",
+  "unlockBioReason": "Confirma a tua identidade para desbloquear o Well Paid",
   "unlockBioUnavailable": "Biometria indisponível",
   "famLeaveTitle": "Sair da família",
   "famLeaveBody": "Se fores o único membro, a família será eliminada. Se fores titular, a titularidade passa para outro membro.",
@@ -702,6 +714,14 @@
   "dashCashflowLegendExpensePaid": "Despesas pagas",
   "dashCashflowLegendExpenseForecast": "Despesas previstas",
   "dashCashflowEmpty": "Sem dados para este período.",
+  "dashCashflowTouchChartHint": "Toque no gráfico para outro mês. Por defeito: mês com mais movimento.",
+  "dashCashflowInsightPeakPaid": "Pico de despesas pagas: {month} · {amount}",
+  "@dashCashflowInsightPeakPaid": {
+    "placeholders": {
+      "month": {"type": "String"},
+      "amount": {"type": "String"}
+    }
+  },
   "dashCashflowError": "Erro ao carregar o histórico mensal.",
   "dashCashflowFooterForecastTotal": "Total previsto: {amount}",
   "@dashCashflowFooterForecastTotal": {
@@ -742,6 +762,19 @@
       "balance": {"type": "String"}
     }
   },
+  "dashCashflowDynamicWindowTooltip": "Ligado: o gráfico usa a janela dinâmica do servidor (últimos meses, independente só do mês do topo). Desligado: 6 meses fixos — do mês do topo voltando 5 meses. À direita: quantos meses futuros mostrar com despesas previstas (funciona nos dois modos).",
+  "dashCashflowBarRollingLabel": "Auto",
+  "dashCashflowBarFixedLabel": "Topo",
+  "dashCashflowForecastBarShort": "Futuro",
+  "dashCashflowForecastBarTooltip": "Meses futuros no eixo com despesas previstas (além do histórico carregado).",
+  "dashCashflowInsightPeakIncome": "Pico de proventos: {month} · {amount}",
+  "@dashCashflowInsightPeakIncome": {
+    "placeholders": {
+      "month": {"type": "String"},
+      "amount": {"type": "String"}
+    }
+  },
+  "dashHomeCategoriesFootnote": "Totais por categoria são do mês escolhido no seletor acima.",
   "shoppingListsTitle": "Listas de compras",
   "shoppingListsMenuLabel": "Listas de compras",
   "shoppingListsActiveSection": "Em planeamento",

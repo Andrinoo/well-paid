@@ -308,6 +308,12 @@ class AppLocalizationsPt extends AppLocalizations {
   String get dashByCategory => 'Despesas por categoria';
 
   @override
+  String get dashHomeChartTabCategory => 'Categorias';
+
+  @override
+  String get dashHomeChartTabCashflow => 'Fluxo';
+
+  @override
   String get dashPendingThisMonthTitle => 'Contas a pagar';
 
   @override
@@ -699,7 +705,15 @@ class AppLocalizationsPt extends AppLocalizations {
       'As categorias aparecem quando existirem despesas neste mês.';
 
   @override
-  String get chartDonutTapHint => 'Toque numa fatia para ver a categoria.';
+  String get chartDonutTapHint => 'Fatia ou grelha — toque para destacar.';
+
+  @override
+  String get chartDonutSelectedHeading => 'Categoria selecionada';
+
+  @override
+  String chartDonutPctOfTotal(int pct) {
+    return '$pct% do total';
+  }
 
   @override
   String get chartCategoryOther => 'Outros';
@@ -1242,15 +1256,15 @@ class AppLocalizationsPt extends AppLocalizations {
       'Desligado — só a sessão online (login) protege.';
 
   @override
-  String get secBiometricTitle => 'Oferecer biometria no desbloqueio';
+  String get secBiometricTitle => 'Desbloquear com rosto ou impressão digital';
 
   @override
   String get secBiometricOnSub =>
-      'Impressão digital ou rosto, se o telemóvel permitir.';
+      'Usa Face ID, reconhecimento facial ou impressão digital do telemóvel — o sistema escolhe o método em que estás registado.';
 
   @override
   String get secBiometricOffSub =>
-      'Este dispositivo não expõe biometria à app.';
+      'Este dispositivo não expõe biometria ou rosto à app.';
 
   @override
   String get secChangePin => 'Alterar PIN';
@@ -1263,6 +1277,15 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get unlockUseBiometric => 'Usar biometria';
+
+  @override
+  String get unlockUseFaceRecognition => 'Usar reconhecimento facial';
+
+  @override
+  String get unlockUseFingerprint => 'Usar impressão digital';
+
+  @override
+  String get unlockUseBiometricMixed => 'Usar rosto ou impressão digital';
 
   @override
   String get authResetSubtitle => 'Cola o código que recebeste por e-mail.';
@@ -1536,7 +1559,8 @@ class AppLocalizationsPt extends AppLocalizations {
   String get unlockPinTooShort => 'PIN com pelo menos 4 dígitos';
 
   @override
-  String get unlockBioReason => 'Desbloquear o Well Paid';
+  String get unlockBioReason =>
+      'Confirma a tua identidade para desbloquear o Well Paid';
 
   @override
   String get unlockBioUnavailable => 'Biometria indisponível';
@@ -1655,6 +1679,15 @@ class AppLocalizationsPt extends AppLocalizations {
   String get dashCashflowEmpty => 'Sem dados para este período.';
 
   @override
+  String get dashCashflowTouchChartHint =>
+      'Toque no gráfico para outro mês. Por defeito: mês com mais movimento.';
+
+  @override
+  String dashCashflowInsightPeakPaid(String month, String amount) {
+    return 'Pico de despesas pagas: $month · $amount';
+  }
+
+  @override
   String get dashCashflowError => 'Erro ao carregar o histórico mensal.';
 
   @override
@@ -1711,6 +1744,32 @@ class AppLocalizationsPt extends AppLocalizations {
   String dashCashflowA11ySummary(String forecast, String balance) {
     return 'Totais do período. Previsto: $forecast. Saldo: $balance.';
   }
+
+  @override
+  String get dashCashflowDynamicWindowTooltip =>
+      'Ligado: o gráfico usa a janela dinâmica do servidor (últimos meses, independente só do mês do topo). Desligado: 6 meses fixos — do mês do topo voltando 5 meses. À direita: quantos meses futuros mostrar com despesas previstas (funciona nos dois modos).';
+
+  @override
+  String get dashCashflowBarRollingLabel => 'Auto';
+
+  @override
+  String get dashCashflowBarFixedLabel => 'Topo';
+
+  @override
+  String get dashCashflowForecastBarShort => 'Futuro';
+
+  @override
+  String get dashCashflowForecastBarTooltip =>
+      'Meses futuros no eixo com despesas previstas (além do histórico carregado).';
+
+  @override
+  String dashCashflowInsightPeakIncome(String month, String amount) {
+    return 'Pico de proventos: $month · $amount';
+  }
+
+  @override
+  String get dashHomeCategoriesFootnote =>
+      'Totais por categoria são do mês escolhido no seletor acima.';
 
   @override
   String get shoppingListsTitle => 'Listas de compras';

@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:local_auth/local_auth.dart';
 
 import '../../../core/l10n/context_l10n.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../core/theme/well_paid_colors.dart';
 import '../application/app_lock_notifier.dart';
+import '../application/biometric_ui_kind.dart';
 
 /// Desbloqueio local (PIN / biometria) após bloqueio de sessão — Etapa 13.
 class UnlockPage extends ConsumerStatefulWidget {
@@ -22,7 +23,7 @@ class _UnlockPageState extends ConsumerState<UnlockPage> {
   final _auth = LocalAuthentication();
   String? _error;
   bool _busy = false;
-  bool? _canBio;
+  AppBiometricUiKind? _bioKind;
   bool _autoBioScheduled = false;
 
   @override
@@ -39,10 +40,10 @@ class _UnlockPageState extends ConsumerState<UnlockPage> {
 
   Future<void> _checkBioAndMaybeAutoBiometric() async {
     try {
-      final supported = await _auth.isDeviceSupported();
-      final can = supported && await _auth.canCheckBiometrics;
+      final kind = await detectBiometricUiKind(_auth);
       if (!mounted) return;
-      setState(() => _canBio = can);
+      setState(() => _bioKind = kind);
+      final can = kind != AppBiometricUiKind.unavailable;
       if (!can || _autoBioScheduled) return;
       final prefer = ref.read(appLockNotifierProvider).biometricPreferred;
       if (!prefer) return;
@@ -52,7 +53,9 @@ class _UnlockPageState extends ConsumerState<UnlockPage> {
         _tryBio();
       });
     } catch (_) {
-      if (mounted) setState(() => _canBio = false);
+      if (mounted) {
+        setState(() => _bioKind = AppBiometricUiKind.unavailable);
+      }
     }
   }
 
@@ -75,6 +78,20 @@ class _UnlockPageState extends ConsumerState<UnlockPage> {
     } else {
       setState(() => _error = context.l10n.secWrongPin);
       _pinCtrl.clear();
+    }
+  }
+
+  String _unlockBioButtonLabel(AppLocalizations l10n, AppBiometricUiKind kind) {
+    switch (kind) {
+      case AppBiometricUiKind.face:
+        return l10n.unlockUseFaceRecognition;
+      case AppBiometricUiKind.fingerprint:
+        return l10n.unlockUseFingerprint;
+      case AppBiometricUiKind.mixed:
+        return l10n.unlockUseBiometricMixed;
+      case AppBiometricUiKind.generic:
+      case AppBiometricUiKind.unavailable:
+        return l10n.unlockUseBiometric;
     }
   }
 
@@ -111,7 +128,7 @@ class _UnlockPageState extends ConsumerState<UnlockPage> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final lock = ref.watch(appLockNotifierProvider);
-    final showBio = lock.biometricPreferred && (_canBio == true);
+    final k = _bioKind;
 
     return PopScope(
       canPop: false,
@@ -159,12 +176,14 @@ class _UnlockPageState extends ConsumerState<UnlockPage> {
                 onPressed: _busy ? null : _tryPin,
                 child: Text(l10n.confirm),
               ),
-              if (showBio) ...[
+              if (lock.biometricPreferred &&
+                  k != null &&
+                  k != AppBiometricUiKind.unavailable) ...[
                 const SizedBox(height: 16),
                 OutlinedButton.icon(
                   onPressed: _busy ? null : _tryBio,
-                  icon: const Icon(PhosphorIconsRegular.fingerprint),
-                  label: Text(l10n.unlockUseBiometric),
+                  icon: Icon(biometricPhosphorIcon(k)),
+                  label: Text(_unlockBioButtonLabel(l10n, k)),
                 ),
               ],
               if (_busy)

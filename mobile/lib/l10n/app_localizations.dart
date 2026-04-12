@@ -668,6 +668,18 @@ abstract class AppLocalizations {
   /// **'Despesas por categoria'**
   String get dashByCategory;
 
+  /// No description provided for @dashHomeChartTabCategory.
+  ///
+  /// In pt, this message translates to:
+  /// **'Categorias'**
+  String get dashHomeChartTabCategory;
+
+  /// No description provided for @dashHomeChartTabCashflow.
+  ///
+  /// In pt, this message translates to:
+  /// **'Fluxo'**
+  String get dashHomeChartTabCashflow;
+
   /// No description provided for @dashPendingThisMonthTitle.
   ///
   /// In pt, this message translates to:
@@ -1355,8 +1367,20 @@ abstract class AppLocalizations {
   /// No description provided for @chartDonutTapHint.
   ///
   /// In pt, this message translates to:
-  /// **'Toque numa fatia para ver a categoria.'**
+  /// **'Fatia ou grelha — toque para destacar.'**
   String get chartDonutTapHint;
+
+  /// No description provided for @chartDonutSelectedHeading.
+  ///
+  /// In pt, this message translates to:
+  /// **'Categoria selecionada'**
+  String get chartDonutSelectedHeading;
+
+  /// No description provided for @chartDonutPctOfTotal.
+  ///
+  /// In pt, this message translates to:
+  /// **'{pct}% do total'**
+  String chartDonutPctOfTotal(int pct);
 
   /// No description provided for @chartCategoryOther.
   ///
@@ -2345,19 +2369,19 @@ abstract class AppLocalizations {
   /// No description provided for @secBiometricTitle.
   ///
   /// In pt, this message translates to:
-  /// **'Oferecer biometria no desbloqueio'**
+  /// **'Desbloquear com rosto ou impressão digital'**
   String get secBiometricTitle;
 
   /// No description provided for @secBiometricOnSub.
   ///
   /// In pt, this message translates to:
-  /// **'Impressão digital ou rosto, se o telemóvel permitir.'**
+  /// **'Usa Face ID, reconhecimento facial ou impressão digital do telemóvel — o sistema escolhe o método em que estás registado.'**
   String get secBiometricOnSub;
 
   /// No description provided for @secBiometricOffSub.
   ///
   /// In pt, this message translates to:
-  /// **'Este dispositivo não expõe biometria à app.'**
+  /// **'Este dispositivo não expõe biometria ou rosto à app.'**
   String get secBiometricOffSub;
 
   /// No description provided for @secChangePin.
@@ -2383,6 +2407,24 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Usar biometria'**
   String get unlockUseBiometric;
+
+  /// No description provided for @unlockUseFaceRecognition.
+  ///
+  /// In pt, this message translates to:
+  /// **'Usar reconhecimento facial'**
+  String get unlockUseFaceRecognition;
+
+  /// No description provided for @unlockUseFingerprint.
+  ///
+  /// In pt, this message translates to:
+  /// **'Usar impressão digital'**
+  String get unlockUseFingerprint;
+
+  /// No description provided for @unlockUseBiometricMixed.
+  ///
+  /// In pt, this message translates to:
+  /// **'Usar rosto ou impressão digital'**
+  String get unlockUseBiometricMixed;
 
   /// No description provided for @authResetSubtitle.
   ///
@@ -2889,7 +2931,7 @@ abstract class AppLocalizations {
   /// No description provided for @unlockBioReason.
   ///
   /// In pt, this message translates to:
-  /// **'Desbloquear o Well Paid'**
+  /// **'Confirma a tua identidade para desbloquear o Well Paid'**
   String get unlockBioReason;
 
   /// No description provided for @unlockBioUnavailable.
@@ -3108,6 +3150,18 @@ abstract class AppLocalizations {
   /// **'Sem dados para este período.'**
   String get dashCashflowEmpty;
 
+  /// No description provided for @dashCashflowTouchChartHint.
+  ///
+  /// In pt, this message translates to:
+  /// **'Toque no gráfico para outro mês. Por defeito: mês com mais movimento.'**
+  String get dashCashflowTouchChartHint;
+
+  /// No description provided for @dashCashflowInsightPeakPaid.
+  ///
+  /// In pt, this message translates to:
+  /// **'Pico de despesas pagas: {month} · {amount}'**
+  String dashCashflowInsightPeakPaid(String month, String amount);
+
   /// No description provided for @dashCashflowError.
   ///
   /// In pt, this message translates to:
@@ -3191,6 +3245,48 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Totais do período. Previsto: {forecast}. Saldo: {balance}.'**
   String dashCashflowA11ySummary(String forecast, String balance);
+
+  /// No description provided for @dashCashflowDynamicWindowTooltip.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ligado: o gráfico usa a janela dinâmica do servidor (últimos meses, independente só do mês do topo). Desligado: 6 meses fixos — do mês do topo voltando 5 meses. À direita: quantos meses futuros mostrar com despesas previstas (funciona nos dois modos).'**
+  String get dashCashflowDynamicWindowTooltip;
+
+  /// No description provided for @dashCashflowBarRollingLabel.
+  ///
+  /// In pt, this message translates to:
+  /// **'Auto'**
+  String get dashCashflowBarRollingLabel;
+
+  /// No description provided for @dashCashflowBarFixedLabel.
+  ///
+  /// In pt, this message translates to:
+  /// **'Topo'**
+  String get dashCashflowBarFixedLabel;
+
+  /// No description provided for @dashCashflowForecastBarShort.
+  ///
+  /// In pt, this message translates to:
+  /// **'Futuro'**
+  String get dashCashflowForecastBarShort;
+
+  /// No description provided for @dashCashflowForecastBarTooltip.
+  ///
+  /// In pt, this message translates to:
+  /// **'Meses futuros no eixo com despesas previstas (além do histórico carregado).'**
+  String get dashCashflowForecastBarTooltip;
+
+  /// No description provided for @dashCashflowInsightPeakIncome.
+  ///
+  /// In pt, this message translates to:
+  /// **'Pico de proventos: {month} · {amount}'**
+  String dashCashflowInsightPeakIncome(String month, String amount);
+
+  /// No description provided for @dashHomeCategoriesFootnote.
+  ///
+  /// In pt, this message translates to:
+  /// **'Totais por categoria são do mês escolhido no seletor acima.'**
+  String get dashHomeCategoriesFootnote;
 
   /// No description provided for @shoppingListsTitle.
   ///

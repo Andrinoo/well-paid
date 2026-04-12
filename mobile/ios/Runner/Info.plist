@@ -48,7 +48,7 @@
 		</dict>
 	</dict>
 	<key>NSFaceIDUsageDescription</key>
-	<string>O Well Paid usa Face ID para desbloquear a app quando activas essa opção.</string>
+	<string>Well Paid uses Face ID or Touch ID to unlock the app when you enable this in Security settings.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>

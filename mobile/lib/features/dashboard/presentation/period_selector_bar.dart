@@ -20,11 +20,16 @@ class PeriodSelectorBar extends ConsumerStatefulWidget {
     super.key,
     this.variant = PeriodSelectorBarVariant.light,
     this.dense = false,
+    this.ultraDense = false,
   });
 
   final PeriodSelectorBarVariant variant;
+
   /// Menos padding e ícones menores (ex.: header do dashboard).
   final bool dense;
+
+  /// Ainda mais compacto (ex.: header navy do Início em ecrãs baixos).
+  final bool ultraDense;
 
   @override
   ConsumerState<PeriodSelectorBar> createState() => _PeriodSelectorBarState();
@@ -58,15 +63,20 @@ class _PeriodSelectorBarState extends ConsumerState<PeriodSelectorBar> {
     }
 
     final d = widget.dense;
-    final iconSize = d ? 20.0 : 24.0;
-    final pad = d
-        ? const EdgeInsets.symmetric(horizontal: 2, vertical: 0)
-        : const EdgeInsets.symmetric(horizontal: 8, vertical: 4);
+    final u = widget.ultraDense && d;
+    final iconSize = u ? 18.0 : (d ? 20.0 : 24.0);
+    final pad = u
+        ? EdgeInsets.zero
+        : (d
+              ? const EdgeInsets.symmetric(horizontal: 2, vertical: 0)
+              : const EdgeInsets.symmetric(horizontal: 8, vertical: 4));
 
     return Semantics(
       label: l10n.periodSummaryA11y(label),
       child: Material(
-        color: dark ? Colors.transparent : WellPaidColors.creamMuted.withValues(alpha: 0.6),
+        color: dark
+            ? Colors.transparent
+            : WellPaidColors.creamMuted.withValues(alpha: 0.6),
         child: Padding(
           padding: pad,
           child: Row(
@@ -79,30 +89,38 @@ class _PeriodSelectorBarState extends ConsumerState<PeriodSelectorBar> {
                 icon: Icon(PhosphorIconsRegular.caretLeft, size: iconSize),
                 color: chevron,
                 style: IconButton.styleFrom(
-                  padding: d ? const EdgeInsets.all(4) : null,
-                  minimumSize: d ? const Size(32, 32) : null,
-                  tapTargetSize: d ? MaterialTapTargetSize.shrinkWrap : null,
-                  visualDensity: d ? VisualDensity.compact : null,
+                  padding: (d || u) ? const EdgeInsets.all(2) : null,
+                  minimumSize: u
+                      ? const Size(28, 28)
+                      : (d ? const Size(32, 32) : null),
+                  tapTargetSize: (d || u)
+                      ? MaterialTapTargetSize.shrinkWrap
+                      : null,
+                  visualDensity: (d || u) ? VisualDensity.compact : null,
                 ),
               ),
               Text(
                 label,
-                style: (d
-                        ? Theme.of(context).textTheme.titleSmall
-                        : Theme.of(context).textTheme.titleMedium)
-                    ?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: fg,
-                      letterSpacing: d ? 0.2 : 0.3,
-                    ),
+                style:
+                    (u
+                            ? Theme.of(context).textTheme.labelLarge
+                            : d
+                            ? Theme.of(context).textTheme.titleSmall
+                            : Theme.of(context).textTheme.titleMedium)
+                        ?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: fg,
+                          fontSize: u ? 13 : null,
+                          letterSpacing: d || u ? 0.2 : 0.3,
+                        ),
               ),
               if (loading) ...[
-                SizedBox(width: d ? 6 : 8),
+                SizedBox(width: d || u ? 6 : 8),
                 SizedBox(
-                  width: d ? 12 : 14,
-                  height: d ? 12 : 14,
+                  width: d || u ? 12 : 14,
+                  height: d || u ? 12 : 14,
                   child: CircularProgressIndicator(
-                    strokeWidth: d ? 1.5 : 2,
+                    strokeWidth: d || u ? 1.5 : 2,
                     color: fgMuted,
                   ),
                 ),
@@ -113,10 +131,14 @@ class _PeriodSelectorBarState extends ConsumerState<PeriodSelectorBar> {
                 icon: Icon(PhosphorIconsRegular.caretRight, size: iconSize),
                 color: chevron,
                 style: IconButton.styleFrom(
-                  padding: d ? const EdgeInsets.all(4) : null,
-                  minimumSize: d ? const Size(32, 32) : null,
-                  tapTargetSize: d ? MaterialTapTargetSize.shrinkWrap : null,
-                  visualDensity: d ? VisualDensity.compact : null,
+                  padding: (d || u) ? const EdgeInsets.all(2) : null,
+                  minimumSize: u
+                      ? const Size(28, 28)
+                      : (d ? const Size(32, 32) : null),
+                  tapTargetSize: (d || u)
+                      ? MaterialTapTargetSize.shrinkWrap
+                      : null,
+                  visualDensity: (d || u) ? VisualDensity.compact : null,
                 ),
               ),
             ],

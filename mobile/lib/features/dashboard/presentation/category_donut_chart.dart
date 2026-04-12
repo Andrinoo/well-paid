@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -44,29 +46,10 @@ enum _DonutDepthPreset { soft, medium }
 
 const _donutDepthPreset = _DonutDepthPreset.soft;
 
-Widget _donutSliceBadge(IconData icon, Color base, bool selected) {
-  return Container(
-    width: 18,
-    height: 18,
-    alignment: Alignment.center,
-    decoration: BoxDecoration(
-      shape: BoxShape.circle,
-      color: WellPaidColors.cream.withValues(alpha: 0.94),
-      border: Border.all(color: base, width: selected ? 1.55 : 1.0),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withValues(alpha: 0.08),
-          blurRadius: 2,
-          offset: const Offset(0, 1),
-        ),
-      ],
-    ),
-    child: Icon(icon, size: 10, color: base),
-  );
-}
-
 /// Ordena por valor e mantém no máximo [_kMaxDonutSlices] fatias; o resto vira uma linha "Outros".
-List<CategorySpend> _aggregateSpendingForDonut(
+///
+/// Usado também no scroll do Início para persistir o índice da fatia selecionada.
+List<CategorySpend> aggregateSpendingRowsForDonut(
   List<CategorySpend> source,
   int monthExpenseTotalCents,
   String otherLabel,
@@ -100,6 +83,8 @@ class CategoryDonutChart extends StatefulWidget {
     super.key,
     required this.categories,
     required this.monthExpenseTotalCents,
+    required this.selectedSliceIndex,
+    required this.onSelectedSliceIndexChanged,
     this.period,
     this.onViewCategoryExpenses,
     this.onRegisterExpense,
@@ -107,6 +92,9 @@ class CategoryDonutChart extends StatefulWidget {
 
   final List<CategorySpend> categories;
   final int monthExpenseTotalCents;
+  /// Índice na lista agregada [aggregateSpendingRowsForDonut] (0 = maior fatia).
+  final int selectedSliceIndex;
+  final ValueChanged<int> onSelectedSliceIndexChanged;
   final PeriodMonth? period;
 
   /// Abre a lista de despesas filtrada pela categoria selecionada no donut.
@@ -122,7 +110,6 @@ class CategoryDonutChart extends StatefulWidget {
 class _CategoryDonutChartState extends State<CategoryDonutChart>
     with SingleTickerProviderStateMixin {
   late final AnimationController _intro;
-  int? _touchedIndex;
 
   @override
   void initState() {
@@ -144,7 +131,6 @@ class _CategoryDonutChartState extends State<CategoryDonutChart>
       _intro
         ..reset()
         ..forward();
-      _touchedIndex = null;
     }
   }
 
@@ -154,13 +140,10 @@ class _CategoryDonutChartState extends State<CategoryDonutChart>
     super.dispose();
   }
 
-  void _setTouched(int? next) {
-    if (next != _touchedIndex) {
-      if (next != null) {
-        HapticFeedback.selectionClick();
-      }
-      setState(() => _touchedIndex = next);
-    }
+  void _selectSlice(int i) {
+    if (i == widget.selectedSliceIndex) return;
+    HapticFeedback.selectionClick();
+    widget.onSelectedSliceIndexChanged(i);
   }
 
   double get _depthStrength {
@@ -193,11 +176,9 @@ class _CategoryDonutChartState extends State<CategoryDonutChart>
     for (var i = 0; i < rows.length; i++) {
       final c = rows[i];
       final base = _palette[i % _palette.length];
-      final touched = _touchedIndex == i;
+      final touched = widget.selectedSliceIndex == i;
       final scaled = c.amountCents * introT;
       final glowA = (0.42 + 0.58 * introT).clamp(0.0, 1.0) / _depthStrength;
-      final icon =
-          _categoryIcons[c.categoryKey] ?? PhosphorIconsRegular.squaresFour;
       out.add(
         PieChartSectionData(
           gradient: LinearGradient(
@@ -214,18 +195,6 @@ class _CategoryDonutChartState extends State<CategoryDonutChart>
           title: '',
           showTitle: false,
           radius: touched ? sliceR + 10 * g : sliceR,
-          badgeWidget: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () {
-              if (_touchedIndex == i) {
-                _setTouched(null);
-              } else {
-                _setTouched(i);
-              }
-            },
-            child: _donutSliceBadge(icon, base, touched),
-          ),
-          badgePositionPercentageOffset: 0.91,
           borderSide: BorderSide(
             color: WellPaidColors.cream.withValues(
               alpha: touched ? 0.95 : 0.88,
@@ -439,14 +408,10 @@ class _CategoryDonutChartState extends State<CategoryDonutChart>
                 enabled: hasData && introT > 0.05,
                 touchCallback: (event, pieTouchResponse) {
                   final sec = pieTouchResponse?.touchedSection;
-                  if (sec == null) {
-                    _setTouched(null);
-                    return;
-                  }
+                  if (sec == null) return;
                   final idx = sec.touchedSectionIndex;
-                  // Toque no badge costuma vir com índice -1; o badge usa GestureDetector.
                   if (idx < 0) return;
-                  _setTouched(idx);
+                  _selectSlice(idx);
                 },
               ),
               startDegreeOffset: -90 + (1 - introT) * (6 * _depthStrength),
@@ -464,15 +429,166 @@ class _CategoryDonutChartState extends State<CategoryDonutChart>
     );
   }
 
+  double _donutSide(BoxConstraints c) {
+    final w = c.maxWidth;
+    final h = c.maxHeight;
+    if (!w.isFinite || !h.isFinite) return _refChartBox;
+    final sideW = w.clamp(158.0, _refChartBox + 40);
+    return math.min(sideW, h * 0.95);
+  }
+
+  Widget _selectedCategoryStrip(
+    BuildContext context,
+    AppLocalizations l10n, {
+    required List<CategorySpend> rows,
+    required int index,
+  }) {
+    final row = rows[index];
+    final color = _palette[index % _palette.length];
+    final icon =
+        _categoryIcons[row.categoryKey] ?? PhosphorIconsRegular.squaresFour;
+    final pct = widget.monthExpenseTotalCents > 0
+        ? ((row.amountCents * 100) ~/ widget.monthExpenseTotalCents)
+        : 0;
+
+    return Material(
+      color: color.withValues(alpha: 0.14),
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: widget.onViewCategoryExpenses != null
+            ? () => widget.onViewCategoryExpenses!(row)
+            : null,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                l10n.chartDonutSelectedHeading,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: WellPaidColors.navy.withValues(alpha: 0.52),
+                  fontSize: 9.5,
+                  letterSpacing: 0.2,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _swatch(icon, color, true, compact: true, size: 24),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      row.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                        height: 1.2,
+                        color: WellPaidColors.navy,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    formatBrlFromCents(row.amountCents),
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: WellPaidColors.navy,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 2),
+              Text(
+                l10n.chartDonutPctOfTotal(pct),
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: WellPaidColors.navy.withValues(alpha: 0.55),
+                  fontSize: 10,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _categoryGridTile(
+    BuildContext context, {
+    required int index,
+    required CategorySpend row,
+  }) {
+    final color = _palette[index % _palette.length];
+    final selected = widget.selectedSliceIndex == index;
+    final icon =
+        _categoryIcons[row.categoryKey] ?? PhosphorIconsRegular.squaresFour;
+    final pct = widget.monthExpenseTotalCents > 0
+        ? ((row.amountCents * 100) ~/ widget.monthExpenseTotalCents)
+        : 0;
+
+    return Material(
+      color: selected
+          ? color.withValues(alpha: 0.12)
+          : WellPaidColors.navy.withValues(alpha: 0.03),
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: () => _selectSlice(index),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(6, 6, 4, 6),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _swatch(icon, color, selected, compact: true, size: 18),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      row.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 11,
+                        height: 1.15,
+                        color: WellPaidColors.navy,
+                      ),
+                    ),
+                    Text(
+                      '$pct% · ${formatBrlFromCents(row.amountCents)}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        fontSize: 9.5,
+                        color: WellPaidColors.navy.withValues(alpha: 0.58),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _intro,
       builder: (context, _) {
         return LayoutBuilder(
-          builder: (context, constraints) {
+          builder: (context, outerConstraints) {
             final l10n = context.l10n;
-            final rows = _aggregateSpendingForDonut(
+            final rows = aggregateSpendingRowsForDonut(
               widget.categories,
               widget.monthExpenseTotalCents,
               l10n.chartCategoryOther,
@@ -483,221 +599,194 @@ class _CategoryDonutChartState extends State<CategoryDonutChart>
               hasData ? widget.monthExpenseTotalCents : 0,
             );
             final introT = Curves.easeOutCubic.transform(_intro.value);
-            final rawW = constraints.maxWidth;
-            final side = rawW.isFinite
-                ? rawW.clamp(158.0, _refChartBox)
-                : _refChartBox;
-            final g = side / _refChartBox;
-            final sections = _sections(hasData, introT, rows, g);
-            final shadows = _shadowSections(hasData, introT, rows, g);
 
-            CategorySpend? selectedCategory;
-            if (hasData &&
-                _touchedIndex != null &&
-                _touchedIndex! >= 0 &&
-                _touchedIndex! < rows.length) {
-              selectedCategory = rows[_touchedIndex!];
-            }
+            final footerHint = !hasData
+                ? Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          l10n.chartCategoriesHint,
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: WellPaidColors.navy.withValues(
+                                  alpha: 0.62,
+                                ),
+                                height: 1.35,
+                              ),
+                        ),
+                        if (widget.onRegisterExpense != null) ...[
+                          const SizedBox(height: 12),
+                          Center(
+                            child: FilledButton.tonalIcon(
+                              onPressed: widget.onRegisterExpense,
+                              icon: Icon(
+                                PhosphorIconsRegular.plusCircle,
+                                color: WellPaidColors.navy.withValues(
+                                  alpha: 0.9,
+                                ),
+                              ),
+                              label: Text(l10n.chartRegisterExpenseCta),
+                              style: FilledButton.styleFrom(
+                                foregroundColor: WellPaidColors.navy,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  )
+                : const SizedBox.shrink();
 
-            final Widget footerHint;
             if (!hasData) {
-              footerHint = Padding(
-                padding: const EdgeInsets.only(top: 8),
+              final side = _donutSide(outerConstraints);
+              final g = side / _refChartBox;
+              return Semantics(
+                label: l10n.chartSemanticsNoData,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      l10n.chartCategoriesHint,
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: WellPaidColors.navy.withValues(alpha: 0.62),
-                        height: 1.35,
-                      ),
-                    ),
-                    if (widget.onRegisterExpense != null) ...[
-                      const SizedBox(height: 12),
-                      Center(
-                        child: FilledButton.tonalIcon(
-                          onPressed: widget.onRegisterExpense,
-                          icon: Icon(
-                            PhosphorIconsRegular.plusCircle,
-                            color: WellPaidColors.navy.withValues(alpha: 0.9),
-                          ),
-                          label: Text(l10n.chartRegisterExpenseCta),
-                          style: FilledButton.styleFrom(
-                            foregroundColor: WellPaidColors.navy,
-                          ),
+                    Expanded(
+                      child: Center(
+                        child: _chartStack(
+                          context,
+                          l10n: l10n,
+                          hasData: false,
+                          introT: introT,
+                          sections: _sections(false, introT, rows, g),
+                          shadows: _shadowSections(false, introT, rows, g),
+                          totalLabel: totalLabel,
+                          side: side,
+                          g: g,
                         ),
                       ),
-                    ],
+                    ),
+                    footerHint,
                   ],
                 ),
               );
-            } else {
-              footerHint = const SizedBox.shrink();
             }
 
-            final chartCol = Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Center(
-                  child: _chartStack(
-                    context,
-                    l10n: l10n,
-                    hasData: hasData,
-                    introT: introT,
-                    sections: sections,
-                    shadows: shadows,
-                    totalLabel: totalLabel,
-                    side: side,
-                    g: g,
-                  ),
-                ),
-                if (hasData)
-                  SizedBox(
-                    height: 40,
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 200),
-                      switchInCurve: Curves.easeOutCubic,
-                      switchOutCurve: Curves.easeInCubic,
-                      child: selectedCategory == null
-                          ? Center(
-                              key: const ValueKey<String>('cat-hint'),
-                              child: Text(
-                                l10n.chartDonutTapHint,
-                                textAlign: TextAlign.center,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.labelSmall
-                                    ?.copyWith(
-                                      fontSize: 10,
-                                      color: WellPaidColors.navy.withValues(
-                                        alpha: 0.48,
-                                      ),
-                                    ),
-                              ),
-                            )
-                          : Center(
-                              key: ValueKey<String>(
-                                selectedCategory.categoryKey,
-                              ),
-                              child: _SelectedCategoryBadge(
-                                category: selectedCategory,
-                                monthTotal: widget.monthExpenseTotalCents,
-                                color:
-                                    _palette[_touchedIndex! % _palette.length],
-                                onOpenExpenses:
-                                    widget.onViewCategoryExpenses != null
-                                    ? () => widget.onViewCategoryExpenses!(
-                                        selectedCategory!,
-                                      )
-                                    : null,
-                              ),
-                            ),
-                    ),
-                  ),
-              ],
-            );
+            final si = widget.selectedSliceIndex.clamp(0, rows.length - 1);
+            final selectedCategory = rows[si];
+            final otherIndices = <int>[
+              for (var i = 0; i < rows.length; i++)
+                if (i != si) i,
+            ];
 
             return Semantics(
-              label: hasData
-                  ? l10n.chartSemanticsWithData(totalLabel)
-                  : l10n.chartSemanticsNoData,
+              label: l10n.chartSemanticsWithData(totalLabel),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [chartCol, footerHint],
+                children: [
+                  Expanded(
+                    flex: 4,
+                    child: LayoutBuilder(
+                      builder: (context, c) {
+                        final side = _donutSide(c);
+                        final g = side / _refChartBox;
+                        return Center(
+                          child: _chartStack(
+                            context,
+                            l10n: l10n,
+                            hasData: true,
+                            introT: introT,
+                            sections: _sections(true, introT, rows, g),
+                            shadows: _shadowSections(true, introT, rows, g),
+                            totalLabel: totalLabel,
+                            side: side,
+                            g: g,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  Expanded(
+                    flex: 6,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _selectedCategoryStrip(
+                          context,
+                          l10n,
+                          rows: rows,
+                          index: si,
+                        ),
+                        const SizedBox(height: 6),
+                        Divider(
+                          height: 1,
+                          thickness: 1,
+                          color: WellPaidColors.navy.withValues(alpha: 0.1),
+                        ),
+                        const SizedBox(height: 4),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(2, 0, 2, 4),
+                          child: Text(
+                            l10n.chartDonutTapHint,
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(
+                                  fontSize: 9.5,
+                                  height: 1.2,
+                                  color: WellPaidColors.navy.withValues(
+                                    alpha: 0.48,
+                                  ),
+                                ),
+                          ),
+                        ),
+                        Expanded(
+                          child: GridView.builder(
+                            padding: EdgeInsets.zero,
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              mainAxisSpacing: 6,
+                              crossAxisSpacing: 8,
+                              mainAxisExtent: 74,
+                            ),
+                            itemCount: otherIndices.length,
+                            itemBuilder: (context, pos) {
+                              final i = otherIndices[pos];
+                              return _categoryGridTile(
+                                context,
+                                index: i,
+                                row: rows[i],
+                              );
+                            },
+                          ),
+                        ),
+                        if (widget.onViewCategoryExpenses != null)
+                          TextButton.icon(
+                            onPressed: () => widget.onViewCategoryExpenses!(
+                              selectedCategory,
+                            ),
+                            icon: Icon(
+                              PhosphorIconsRegular.list,
+                              size: 18,
+                              color: WellPaidColors.navy.withValues(alpha: 0.85),
+                            ),
+                            label: Text(
+                              l10n.chartViewCategoryExpenses,
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                            style: TextButton.styleFrom(
+                              foregroundColor: WellPaidColors.navy,
+                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             );
           },
         );
       },
-    );
-  }
-}
-
-class _SelectedCategoryBadge extends StatelessWidget {
-  const _SelectedCategoryBadge({
-    required this.category,
-    required this.monthTotal,
-    required this.color,
-    this.onOpenExpenses,
-  });
-
-  final CategorySpend category;
-  final int monthTotal;
-  final Color color;
-  final VoidCallback? onOpenExpenses;
-
-  @override
-  Widget build(BuildContext context) {
-    final icon =
-        _categoryIcons[category.categoryKey] ??
-        PhosphorIconsRegular.squaresFour;
-    final pct = monthTotal > 0
-        ? ((category.amountCents * 100) ~/ monthTotal)
-        : 0;
-    final row = Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _swatch(icon, color, true, compact: true, size: 17),
-        const SizedBox(width: 5),
-        Flexible(
-          child: Text(
-            category.name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: WellPaidColors.navy,
-              fontWeight: FontWeight.w800,
-              fontSize: 12,
-            ),
-          ),
-        ),
-        const SizedBox(width: 5),
-        Text(
-          '$pct%',
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: WellPaidColors.navy.withValues(alpha: 0.72),
-            fontWeight: FontWeight.w800,
-            fontSize: 10,
-          ),
-        ),
-        const SizedBox(width: 5),
-        Text(
-          formatBrlFromCents(category.amountCents),
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: WellPaidColors.navy,
-            fontWeight: FontWeight.w800,
-            fontSize: 11,
-          ),
-        ),
-      ],
-    );
-
-    final decoration = BoxDecoration(
-      borderRadius: BorderRadius.circular(12),
-      gradient: LinearGradient(
-        colors: [color.withValues(alpha: 0.2), color.withValues(alpha: 0.08)],
-      ),
-      border: Border.all(color: color.withValues(alpha: 0.4)),
-    );
-    final padded = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-      child: row,
-    );
-
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 300),
-      child: onOpenExpenses == null
-          ? DecoratedBox(decoration: decoration, child: padded)
-          : Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: onOpenExpenses,
-                borderRadius: BorderRadius.circular(12),
-                child: Ink(decoration: decoration, child: padded),
-              ),
-            ),
     );
   }
 }

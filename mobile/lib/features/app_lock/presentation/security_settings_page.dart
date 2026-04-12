@@ -9,6 +9,7 @@ import '../../../core/l10n/context_l10n.dart';
 import '../../../core/theme/well_paid_colors.dart';
 import '../../../l10n/app_localizations.dart';
 import '../application/app_lock_notifier.dart';
+import '../application/biometric_ui_kind.dart';
 
 bool _validPin(String p) {
   if (p.length < 4 || p.length > 6) return false;
@@ -25,7 +26,7 @@ class SecuritySettingsPage extends ConsumerStatefulWidget {
 
 class _SecuritySettingsPageState extends ConsumerState<SecuritySettingsPage> {
   final _la = LocalAuthentication();
-  bool? _hardwareBio;
+  AppBiometricUiKind? _bioKind;
 
   @override
   void initState() {
@@ -35,11 +36,12 @@ class _SecuritySettingsPageState extends ConsumerState<SecuritySettingsPage> {
 
   Future<void> _checkHardware() async {
     try {
-      final s = await _la.isDeviceSupported();
-      final c = s && await _la.canCheckBiometrics;
-      if (mounted) setState(() => _hardwareBio = c);
+      final kind = await detectBiometricUiKind(_la);
+      if (mounted) setState(() => _bioKind = kind);
     } catch (_) {
-      if (mounted) setState(() => _hardwareBio = false);
+      if (mounted) {
+        setState(() => _bioKind = AppBiometricUiKind.unavailable);
+      }
     }
   }
 
@@ -167,7 +169,8 @@ class _SecuritySettingsPageState extends ConsumerState<SecuritySettingsPage> {
     final l10n = context.l10n;
     final lock = ref.watch(appLockNotifierProvider);
     final pinOn = lock.pinEnabled;
-    final bioOk = _hardwareBio == true;
+    final bioOk = _bioKind != null &&
+        _bioKind != AppBiometricUiKind.unavailable;
 
     return Scaffold(
       appBar: AppBar(
@@ -195,6 +198,14 @@ class _SecuritySettingsPageState extends ConsumerState<SecuritySettingsPage> {
             },
           ),
           SwitchListTile(
+            secondary: Icon(
+              _bioKind != null && bioOk
+                  ? biometricPhosphorIcon(_bioKind!)
+                  : PhosphorIconsRegular.fingerprint,
+              color: WellPaidColors.navy.withValues(
+                alpha: bioOk ? 0.72 : 0.28,
+              ),
+            ),
             title: Text(l10n.secBiometricTitle),
             subtitle: Text(
               bioOk ? l10n.secBiometricOnSub : l10n.secBiometricOffSub,

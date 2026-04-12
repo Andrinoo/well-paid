@@ -106,6 +106,8 @@
   "dashExpenses": "Expenses",
   "dashBalance": "Balance",
   "dashByCategory": "Spending by category",
+  "dashHomeChartTabCategory": "Categories",
+  "dashHomeChartTabCashflow": "Cash flow",
   "dashPendingThisMonthTitle": "Bills to pay",
   "dashPendingThisMonthSubtitle": "Tap to review and settle",
   "chartViewCategoryExpenses": "View expenses in this category",
@@ -299,7 +301,14 @@
   },
   "chartSemanticsNoData": "Category spending chart, no data this month",
   "chartCategoriesHint": "Categories appear when there are expenses this month.",
-  "chartDonutTapHint": "Tap a slice to see the category.",
+  "chartDonutTapHint": "Slice or grid — tap to highlight.",
+  "chartDonutSelectedHeading": "Selected category",
+  "chartDonutPctOfTotal": "{pct}% of total",
+  "@chartDonutPctOfTotal": {
+    "placeholders": {
+      "pct": {"type": "int"}
+    }
+  },
   "chartCategoryOther": "Other",
   "goalsTitle": "Goals",
   "goalsRefresh": "Refresh",
@@ -530,13 +539,16 @@
   "secLockWithPin": "Lock with PIN",
   "secLockPinOnSub": "When minimized, the app asks for the PIN when you return.",
   "secLockPinOffSub": "Off — only your online session (login) protects the app.",
-  "secBiometricTitle": "Offer biometrics to unlock",
-  "secBiometricOnSub": "Fingerprint or face, if your phone supports it.",
-  "secBiometricOffSub": "This device does not expose biometrics to the app.",
+  "secBiometricTitle": "Unlock with face or fingerprint",
+  "secBiometricOnSub": "Uses Face ID, face unlock, or fingerprint — your device picks the method you enrolled with.",
+  "secBiometricOffSub": "This device does not expose biometrics or face unlock to the app.",
   "secChangePin": "Change PIN",
   "unlockIntro": "Enter your app PIN to continue.",
   "unlockPinLabel": "PIN",
   "unlockUseBiometric": "Use biometrics",
+  "unlockUseFaceRecognition": "Use face recognition",
+  "unlockUseFingerprint": "Use fingerprint",
+  "unlockUseBiometricMixed": "Use face or fingerprint",
   "authResetSubtitle": "Paste the code you received by email.",
   "authResetTokenLabel": "Recovery code",
   "authResetTokenHint": "Paste the full token",
@@ -649,7 +661,7 @@
   "incomeDetailNotesLabel": "Notes",
   "incomeDeleteError": "Could not delete.",
   "unlockPinTooShort": "PIN must be at least 4 digits",
-  "unlockBioReason": "Unlock Well Paid",
+  "unlockBioReason": "Confirm your identity to unlock Well Paid",
   "unlockBioUnavailable": "Biometrics unavailable",
   "famLeaveTitle": "Leave family",
   "famLeaveBody": "If you are the only member, the family will be removed. If you are the owner, ownership passes to another member.",
@@ -702,6 +714,14 @@
   "dashCashflowLegendExpensePaid": "Paid expenses",
   "dashCashflowLegendExpenseForecast": "Forecast expenses",
   "dashCashflowEmpty": "No data for this period.",
+  "dashCashflowTouchChartHint": "Tap the chart to pick a month. Default: month with the most activity.",
+  "dashCashflowInsightPeakPaid": "Peak paid spending: {month} · {amount}",
+  "@dashCashflowInsightPeakPaid": {
+    "placeholders": {
+      "month": {"type": "String"},
+      "amount": {"type": "String"}
+    }
+  },
   "dashCashflowError": "Could not load monthly history.",
   "dashCashflowFooterForecastTotal": "Forecast total: {amount}",
   "@dashCashflowFooterForecastTotal": {
@@ -742,6 +762,19 @@
       "balance": {"type": "String"}
     }
   },
+  "dashCashflowDynamicWindowTooltip": "On: chart uses the server’s rolling window (recent months, not tied only to the header month). Off: fixed 6 months — from the header month back 5 months. Right: how many future months show forecast spending (works in both modes).",
+  "dashCashflowBarRollingLabel": "Auto",
+  "dashCashflowBarFixedLabel": "Header",
+  "dashCashflowForecastBarShort": "Ahead",
+  "dashCashflowForecastBarTooltip": "Future months on the axis with forecast spending (beyond the loaded history).",
+  "dashCashflowInsightPeakIncome": "Peak income: {month} · {amount}",
+  "@dashCashflowInsightPeakIncome": {
+    "placeholders": {
+      "month": {"type": "String"},
+      "amount": {"type": "String"}
+    }
+  },
+  "dashHomeCategoriesFootnote": "Category totals match the month selected in the header.",
   "shoppingListsTitle": "Shopping lists",
   "shoppingListsMenuLabel": "Shopping lists",
   "shoppingListsActiveSection": "Planning",
