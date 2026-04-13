@@ -20,17 +20,14 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -69,6 +66,7 @@ import com.wellpaid.ui.theme.WellPaidNavy
 import com.wellpaid.ui.theme.WellPaidNavyDeep
 import com.wellpaid.ui.theme.WellPaidMaxContentWidth
 import com.wellpaid.ui.theme.wellPaidMaxContentWidth
+import com.wellpaid.ui.theme.DiscreetBalanceValue
 import com.wellpaid.util.formatBrlFromCents
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
@@ -81,13 +79,10 @@ fun HomeDashboardContent(
     mainRouteEntry: NavBackStackEntry,
     modifier: Modifier = Modifier,
     onOpenSettings: () -> Unit = {},
-    onOpenDisplayName: () -> Unit = {},
-    onLogout: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
-    var menuOpen by remember { mutableStateOf(false) }
     val pagerState = rememberPagerState(pageCount = { 2 })
     val configuration = LocalConfiguration.current
     val locale = configuration.locales[0] ?: Locale.getDefault()
@@ -96,9 +91,6 @@ fun HomeDashboardContent(
             if (locale.language.equals("en", ignoreCase = true)) "MMMM yyyy" else "LLLL yyyy",
             locale,
         )
-    }
-    val monthShortNavFormatter = remember(locale) {
-        DateTimeFormatter.ofPattern("MM/yyyy", locale)
     }
     val pullRefreshing = state.isLoading && state.overview != null
     val pullRefreshState = rememberPullRefreshState(
@@ -132,70 +124,42 @@ fun HomeDashboardContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
-                    .padding(bottom = 2.dp),
+                    .padding(bottom = 10.dp),
             ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 12.dp, end = 2.dp, bottom = 2.dp),
+                    .padding(horizontal = 12.dp, vertical = 0.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                val greeting = state.userFirstName?.let { n ->
+                val greetingText = state.userFirstName?.let { n ->
                     stringResource(R.string.home_greeting_named, n)
-                }
-                if (greeting != null) {
-                    Text(
-                        text = greeting,
-                        modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+                } ?: stringResource(R.string.home_greeting_fallback)
+                Text(
+                    text = greetingText,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 6.dp),
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        fontSize = 14.sp,
+                        lineHeight = 18.sp,
+                        letterSpacing = 0.1.sp,
+                    ),
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White.copy(alpha = 0.98f),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                IconButton(
+                    onClick = onOpenSettings,
+                    modifier = Modifier.size(40.dp),
+                ) {
+                    Icon(
+                        Icons.Filled.Settings,
+                        contentDescription = stringResource(R.string.settings_title),
+                        tint = Color.White.copy(alpha = 0.95f),
+                        modifier = Modifier.size(22.dp),
                     )
-                } else {
-                    Spacer(Modifier.weight(1f))
-                }
-                Box {
-                    IconButton(
-                        onClick = { menuOpen = true },
-                        modifier = Modifier.size(28.dp),
-                    ) {
-                        Icon(
-                            Icons.Filled.Settings,
-                            contentDescription = stringResource(R.string.settings_title),
-                            tint = Color.White,
-                        )
-                    }
-                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.settings_title)) },
-                            onClick = {
-                                menuOpen = false
-                                onOpenSettings()
-                            },
-                            leadingIcon = {
-                                Icon(Icons.Filled.Settings, contentDescription = null)
-                            },
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.display_name_menu_item)) },
-                            onClick = {
-                                menuOpen = false
-                                onOpenDisplayName()
-                            },
-                            leadingIcon = {
-                                Icon(Icons.Outlined.Person, contentDescription = null)
-                            },
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.logout)) },
-                            onClick = {
-                                menuOpen = false
-                                onLogout()
-                            },
-                        )
-                    }
                 }
             }
 
@@ -204,7 +168,7 @@ fun HomeDashboardContent(
                     modifier = Modifier
                         .fillMaxWidth()
                         .wellPaidMaxContentWidth(WellPaidMaxContentWidth)
-                        .padding(horizontal = 8.dp, vertical = 0.dp),
+                        .padding(start = 10.dp, top = 8.dp, end = 10.dp, bottom = 2.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.Top,
                 ) {
@@ -216,11 +180,9 @@ fun HomeDashboardContent(
                         align = Alignment.Start,
                         compact = true,
                     )
-                    HeaderMetric(
+                    HeaderMetricBalance(
                         label = stringResource(R.string.home_metric_balance),
-                        value = formatBrlFromCents(o.monthBalanceCents),
-                        valueColor = WellPaidGold,
-                        valueLarge = true,
+                        balanceCents = o.monthBalanceCents,
                         modifier = Modifier.weight(1f),
                         align = Alignment.CenterHorizontally,
                         compact = true,
@@ -232,44 +194,6 @@ fun HomeDashboardContent(
                         modifier = Modifier.weight(1f),
                         align = Alignment.End,
                         compact = true,
-                    )
-                }
-            }
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .wellPaidMaxContentWidth(WellPaidMaxContentWidth)
-                    .padding(horizontal = 8.dp, vertical = 0.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                IconButton(
-                    onClick = { viewModel.previousMonth() },
-                    enabled = !state.isLoading,
-                    modifier = Modifier.size(28.dp),
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = stringResource(R.string.home_prev_month),
-                        tint = WellPaidGold,
-                    )
-                }
-                Text(
-                    text = state.period.format(monthShortNavFormatter),
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.White,
-                )
-                IconButton(
-                    onClick = { viewModel.nextMonth() },
-                    enabled = !state.isLoading,
-                    modifier = Modifier.size(28.dp),
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = stringResource(R.string.home_next_month),
-                        tint = WellPaidGold,
                     )
                 }
             }
@@ -368,15 +292,24 @@ fun HomeDashboardContent(
                                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                                 shape = RoundedCornerShape(20.dp),
                             ) {
-                                HorizontalPager(
-                                    state = pagerState,
-                                    modifier = Modifier.fillMaxSize(),
-                                    beyondViewportPageCount = 1,
-                                ) { page ->
+                                Column(Modifier.fillMaxSize()) {
+                                    HomeMonthNavigationCardBar(
+                                        monthLabel = monthTitle,
+                                        onPrev = { viewModel.previousMonth() },
+                                        onNext = { viewModel.nextMonth() },
+                                        enabled = !state.isLoading,
+                                    )
+                                    HorizontalPager(
+                                        state = pagerState,
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .fillMaxWidth(),
+                                        beyondViewportPageCount = 1,
+                                    ) { page ->
                                     Box(
                                         modifier = Modifier
                                             .fillMaxSize()
-                                            .padding(start = 10.dp, top = 6.dp, end = 10.dp, bottom = 8.dp),
+                                            .padding(start = 10.dp, top = 0.dp, end = 10.dp, bottom = 8.dp),
                                     ) {
                                         when (page) {
                                             0 -> {
@@ -384,6 +317,7 @@ fun HomeDashboardContent(
                                                     monthTitle = monthTitle,
                                                     totalExpenseCents = overview.monthExpenseTotalCents,
                                                     spending = overview.spendingByCategory,
+                                                    showMonthInDonutCenter = false,
                                                     modifier = Modifier.fillMaxSize(),
                                                 )
                                             }
@@ -421,6 +355,7 @@ fun HomeDashboardContent(
                                             }
                                         }
                                     }
+                                    }
                                 }
                             }
                         } else if (overview != null && cashflow == null && state.cashflowError == null && !state.isLoading) {
@@ -439,6 +374,115 @@ fun HomeDashboardContent(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun HomeMonthNavigationCardBar(
+    monthLabel: String,
+    onPrev: () -> Unit,
+    onNext: () -> Unit,
+    enabled: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 40.dp, max = 44.dp)
+            .padding(horizontal = 2.dp, vertical = 0.dp),
+    ) {
+        IconButton(
+            onClick = onPrev,
+            enabled = enabled,
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .size(40.dp),
+        ) {
+            Icon(
+                Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = stringResource(R.string.home_prev_month),
+                tint = WellPaidGold,
+                modifier = Modifier.size(22.dp),
+            )
+        }
+        Text(
+            text = monthLabel,
+            modifier = Modifier
+                .align(Alignment.Center)
+                .padding(horizontal = 48.dp),
+            style = MaterialTheme.typography.titleSmall.copy(lineHeight = 18.sp),
+            fontWeight = FontWeight.SemiBold,
+            color = WellPaidNavy,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+        )
+        IconButton(
+            onClick = onNext,
+            enabled = enabled,
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .size(40.dp),
+        ) {
+            Icon(
+                Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = stringResource(R.string.home_next_month),
+                tint = WellPaidGold,
+                modifier = Modifier.size(22.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun HeaderMetricBalance(
+    label: String,
+    balanceCents: Int,
+    modifier: Modifier = Modifier,
+    valueColor: Color = WellPaidGold,
+    align: Alignment.Horizontal = Alignment.Start,
+    compact: Boolean = false,
+) {
+    Column(
+        modifier = modifier.widthIn(max = if (compact) 120.dp else 140.dp),
+        horizontalAlignment = when (align) {
+            Alignment.CenterHorizontally -> Alignment.CenterHorizontally
+            Alignment.End -> Alignment.End
+            else -> Alignment.Start
+        },
+    ) {
+        Text(
+            text = label,
+            style = if (compact) {
+                MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, lineHeight = 12.sp)
+            } else {
+                MaterialTheme.typography.labelMedium
+            },
+            color = Color.White.copy(alpha = 0.92f),
+            textAlign = when (align) {
+                Alignment.CenterHorizontally -> TextAlign.Center
+                Alignment.End -> TextAlign.End
+                else -> TextAlign.Start
+            },
+            modifier = Modifier.fillMaxWidth(),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        val valueStyle = MaterialTheme.typography.titleMedium.copy(
+            fontSize = if (compact) 16.sp else 22.sp,
+            lineHeight = if (compact) 19.sp else 26.sp,
+            fontWeight = FontWeight.Bold,
+        )
+        DiscreetBalanceValue(
+            cents = balanceCents,
+            style = valueStyle,
+            color = valueColor,
+            textAlign = when (align) {
+                Alignment.CenterHorizontally -> TextAlign.Center
+                Alignment.End -> TextAlign.End
+                else -> TextAlign.Start
+            },
+        )
     }
 }
 
@@ -463,11 +507,11 @@ private fun HeaderMetric(
         Text(
             text = label,
             style = if (compact) {
-                MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, lineHeight = 11.sp)
+                MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, lineHeight = 12.sp)
             } else {
                 MaterialTheme.typography.labelMedium
             },
-            color = Color.White.copy(alpha = 0.88f),
+            color = Color.White.copy(alpha = 0.92f),
             textAlign = when (align) {
                 Alignment.CenterHorizontally -> TextAlign.Center
                 Alignment.End -> TextAlign.End
@@ -481,16 +525,16 @@ private fun HeaderMetric(
             text = value,
             style = if (valueLarge) {
                 MaterialTheme.typography.titleMedium.copy(
-                    fontSize = if (compact) 14.sp else 22.sp,
-                    lineHeight = if (compact) 16.sp else 26.sp,
+                    fontSize = if (compact) 16.sp else 22.sp,
+                    lineHeight = if (compact) 19.sp else 26.sp,
                     fontWeight = FontWeight.Bold,
                 )
             } else {
                 if (compact) {
                     MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = 12.sp,
-                        lineHeight = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.sp,
+                        lineHeight = 17.sp,
+                        fontWeight = FontWeight.Bold,
                     )
                 } else {
                     MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold)

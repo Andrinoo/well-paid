@@ -4,17 +4,26 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.compose.runtime.CompositionLocalProvider
+import com.wellpaid.security.AppSecurityEntryPoint
+import com.wellpaid.ui.security.AppLockScreen
+import com.wellpaid.ui.security.SecurityScreen
+import com.wellpaid.ui.theme.LocalPrivacyHideBalance
+import dagger.hilt.android.EntryPointAccessors
 import com.wellpaid.ui.auth.ForgotPasswordScreen
 import com.wellpaid.ui.auth.ResetPasswordScreen
 import com.wellpaid.ui.expenses.ExpenseFormScreen
@@ -27,6 +36,7 @@ import com.wellpaid.ui.register.RegisterScreen
 import com.wellpaid.ui.register.VerifyEmailScreen
 import com.wellpaid.ui.session.SessionViewModel
 import com.wellpaid.ui.family.FamilyScreen
+import com.wellpaid.ui.categories.ManageCategoriesScreen
 import com.wellpaid.ui.settings.DisplayNameScreen
 import com.wellpaid.ui.settings.SettingsScreen
 import com.wellpaid.ui.shopping.ShoppingListDetailScreen
@@ -93,11 +103,28 @@ fun WellPaidNavHost(
                         System.currentTimeMillis()
                 }
             }
-            NavHost(
-                navController = navController,
-                startDestination = route,
-                modifier = modifier,
-            ) {
+            val context = LocalContext.current
+            val securityManager = remember(context.applicationContext) {
+                EntryPointAccessors.fromApplication(
+                    context.applicationContext,
+                    AppSecurityEntryPoint::class.java,
+                ).appSecurityManager()
+            }
+            val locked by securityManager.locked.collectAsStateWithLifecycle()
+            val hidePrivacy by securityManager.privacyHideAmounts.collectAsStateWithLifecycle()
+            val navBackStackEntry by navController.currentBackStackEntryAsState()
+            val currentRoute = navBackStackEntry?.destination?.route
+            LaunchedEffect(Unit) {
+                securityManager.applyColdStartLockIfNeeded()
+            }
+            val showAppLock = locked && !isPublicAuthRoute(currentRoute)
+            Box(modifier = modifier) {
+                CompositionLocalProvider(LocalPrivacyHideBalance provides hidePrivacy) {
+                    NavHost(
+                        navController = navController,
+                        startDestination = route,
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
                 composable(NavRoutes.Login) {
                     LoginScreen(
                         onNavigateToMain = goMain,
@@ -173,9 +200,6 @@ fun WellPaidNavHost(
                         },
                         onOpenSettings = {
                             navController.navigate(NavRoutes.Settings)
-                        },
-                        onOpenDisplayName = {
-                            navController.navigate(NavRoutes.DisplayName)
                         },
                         onOpenExpenseNew = {
                             navController.navigate(NavRoutes.ExpenseNew)
@@ -282,8 +306,17 @@ fun WellPaidNavHost(
                                 launchSingleTop = true
                             }
                         },
+                        onOpenDisplayName = { navController.navigate(NavRoutes.DisplayName) },
                         onOpenFamily = { navController.navigate(NavRoutes.Family) },
+                        onOpenSecurity = { navController.navigate(NavRoutes.Security) },
+                        onOpenManageCategories = { navController.navigate(NavRoutes.ManageCategories) },
                     )
+                }
+                composable(NavRoutes.ManageCategories) {
+                    ManageCategoriesScreen(onNavigateBack = { navController.popBackStack() })
+                }
+                composable(NavRoutes.Security) {
+                    SecurityScreen(onNavigateBack = { navController.popBackStack() })
                 }
                 composable(NavRoutes.DisplayName) {
                     DisplayNameScreen(
@@ -306,7 +339,7 @@ fun WellPaidNavHost(
                     ShoppingListsScreen(
                         onNavigateBack = { navController.popBackStack() },
                         onOpenList = { id -> navController.navigate(NavRoutes.shoppingListDetail(id)) },
-                        onEmptyListCreated = { id ->
+                        onListCreated = { id ->
                             navController.navigate(NavRoutes.shoppingListDetail(id))
                         },
                         viewModel = hiltViewModel<ShoppingListsViewModel>(mainEntry),
@@ -335,7 +368,25 @@ fun WellPaidNavHost(
                         },
                     )
                 }
+                    }
+                }
+                if (showAppLock) {
+                    AppLockScreen(
+                        manager = securityManager,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
             }
         }
     }
+}
+
+private fun isPublicAuthRoute(route: String?): Boolean {
+    if (route == null) return true
+    if (route == NavRoutes.Login || route == NavRoutes.Register || route == NavRoutes.ForgotPassword) {
+        return true
+    }
+    if (route.startsWith("verify_email")) return true
+    if (route.startsWith("reset_password")) return true
+    return false
 }

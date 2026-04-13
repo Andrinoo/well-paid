@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -43,7 +44,9 @@ import com.wellpaid.ui.theme.WellPaidMaxContentWidth
 import com.wellpaid.ui.theme.WellPaidNavy
 import com.wellpaid.ui.theme.WellPaidNavyDeep
 import com.wellpaid.ui.theme.wellPaidMaxContentWidth
+import com.wellpaid.ui.theme.DiscreetBalanceValue
 import com.wellpaid.util.formatBrlFromCents
+import com.wellpaid.util.centsToBrlInput
 import com.wellpaid.util.formatIsoDateToBr
 import kotlin.math.roundToInt
 
@@ -125,11 +128,11 @@ fun EmergencyReserveContent(
                         )
                     }
                     Spacer(Modifier.height(12.dp))
-                    Text(
-                        text = formatBrlFromCents(r.balanceCents),
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
+                    DiscreetBalanceValue(
+                        cents = r.balanceCents,
+                        style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
                         color = WellPaidGold,
+                        textAlign = TextAlign.Start,
                     )
                     Text(
                         text = stringResource(R.string.emergency_balance_label),
@@ -206,7 +209,7 @@ fun EmergencyReserveContent(
                         val label = formatBrlFromCents(cents)
                         FilterChip(
                             selected = false,
-                            onClick = { viewModel.setMonthlyTargetText(label) },
+                            onClick = { viewModel.setMonthlyTargetText(centsToBrlInput(cents)) },
                             label = { Text(label, maxLines = 1) },
                             modifier = Modifier.weight(1f),
                             enabled = state.canEditReserve && !state.isSaving,

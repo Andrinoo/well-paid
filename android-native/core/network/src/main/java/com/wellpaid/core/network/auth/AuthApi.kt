@@ -43,4 +43,8 @@ interface AuthApi {
 
     @POST("auth/refresh")
     fun refreshCall(@Body body: RefreshRequestDto): Call<TokenPairDto>
+
+    /** Mesmo endpoint que [refreshCall]; preferir em corrotinas para erros HTTP mapeados (HttpException). */
+    @POST("auth/refresh")
+    suspend fun refresh(@Body body: RefreshRequestDto): TokenPairDto
 }

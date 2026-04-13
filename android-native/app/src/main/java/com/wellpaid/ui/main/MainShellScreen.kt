@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -22,7 +23,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Payments
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -48,6 +49,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -77,7 +79,6 @@ fun MainShellScreen(
     mainRouteEntry: NavBackStackEntry,
     onLoggedOut: () -> Unit,
     onOpenSettings: () -> Unit,
-    onOpenDisplayName: () -> Unit,
     onOpenExpenseNew: () -> Unit,
     onOpenExpenseDetail: (String) -> Unit,
     onOpenIncomeNew: () -> Unit,
@@ -145,10 +146,10 @@ fun MainShellScreen(
                         )
                     },
                     navigationIcon = {
-                        IconButton(onClick = onOpenSettings) {
+                        IconButton(onClick = { selectedTab = 0 }) {
                             Icon(
-                                imageVector = Icons.Filled.Settings,
-                                contentDescription = stringResource(R.string.settings_title),
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.main_back_to_home),
                             )
                         }
                     },
@@ -264,10 +265,18 @@ fun MainShellScreen(
             }
         },
     ) { innerPadding ->
+        val layoutDirection = LocalLayoutDirection.current
+        // Home: fundo navy até ao topo (edge-to-edge); o conteúdo usa statusBarsPadding no ecrã.
+        val contentPadding = PaddingValues(
+            start = innerPadding.calculateLeftPadding(layoutDirection),
+            top = if (selectedTab == 0) 0.dp else innerPadding.calculateTopPadding(),
+            end = innerPadding.calculateRightPadding(layoutDirection),
+            bottom = innerPadding.calculateBottomPadding(),
+        )
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
+                .padding(contentPadding)
                 .then(
                     if (selectedTab == 0) Modifier else Modifier
                         .wellPaidScreenHorizontalPadding()
@@ -280,8 +289,6 @@ fun MainShellScreen(
                     modifier = Modifier.fillMaxSize(),
                     mainRouteEntry = mainRouteEntry,
                     onOpenSettings = onOpenSettings,
-                    onOpenDisplayName = onOpenDisplayName,
-                    onLogout = { viewModel.logout() },
                 )
                 1 -> ExpensesListContent(
                     mainRouteEntry = mainRouteEntry,

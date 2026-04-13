@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -20,6 +21,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
@@ -49,6 +51,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
@@ -67,6 +70,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wellpaid.BuildConfig
 import com.wellpaid.R
@@ -97,6 +101,12 @@ fun LoginScreen(
 ) {
     WellPaidLoginTheme {
         val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+        val activity = LocalContext.current as FragmentActivity
+
+        LaunchedEffect(Unit) {
+            viewModel.refreshQuickLoginAvailability()
+        }
 
         LaunchedEffect(Unit) {
             viewModel.events.collect { event ->
@@ -290,6 +300,39 @@ fun LoginScreen(
 
                         Spacer(Modifier.height(8.dp))
 
+                        if (state.quickLoginAvailable) {
+                            OutlinedButton(
+                                onClick = { viewModel.loginWithBiometric(activity) },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp),
+                                enabled = !state.isLoading,
+                                shape = MaterialTheme.shapes.medium,
+                                border = BorderStroke(1.dp, LoginGold.copy(alpha = 0.75f)),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = LoginGold,
+                                ),
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center,
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Fingerprint,
+                                        contentDescription = null,
+                                    )
+                                    Spacer(Modifier.width(10.dp))
+                                    Text(
+                                        text = stringResource(R.string.login_with_biometric),
+                                        style = MaterialTheme.typography.titleSmall.copy(
+                                            fontWeight = FontWeight.SemiBold,
+                                        ),
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.height(10.dp))
+                        }
+
                         val buttonShape = MaterialTheme.shapes.medium
                         Button(
                             onClick = { viewModel.submit() },
@@ -391,9 +434,10 @@ fun LoginScreen(
                             modifier = Modifier.fillMaxWidth(),
                         )
                         Text(
-                            text = stringResource(R.string.login_version, BuildConfig.VERSION_NAME),
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                            color = LoginFooter.copy(alpha = 0.75f),
+                            text = "${BuildConfig.REVISION_CODE}:WP_VER: ${BuildConfig.VERSION_NAME} \"${BuildConfig.BUILD_TIMESTAMP}\"",
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 7.sp),
+                            lineHeight = 8.sp,
+                            color = LoginFooter.copy(alpha = 0.65f),
                             textAlign = TextAlign.Center,
                             modifier = Modifier
                                 .fillMaxWidth()

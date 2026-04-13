@@ -73,7 +73,7 @@ data class AggregatedCategorySlice(
 
 /**
  * Paleta longa: cada fatia no ecrã usa `palette[i]` pela ordem de exibição — sem repetição
- * enquanto o número de fatias for ≤ tamanho da lista (agregação máx. 6).
+ * enquanto o número de fatias for ≤ tamanho da lista (agregação máx. 5: 4 + «Outros» quando >5 categorias).
  */
 private val ExpandedDistinctPalette = listOf(
     Color(0xFF5E35B1),
@@ -118,8 +118,10 @@ fun aggregateCategorySlices(
 ): List<AggregatedCategorySlice> {
     val sorted = spending.filter { it.amountCents > 0 }.sortedByDescending { it.amountCents }
     if (sorted.isEmpty()) return emptyList()
-    val head = sorted.take(5)
-    val tail = sorted.drop(5)
+    // Com mais de 5 categorias: no máx. 5 legendas no gráfico — as 4 maiores + «Outros» com o resto.
+    val headCount = if (sorted.size > 5) 4 else 5
+    val head = sorted.take(headCount)
+    val tail = sorted.drop(headCount)
     val out = head.map { AggregatedCategorySlice(it.categoryKey, it.name, it.amountCents) }.toMutableList()
     if (tail.isNotEmpty()) {
         out += AggregatedCategorySlice("outros", otherName, tail.sumOf { it.amountCents })
@@ -226,6 +228,8 @@ fun CategoryDonutChartPage(
     monthTitle: String,
     totalExpenseCents: Int,
     spending: List<CategorySpendDto>,
+    /** Quando falso, o mês não se repete no buraco do donut (mostra-se só na barra do cartão). */
+    showMonthInDonutCenter: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val otherLabel = stringResource(R.string.home_category_other)
@@ -251,12 +255,17 @@ fun CategoryDonutChartPage(
     Column(modifier = modifier.fillMaxSize()) {
         BoxWithConstraints(
             modifier = Modifier
-                .weight(2.75f)
+                .weight(1.5f)
                 .fillMaxWidth()
                 .padding(horizontal = 0.dp, vertical = 0.dp),
             contentAlignment = Alignment.Center,
         ) {
-            val side = minOf(maxWidth * 0.96f, maxHeight * 0.99f, DonutMaxSide).coerceAtLeast(
+            // Margem vertical dentro da área para o anel não encostar ao mês nem comprimir as legendas.
+            val side = minOf(
+                maxWidth * 0.96f,
+                maxHeight * 0.92f,
+                DonutMaxSide,
+            ).coerceAtLeast(
                 minOf(DonutMinSide, maxWidth),
             )
             Box(
@@ -271,6 +280,7 @@ fun CategoryDonutChartPage(
                     selectedIndex = selectedIndex,
                     onSelectIndex = { selectedIndex = it },
                     monthTitle = monthTitle,
+                    showMonthInCenter = showMonthInDonutCenter,
                     centerTotalCents = totalExpenseCents,
                     modifier = Modifier.fillMaxSize(),
                 )
@@ -331,7 +341,7 @@ fun CategoryDonutChartPage(
         }
         LazyColumn(
             modifier = Modifier
-                .weight(0.85f)
+                .weight(1f)
                 .fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(1.dp),
         ) {
@@ -455,6 +465,7 @@ private fun CategoryDonutCanvas(
     selectedIndex: Int,
     onSelectIndex: (Int) -> Unit,
     monthTitle: String,
+    showMonthInCenter: Boolean = true,
     centerTotalCents: Int,
     modifier: Modifier = Modifier,
 ) {
@@ -560,18 +571,23 @@ private fun CategoryDonutCanvas(
         }
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(horizontal = 4.dp),
+            modifier = Modifier.padding(
+                horizontal = 4.dp,
+                vertical = if (showMonthInCenter) 0.dp else 2.dp,
+            ),
         ) {
-            Text(
-                text = monthTitle,
-                style = MaterialTheme.typography.labelSmall,
-                fontSize = 8.sp,
-                lineHeight = 10.sp,
-                color = WellPaidNavy.copy(alpha = 0.5f),
-                textAlign = TextAlign.Center,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
+            if (showMonthInCenter) {
+                Text(
+                    text = monthTitle,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontSize = 8.sp,
+                    lineHeight = 10.sp,
+                    color = WellPaidNavy.copy(alpha = 0.5f),
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
             Text(
                 text = stringResource(R.string.home_donut_center_total),
                 style = MaterialTheme.typography.labelSmall,

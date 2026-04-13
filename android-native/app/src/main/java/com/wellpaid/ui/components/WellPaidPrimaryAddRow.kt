@@ -34,6 +34,7 @@ fun WellPaidPrimaryAddRow(
     onPrimaryClick: () -> Unit,
     onRefresh: () -> Unit,
     refreshEnabled: Boolean,
+    primaryEnabled: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -43,6 +44,7 @@ fun WellPaidPrimaryAddRow(
     ) {
         Button(
             onClick = onPrimaryClick,
+            enabled = primaryEnabled,
             modifier = Modifier
                 .weight(1f)
                 .height(52.dp),
