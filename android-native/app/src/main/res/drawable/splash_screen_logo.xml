@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  PNG em drawable-nodpi (alta resolução). O sistema (API 31+) aplica máscara circular:
+  inset equilibrado para não cortar a seta; ajuste % se mudares o asset.
+-->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/logo_well_paid"
+    android:insetLeft="22%"
+    android:insetTop="22%"
+    android:insetRight="22%"
+    android:insetBottom="22%" />

@@ -1,0 +1,18 @@
+# Monorepo Well Paid — só relevante se o projeto Vercel estiver ligado à RAIZ do repositório.
+# Recomendação (Ordems 2): no dashboard Vercel definir Root Directory = backend
+# e usar backend/.vercelignore; assim o cliente Android/Flutter não entra no upload.
+
+android-native/
+android/
+mobile/
+
+*.jks
+*.keystore
+*.pem
+
+.env
+.env.*
+!.env.example
+
+*.log
+.DS_Store

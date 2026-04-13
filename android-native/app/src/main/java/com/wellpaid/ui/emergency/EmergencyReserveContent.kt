@@ -1,0 +1,296 @@
+package com.wellpaid.ui.emergency
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.NightsStay
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wellpaid.R
+import com.wellpaid.ui.theme.WellPaidGold
+import com.wellpaid.ui.theme.WellPaidMaxContentWidth
+import com.wellpaid.ui.theme.WellPaidNavy
+import com.wellpaid.ui.theme.WellPaidNavyDeep
+import com.wellpaid.ui.theme.wellPaidMaxContentWidth
+import com.wellpaid.util.formatBrlFromCents
+import com.wellpaid.util.formatIsoDateToBr
+import kotlin.math.roundToInt
+
+@Composable
+fun EmergencyReserveContent(
+    modifier: Modifier = Modifier,
+    viewModel: EmergencyReserveViewModel = hiltViewModel(),
+) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .fillMaxWidth()
+            .wellPaidMaxContentWidth(WellPaidMaxContentWidth),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End,
+        ) {
+            IconButton(onClick = { viewModel.refresh() }, enabled = !state.isLoading) {
+                Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.home_refresh))
+            }
+        }
+
+        if (state.isLoading && state.reserve == null) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                horizontalArrangement = Arrangement.Center,
+            ) {
+                CircularProgressIndicator()
+            }
+            return
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
+        ) {
+            state.errorMessage?.let { msg ->
+                Text(
+                    text = msg,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(bottom = 12.dp),
+                )
+            }
+
+            val r = state.reserve
+            if (r != null) {
+                val annualTarget = (r.monthlyTargetCents.toLong() * 12L).coerceAtLeast(1L)
+                val progress = (r.balanceCents.toFloat() / annualTarget.toFloat()).coerceIn(0f, 1f)
+                val pctAnnual = (progress * 100f).roundToInt().coerceIn(0, 100)
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(WellPaidNavyDeep)
+                        .padding(16.dp),
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Icon(
+                            Icons.Filled.NightsStay,
+                            contentDescription = null,
+                            tint = WellPaidGold,
+                        )
+                        Text(
+                            text = stringResource(R.string.emergency_hero_title),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White,
+                        )
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        text = formatBrlFromCents(r.balanceCents),
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = WellPaidGold,
+                    )
+                    Text(
+                        text = stringResource(R.string.emergency_balance_label),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = Color.White.copy(alpha = 0.65f),
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        text = stringResource(
+                            R.string.emergency_meta_monthly_line,
+                            formatBrlFromCents(r.monthlyTargetCents),
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.92f),
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    LinearProgressIndicator(
+                        progress = { progress },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(8.dp)
+                            .clip(RoundedCornerShape(4.dp)),
+                        color = WellPaidGold,
+                        trackColor = Color.White.copy(alpha = 0.15f),
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(R.string.emergency_percent_annual, pctAnnual),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White.copy(alpha = 0.7f),
+                    )
+                }
+
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    text = stringResource(R.string.emergency_intro),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                if (!state.canEditReserve) {
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        text = stringResource(R.string.emergency_readonly_not_owner),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.tertiary,
+                    )
+                }
+
+                Spacer(Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = state.monthlyTargetText,
+                    onValueChange = { viewModel.setMonthlyTargetText(it) },
+                    placeholder = { Text(stringResource(R.string.emergency_monthly_placeholder)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    enabled = state.canEditReserve && !state.isSaving,
+                    shape = RoundedCornerShape(16.dp),
+                )
+
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = stringResource(R.string.emergency_shortcuts_title),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = WellPaidNavy,
+                )
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    listOf(20_000, 50_000, 100_000).forEach { cents ->
+                        val label = formatBrlFromCents(cents)
+                        FilterChip(
+                            selected = false,
+                            onClick = { viewModel.setMonthlyTargetText(label) },
+                            label = { Text(label, maxLines = 1) },
+                            modifier = Modifier.weight(1f),
+                            enabled = state.canEditReserve && !state.isSaving,
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+                Button(
+                    onClick = { viewModel.saveMonthlyTarget() },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = state.canEditReserve && !state.isSaving,
+                    shape = RoundedCornerShape(24.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = WellPaidGold,
+                        contentColor = WellPaidNavy,
+                    ),
+                ) {
+                    Text(
+                        text = if (state.isSaving) {
+                            stringResource(R.string.emergency_saving)
+                        } else {
+                            stringResource(R.string.emergency_save_meta)
+                        },
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+
+                if (!r.configured) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(R.string.emergency_not_configured_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.tertiary,
+                    )
+                }
+
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = stringResource(
+                        R.string.emergency_tracking_start,
+                        formatIsoDateToBr(r.trackingStart),
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                Spacer(Modifier.height(28.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    text = stringResource(R.string.emergency_accruals_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(Modifier.height(8.dp))
+                if (state.accruals.isEmpty()) {
+                    Text(
+                        text = stringResource(R.string.emergency_accruals_empty),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    state.accruals.forEach { a ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 6.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = viewModel.formatAccrualMonth(a.year, a.month),
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                            Text(
+                                text = formatBrlFromCents(a.amountCents),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

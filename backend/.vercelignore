@@ -1,0 +1,32 @@
+# Well Paid — API FastAPI no Vercel
+# No painel Vercel: Root Directory = backend (recomendado em Ordems 2 §2.4).
+# Estes padrões aplicam-se relativamente a backend/.
+
+# Ambiente e segredos (nunca enviar)
+.env
+.env.*
+!.env.example
+
+# Ambiente Python local
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+.eggs/
+dist/
+
+# Testes (não necessários no bundle de produção)
+tests/
+
+# Assets de ícones iOS / marketing no repositório (não usados pelo runtime da API)
+AppIcons/
+
+# Cache / ferramentas locais
+.vercel

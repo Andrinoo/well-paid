@@ -1,0 +1,7 @@
+# Copia para local.properties (não commits) e ajusta sdk.dir ao teu Android SDK.
+# No emulador, 10.0.2.2 = localhost do PC (uvicorn). Em telefone físico, usa o IP da
+# rede local (ex.: http://192.168.1.10:8000/) ou `adb reverse tcp:8000 tcp:8000` e
+# `api.base.url=http://127.0.0.1:8000/`.
+
+sdk.dir=C\:\\Users\\SEU_USER\\AppData\\Local\\Android\\Sdk
+api.base.url=http://10.0.2.2:8000/

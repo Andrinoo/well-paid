@@ -1,0 +1,68 @@
+# --- Ambiente e segredos (nunca commitar) — Ordems 2 §2.2 ---
+.env
+.env.local
+.env.*.local
+
+# --- Python / backend ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+backend/.venv/
+backend/venv/
+.venv/
+venv/
+ENV/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# --- Node (se no futuro houver tooling JS na raiz) ---
+node_modules/
+
+# --- Android (android-native) ---
+android-native/.gradle/
+android-native/**/build/
+android-native/local.properties
+android-native/.idea/
+android-native/*.iml
+android-native/captures/
+android-native/*.apk
+android-native/*.aab
+android-native/*.hprof
+*.keystore
+*.jks
+!android-native/debug.keystore
+
+# --- Especificações / cópias locais (Ordems 2 §4.7) ---
+Ordems.local.md
+*.local.md
+
+# --- Deploy / cloud ---
+.vercel/
+**/.vercel/
+*.pem
+
+# --- IDE ---
+.idea/
+*.iml
+.vscode/*
+!.vscode/extensions.json
+
+# --- SO ---
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# --- Logs e temporários ---
+*.log
+*.tmp
+*.swp
+*~

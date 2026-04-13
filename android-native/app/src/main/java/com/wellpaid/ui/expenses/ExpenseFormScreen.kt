@@ -1,0 +1,628 @@
+package com.wellpaid.ui.expenses
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wellpaid.R
+import com.wellpaid.ui.components.WellPaidDatePickerField
+import com.wellpaid.ui.theme.WellPaidCream
+import com.wellpaid.ui.theme.WellPaidCreamMuted
+import com.wellpaid.ui.theme.WellPaidGold
+import com.wellpaid.ui.theme.WellPaidNavy
+import com.wellpaid.ui.theme.wellPaidScreenHorizontalPadding
+import com.wellpaid.ui.theme.wellPaidTopAppBarColors
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ExpenseFormScreen(
+    onNavigateBack: () -> Unit,
+    onFinishedNeedRefresh: () -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: ExpenseFormViewModel = hiltViewModel(),
+) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val canEdit = viewModel.canEditFields()
+    val canPay = viewModel.canPay()
+    val canDelete = viewModel.canDelete()
+    var categoryMenuExpanded by remember { mutableStateOf(false) }
+    val fieldShape = RoundedCornerShape(12.dp)
+    val fieldColors = OutlinedTextFieldDefaults.colors(
+        focusedContainerColor = WellPaidCreamMuted,
+        unfocusedContainerColor = WellPaidCreamMuted,
+        disabledContainerColor = WellPaidCreamMuted.copy(alpha = 0.6f),
+    )
+
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        topBar = {
+            CenterAlignedTopAppBar(
+                colors = wellPaidTopAppBarColors(),
+                title = {
+                    Text(
+                        text = stringResource(
+                            if (viewModel.isEditMode) R.string.expense_edit_title
+                            else R.string.expense_new_title,
+                        ),
+                        color = Color.White,
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(
+                            Icons.Filled.Close,
+                            contentDescription = stringResource(R.string.common_close),
+                            tint = Color.White,
+                        )
+                    }
+                },
+            )
+        },
+    ) { inner ->
+        if (state.isLoading) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(inner),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                CircularProgressIndicator()
+            }
+            return@Scaffold
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(WellPaidCream)
+                .padding(inner)
+                .imePadding()
+                .wellPaidScreenHorizontalPadding()
+                .verticalScroll(rememberScrollState()),
+        ) {
+            state.loadedExpense?.let { e ->
+                when {
+                    !e.isMine -> {
+                        Text(
+                            text = stringResource(R.string.expense_readonly_not_mine),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.tertiary,
+                            modifier = Modifier.padding(bottom = 12.dp),
+                        )
+                    }
+                    e.isProjected -> {
+                        Text(
+                            text = stringResource(R.string.expense_readonly_projected),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.tertiary,
+                            modifier = Modifier.padding(bottom = 12.dp),
+                        )
+                    }
+                }
+            }
+
+            state.errorMessage?.let { msg ->
+                Text(
+                    text = msg,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                )
+            }
+
+            if (!viewModel.isEditMode) {
+                OutlinedTextField(
+                    value = state.description,
+                    onValueChange = { if (canEdit) viewModel.setDescription(it) },
+                    label = { Text(stringResource(R.string.expense_field_description)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = canEdit,
+                    singleLine = false,
+                    minLines = 3,
+                    shape = fieldShape,
+                    colors = fieldColors,
+                    supportingText = {
+                        Text(stringResource(R.string.expense_desc_counter, state.description.length))
+                    },
+                )
+                Spacer(Modifier.height(14.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    FilterChip(
+                        selected = state.expenseKind == NewExpenseKind.SINGLE,
+                        onClick = { if (canEdit) viewModel.setExpenseKind(NewExpenseKind.SINGLE) },
+                        label = { Text(stringResource(R.string.expense_type_single)) },
+                        leadingIcon = if (state.expenseKind == NewExpenseKind.SINGLE) {
+                            { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                        } else {
+                            null
+                        },
+                        modifier = Modifier.weight(1f),
+                    )
+                    FilterChip(
+                        selected = state.expenseKind == NewExpenseKind.INSTALLMENTS,
+                        onClick = { if (canEdit) viewModel.setExpenseKind(NewExpenseKind.INSTALLMENTS) },
+                        label = { Text(stringResource(R.string.expense_type_installments)) },
+                        leadingIcon = {
+                            Icon(Icons.Outlined.CalendarMonth, contentDescription = null, modifier = Modifier.size(18.dp))
+                        },
+                        modifier = Modifier.weight(1f),
+                    )
+                    FilterChip(
+                        selected = state.expenseKind == NewExpenseKind.RECURRING,
+                        onClick = { if (canEdit) viewModel.setExpenseKind(NewExpenseKind.RECURRING) },
+                        label = { Text(stringResource(R.string.expense_type_recurring)) },
+                        leadingIcon = {
+                            Icon(Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(18.dp))
+                        },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                Spacer(Modifier.height(14.dp))
+
+                OutlinedTextField(
+                    value = state.amountText,
+                    onValueChange = { if (canEdit) viewModel.setAmountText(it) },
+                    label = { Text(stringResource(R.string.expense_field_amount)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = canEdit,
+                    singleLine = true,
+                    supportingText = { Text(stringResource(R.string.expense_field_amount_hint)) },
+                    shape = fieldShape,
+                    colors = fieldColors,
+                )
+                Spacer(Modifier.height(10.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        text = stringResource(R.string.expense_toggle_paid),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = WellPaidNavy,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Switch(
+                        checked = state.alreadyPaid,
+                        onCheckedChange = { if (canEdit) viewModel.setAlreadyPaid(it) },
+                        enabled = canEdit,
+                    )
+                }
+                Spacer(Modifier.height(6.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.Top,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(R.string.expense_toggle_due),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = WellPaidNavy,
+                        )
+                        Text(
+                            text = stringResource(R.string.expense_toggle_due_sub),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = WellPaidNavy.copy(alpha = 0.58f),
+                        )
+                    }
+                    Switch(
+                        checked = state.hasDueDate,
+                        onCheckedChange = { if (canEdit) viewModel.setHasDueDate(it) },
+                        enabled = canEdit,
+                    )
+                }
+                if (state.hasDueDate) {
+                    Spacer(Modifier.height(8.dp))
+                    Column(Modifier.fillMaxWidth()) {
+                        WellPaidDatePickerField(
+                            label = { Text(stringResource(R.string.expense_field_due_date)) },
+                            isoDate = state.dueDate,
+                            onIsoDateChange = { if (canEdit) viewModel.setDueDate(it) },
+                            enabled = canEdit,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = fieldColors,
+                            shape = fieldShape,
+                        )
+                        Text(
+                            text = stringResource(R.string.expense_field_due_optional),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = WellPaidNavy.copy(alpha = 0.58f),
+                            modifier = Modifier.padding(start = 4.dp, top = 4.dp),
+                        )
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+
+                WellPaidDatePickerField(
+                    label = { Text(stringResource(R.string.expense_field_expense_date)) },
+                    isoDate = state.expenseDate,
+                    onIsoDateChange = { if (canEdit) viewModel.setExpenseDate(it) },
+                    enabled = canEdit,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = fieldColors,
+                    shape = fieldShape,
+                )
+
+                if (state.expenseKind == NewExpenseKind.INSTALLMENTS) {
+                    Spacer(Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = state.installmentTotal.toString(),
+                        onValueChange = { txt ->
+                            if (!canEdit) return@OutlinedTextField
+                            val n = txt.filter { it.isDigit() }.toIntOrNull() ?: return@OutlinedTextField
+                            viewModel.setInstallmentTotal(n.coerceIn(2, 60))
+                        },
+                        label = { Text(stringResource(R.string.expense_installment_count)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = canEdit,
+                        singleLine = true,
+                        shape = fieldShape,
+                        colors = fieldColors,
+                    )
+                }
+
+                if (state.expenseKind == NewExpenseKind.RECURRING) {
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        text = stringResource(R.string.expense_recurring_frequency),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = WellPaidNavy,
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(
+                            "monthly" to R.string.expense_freq_monthly,
+                            "weekly" to R.string.expense_freq_weekly,
+                            "yearly" to R.string.expense_freq_yearly,
+                        ).forEach { (key, strId) ->
+                            FilterChip(
+                                selected = state.recurringFrequency.equals(key, ignoreCase = true),
+                                onClick = { if (canEdit) viewModel.setRecurringFrequency(key) },
+                                label = { Text(stringResource(strId)) },
+                            )
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+            } else {
+                OutlinedTextField(
+                    value = state.description,
+                    onValueChange = { if (canEdit) viewModel.setDescription(it) },
+                    label = { Text(stringResource(R.string.expense_field_description)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = canEdit,
+                    singleLine = false,
+                    minLines = 2,
+                    shape = fieldShape,
+                    colors = fieldColors,
+                    supportingText = {
+                        Text(stringResource(R.string.expense_desc_counter, state.description.length))
+                    },
+                )
+                Spacer(Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = state.amountText,
+                    onValueChange = { if (canEdit) viewModel.setAmountText(it) },
+                    label = { Text(stringResource(R.string.expense_field_amount)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = canEdit,
+                    singleLine = true,
+                    supportingText = { Text(stringResource(R.string.expense_field_amount_hint)) },
+                    shape = fieldShape,
+                    colors = fieldColors,
+                )
+                Spacer(Modifier.height(12.dp))
+
+                WellPaidDatePickerField(
+                    label = { Text(stringResource(R.string.expense_field_expense_date)) },
+                    isoDate = state.expenseDate,
+                    onIsoDateChange = { if (canEdit) viewModel.setExpenseDate(it) },
+                    enabled = canEdit,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = fieldColors,
+                    shape = fieldShape,
+                )
+                Spacer(Modifier.height(12.dp))
+
+                Column(Modifier.fillMaxWidth()) {
+                    WellPaidDatePickerField(
+                        label = { Text(stringResource(R.string.expense_field_due_date)) },
+                        isoDate = state.dueDate,
+                        onIsoDateChange = { if (canEdit) viewModel.setDueDate(it) },
+                        enabled = canEdit,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = fieldColors,
+                        shape = fieldShape,
+                    )
+                    Text(
+                        text = stringResource(R.string.expense_field_due_optional),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = WellPaidNavy.copy(alpha = 0.58f),
+                        modifier = Modifier.padding(start = 4.dp, top = 4.dp),
+                    )
+                }
+                Spacer(Modifier.height(12.dp))
+            }
+
+            if (state.categories.isNotEmpty()) {
+                ExposedDropdownMenuBox(
+                    expanded = categoryMenuExpanded,
+                    onExpandedChange = { if (canEdit) categoryMenuExpanded = it },
+                ) {
+                    OutlinedTextField(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(),
+                        readOnly = true,
+                        enabled = canEdit,
+                        value = state.categories.find { it.id == state.categoryId }?.name.orEmpty(),
+                        onValueChange = {},
+                        label = { Text(stringResource(R.string.expense_field_category)) },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryMenuExpanded) },
+                        shape = fieldShape,
+                        colors = fieldColors,
+                    )
+                    ExposedDropdownMenu(
+                        expanded = categoryMenuExpanded,
+                        onDismissRequest = { categoryMenuExpanded = false },
+                    ) {
+                        state.categories.forEach { cat ->
+                            DropdownMenuItem(
+                                text = { Text(cat.name) },
+                                onClick = {
+                                    viewModel.setCategoryId(cat.id)
+                                    categoryMenuExpanded = false
+                                },
+                            )
+                        }
+                    }
+                }
+            } else {
+                Text(
+                    text = stringResource(R.string.expense_no_categories),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+
+            val showShareControls = !viewModel.isEditMode || canEdit
+            if (showShareControls) {
+                if (viewModel.canShareExpense()) {
+                    Spacer(Modifier.height(14.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.Top,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.expense_toggle_share),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = WellPaidNavy,
+                            )
+                            Text(
+                                text = stringResource(R.string.expense_toggle_share_sub),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = WellPaidNavy.copy(alpha = 0.58f),
+                            )
+                        }
+                        Switch(
+                            checked = state.isShared,
+                            onCheckedChange = { if (canEdit) viewModel.setShared(it) },
+                            enabled = canEdit,
+                        )
+                    }
+                    if (state.isShared) {
+                        Spacer(Modifier.height(10.dp))
+                        var shareMenuExpanded by remember { mutableStateOf(false) }
+                        val peers = viewModel.peerMembersForShare()
+                        val wholeLabel = stringResource(R.string.expense_share_whole_family)
+                        val selectedLabel = when (state.sharedWithUserId) {
+                            null -> wholeLabel
+                            else -> peers.find { it.userId == state.sharedWithUserId }
+                                ?.let { m -> m.fullName?.takeIf { fn -> fn.isNotBlank() } ?: m.email }
+                                ?: wholeLabel
+                        }
+                        ExposedDropdownMenuBox(
+                            expanded = shareMenuExpanded,
+                            onExpandedChange = { if (canEdit) shareMenuExpanded = it },
+                        ) {
+                            OutlinedTextField(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .menuAnchor(),
+                                readOnly = true,
+                                enabled = canEdit,
+                                value = selectedLabel,
+                                onValueChange = {},
+                                label = { Text(stringResource(R.string.expense_share_with_label)) },
+                                trailingIcon = {
+                                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = shareMenuExpanded)
+                                },
+                                shape = fieldShape,
+                                colors = fieldColors,
+                            )
+                            ExposedDropdownMenu(
+                                expanded = shareMenuExpanded,
+                                onDismissRequest = { shareMenuExpanded = false },
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text(wholeLabel) },
+                                    onClick = {
+                                        viewModel.setSharedWithUserId(null)
+                                        shareMenuExpanded = false
+                                    },
+                                )
+                                peers.forEach { m ->
+                                    val label = m.fullName?.takeIf { it.isNotBlank() } ?: m.email
+                                    DropdownMenuItem(
+                                        text = { Text(label) },
+                                        onClick = {
+                                            viewModel.setSharedWithUserId(m.userId)
+                                            shareMenuExpanded = false
+                                        },
+                                    )
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        text = stringResource(R.string.expense_share_need_family),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.tertiary,
+                    )
+                }
+            }
+
+            if (viewModel.isEditMode && canEdit) {
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    text = stringResource(R.string.expense_field_status),
+                    style = MaterialTheme.typography.labelLarge,
+                )
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = state.status == "pending",
+                        onClick = { viewModel.setStatus("pending") },
+                        label = { Text(stringResource(R.string.expenses_status_pending)) },
+                    )
+                    FilterChip(
+                        selected = state.status == "paid",
+                        onClick = { viewModel.setStatus("paid") },
+                        label = { Text(stringResource(R.string.expenses_status_paid)) },
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(24.dp))
+
+            if (canEdit) {
+                Button(
+                    onClick = { viewModel.save(onFinishedNeedRefresh) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    enabled = !state.isSaving,
+                    shape = RoundedCornerShape(24.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = WellPaidGold,
+                        contentColor = WellPaidNavy,
+                    ),
+                ) {
+                    Text(
+                        text = if (state.isSaving) {
+                            stringResource(R.string.expense_saving)
+                        } else {
+                            stringResource(R.string.expense_save)
+                        },
+                    )
+                }
+            }
+
+            if (canPay) {
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = { viewModel.pay(onFinishedNeedRefresh) },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !state.isSaving,
+                ) {
+                    Text(stringResource(R.string.expense_mark_paid))
+                }
+            }
+
+            if (canDelete) {
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = { viewModel.requestDeleteConfirm() },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !state.isSaving,
+                ) {
+                    Text(stringResource(R.string.expense_delete))
+                }
+            }
+
+            Spacer(Modifier.height(32.dp))
+        }
+    }
+
+    if (state.showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissDeleteConfirm() },
+            title = { Text(stringResource(R.string.expense_delete_title)) },
+            text = { Text(stringResource(R.string.expense_delete_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = { viewModel.delete(onFinishedNeedRefresh) },
+                    enabled = !state.isSaving,
+                ) {
+                    Text(stringResource(R.string.expense_delete_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissDeleteConfirm() }) {
+                    Text(stringResource(R.string.expense_delete_cancel))
+                }
+            },
+        )
+    }
+}
