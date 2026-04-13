@@ -42,6 +42,7 @@ from app.schemas.auth import (
     ResetPasswordRequest,
     TokenPairResponse,
     UserMeResponse,
+    DisplayNameUpdateBody,
     UserProfilePatch,
     VerifyEmailRequest,
 )
@@ -338,6 +339,25 @@ def patch_current_user(
         db.add(current_user)
         db.commit()
         db.refresh(current_user)
+    return UserMeResponse(
+        email=current_user.email,
+        full_name=current_user.full_name,
+        display_name=current_user.display_name,
+    )
+
+
+@router.post("/profile/display-name", response_model=UserMeResponse)
+def post_profile_display_name(
+    body: DisplayNameUpdateBody,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Session = Depends(get_db),
+) -> UserMeResponse:
+    """Define o nome de saudação (POST para evitar 404 em proxies que não encaminham PATCH)."""
+    stripped = body.display_name.strip()
+    current_user.display_name = stripped[:200] if stripped else None
+    db.add(current_user)
+    db.commit()
+    db.refresh(current_user)
     return UserMeResponse(
         email=current_user.email,
         full_name=current_user.full_name,

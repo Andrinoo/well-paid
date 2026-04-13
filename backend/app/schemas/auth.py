@@ -84,6 +84,12 @@ class UserProfilePatch(BaseModel):
     display_name: str | None = Field(default=None, max_length=200)
 
 
+class DisplayNameUpdateBody(BaseModel):
+    """Corpo POST para alterar o nome de saudação (compatível com clientes sem PATCH)."""
+
+    display_name: str = Field("", max_length=200)
+
+
 class ForgotPasswordRequest(BaseModel):
     email: EmailStr
 

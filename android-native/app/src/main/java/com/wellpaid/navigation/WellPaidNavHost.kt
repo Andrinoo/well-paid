@@ -27,6 +27,7 @@ import com.wellpaid.ui.register.RegisterScreen
 import com.wellpaid.ui.register.VerifyEmailScreen
 import com.wellpaid.ui.session.SessionViewModel
 import com.wellpaid.ui.family.FamilyScreen
+import com.wellpaid.ui.settings.DisplayNameScreen
 import com.wellpaid.ui.settings.SettingsScreen
 import com.wellpaid.ui.shopping.ShoppingListDetailScreen
 import com.wellpaid.ui.shopping.ShoppingListFormScreen
@@ -173,6 +174,9 @@ fun WellPaidNavHost(
                         onOpenSettings = {
                             navController.navigate(NavRoutes.Settings)
                         },
+                        onOpenDisplayName = {
+                            navController.navigate(NavRoutes.DisplayName)
+                        },
                         onOpenExpenseNew = {
                             navController.navigate(NavRoutes.ExpenseNew)
                         },
@@ -279,6 +283,18 @@ fun WellPaidNavHost(
                             }
                         },
                         onOpenFamily = { navController.navigate(NavRoutes.Family) },
+                        onOpenDisplayName = { navController.navigate(NavRoutes.DisplayName) },
+                    )
+                }
+                composable(NavRoutes.DisplayName) {
+                    DisplayNameScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                        onSavedNotifyMain = {
+                            runCatching {
+                                navController.getBackStackEntry(NavRoutes.Main).savedStateHandle["user_profile_dirty"] =
+                                    System.currentTimeMillis()
+                            }
+                        },
                     )
                 }
                 composable(NavRoutes.Family) {

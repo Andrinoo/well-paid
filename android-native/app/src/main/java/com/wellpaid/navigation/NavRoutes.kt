@@ -6,6 +6,7 @@ object NavRoutes {
     const val Login = "login"
     const val Main = "main"
     const val Settings = "settings"
+    const val DisplayName = "display_name"
     const val Family = "family"
     const val Register = "register"
     private const val VERIFY_EMAIL = "verify_email"

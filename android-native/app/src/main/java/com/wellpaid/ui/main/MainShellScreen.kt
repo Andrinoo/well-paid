@@ -77,6 +77,7 @@ fun MainShellScreen(
     mainRouteEntry: NavBackStackEntry,
     onLoggedOut: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenDisplayName: () -> Unit,
     onOpenExpenseNew: () -> Unit,
     onOpenExpenseDetail: (String) -> Unit,
     onOpenIncomeNew: () -> Unit,
@@ -218,7 +219,7 @@ fun MainShellScreen(
                         Box(
                             Modifier
                                 .fillMaxWidth()
-                                .height(36.dp)
+                                .height(28.dp)
                                 .clickable(
                                     interactionSource = expandInteraction,
                                     indication = null,
@@ -229,7 +230,7 @@ fun MainShellScreen(
                             Icon(
                                 Icons.Filled.KeyboardArrowUp,
                                 contentDescription = stringResource(R.string.home_shortcuts_expand),
-                                modifier = Modifier.size(22.dp),
+                                modifier = Modifier.size(20.dp),
                                 tint = MaterialTheme.colorScheme.primary,
                             )
                         }
@@ -278,7 +279,9 @@ fun MainShellScreen(
             when (selectedTab) {
                 0 -> HomeDashboardContent(
                     modifier = Modifier.fillMaxSize(),
+                    mainRouteEntry = mainRouteEntry,
                     onOpenSettings = onOpenSettings,
+                    onOpenDisplayName = onOpenDisplayName,
                     onLogout = { viewModel.logout() },
                 )
                 1 -> ExpensesListContent(

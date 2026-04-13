@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -21,6 +22,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
@@ -38,11 +40,13 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -56,6 +60,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavBackStackEntry
 import com.wellpaid.R
 import com.wellpaid.ui.theme.WellPaidCardWhite
 import com.wellpaid.ui.theme.WellPaidCream
@@ -65,6 +70,7 @@ import com.wellpaid.ui.theme.WellPaidNavyDeep
 import com.wellpaid.ui.theme.WellPaidMaxContentWidth
 import com.wellpaid.ui.theme.wellPaidMaxContentWidth
 import com.wellpaid.util.formatBrlFromCents
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -72,8 +78,10 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
 fun HomeDashboardContent(
+    mainRouteEntry: NavBackStackEntry,
     modifier: Modifier = Modifier,
     onOpenSettings: () -> Unit = {},
+    onOpenDisplayName: () -> Unit = {},
     onLogout: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
@@ -97,6 +105,14 @@ fun HomeDashboardContent(
         refreshing = pullRefreshing,
         onRefresh = { viewModel.refresh() },
     )
+
+    LaunchedEffect(mainRouteEntry) {
+        snapshotFlow {
+            mainRouteEntry.savedStateHandle.get<Long>("user_profile_dirty") ?: 0L
+        }.distinctUntilChanged().collect { t ->
+            if (t > 0L) viewModel.refresh()
+        }
+    }
 
     Column(
         modifier = modifier
@@ -131,7 +147,7 @@ fun HomeDashboardContent(
                     Text(
                         text = greeting,
                         modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.labelLarge,
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                         fontWeight = FontWeight.SemiBold,
                         color = Color.White,
                         maxLines = 1,
@@ -143,7 +159,7 @@ fun HomeDashboardContent(
                 Box {
                     IconButton(
                         onClick = { menuOpen = true },
-                        modifier = Modifier.size(36.dp),
+                        modifier = Modifier.size(28.dp),
                     ) {
                         Icon(
                             Icons.Filled.Settings,
@@ -157,6 +173,19 @@ fun HomeDashboardContent(
                             onClick = {
                                 menuOpen = false
                                 onOpenSettings()
+                            },
+                            leadingIcon = {
+                                Icon(Icons.Filled.Settings, contentDescription = null)
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.display_name_menu_item)) },
+                            onClick = {
+                                menuOpen = false
+                                onOpenDisplayName()
+                            },
+                            leadingIcon = {
+                                Icon(Icons.Outlined.Person, contentDescription = null)
                             },
                         )
                         DropdownMenuItem(
@@ -175,7 +204,7 @@ fun HomeDashboardContent(
                     modifier = Modifier
                         .fillMaxWidth()
                         .wellPaidMaxContentWidth(WellPaidMaxContentWidth)
-                        .padding(horizontal = 8.dp, vertical = 2.dp),
+                        .padding(horizontal = 8.dp, vertical = 0.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.Top,
                 ) {
@@ -218,7 +247,7 @@ fun HomeDashboardContent(
                 IconButton(
                     onClick = { viewModel.previousMonth() },
                     enabled = !state.isLoading,
-                    modifier = Modifier.size(36.dp),
+                    modifier = Modifier.size(28.dp),
                 ) {
                     Icon(
                         Icons.AutoMirrored.Filled.ArrowBack,
@@ -228,14 +257,14 @@ fun HomeDashboardContent(
                 }
                 Text(
                     text = state.period.format(monthShortNavFormatter),
-                    style = MaterialTheme.typography.labelLarge,
+                    style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = Color.White,
                 )
                 IconButton(
                     onClick = { viewModel.nextMonth() },
                     enabled = !state.isLoading,
-                    modifier = Modifier.size(36.dp),
+                    modifier = Modifier.size(28.dp),
                 ) {
                     Icon(
                         Icons.AutoMirrored.Filled.ArrowForward,
@@ -287,7 +316,9 @@ fun HomeDashboardContent(
 
                         if (overview != null && (cashflow != null || state.cashflowError != null)) {
                             SingleChoiceSegmentedButtonRow(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = 40.dp),
                             ) {
                                 SegmentedButton(
                                     shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
@@ -349,18 +380,12 @@ fun HomeDashboardContent(
                                     ) {
                                         when (page) {
                                             0 -> {
-                                                Column(Modifier.fillMaxSize()) {
-                                                    CategoryDonutChartPage(
-                                                        monthTitle = monthTitle,
-                                                        totalExpenseCents = overview.monthExpenseTotalCents,
-                                                        spending = overview.spendingByCategory,
-                                                        modifier = Modifier.weight(1f),
-                                                    )
-                                                    Spacer(Modifier.height(8.dp))
-                                                    HomePendingInfoCard(
-                                                        pendingTotalCents = overview.pendingTotalCents,
-                                                    )
-                                                }
+                                                CategoryDonutChartPage(
+                                                    monthTitle = monthTitle,
+                                                    totalExpenseCents = overview.monthExpenseTotalCents,
+                                                    spending = overview.spendingByCategory,
+                                                    modifier = Modifier.fillMaxSize(),
+                                                )
                                             }
                                             else -> {
                                                 Column(Modifier.fillMaxSize()) {
@@ -392,10 +417,6 @@ fun HomeDashboardContent(
                                                             )
                                                         }
                                                     }
-                                                    Spacer(Modifier.height(8.dp))
-                                                    HomePendingInfoCard(
-                                                        pendingTotalCents = overview.pendingTotalCents,
-                                                    )
                                                 }
                                             }
                                         }
@@ -442,7 +463,7 @@ private fun HeaderMetric(
         Text(
             text = label,
             style = if (compact) {
-                MaterialTheme.typography.labelSmall
+                MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, lineHeight = 11.sp)
             } else {
                 MaterialTheme.typography.labelMedium
             },
@@ -460,12 +481,17 @@ private fun HeaderMetric(
             text = value,
             style = if (valueLarge) {
                 MaterialTheme.typography.titleMedium.copy(
-                    fontSize = if (compact) 16.sp else 22.sp,
+                    fontSize = if (compact) 14.sp else 22.sp,
+                    lineHeight = if (compact) 16.sp else 26.sp,
                     fontWeight = FontWeight.Bold,
                 )
             } else {
                 if (compact) {
-                    MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold)
+                    MaterialTheme.typography.bodyMedium.copy(
+                        fontSize = 12.sp,
+                        lineHeight = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
                 } else {
                     MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold)
                 }

@@ -261,6 +261,14 @@
     <string name="settings_display_name_help">Shown after “Hello,” on the home header. Leave empty to use the first name from your registration.</string>
     <string name="settings_display_name_save">Save</string>
     <string name="settings_display_name_saved">Display name updated.</string>
+    <string name="settings_display_name_save_error">Could not save. Check your connection and that the API is up to date (POST /auth/profile/display-name).</string>
+    <string name="display_name_screen_title">Greeting name</string>
+    <string name="display_name_preview_label">Preview (home header)</string>
+    <string name="display_name_preview_placeholder">there</string>
+    <string name="display_name_preview_subline">Income · balance · expenses (illustration)</string>
+    <string name="display_name_menu_item">Greeting name…</string>
+    <string name="display_name_open_full_screen">Edit greeting name and preview</string>
+    <string name="display_name_settings_hint">Opens a screen with a live preview of the navy header.</string>
     <string name="settings_language_section">Interface language</string>
     <string name="settings_language_pt">Portuguese (Brazil)</string>
     <string name="settings_language_en">English (US)</string>

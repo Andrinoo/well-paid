@@ -261,6 +261,14 @@
     <string name="settings_display_name_help">Aparece depois de «Olá,» no topo do Início. Deixe vazio para usar o primeiro nome do cadastro.</string>
     <string name="settings_display_name_save">Guardar</string>
     <string name="settings_display_name_saved">Nome de exibição atualizado.</string>
+    <string name="settings_display_name_save_error">Não foi possível guardar. Verifique a ligação e se a API está actualizada (POST /auth/profile/display-name).</string>
+    <string name="display_name_screen_title">Nome na saudação</string>
+    <string name="display_name_preview_label">Pré-visualização (topo do Início)</string>
+    <string name="display_name_preview_placeholder">utilizador</string>
+    <string name="display_name_preview_subline">Receitas · saldo · despesas (ilustração)</string>
+    <string name="display_name_menu_item">Nome na saudação…</string>
+    <string name="display_name_open_full_screen">Editar nome e pré-visualizar</string>
+    <string name="display_name_settings_hint">Abre um ecrã com pré-visualização do cabeçalho azul.</string>
     <string name="settings_language_section">Idioma da interface</string>
     <string name="settings_language_pt">Português (Brasil)</string>
     <string name="settings_language_en">English (US)</string>

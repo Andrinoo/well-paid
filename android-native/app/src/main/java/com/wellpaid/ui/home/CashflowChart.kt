@@ -222,7 +222,7 @@ fun CashflowChartCard(
             forecastMonths = forecastMonths,
             onForecastMonthsDelta = onForecastMonthsDelta,
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(4.dp))
         LegendChipsRow(
             showIncome = showIncome,
             showPaid = showPaid,
@@ -241,7 +241,7 @@ fun CashflowChartCard(
             },
         )
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(4.dp))
 
         if (!hasAnySeries) {
             Text(
@@ -253,9 +253,9 @@ fun CashflowChartCard(
         } else {
         Row(
             modifier = Modifier
-                .weight(1f)
+                .weight(1f, fill = true)
                 .fillMaxWidth()
-                .heightIn(min = 112.dp, max = 188.dp),
+                .fillMaxHeight(),
         ) {
             Column(
                 modifier = Modifier
@@ -495,7 +495,7 @@ fun CashflowChartCard(
         }
         }
 
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(6.dp))
 
         CashflowDetailPanel(
             months = cashflow.months,
@@ -555,7 +555,7 @@ private fun CashflowOptionsBar(
                 maxLines = 2,
             )
         }
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(4.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -604,7 +604,7 @@ private fun LegendChipsRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(30.dp),
+            .height(26.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -727,23 +727,23 @@ private fun CashflowDetailPanel(
             .clip(RoundedCornerShape(12.dp))
             .background(WellPaidNavy.copy(alpha = 0.045f))
             .border(1.dp, WellPaidNavy.copy(alpha = 0.10f), RoundedCornerShape(12.dp))
-            .padding(horizontal = 10.dp, vertical = 8.dp),
+            .padding(horizontal = 8.dp, vertical = 6.dp),
     ) {
         Text(
             text = title,
-            style = MaterialTheme.typography.titleSmall,
+            style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.SemiBold,
         )
         if (showTapHint) {
             Text(
                 text = stringResource(R.string.home_cashflow_hint_tap),
                 style = MaterialTheme.typography.labelSmall,
-                fontSize = 9.sp,
+                fontSize = 8.sp,
                 color = navyHintColor(),
-                modifier = Modifier.padding(top = 4.dp),
+                modifier = Modifier.padding(top = 2.dp),
             )
         }
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(4.dp))
         if (showIncome) {
             DetailRow(WellPaidPositive, stringResource(R.string.home_cashflow_legend_income), incomeCents, monthIndex)
         }
