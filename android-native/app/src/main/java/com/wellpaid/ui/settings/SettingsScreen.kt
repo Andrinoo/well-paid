@@ -11,13 +11,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -64,7 +61,6 @@ fun SettingsScreen(
     onNavigateBack: () -> Unit,
     onLoggedOut: () -> Unit,
     onOpenFamily: () -> Unit = {},
-    onOpenDisplayName: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
@@ -110,34 +106,6 @@ fun SettingsScreen(
                 .wellPaidScreenHorizontalPadding()
                 .padding(vertical = 8.dp),
         ) {
-            Text(
-                text = stringResource(R.string.settings_display_name_section),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Spacer(Modifier.height(8.dp))
-            OutlinedButton(
-                onClick = onOpenDisplayName,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Icon(
-                    Icons.Outlined.Person,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-                Spacer(Modifier.width(10.dp))
-                Text(
-                    text = stringResource(R.string.display_name_open_full_screen),
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-            }
-            Text(
-                text = stringResource(R.string.display_name_settings_hint),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 6.dp),
-            )
-            Spacer(Modifier.height(20.dp))
             Text(
                 text = stringResource(R.string.settings_language_section),
                 style = MaterialTheme.typography.titleMedium,

@@ -12,6 +12,8 @@
     <string name="login_card_title">Entrar na conta</string>
     <string name="login_email_label">E-mail</string>
     <string name="login_password_label">Senha</string>
+    <string name="login_password_show">Mostrar senha</string>
+    <string name="login_password_hide">Ocultar senha</string>
     <string name="login_remember">Lembrar e-mail e senha neste aparelho</string>
     <string name="login_no_account_prefix">Ainda sem conta? </string>
     <string name="login_create_account_highlight">Criar conta</string>
@@ -120,8 +122,6 @@
     <string name="expenses_filter_all">Todas</string>
     <string name="expenses_filter_pending">Pendentes</string>
     <string name="expenses_filter_paid">Pagas</string>
-    <string name="expenses_category_all">Todas categorias</string>
-    <string name="expenses_filter_category_banner">Categoria: %1$s</string>
     <string name="expenses_empty">Nenhuma despesa neste período com os filtros escolhidos.</string>
     <string name="expenses_status_paid">Paga</string>
     <string name="expenses_status_pending">Pendente</string>
@@ -256,7 +256,6 @@
     <string name="emergency_accruals_empty">Ainda não existem adesões mensais.</string>
     <string name="emergency_percent_annual">%1$d%% do objetivo anual</string>
     <string name="emergency_meta_monthly_line">Meta mensal: %1$s</string>
-    <string name="settings_display_name_section">Nome no ecrã inicial</string>
     <string name="settings_display_name_label">Nome na saudação</string>
     <string name="settings_display_name_help">Aparece depois de «Olá,» no topo do Início. Deixe vazio para usar o primeiro nome do cadastro.</string>
     <string name="settings_display_name_save">Guardar</string>
@@ -267,8 +266,6 @@
     <string name="display_name_preview_placeholder">utilizador</string>
     <string name="display_name_preview_subline">Receitas · saldo · despesas (ilustração)</string>
     <string name="display_name_menu_item">Nome na saudação…</string>
-    <string name="display_name_open_full_screen">Editar nome e pré-visualizar</string>
-    <string name="display_name_settings_hint">Abre um ecrã com pré-visualização do cabeçalho azul.</string>
     <string name="settings_language_section">Idioma da interface</string>
     <string name="settings_language_pt">Português (Brasil)</string>
     <string name="settings_language_en">English (US)</string>
@@ -301,7 +298,7 @@
     <string name="shopping_add_item">Adicionar item</string>
     <string name="shopping_field_label_item">Artigo</string>
     <string name="shopping_field_qty">Quantidade</string>
-    <string name="shopping_field_unit_price">Preço unitário (opcional)</string>
+    <string name="shopping_field_unit_price">Custo por unidade (opcional)</string>
     <string name="shopping_close_purchase">Fechar compra</string>
     <string name="shopping_subtotal_lines">Subtotal (linhas com preço)</string>
     <string name="shopping_units_total">Unidades</string>
@@ -319,10 +316,11 @@
     <string name="shopping_edit_item">Editar item</string>
     <string name="shopping_remove_item">Remover item</string>
     <string name="shopping_remove_item_confirm">Remover esta linha?</string>
-    <string name="shopping_clear_unit_price">Limpar preço unitário</string>
+    <string name="shopping_clear_unit_price">Limpar custo</string>
     <string name="shopping_estimated_total">Total estimado</string>
-    <string name="shopping_estimated_total_footnote">Soma de (valor unitário × quantidade) nas linhas com preço.</string>
-    <string name="shopping_item_unit_label">Unitário</string>
+    <string name="shopping_estimated_total_footnote">Soma de (custo por unidade × quantidade) nas linhas com custo.</string>
+    <string name="shopping_item_unit_label">Custo</string>
+    <string name="shopping_currency_prefix">R$</string>
     <string name="shopping_item_no_price_hint">Sem valor (preencher na loja)</string>
     <plurals name="shopping_items_total_footer">
         <item quantity="one">%d item no total</item>

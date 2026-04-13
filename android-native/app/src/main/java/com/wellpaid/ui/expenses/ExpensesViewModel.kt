@@ -5,9 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wellpaid.R
 import com.wellpaid.core.model.auth.TokenStorage
-import com.wellpaid.core.model.expense.CategoryDto
 import com.wellpaid.core.model.expense.ExpenseDto
-import com.wellpaid.core.network.CategoriesApi
 import com.wellpaid.core.network.ExpensesApi
 import com.wellpaid.util.FastApiErrorMapper
 import com.wellpaid.util.sortExpensesNewestFirst
@@ -38,7 +36,6 @@ enum class ExpenseStatusFilter {
 class ExpensesViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context,
     private val expensesApi: ExpensesApi,
-    private val categoriesApi: CategoriesApi,
     private val tokenStorage: TokenStorage,
 ) : ViewModel() {
 
@@ -46,10 +43,10 @@ class ExpensesViewModel @Inject constructor(
     val uiState: StateFlow<ExpensesUiState> = _uiState.asStateFlow()
 
     init {
-        refresh(loadCategoriesToo = true)
+        refresh()
     }
 
-    fun refresh(loadCategoriesToo: Boolean = false) {
+    fun refresh() {
         if (tokenStorage.getAccessToken().isNullOrBlank()) {
             _uiState.update {
                 it.copy(
@@ -64,19 +61,12 @@ class ExpensesViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
 
-            if (loadCategoriesToo || _uiState.value.categories.isEmpty()) {
-                runCatching { categoriesApi.listCategories() }
-                    .onSuccess { list ->
-                        _uiState.update { it.copy(categories = list.sortedBy { c -> c.sortOrder }) }
-                    }
-            }
-
             val s = _uiState.value
             runCatching {
                 expensesApi.listExpenses(
                     year = s.period.year,
                     month = s.period.monthValue,
-                    categoryId = s.categoryId,
+                    categoryId = null,
                     status = s.statusFilter.toQueryValue(),
                 )
             }.onSuccess { list ->
@@ -100,29 +90,24 @@ class ExpensesViewModel @Inject constructor(
 
     fun setStatusFilter(filter: ExpenseStatusFilter) {
         _uiState.update { it.copy(statusFilter = filter) }
-        refresh(loadCategoriesToo = false)
-    }
-
-    fun selectCategory(categoryId: String?) {
-        _uiState.update { it.copy(categoryId = categoryId) }
-        refresh(loadCategoriesToo = false)
+        refresh()
     }
 
     fun previousMonth() {
         _uiState.update { it.copy(period = it.period.minusMonths(1)) }
-        refresh(loadCategoriesToo = false)
+        refresh()
     }
 
     fun nextMonth() {
         _uiState.update { it.copy(period = it.period.plusMonths(1)) }
-        refresh(loadCategoriesToo = false)
+        refresh()
     }
 
     fun payExpense(expenseId: String) {
         viewModelScope.launch {
             runCatching { expensesApi.payExpense(expenseId) }
                 .onSuccess {
-                    refresh(loadCategoriesToo = false)
+                    refresh()
                 }
                 .onFailure { t ->
                     _uiState.update {
@@ -136,8 +121,6 @@ class ExpensesViewModel @Inject constructor(
 data class ExpensesUiState(
     val period: YearMonth = YearMonth.now(),
     val statusFilter: ExpenseStatusFilter = ExpenseStatusFilter.ALL,
-    val categoryId: String? = null,
-    val categories: List<CategoryDto> = emptyList(),
     val expenses: List<ExpenseDto> = emptyList(),
     val isLoading: Boolean = true,
     val errorMessage: String? = null,

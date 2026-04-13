@@ -283,7 +283,6 @@ fun WellPaidNavHost(
                             }
                         },
                         onOpenFamily = { navController.navigate(NavRoutes.Family) },
-                        onOpenDisplayName = { navController.navigate(NavRoutes.DisplayName) },
                     )
                 }
                 composable(NavRoutes.DisplayName) {

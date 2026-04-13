@@ -107,7 +107,6 @@ fun MainShellScreen(
     var shortcutsExpanded by rememberSaveable { mutableStateOf(false) }
 
     fun navigateToExpensesPending() {
-        mainRouteEntry.savedStateHandle.remove<String>("pending_category_key")
         mainRouteEntry.savedStateHandle["pending_expense_status"] = "pending"
         selectedTab = 1
     }

@@ -27,6 +27,13 @@ from app.core.limiter import limiter
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
+_DEV_ENVS = frozenset({"development", "dev", "local"})
+
+
+def _is_dev_env() -> bool:
+    return settings.app_env.strip().lower() in _DEV_ENVS
+
+
 _expose_docs = settings.expose_openapi
 app = FastAPI(
     title="Well Paid API",
@@ -39,7 +46,7 @@ app.state.limiter = limiter
 
 
 class _SecurityAndRequestIdMiddleware(BaseHTTPMiddleware):
-    """Cabeçalhos de segurança mínimos + X-Request-ID para correlacionar logs."""
+    """Cabeçalhos de segurança mínimos, X-Request-ID e linha de log por pedido (sem corpo nem Authorization)."""
 
     async def dispatch(self, request: Request, call_next):  # type: ignore[override]
         rid = str(uuid.uuid4())
@@ -50,6 +57,30 @@ class _SecurityAndRequestIdMiddleware(BaseHTTPMiddleware):
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        path = request.url.path
+        if path == "/health" and request.method == "GET":
+            logger.debug(
+                "request_id=%s method=%s path=%s status=%s",
+                rid,
+                request.method,
+                path,
+                response.status_code,
+            )
+        else:
+            log_fn = (
+                logger.error
+                if response.status_code >= 500
+                else logger.warning
+                if response.status_code >= 400
+                else logger.info
+            )
+            log_fn(
+                "request_id=%s method=%s path=%s status=%s",
+                rid,
+                request.method,
+                path,
+                response.status_code,
+            )
         return response
 
 
@@ -99,6 +130,26 @@ def _log_smtp_status() -> None:
         logger.info("SMTP ativo: host=%s port=%s mail_from=%s", host, s.smtp_port, mf)
 
 
+@app.on_event("startup")
+def _warn_insecure_flags_in_production() -> None:
+    """A.4: em APP_ENV típico de produção, avisar se flags de log de tokens estiverem ativas."""
+    s = get_settings()
+    if _is_dev_env():
+        return
+    problems: list[str] = []
+    if s.email_verification_log_token:
+        problems.append("EMAIL_VERIFICATION_LOG_TOKEN=true")
+    if s.password_reset_log_token:
+        problems.append("PASSWORD_RESET_LOG_TOKEN=true")
+    if not problems:
+        return
+    logger.warning(
+        "Segurança: em ambiente não-development, desligue %s no painel (Vercel) para não registar tokens em logs. "
+        "Ver docs/VERCEL_E_NEON_OPERACOES.md e docs/SEGURANCA_ROADMAP.md (A.4).",
+        " e ".join(problems),
+    )
+
+
 def _rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
     return JSONResponse(
         status_code=429,
@@ -106,6 +157,34 @@ def _rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONRespons
     )
 
 
+async def _unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """B.3: erros não tratados — em produção não vazar detalhes; em dev incluir pista e request_id."""
+    rid = getattr(request.state, "request_id", None)
+    logger.exception(
+        "Erro não tratado request_id=%s method=%s path=%s",
+        rid,
+        request.method,
+        request.url.path,
+        exc_info=exc,
+    )
+    if _is_dev_env():
+        return JSONResponse(
+            status_code=500,
+            content={
+                "detail": str(exc),
+                "request_id": rid,
+            },
+        )
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": "Erro interno do servidor.",
+            "request_id": rid,
+        },
+    )
+
+
+app.add_exception_handler(Exception, _unhandled_exception_handler)
 app.add_exception_handler(RateLimitExceeded, _rate_limit_handler)
 app.add_middleware(SlowAPIMiddleware)
 app.add_middleware(_SecurityAndRequestIdMiddleware)

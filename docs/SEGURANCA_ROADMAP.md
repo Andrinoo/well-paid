@@ -119,6 +119,13 @@ Marque `[ ]` → `[x]` à medida que implementa. A ordem sugere **impacto / esfo
 - **`EXPOSE_OPENAPI`** — desativa `/docs`, `/redoc`, `/openapi.json` quando `false` (produção: definir no Vercel + redeploy).
 - **Cabeçalhos** — `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy` em todas as respostas.
 - **`X-Request-ID`** — por pedido, para correlacionar logs e suporte.
+- **A.4 (parcial)** — ao arranque, aviso em log se `EMAIL_VERIFICATION_LOG_TOKEN` ou `PASSWORD_RESET_LOG_TOKEN` estiverem ativos fora de `development`.
+- **B.6** — linha de log por pedido (`request_id`, método, path, status); `GET /health` só em DEBUG; 4xx/5xx com nível warning/error.
+- **B.3** — handler global para exceções não tratadas: produção devolve mensagem genérica + `request_id`; em `development`/`dev`/`local`, `detail` inclui a mensagem da excepção.
+- **D.3** — `FLAG_SECURE` na janela principal (`MainActivity`) para mitigar screenshots e gravação de ecrã em toda a app (**novo APK** para utilizadores).
+- **A.6 (ferramenta)** — `pip-audit` listado em `backend/requirements-dev.txt`; última corrida local: sem vulnerabilidades conhecidas em `requirements.txt`.
+
+**Pendente (próxima vaga):** A.6 (repetir `pip-audit` em CI ou mensalmente), B.2/B.4/B.5, D.1 (R8 release), A.1/A.5 quando houver requisitos claros. **A.6:** ver `backend/requirements-dev.txt`.
 
 ---
 
@@ -157,37 +164,37 @@ Marque `[ ]` → `[x]` à medida que implementa. A ordem sugere **impacto / esfo
 
 Ordem pensada para **ganhos rápidos sem downtime lógico**; cada passo assume o anterior validado em *staging*.
 
-1. **Confirmar ambiente de produção (A.4)**  
+1. **Confirmar ambiente de produção (A.4)** — *parcial no código (avisos ao arranque); falta definir env no Vercel quando promover a produção.*  
    - **Necessário:** Acesso às variáveis no painel (Vercel ou outro).  
    - **Ação:** `APP_ENV=production` (ou equivalente), `EMAIL_VERIFICATION_LOG_TOKEN=false`, `PASSWORD_RESET_LOG_TOKEN=false`.  
    - **Verificar:** Nenhum token de reset/verificação em logs após um fluxo de teste.
 
-2. **Documentação API só onde importa (A.2)**  
+2. **Documentação API só onde importa (A.2)** — *feito no código; com `EXPOSE_OPENAPI=false` no Vercel após deploy.*  
    - **Necessário:** Variável tipo `EXPOSE_OPENAPI=false` ou detetar `VERCEL_ENV==production` no código que instancia `FastAPI`.  
    - **Ação:** Condicionar `docs_url`, `redoc_url`, `openapi_url` a `None` em produção.  
    - **Verificar:** `GET /docs` em produção deixa de servir UI; endpoints `/auth/login`, etc., inalterados.
 
-3. **Security headers (B.1)**  
+3. **Security headers (B.1)** — *feito.*  
    - **Necessário:** Middleware Starlette/FastAPI ou headers no *edge* (Vercel).  
    - **Ação:** Adicionar pelo menos `X-Content-Type-Options: nosniff`; opcional `Referrer-Policy`.  
    - **Verificar:** App continua a fazer login e chamadas habituais (teste manual ou E2E).
 
-4. **Logging estruturado sem dados sensíveis (B.6)**  
+4. **Logging estruturado sem dados sensíveis (B.6)** — *feito (linha por pedido; sem corpo nem Authorization).*  
    - **Necessário:** Middleware que gera `request_id` e loga método, path, status, `user_id` se autenticado.  
    - **Ação:** Garantir *redaction* de `Authorization` e corpos com password.  
    - **Verificar:** Logs úteis em *staging*; nenhum segredo em texto claro.
 
-5. **Handler de erros em produção (B.3)**  
+5. **Handler de erros em produção (B.3)** — *feito.*  
    - **Necessário:** Flag `APP_ENV` ou `DEBUG`.  
    - **Ação:** Handler global: em produção, resposta genérica ou `detail` seguro; não enviar `traceback` ao cliente.  
    - **Verificar:** Erros 422 ainda devolvem erros de validação Pydantic úteis; 401/403 inalterados.
 
-6. **Inventário de dependências (A.6 — fase leitura)**  
+6. **Inventário de dependências (A.6 — fase leitura)** — *ferramenta instalada; repetir periodicamente ou no CI.*  
    - **Necessário:** CI ou comando local.  
-   - **Ação:** `pip audit`, exportar relatório; priorizar CVEs **críticas** numa *issue*.  
+   - **Ação:** `python -m pip install -r requirements-dev.txt` (inclui `pip-audit`) e `python -m pip_audit -r requirements.txt` no directório `backend/`; priorizar CVEs **críticas** numa *issue*.  
    - **Verificar:** Nada mudou em runtime até decidir atualizações.
 
-7. **Android: `FLAG_SECURE` (D.3)**  
+7. **Android: `FLAG_SECURE` (D.3)** — *feito na `MainActivity` (toda a app); exige novo APK.*  
    - **Necessário:** Lista de *composables*/actividades com dados sensíveis.  
    - **Ação:** Aplicar nas telas acordadas.  
    - **Verificar:** UX aceitável (sem screenshots); fluxos de API iguais.
@@ -229,6 +236,24 @@ Ordem pensada para **ganhos rápidos sem downtime lógico**; cada passo assume o
 | **Sec. 4** (rituais, `security.txt`) | Opcional | Não | `security.txt` no site/API é ficheiro estático ou rota → pode ser redeploy; é processo, não binário. |
 
 **Resumo:** tudo que mexe em **FastAPI**, **env do servidor**, **proxy** ou **base de dados** → **redeploy** (ou novo deploy) da API. Tudo que mexe em **Kotlin**, **manifest**, **recursos Android** ou **assinatura** → **novo build/APK** (e nova publicação na Play se for produção).
+
+---
+
+## 7. SQL injection — estado no backend
+
+**Conclusão:** o código em `backend/app/` segue o padrão **SQLAlchemy 2.x** (`select`, `update`, modelos ORM, `.where()` com colunas e valores ligados como parâmetros). Não há SQL em *string* construído com `f"…"` ou concatenação a partir de input HTTP. Os únicos `text("…")` são literais fixos (ex.: `SELECT 1`, `SHOW ssl` em *health*).
+
+| Prática | No projeto |
+|---------|------------|
+| Consultas à API | Filtros e IDs passam pelo ORM / `bindparam` implícito — **parametrizadas**. |
+| Migrações Alembic | SQL estático em revisões; não é input de utilizador. |
+| Risco residual | **Baixo** enquanto se evitar introduzir SQL cru com input dinâmico. |
+
+**Manter assim (regra de equipa):**
+
+- Preferir sempre `select(Model).where(Model.col == value)` (ou equivalente) em vez de `text(f"SELECT … {user_input}")`.
+- Se no futuro for inevitável `text("…")`, usar **ligação explícita de parâmetros** (`:name` + dicionário) e nunca interpolar strings do cliente em SQL.
+- Revisão de PR em qualquer uso novo de `text(`, `literal_column` com input externo, ou `execute("…" +`.
 
 ---
 

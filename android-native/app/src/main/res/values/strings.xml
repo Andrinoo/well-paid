@@ -12,6 +12,8 @@
     <string name="login_card_title">Sign in</string>
     <string name="login_email_label">Email</string>
     <string name="login_password_label">Password</string>
+    <string name="login_password_show">Show password</string>
+    <string name="login_password_hide">Hide password</string>
     <string name="login_remember">Remember email and password on this device</string>
     <string name="login_no_account_prefix">No account yet? </string>
     <string name="login_create_account_highlight">Create account</string>
@@ -120,8 +122,6 @@
     <string name="expenses_filter_all">All</string>
     <string name="expenses_filter_pending">Pending</string>
     <string name="expenses_filter_paid">Paid</string>
-    <string name="expenses_category_all">All categories</string>
-    <string name="expenses_filter_category_banner">Category: %1$s</string>
     <string name="expenses_empty">No expenses in this period with the selected filters.</string>
     <string name="expenses_status_paid">Paid</string>
     <string name="expenses_status_pending">Pending</string>
@@ -256,7 +256,6 @@
     <string name="emergency_accruals_empty">No monthly accruals yet.</string>
     <string name="emergency_percent_annual">%1$d%% of annual target</string>
     <string name="emergency_meta_monthly_line">Monthly target: %1$s</string>
-    <string name="settings_display_name_section">Name on home screen</string>
     <string name="settings_display_name_label">Greeting name</string>
     <string name="settings_display_name_help">Shown after “Hello,” on the home header. Leave empty to use the first name from your registration.</string>
     <string name="settings_display_name_save">Save</string>
@@ -267,8 +266,6 @@
     <string name="display_name_preview_placeholder">there</string>
     <string name="display_name_preview_subline">Income · balance · expenses (illustration)</string>
     <string name="display_name_menu_item">Greeting name…</string>
-    <string name="display_name_open_full_screen">Edit greeting name and preview</string>
-    <string name="display_name_settings_hint">Opens a screen with a live preview of the navy header.</string>
     <string name="settings_language_section">Interface language</string>
     <string name="settings_language_pt">Portuguese (Brazil)</string>
     <string name="settings_language_en">English (US)</string>
@@ -301,7 +298,7 @@
     <string name="shopping_add_item">Add item</string>
     <string name="shopping_field_label_item">Item</string>
     <string name="shopping_field_qty">Quantity</string>
-    <string name="shopping_field_unit_price">Unit price (optional)</string>
+    <string name="shopping_field_unit_price">Cost per unit (optional)</string>
     <string name="shopping_close_purchase">Complete purchase</string>
     <string name="shopping_subtotal_lines">Subtotal (priced lines)</string>
     <string name="shopping_units_total">Units</string>
@@ -319,10 +316,11 @@
     <string name="shopping_edit_item">Edit item</string>
     <string name="shopping_remove_item">Remove item</string>
     <string name="shopping_remove_item_confirm">Remove this line?</string>
-    <string name="shopping_clear_unit_price">Clear unit price</string>
+    <string name="shopping_clear_unit_price">Clear cost</string>
     <string name="shopping_estimated_total">Estimated total</string>
-    <string name="shopping_estimated_total_footnote">Sum of (unit price × quantity) on lines with a price.</string>
-    <string name="shopping_item_unit_label">Per unit</string>
+    <string name="shopping_estimated_total_footnote">Sum of (cost per unit × quantity) on lines with a cost.</string>
+    <string name="shopping_item_unit_label">Cost</string>
+    <string name="shopping_currency_prefix">$</string>
     <string name="shopping_item_no_price_hint">No price yet (fill in at the store)</string>
     <plurals name="shopping_items_total_footer">
         <item quantity="one">%d item in total</item>

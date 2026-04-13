@@ -22,8 +22,27 @@ val keystoreProperties = Properties().apply {
 fun normalizeApiBaseUrl(raw: String): String =
     raw.trim().let { if (it.endsWith("/")) it else "$it/" }
 
-/** Se `api.base.url` existir em `local.properties`, usa-se em debug e release (override). */
-val apiBaseUrlOverride = localProperties.getProperty("api.base.url")?.let(::normalizeApiBaseUrl)
+/** Debug: emulador ou backend local (`api.base.url` em local.properties). */
+val apiBaseUrlDebugOverride = localProperties.getProperty("api.base.url")?.let(::normalizeApiBaseUrl)
+
+/**
+ * Release (APK): opcional em local.properties — só para apontar o APK para outro host sem mudar gradle.properties.
+ * Prioridade: api.release.base.url → wellpaid.api.release.url (gradle.properties).
+ */
+val apiBaseUrlReleaseOverride =
+    localProperties.getProperty("api.release.base.url")?.let(::normalizeApiBaseUrl)
+
+fun releaseApiUrlFromProject(): String {
+    val fromGradle =
+        (project.findProperty("wellpaid.api.release.url") ?: rootProject.findProperty("wellpaid.api.release.url"))
+            ?.toString()
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+            ?: error(
+                "Defina wellpaid.api.release.url em android-native/gradle.properties (URL do deploy Vercel para o APK release).",
+            )
+    return normalizeApiBaseUrl(fromGradle)
+}
 
 fun escapeBuildConfigString(s: String): String =
     s.replace("\\", "\\\\").replace("\"", "\\\"")
@@ -53,7 +72,7 @@ android {
 
     buildTypes {
         debug {
-            val url = apiBaseUrlOverride ?: normalizeApiBaseUrl("http://10.0.2.2:8000")
+            val url = apiBaseUrlDebugOverride ?: normalizeApiBaseUrl("http://10.0.2.2:8000")
             buildConfigField("String", "API_BASE_URL", "\"${escapeBuildConfigString(url)}\"")
         }
         release {
@@ -62,7 +81,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-            val url = apiBaseUrlOverride ?: normalizeApiBaseUrl("https://well-paid-psi.vercel.app")
+            val url = apiBaseUrlReleaseOverride ?: releaseApiUrlFromProject()
             buildConfigField("String", "API_BASE_URL", "\"${escapeBuildConfigString(url)}\"")
             if (keystorePropertiesFile.exists()) {
                 signingConfig = signingConfigs.getByName("release")

@@ -1,6 +1,5 @@
 package com.wellpaid.ui.expenses
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -39,8 +38,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -51,7 +53,6 @@ import com.wellpaid.ui.components.WellPaidPrimaryAddRow
 import com.wellpaid.ui.theme.WellPaidMaxContentWidth
 import com.wellpaid.ui.theme.wellPaidMaxContentWidth
 import com.wellpaid.core.model.expense.ExpenseDto
-import com.wellpaid.ui.theme.WellPaidCardWhite
 import com.wellpaid.ui.theme.WellPaidGold
 import com.wellpaid.ui.theme.WellPaidNavy
 import com.wellpaid.util.formatBrlFromCents
@@ -79,21 +80,8 @@ fun ExpensesListContent(
     val dirty by dirtyFlow.collectAsStateWithLifecycle()
     LaunchedEffect(dirty) {
         if (dirty != 0L) {
-            viewModel.refresh(loadCategoriesToo = false)
+            viewModel.refresh()
         }
-    }
-
-    val pendingCategoryKeyFlow = remember(mainRouteEntry) {
-        mainRouteEntry.savedStateHandle.getStateFlow<String?>("pending_category_key", null)
-    }
-    val pendingCategoryKey by pendingCategoryKeyFlow.collectAsStateWithLifecycle()
-    LaunchedEffect(pendingCategoryKey, state.categories, state.isLoading) {
-        val key = pendingCategoryKey ?: return@LaunchedEffect
-        if (state.isLoading) return@LaunchedEffect
-        if (state.categories.isEmpty()) return@LaunchedEffect
-        val id = if (key == "outros") null else state.categories.find { it.key == key }?.id
-        viewModel.selectCategory(id)
-        mainRouteEntry.savedStateHandle.remove<String>("pending_category_key")
     }
 
     val pendingStatusFlow = remember(mainRouteEntry) {
@@ -138,7 +126,7 @@ fun ExpensesListContent(
             label = stringResource(R.string.expense_fab_new),
             leadingIcon = Icons.AutoMirrored.Filled.List,
             onPrimaryClick = onNewExpense,
-            onRefresh = { viewModel.refresh(loadCategoriesToo = true) },
+            onRefresh = { viewModel.refresh() },
             refreshEnabled = !state.isLoading,
             modifier = Modifier
                 .fillMaxWidth()
@@ -177,50 +165,6 @@ fun ExpensesListContent(
             }
         }
 
-        if (state.categories.isNotEmpty()) {
-            LazyRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                item {
-                    FilterChip(
-                        selected = state.categoryId == null,
-                        onClick = { viewModel.selectCategory(null) },
-                        enabled = !state.isLoading,
-                        label = { Text(stringResource(R.string.expenses_category_all)) },
-                    )
-                }
-                items(state.categories, key = { it.id }) { cat ->
-                    FilterChip(
-                        selected = state.categoryId == cat.id,
-                        onClick = { viewModel.selectCategory(cat.id) },
-                        enabled = !state.isLoading,
-                        label = { Text(cat.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                    )
-                }
-            }
-        }
-
-        state.categoryId?.let { id ->
-            val name = state.categories.find { it.id == id }?.name ?: return@let
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp),
-                shape = RoundedCornerShape(12.dp),
-                color = WellPaidGold.copy(alpha = 0.22f),
-            ) {
-                Text(
-                    text = stringResource(R.string.expenses_filter_category_banner, name),
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = WellPaidNavy,
-                )
-            }
-        }
-
         state.errorMessage?.let { msg ->
             Text(
                 text = msg,
@@ -244,7 +188,7 @@ fun ExpensesListContent(
             val pullRefreshing = state.isLoading && state.expenses.isNotEmpty()
             val pullState = rememberPullRefreshState(
                 refreshing = pullRefreshing,
-                onRefresh = { viewModel.refresh(loadCategoriesToo = false) },
+                onRefresh = { viewModel.refresh() },
             )
             Box(
                 modifier = Modifier
@@ -297,14 +241,6 @@ private fun showRecTag(expense: ExpenseDto): Boolean =
     expense.installmentTotal <= 1 && !expense.recurringSeriesId.isNullOrBlank()
 
 @Composable
-private fun recurringFrequencyLabel(freq: String?): String = when (freq?.lowercase()) {
-    "monthly" -> stringResource(R.string.expense_freq_monthly)
-    "weekly" -> stringResource(R.string.expense_freq_weekly)
-    "yearly" -> stringResource(R.string.expense_freq_yearly)
-    else -> freq ?: "—"
-}
-
-@Composable
 private fun ExpenseTypeTagPar() {
     Surface(
         shape = RoundedCornerShape(6.dp),
@@ -339,23 +275,6 @@ private fun ExpenseTypeTagRec() {
 }
 
 @Composable
-private fun ListMetadataBox(text: String) {
-    Surface(
-        shape = RoundedCornerShape(8.dp),
-        color = WellPaidCardWhite.copy(alpha = 0.75f),
-        border = BorderStroke(1.dp, WellPaidNavy.copy(alpha = 0.18f)),
-        modifier = Modifier.padding(top = 6.dp),
-    ) {
-        Text(
-            text = text,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
-            style = MaterialTheme.typography.labelSmall,
-            color = WellPaidNavy.copy(alpha = 0.72f),
-        )
-    }
-}
-
-@Composable
 private fun ExpenseListRow(
     expense: ExpenseDto,
     onRowClick: () -> Unit,
@@ -373,11 +292,6 @@ private fun ExpenseListRow(
         dueUrgencyForDays(daysUntilDue(anchorDate))
     } else {
         null
-    }
-    val dateStatusText = if (isPaid) {
-        stringResource(R.string.expenses_date_line_paid, expenseDateBr, statusWord)
-    } else {
-        stringResource(R.string.expenses_date_line_pending, expenseDateBr, statusWord)
     }
     val dateStatusColor = if (isPaid) {
         WellPaidNavy.copy(alpha = 0.55f)
@@ -403,15 +317,50 @@ private fun ExpenseListRow(
     }
     val nextUrgency = nextDueDate?.let { dueUrgencyForDays(daysUntilDue(it)) }
 
+    val metaLine = buildAnnotatedString {
+        withStyle(
+            SpanStyle(
+                color = WellPaidNavy.copy(alpha = 0.58f),
+                fontWeight = FontWeight.Normal,
+            ),
+        ) {
+            append(expense.categoryName)
+        }
+        append(" · ")
+        withStyle(
+            SpanStyle(
+                color = dateStatusColor,
+                fontWeight = dateStatusWeight,
+            ),
+        ) {
+            append(expenseDateBr)
+            append(" · ")
+            append(statusWord)
+        }
+        if (expense.installmentTotal > 1) {
+            append(" · ")
+            withStyle(SpanStyle(color = WellPaidNavy.copy(alpha = 0.58f))) {
+                append(
+                    stringResource(
+                        R.string.expenses_installment_short,
+                        expense.installmentNumber,
+                        expense.installmentTotal,
+                    ),
+                )
+            }
+        }
+    }
+
     Column(
         modifier = modifier
             .fillMaxWidth()
             .clickable { onRowClick() }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 12.dp, vertical = 8.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top,
         ) {
             Column(
                 modifier = Modifier
@@ -420,50 +369,31 @@ private fun ExpenseListRow(
             ) {
                 Text(
                     text = expense.description,
-                    maxLines = 2,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = WellPaidNavy,
                 )
                 Text(
-                    text = expense.categoryName,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = WellPaidNavy.copy(alpha = 0.65f),
-                    modifier = Modifier.padding(top = 2.dp),
-                )
-                if (expense.installmentTotal > 1) {
-                    ListMetadataBox(
-                        stringResource(
-                            R.string.expenses_line_installment,
-                            expense.installmentNumber,
-                            expense.installmentTotal,
-                        ),
-                    )
-                } else if (showRecTag(expense)) {
-                    ListMetadataBox(
-                        stringResource(
-                            R.string.expenses_line_recurring,
-                            recurringFrequencyLabel(expense.recurringFrequency),
-                        ),
-                    )
-                }
-                Text(
-                    text = dateStatusText,
+                    text = metaLine,
                     style = MaterialTheme.typography.labelSmall,
                     fontSize = 11.sp,
                     lineHeight = 14.sp,
-                    color = dateStatusColor,
-                    fontWeight = dateStatusWeight,
-                    modifier = Modifier.padding(top = 8.dp),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 3.dp),
                 )
                 if (nextInstallmentBr != null && nextUrgency != null) {
                     Text(
                         text = stringResource(R.string.expenses_next_due, nextInstallmentBr),
                         style = MaterialTheme.typography.labelSmall,
-                        fontSize = 11.sp,
+                        fontSize = 10.sp,
+                        lineHeight = 12.sp,
                         color = dueUrgencyColorOnLight(nextUrgency),
                         fontWeight = dueUrgencyFontWeight(nextUrgency),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.padding(top = 2.dp),
                     )
                 }
@@ -471,14 +401,18 @@ private fun ExpenseListRow(
                     Text(
                         text = stringResource(R.string.expenses_shared_with, label),
                         style = MaterialTheme.typography.labelSmall,
+                        fontSize = 10.sp,
                         color = WellPaidNavy.copy(alpha = 0.5f),
-                        modifier = Modifier.padding(top = 4.dp),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(top = 2.dp),
                     )
                 }
                 if (expense.isProjected) {
                     Text(
                         text = stringResource(R.string.expenses_projected_suffix),
                         style = MaterialTheme.typography.labelSmall,
+                        fontSize = 10.sp,
                         color = MaterialTheme.colorScheme.tertiary,
                         modifier = Modifier.padding(top = 2.dp),
                     )
@@ -487,7 +421,7 @@ private fun ExpenseListRow(
             Column(horizontalAlignment = Alignment.End) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     if (showParTag(expense)) {
                         ExpenseTypeTagPar()
@@ -505,11 +439,11 @@ private fun ExpenseListRow(
                 if (!isPaid && expense.isMine) {
                     Text(
                         text = stringResource(R.string.expenses_pay),
-                        style = MaterialTheme.typography.labelLarge,
+                        style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier
-                            .padding(top = 6.dp)
+                            .padding(top = 2.dp)
                             .clickable(
                                 indication = null,
                                 interactionSource = remember { MutableInteractionSource() },

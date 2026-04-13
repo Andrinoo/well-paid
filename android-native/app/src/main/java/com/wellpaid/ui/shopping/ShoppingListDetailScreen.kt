@@ -5,11 +5,17 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -39,6 +45,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -54,12 +61,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wellpaid.R
@@ -74,6 +88,9 @@ import com.wellpaid.ui.theme.WellPaidNavy
 import com.wellpaid.ui.theme.wellPaidMaxContentWidth
 import com.wellpaid.ui.theme.wellPaidScreenHorizontalPadding
 import com.wellpaid.ui.theme.wellPaidTopAppBarColors
+import com.wellpaid.util.BRL_CENT_DIGIT_CHAIN_MAX
+import com.wellpaid.util.brlDigitChainToCents
+import com.wellpaid.util.centsToBrlDigitChainDisplay
 import com.wellpaid.util.formatBrlFromCents
 import com.wellpaid.util.formatIsoDateForList
 import com.wellpaid.util.localDateToIso
@@ -100,10 +117,12 @@ private fun DraftListFooter(
 ) {
     Column(
         modifier = modifier
-            .background(WellPaidCream),
+            .background(WellPaidCream)
+            .navigationBarsPadding()
+            .padding(bottom = 8.dp),
     ) {
         HorizontalDivider(color = WellPaidNavy.copy(alpha = 0.12f))
-        Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
+        Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
             Text(
                 text = pluralStringResource(R.plurals.shopping_items_total_footer, itemCount, itemCount),
                 style = MaterialTheme.typography.bodySmall,
@@ -128,31 +147,47 @@ private fun DraftListFooter(
                     color = WellPaidNavy,
                 )
             }
-            Text(
-                text = stringResource(R.string.shopping_estimated_total_footnote),
-                style = MaterialTheme.typography.bodySmall,
-                color = WellPaidNavy.copy(alpha = 0.55f),
-                modifier = Modifier.padding(top = 4.dp),
-            )
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 12.dp),
+                    .padding(top = 10.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 OutlinedButton(
                     onClick = onAddItem,
                     enabled = !isSaving,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .defaultMinSize(minHeight = 48.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = null)
-                    Spacer(Modifier.padding(4.dp))
-                    Text(stringResource(R.string.shopping_add_item))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(R.string.shopping_add_item),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                    }
                 }
                 Button(
                     onClick = onCompletePurchase,
                     enabled = !isSaving && canCompletePurchase,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .defaultMinSize(minHeight = 48.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = WellPaidGold,
                         contentColor = Color.Black,
@@ -160,7 +195,12 @@ private fun DraftListFooter(
                         disabledContentColor = Color.Black.copy(alpha = 0.45f),
                     ),
                 ) {
-                    Text(stringResource(R.string.shopping_close_purchase))
+                    Text(
+                        text = stringResource(R.string.shopping_close_purchase),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.labelLarge,
+                    )
                 }
             }
         }
@@ -264,16 +304,36 @@ fun ShoppingListDetailScreen(
                         .fillMaxWidth()
                         .wellPaidScreenHorizontalPadding()
                         .wellPaidMaxContentWidth(WellPaidMaxContentWidth)
+                        .navigationBarsPadding()
+                        .padding(bottom = 8.dp)
                         .padding(12.dp),
                 ) {
                     OutlinedButton(
                         onClick = { showAddItem = true },
                         enabled = !state.isSaving,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .defaultMinSize(minHeight = 48.dp),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = null)
-                        Spacer(Modifier.padding(4.dp))
-                        Text(stringResource(R.string.shopping_add_item))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                Icons.Default.Add,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = stringResource(R.string.shopping_add_item),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                style = MaterialTheme.typography.labelLarge,
+                            )
+                        }
                     }
                 }
             }
@@ -308,7 +368,7 @@ fun ShoppingListDetailScreen(
                             .wellPaidScreenHorizontalPadding()
                             .wellPaidMaxContentWidth(WellPaidMaxContentWidth)
                             .padding(bottom = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         item {
                             MetaBlock(detail, locale)
@@ -360,8 +420,16 @@ fun ShoppingListDetailScreen(
                             ItemLineCard(
                                 line = line,
                                 canEdit = canEditItems,
+                                isSaving = state.isSaving,
                                 onEdit = { editItem = line },
                                 onRemove = { showRemoveItem = line },
+                                onCommitCost = { cents, clear ->
+                                    viewModel.patchItem(
+                                        itemId = line.id,
+                                        lineAmountCents = cents,
+                                        clearLineAmount = clear,
+                                    )
+                                },
                             )
                         }
                     }
@@ -566,104 +634,203 @@ private fun CompletedSummary(
 }
 
 @Composable
+private fun ItemLineCostField(
+    line: ShoppingListItemDto,
+    canEdit: Boolean,
+    isSaving: Boolean,
+    onCommitCost: (cents: Int?, clearLineAmount: Boolean) -> Unit,
+) {
+    var focused by remember { mutableStateOf(false) }
+    var localDigits by remember(line.id) {
+        mutableStateOf(line.lineAmountCents?.takeIf { it > 0 }?.toString().orEmpty())
+    }
+    LaunchedEffect(line.id, line.lineAmountCents) {
+        if (!focused) {
+            localDigits = line.lineAmountCents?.takeIf { it > 0 }?.toString().orEmpty()
+        }
+    }
+
+    val displayFormatted = if (localDigits.isEmpty()) {
+        ""
+    } else {
+        centsToBrlDigitChainDisplay(brlDigitChainToCents(localDigits))
+    }
+
+    val amountContentDescription = stringResource(R.string.shopping_item_unit_label)
+    val currencyPrefix = stringResource(R.string.shopping_currency_prefix)
+
+    fun computeNewCents(): Int? =
+        if (localDigits.isEmpty()) {
+            null
+        } else {
+            brlDigitChainToCents(localDigits).toInt().takeIf { it > 0 }
+        }
+
+    fun commitIfChanged() {
+        val newC = computeNewCents()
+        val had = line.lineAmountCents
+        when {
+            newC == null && had == null -> return
+            newC != null && newC == had -> return
+            newC == null && had != null -> onCommitCost(null, true)
+            newC != null && newC != had -> onCommitCost(newC, false)
+        }
+    }
+
+    if (!canEdit) {
+        Surface(
+            shape = RoundedCornerShape(6.dp),
+            color = WellPaidNavy.copy(alpha = 0.08f),
+        ) {
+            Text(
+                text = line.lineAmountCents?.let { formatBrlFromCents(it) } ?: "—",
+                style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp),
+                color = WellPaidNavy.copy(alpha = 0.85f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .padding(horizontal = 6.dp, vertical = 4.dp)
+                    .widthIn(max = 86.dp),
+            )
+        }
+        return
+    }
+
+    OutlinedTextField(
+        value = displayFormatted,
+        onValueChange = { value: String ->
+            if (isSaving) return@OutlinedTextField
+            localDigits = value.filter { it.isDigit() }.take(BRL_CENT_DIGIT_CHAIN_MAX)
+        },
+        modifier = Modifier
+            // Largura para valores típicos de mercado (ex.: 125,50); prefixo R$/$
+            .widthIn(min = 76.dp, max = 88.dp)
+            .defaultMinSize(minHeight = 40.dp)
+            .onFocusChanged { st ->
+                val was = focused
+                focused = st.isFocused
+                if (was && !st.isFocused) {
+                    commitIfChanged()
+                }
+            }
+            .semantics {
+                contentDescription = amountContentDescription
+            },
+        enabled = !isSaving,
+        singleLine = true,
+        prefix = {
+            Text(
+                text = currencyPrefix,
+                style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp),
+                color = WellPaidNavy.copy(alpha = 0.62f),
+            )
+        },
+        textStyle = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 14.sp),
+        placeholder = {
+            Text(
+                text = "0,00",
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                color = WellPaidNavy.copy(alpha = 0.38f),
+            )
+        },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedTextColor = WellPaidNavy,
+            unfocusedTextColor = WellPaidNavy,
+            focusedContainerColor = WellPaidCreamMuted,
+            unfocusedContainerColor = WellPaidCreamMuted,
+            disabledTextColor = WellPaidNavy.copy(alpha = 0.55f),
+            disabledContainerColor = WellPaidCreamMuted,
+            focusedBorderColor = WellPaidNavy.copy(alpha = 0.45f),
+            unfocusedBorderColor = WellPaidNavy.copy(alpha = 0.22f),
+            disabledBorderColor = WellPaidNavy.copy(alpha = 0.15f),
+        ),
+    )
+}
+
+@Composable
 private fun ItemLineCard(
     line: ShoppingListItemDto,
     canEdit: Boolean,
+    isSaving: Boolean,
     onEdit: () -> Unit,
     onRemove: () -> Unit,
+    onCommitCost: (cents: Int?, clearLineAmount: Boolean) -> Unit,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(containerColor = WellPaidCreamMuted),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 12.dp),
+                .padding(horizontal = 10.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = line.label,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = WellPaidNavy,
-                )
-                Spacer(Modifier.padding(top = 4.dp))
-                if (line.lineAmountCents == null) {
-                    Text(
-                        text = stringResource(R.string.shopping_item_no_price_hint),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = WellPaidNavy.copy(alpha = 0.5f),
-                    )
-                } else {
-                    val unitCents = requireNotNull(line.lineAmountCents)
-                    val lineTotal = unitCents * line.quantity
-                    Text(
-                        text = "${formatBrlFromCents(unitCents)} · ${line.quantity} = ${formatBrlFromCents(lineTotal)}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = WellPaidNavy.copy(alpha = 0.58f),
-                    )
-                }
-            }
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            Text(
+                text = line.label,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 4.dp),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = WellPaidNavy,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Surface(
+                shape = RoundedCornerShape(6.dp),
+                color = WellPaidNavy.copy(alpha = 0.08f),
             ) {
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = WellPaidNavy.copy(alpha = 0.08f),
-                ) {
-                    Text(
-                        text = line.quantity.toString(),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = WellPaidNavy,
-                        modifier = Modifier
-                            .padding(horizontal = 10.dp, vertical = 6.dp)
-                            .widthIn(min = 28.dp),
-                    )
-                }
-                Surface(
-                    shape = RoundedCornerShape(999.dp),
-                    color = WellPaidNavy.copy(alpha = 0.08f),
-                ) {
-                    Text(
-                        text = stringResource(R.string.shopping_item_unit_label),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = WellPaidNavy.copy(alpha = 0.85f),
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                    )
-                }
-                if (canEdit) {
-                    Box {
-                        IconButton(onClick = { menuOpen = true }) {
-                            Icon(
-                                Icons.Default.MoreVert,
-                                contentDescription = stringResource(R.string.shopping_edit_item),
-                                tint = WellPaidNavy.copy(alpha = 0.72f),
-                            )
-                        }
-                        DropdownMenu(
-                            expanded = menuOpen,
-                            onDismissRequest = { menuOpen = false },
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.shopping_edit_item)) },
-                                onClick = {
-                                    menuOpen = false
-                                    onEdit()
-                                },
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.shopping_remove_item)) },
-                                onClick = {
-                                    menuOpen = false
-                                    onRemove()
-                                },
-                            )
-                        }
+                Text(
+                    text = line.quantity.toString(),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontSize = 12.sp,
+                    color = WellPaidNavy,
+                    modifier = Modifier
+                        .padding(horizontal = 7.dp, vertical = 3.dp)
+                        .widthIn(min = 22.dp),
+                )
+            }
+            ItemLineCostField(
+                line = line,
+                canEdit = canEdit,
+                isSaving = isSaving,
+                onCommitCost = onCommitCost,
+            )
+            if (canEdit) {
+                Box {
+                    IconButton(
+                        onClick = { menuOpen = true },
+                        modifier = Modifier.size(36.dp),
+                    ) {
+                        Icon(
+                            Icons.Default.MoreVert,
+                            contentDescription = stringResource(R.string.shopping_edit_item),
+                            tint = WellPaidNavy.copy(alpha = 0.72f),
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = menuOpen,
+                        onDismissRequest = { menuOpen = false },
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.shopping_edit_item)) },
+                            onClick = {
+                                menuOpen = false
+                                onEdit()
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.shopping_remove_item)) },
+                            onClick = {
+                                menuOpen = false
+                                onRemove()
+                            },
+                        )
                     }
                 }
             }

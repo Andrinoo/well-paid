@@ -1,0 +1,5 @@
+# Ferramentas de desenvolvimento e segurança (opcional).
+# Instalação: python -m pip install -r requirements-dev.txt
+#
+# pip-audit: auditoria de CVEs nas dependências de requirements.txt
+pip-audit>=2.10.0
