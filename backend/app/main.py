@@ -1,10 +1,12 @@
 import logging
+import uuid
 
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.api.routes import (
     auth,
@@ -25,18 +27,42 @@ from app.core.limiter import limiter
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
-app = FastAPI(title="Well Paid API", version="0.1.0")
+_expose_docs = settings.expose_openapi
+app = FastAPI(
+    title="Well Paid API",
+    version="0.1.0",
+    docs_url="/docs" if _expose_docs else None,
+    redoc_url="/redoc" if _expose_docs else None,
+    openapi_url="/openapi.json" if _expose_docs else None,
+)
 app.state.limiter = limiter
+
+
+class _SecurityAndRequestIdMiddleware(BaseHTTPMiddleware):
+    """Cabeçalhos de segurança mínimos + X-Request-ID para correlacionar logs."""
+
+    async def dispatch(self, request: Request, call_next):  # type: ignore[override]
+        rid = str(uuid.uuid4())
+        request.state.request_id = rid
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = rid
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        return response
 
 
 @app.get("/")
 def root() -> dict[str, str]:
     """Raiz: evita 404 ao abrir a URL do deploy no browser; a API vive em /health, /auth, …"""
-    return {
+    out: dict[str, str] = {
         "service": "Well Paid API",
         "health": "/health",
-        "docs": "/docs",
     }
+    if _expose_docs:
+        out["docs"] = "/docs"
+    return out
 
 
 @app.post("/")
@@ -82,6 +108,7 @@ def _rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONRespons
 
 app.add_exception_handler(RateLimitExceeded, _rate_limit_handler)
 app.add_middleware(SlowAPIMiddleware)
+app.add_middleware(_SecurityAndRequestIdMiddleware)
 
 _origins = settings.cors_origins_list
 app.add_middleware(

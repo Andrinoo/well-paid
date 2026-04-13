@@ -118,6 +118,8 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 60
     refresh_token_expire_days: int = 30
     cors_origins: str = "*"
+    # Em produção definir EXPOSE_OPENAPI=false no Vercel para ocultar /docs e OpenAPI (ver docs/VERCEL_E_NEON_OPERACOES.md).
+    expose_openapi: bool = True
     # Ambiente: em development/local o endpoint forgot-password pode devolver o token (apenas para testes).
     app_env: str = "production"
     # E-mail opcional para recuperação de senha (SMTP).
