@@ -105,6 +105,8 @@
     <string name="home_shortcut_pending_pay">A pagar</string>
     <string name="home_shortcut_shopping_lists">Listas de compras</string>
     <string name="home_shortcut_coming_soon">Em breve</string>
+    <string name="home_shortcuts_expand">Mostrar mais atalhos</string>
+    <string name="home_shortcuts_collapse">Ocultar atalhos</string>
     <string name="main_title_expenses">Despesas</string>
     <string name="main_title_incomes">Proventos</string>
     <string name="main_title_goals">Metas</string>
@@ -254,6 +256,11 @@
     <string name="emergency_accruals_empty">Ainda não existem adesões mensais.</string>
     <string name="emergency_percent_annual">%1$d%% do objetivo anual</string>
     <string name="emergency_meta_monthly_line">Meta mensal: %1$s</string>
+    <string name="settings_display_name_section">Nome no ecrã inicial</string>
+    <string name="settings_display_name_label">Nome na saudação</string>
+    <string name="settings_display_name_help">Aparece depois de «Olá,» no topo do Início. Deixe vazio para usar o primeiro nome do cadastro.</string>
+    <string name="settings_display_name_save">Guardar</string>
+    <string name="settings_display_name_saved">Nome de exibição atualizado.</string>
     <string name="settings_language_section">Idioma da interface</string>
     <string name="settings_language_pt">Português (Brasil)</string>
     <string name="settings_language_en">English (US)</string>

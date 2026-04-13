@@ -110,7 +110,7 @@ fun LoginScreen(
                     .imePadding()
                     .verticalScroll(rememberScrollState())
                     .wellPaidScreenHorizontalPadding()
-                    .padding(vertical = 12.dp),
+                    .padding(vertical = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Column(
@@ -123,13 +123,13 @@ fun LoginScreen(
                     painter = painterResource(R.drawable.logo_well_paid),
                     contentDescription = stringResource(R.string.logo_content_description),
                     modifier = Modifier
-                        .height(200.dp)
-                        .fillMaxWidth(0.9f),
+                        .height(128.dp)
+                        .fillMaxWidth(0.85f),
                     contentScale = ContentScale.Fit,
                 )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(4.dp))
                 WellPaidBrandTitle()
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(8.dp))
 
                 Card(
                     modifier = Modifier
@@ -141,14 +141,14 @@ fun LoginScreen(
                     elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
                 ) {
                     Column(
-                        modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                     ) {
                         Text(
                             text = stringResource(R.string.login_card_title),
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                             color = LoginOnCard,
                         )
-                        Spacer(Modifier.height(14.dp))
+                        Spacer(Modifier.height(10.dp))
 
                         val fieldColors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = LoginOnCard,
@@ -180,7 +180,7 @@ fun LoginScreen(
                             enabled = !state.isLoading,
                             colors = fieldColors,
                         )
-                        Spacer(Modifier.height(12.dp))
+                        Spacer(Modifier.height(8.dp))
                         OutlinedTextField(
                             value = state.password,
                             onValueChange = viewModel::onPasswordChange,
@@ -251,14 +251,14 @@ fun LoginScreen(
                             )
                         }
 
-                        Spacer(Modifier.height(12.dp))
+                        Spacer(Modifier.height(8.dp))
 
                         val buttonShape = MaterialTheme.shapes.medium
                         Button(
                             onClick = { viewModel.submit() },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(52.dp),
+                                .height(48.dp),
                             enabled = !state.isLoading,
                             shape = buttonShape,
                             colors = ButtonDefaults.buttonColors(
@@ -270,7 +270,7 @@ fun LoginScreen(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(52.dp)
+                                    .height(48.dp)
                                     .clip(buttonShape)
                                     .background(
                                         if (state.isLoading) {
@@ -309,7 +309,7 @@ fun LoginScreen(
                             onClick = onExploreWithoutAccount,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(top = 12.dp),
+                                .padding(top = 8.dp),
                             enabled = !state.isLoading,
                             shape = MaterialTheme.shapes.medium,
                             border = BorderStroke(1.dp, LoginGoldMuted.copy(alpha = 0.45f)),
@@ -345,7 +345,7 @@ fun LoginScreen(
                             }
                         }
 
-                        Spacer(Modifier.height(16.dp))
+                        Spacer(Modifier.height(8.dp))
                         Text(
                             text = stringResource(R.string.login_copyright),
                             style = MaterialTheme.typography.labelSmall,
@@ -364,7 +364,7 @@ fun LoginScreen(
                         )
                     }
                 }
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(8.dp))
                 }
             }
         }
@@ -399,7 +399,7 @@ private fun WellPaidBrandTitle() {
                 append("Paid")
             }
         },
-        style = MaterialTheme.typography.headlineMedium.copy(
+        style = MaterialTheme.typography.titleLarge.copy(
             fontWeight = FontWeight.Bold,
             letterSpacing = 0.2.sp,
         ),

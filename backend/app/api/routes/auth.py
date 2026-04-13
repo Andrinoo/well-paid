@@ -42,6 +42,7 @@ from app.schemas.auth import (
     ResetPasswordRequest,
     TokenPairResponse,
     UserMeResponse,
+    UserProfilePatch,
     VerifyEmailRequest,
 )
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -315,6 +316,32 @@ def read_current_user(
     return UserMeResponse(
         email=current_user.email,
         full_name=current_user.full_name,
+        display_name=current_user.display_name,
+    )
+
+
+@router.patch("/me", response_model=UserMeResponse)
+def patch_current_user(
+    body: UserProfilePatch,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Session = Depends(get_db),
+) -> UserMeResponse:
+    """Define o nome mostrado na saudação (opcional; vazio volta ao nome derivado do cadastro)."""
+    data = body.model_dump(exclude_unset=True)
+    if "display_name" in data:
+        raw = body.display_name
+        if raw is None:
+            current_user.display_name = None
+        else:
+            stripped = raw.strip()
+            current_user.display_name = stripped[:200] if stripped else None
+        db.add(current_user)
+        db.commit()
+        db.refresh(current_user)
+    return UserMeResponse(
+        email=current_user.email,
+        full_name=current_user.full_name,
+        display_name=current_user.display_name,
     )
 
 

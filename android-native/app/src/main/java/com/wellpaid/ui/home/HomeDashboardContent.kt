@@ -116,17 +116,34 @@ fun HomeDashboardContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
-                    .padding(bottom = 4.dp),
+                    .padding(bottom = 2.dp),
             ) {
-            Box(
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 8.dp, end = 4.dp, bottom = 2.dp),
+                    .padding(start = 12.dp, end = 2.dp, bottom = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box(modifier = Modifier.align(Alignment.CenterEnd)) {
+                val greeting = state.userFirstName?.let { n ->
+                    stringResource(R.string.home_greeting_named, n)
+                }
+                if (greeting != null) {
+                    Text(
+                        text = greeting,
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                } else {
+                    Spacer(Modifier.weight(1f))
+                }
+                Box {
                     IconButton(
                         onClick = { menuOpen = true },
-                        modifier = Modifier.size(40.dp),
+                        modifier = Modifier.size(36.dp),
                     ) {
                         Icon(
                             Icons.Filled.Settings,
@@ -153,26 +170,12 @@ fun HomeDashboardContent(
                 }
             }
 
-            state.userFirstName?.let { name ->
-                Text(
-                    text = stringResource(R.string.home_greeting_named, name),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 2.dp),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.White,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-
             state.overview?.let { o ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .wellPaidMaxContentWidth(WellPaidMaxContentWidth)
-                        .padding(horizontal = 8.dp, vertical = 0.dp),
+                        .padding(horizontal = 8.dp, vertical = 2.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.Top,
                 ) {
@@ -208,14 +211,14 @@ fun HomeDashboardContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .wellPaidMaxContentWidth(WellPaidMaxContentWidth)
-                    .padding(horizontal = 8.dp, vertical = 2.dp),
+                    .padding(horizontal = 8.dp, vertical = 0.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 IconButton(
                     onClick = { viewModel.previousMonth() },
                     enabled = !state.isLoading,
-                    modifier = Modifier.size(40.dp),
+                    modifier = Modifier.size(36.dp),
                 ) {
                     Icon(
                         Icons.AutoMirrored.Filled.ArrowBack,
@@ -225,14 +228,14 @@ fun HomeDashboardContent(
                 }
                 Text(
                     text = state.period.format(monthShortNavFormatter),
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.SemiBold,
                     color = Color.White,
                 )
                 IconButton(
                     onClick = { viewModel.nextMonth() },
                     enabled = !state.isLoading,
-                    modifier = Modifier.size(40.dp),
+                    modifier = Modifier.size(36.dp),
                 ) {
                     Icon(
                         Icons.AutoMirrored.Filled.ArrowForward,
@@ -324,7 +327,7 @@ fun HomeDashboardContent(
                                 }
                             }
 
-                            Spacer(Modifier.height(8.dp))
+                            Spacer(Modifier.height(4.dp))
 
                             Card(
                                 modifier = Modifier
@@ -457,7 +460,7 @@ private fun HeaderMetric(
             text = value,
             style = if (valueLarge) {
                 MaterialTheme.typography.titleMedium.copy(
-                    fontSize = if (compact) 18.sp else 22.sp,
+                    fontSize = if (compact) 16.sp else 22.sp,
                     fontWeight = FontWeight.Bold,
                 )
             } else {

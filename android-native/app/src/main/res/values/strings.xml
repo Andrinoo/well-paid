@@ -105,6 +105,8 @@
     <string name="home_shortcut_pending_pay">To pay</string>
     <string name="home_shortcut_shopping_lists">Shopping lists</string>
     <string name="home_shortcut_coming_soon">Coming soon</string>
+    <string name="home_shortcuts_expand">Show more shortcuts</string>
+    <string name="home_shortcuts_collapse">Hide shortcuts</string>
     <string name="main_title_expenses">Expenses</string>
     <string name="main_title_incomes">Income</string>
     <string name="main_title_goals">Goals</string>
@@ -254,6 +256,11 @@
     <string name="emergency_accruals_empty">No monthly accruals yet.</string>
     <string name="emergency_percent_annual">%1$d%% of annual target</string>
     <string name="emergency_meta_monthly_line">Monthly target: %1$s</string>
+    <string name="settings_display_name_section">Name on home screen</string>
+    <string name="settings_display_name_label">Greeting name</string>
+    <string name="settings_display_name_help">Shown after “Hello,” on the home header. Leave empty to use the first name from your registration.</string>
+    <string name="settings_display_name_save">Save</string>
+    <string name="settings_display_name_saved">Display name updated.</string>
     <string name="settings_language_section">Interface language</string>
     <string name="settings_language_pt">Portuguese (Brazil)</string>
     <string name="settings_language_en">English (US)</string>

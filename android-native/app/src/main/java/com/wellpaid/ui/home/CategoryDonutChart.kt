@@ -217,7 +217,7 @@ private fun annularSectorPath(
 }
 
 /** Teto do quadrado do donut no ecrã inicial (aumenta o anel; a legenda fica por baixo). */
-private val DonutMaxSide = 300.dp
+private val DonutMaxSide = 380.dp
 
 private val DonutMinSide = 132.dp
 
@@ -251,12 +251,12 @@ fun CategoryDonutChartPage(
     Column(modifier = modifier.fillMaxSize()) {
         BoxWithConstraints(
             modifier = Modifier
-                .weight(2.4f)
+                .weight(2.75f)
                 .fillMaxWidth()
-                .padding(horizontal = 2.dp, vertical = 2.dp),
+                .padding(horizontal = 0.dp, vertical = 0.dp),
             contentAlignment = Alignment.Center,
         ) {
-            val side = minOf(maxWidth, maxHeight * 0.95f, DonutMaxSide).coerceAtLeast(
+            val side = minOf(maxWidth * 0.96f, maxHeight * 0.99f, DonutMaxSide).coerceAtLeast(
                 minOf(DonutMinSide, maxWidth),
             )
             Box(
@@ -283,11 +283,11 @@ fun CategoryDonutChartPage(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 4.dp)
+                    .padding(bottom = 2.dp)
                     .clip(RoundedCornerShape(8.dp))
                     .background(WellPaidNavy.copy(alpha = 0.07f))
                     .border(1.dp, WellPaidNavy.copy(alpha = 0.10f), RoundedCornerShape(8.dp))
-                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                    .padding(horizontal = 6.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
@@ -331,9 +331,9 @@ fun CategoryDonutChartPage(
         }
         LazyColumn(
             modifier = Modifier
-                .weight(1f)
+                .weight(0.85f)
                 .fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
+            verticalArrangement = Arrangement.spacedBy(1.dp),
         ) {
             items(
                 count = listSlices.size,
@@ -395,10 +395,10 @@ private fun DonutCompactLegendRow(
     onClick: () -> Unit,
 ) {
     val pct = (slice.amountCents * 100f / total).toInt().coerceIn(0, 100)
-    Row(
+        Row(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 36.dp, max = 44.dp)
+            .heightIn(min = 26.dp, max = 34.dp)
             .clip(RoundedCornerShape(8.dp))
             .border(
                 width = 1.dp,
@@ -407,7 +407,7 @@ private fun DonutCompactLegendRow(
             )
             .background(WellPaidCardWhite.copy(alpha = 0.6f))
             .clickable(onClick = onClick)
-            .padding(horizontal = 8.dp, vertical = 4.dp),
+            .padding(horizontal = 6.dp, vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -420,8 +420,8 @@ private fun DonutCompactLegendRow(
         Text(
             text = slice.name,
             style = MaterialTheme.typography.labelMedium,
-            fontSize = 11.sp,
-            lineHeight = 14.sp,
+            fontSize = 10.sp,
+            lineHeight = 12.sp,
             fontWeight = FontWeight.Normal,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -438,8 +438,8 @@ private fun DonutCompactLegendRow(
         Text(
             text = formatBrlFromCents(slice.amountCents),
             style = MaterialTheme.typography.labelMedium,
-            fontSize = 11.sp,
-            lineHeight = 14.sp,
+            fontSize = 10.sp,
+            lineHeight = 12.sp,
             fontWeight = FontWeight.Medium,
             maxLines = 1,
             overflow = TextOverflow.Clip,
@@ -560,13 +560,13 @@ private fun CategoryDonutCanvas(
         }
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(horizontal = 8.dp),
+            modifier = Modifier.padding(horizontal = 4.dp),
         ) {
             Text(
                 text = monthTitle,
                 style = MaterialTheme.typography.labelSmall,
-                fontSize = 9.sp,
-                lineHeight = 11.sp,
+                fontSize = 8.sp,
+                lineHeight = 10.sp,
                 color = WellPaidNavy.copy(alpha = 0.5f),
                 textAlign = TextAlign.Center,
                 maxLines = 2,
@@ -575,16 +575,16 @@ private fun CategoryDonutCanvas(
             Text(
                 text = stringResource(R.string.home_donut_center_total),
                 style = MaterialTheme.typography.labelSmall,
-                fontSize = 9.sp,
+                fontSize = 8.sp,
                 color = WellPaidNavy.copy(alpha = 0.58f),
-                modifier = Modifier.padding(top = 1.dp),
+                modifier = Modifier.padding(top = 0.dp),
             )
             Text(
                 text = formatBrlFromCents(centerTotalCents),
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = 17.sp,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
-                    lineHeight = 20.sp,
+                    lineHeight = 15.sp,
                 ),
                 color = WellPaidNavy,
                 textAlign = TextAlign.Center,

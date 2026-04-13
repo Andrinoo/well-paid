@@ -75,6 +75,13 @@ class UserMeResponse(BaseModel):
 
     email: str
     full_name: str | None = None
+    display_name: str | None = None
+
+
+class UserProfilePatch(BaseModel):
+    """Atualização parcial do perfil (nome mostrado no ecrã inicial)."""
+
+    display_name: str | None = Field(default=None, max_length=200)
 
 
 class ForgotPasswordRequest(BaseModel):

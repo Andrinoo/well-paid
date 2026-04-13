@@ -138,6 +138,10 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun greetingFirstName(dto: UserMeDto): String? {
+        val custom = dto.displayName?.trim().orEmpty()
+        if (custom.isNotEmpty() && !custom.looksLikeUuid()) {
+            return custom
+        }
         val fromFull = dto.fullName?.trim().orEmpty()
         if (fromFull.isNotEmpty()) {
             val first = fromFull.split(Regex("\\s+")).first()

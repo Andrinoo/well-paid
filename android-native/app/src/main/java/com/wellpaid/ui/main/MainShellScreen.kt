@@ -1,5 +1,7 @@
 package com.wellpaid.ui.main
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -41,6 +44,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -162,7 +166,7 @@ fun MainShellScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                                .padding(horizontal = 12.dp, vertical = 4.dp),
                             horizontalArrangement = Arrangement.SpaceEvenly,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
@@ -176,7 +180,7 @@ fun MainShellScreen(
                                         contentDescription = null,
                                         tint = MaterialTheme.colorScheme.primary,
                                     )
-                                    Spacer(Modifier.height(4.dp))
+                                    Spacer(Modifier.height(2.dp))
                                     Text(
                                         stringResource(R.string.home_shortcut_pending_pay),
                                         style = MaterialTheme.typography.labelSmall,
@@ -193,7 +197,7 @@ fun MainShellScreen(
                                         contentDescription = null,
                                         tint = MaterialTheme.colorScheme.primary,
                                     )
-                                    Spacer(Modifier.height(4.dp))
+                                    Spacer(Modifier.height(2.dp))
                                     Text(
                                         stringResource(R.string.home_shortcut_shopping_lists),
                                         style = MaterialTheme.typography.labelSmall,
@@ -203,14 +207,31 @@ fun MainShellScreen(
                         }
                         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                             IconButton(onClick = { shortcutsExpanded = false }) {
-                                Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null)
+                                Icon(
+                                    Icons.Filled.KeyboardArrowDown,
+                                    contentDescription = stringResource(R.string.home_shortcuts_collapse),
+                                )
                             }
                         }
                     } else {
-                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            IconButton(onClick = { shortcutsExpanded = true }) {
-                                Icon(Icons.Filled.KeyboardArrowUp, contentDescription = null)
-                            }
+                        val expandInteraction = remember { MutableInteractionSource() }
+                        Box(
+                            Modifier
+                                .fillMaxWidth()
+                                .height(36.dp)
+                                .clickable(
+                                    interactionSource = expandInteraction,
+                                    indication = null,
+                                    onClick = { shortcutsExpanded = true },
+                                ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                Icons.Filled.KeyboardArrowUp,
+                                contentDescription = stringResource(R.string.home_shortcuts_expand),
+                                modifier = Modifier.size(22.dp),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
                         }
                     }
                     NavigationBar(
