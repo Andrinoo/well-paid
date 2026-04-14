@@ -28,6 +28,16 @@ fun centsToBrlInput(cents: Long): String {
     return "${if (neg) "-" else ""}$reaisPart,${"%02d".format(frac)}"
 }
 
+/**
+ * Campo de valor em modo “caixa”: extrai só dígitos (ordem = centavos), aplica máscara pt-BR
+ * (`1.256,36`). String vazia se não houver dígitos — alinhado a [brlDigitChainToCents].
+ */
+fun formatBrlAmountFromDigitInput(raw: String): String {
+    val digits = raw.filter { it.isDigit() }.take(BRL_CENT_DIGIT_CHAIN_MAX)
+    if (digits.isEmpty()) return ""
+    return centsToBrlInput(brlDigitChainToCents(digits))
+}
+
 private fun formatIntWithThousandsDots(reais: Long): String {
     val s = reais.toString()
     return buildString {

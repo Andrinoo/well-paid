@@ -16,6 +16,7 @@ import com.wellpaid.core.network.ExpensesApi
 import com.wellpaid.data.FamilyMeRepository
 import com.wellpaid.util.FastApiErrorMapper
 import com.wellpaid.util.centsToBrlInput
+import com.wellpaid.util.formatBrlAmountFromDigitInput
 import com.wellpaid.util.parseBrlToCents
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -190,7 +191,7 @@ class ExpenseFormViewModel @Inject constructor(
     fun peerMembersForShare(): List<FamilyMemberDto> = familyMeRepository.peerMembersExcludingSelf()
 
     fun setAmountText(value: String) {
-        _uiState.update { it.copy(amountText = value) }
+        _uiState.update { it.copy(amountText = formatBrlAmountFromDigitInput(value)) }
     }
 
     fun setExpenseDate(value: String) {
@@ -255,7 +256,7 @@ class ExpenseFormViewModel @Inject constructor(
     }
 
     fun setPayAmountText(value: String) {
-        _uiState.update { it.copy(payAmountText = value) }
+        _uiState.update { it.copy(payAmountText = formatBrlAmountFromDigitInput(value)) }
     }
 
     fun canDelete(): Boolean {

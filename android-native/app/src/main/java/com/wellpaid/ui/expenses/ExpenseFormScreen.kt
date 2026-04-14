@@ -287,6 +287,7 @@ fun ExpenseFormScreen(
                     modifier = Modifier.fillMaxWidth(),
                     enabled = canEdit,
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     shape = fieldShape,
                     colors = fieldColors,
                 )
@@ -520,6 +521,7 @@ fun ExpenseFormScreen(
                     modifier = Modifier.fillMaxWidth(),
                     enabled = canEdit,
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     shape = fieldShape,
                     colors = fieldColors,
                 )
@@ -882,6 +884,7 @@ fun ExpenseFormScreen(
                             onValueChange = { viewModel.setPayAmountText(it) },
                             label = { Text(stringResource(R.string.expense_pay_amount_optional)) },
                             singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             enabled = !state.isSaving,
                             shape = fieldShape,
                             colors = fieldColors,
