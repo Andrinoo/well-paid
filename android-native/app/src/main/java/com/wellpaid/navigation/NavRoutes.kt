@@ -33,6 +33,11 @@ object NavRoutes {
 
     fun expenseDetail(expenseId: String): String = "$EXPENSE_DETAIL/$expenseId"
 
+    private const val INSTALLMENT_PLAN = "installment_plan"
+    const val InstallmentPlanRoute = "$INSTALLMENT_PLAN/{groupId}"
+
+    fun installmentPlan(groupId: String): String = "$INSTALLMENT_PLAN/$groupId"
+
     const val IncomeNew = "income_new"
 
     private const val INCOME_DETAIL = "income"

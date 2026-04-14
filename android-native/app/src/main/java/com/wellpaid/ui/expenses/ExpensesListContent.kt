@@ -69,6 +69,7 @@ private val monthTitleFormatter =
 fun ExpensesListContent(
     mainRouteEntry: NavBackStackEntry,
     onExpenseClick: (String) -> Unit,
+    onOpenInstallmentPlan: (String) -> Unit,
     onNewExpense: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ExpensesViewModel = hiltViewModel(),
@@ -214,7 +215,14 @@ fun ExpensesListContent(
                     items(state.expenses, key = { it.id }) { expense ->
                         ExpenseListRow(
                             expense = expense,
-                            onRowClick = { onExpenseClick(expense.id) },
+                            onRowClick = {
+                                val gid = expense.installmentGroupId
+                                if (expense.installmentTotal > 1 && !gid.isNullOrBlank()) {
+                                    onOpenInstallmentPlan(gid)
+                                } else {
+                                    onExpenseClick(expense.id)
+                                }
+                            },
                             onPayClick = {
                                 if (expense.isMine && expense.status != "paid") {
                                     viewModel.payExpense(expense.id)

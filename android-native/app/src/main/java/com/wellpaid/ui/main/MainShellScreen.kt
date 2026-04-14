@@ -84,6 +84,7 @@ fun MainShellScreen(
     onOpenSettings: () -> Unit,
     onOpenExpenseNew: () -> Unit,
     onOpenExpenseDetail: (String) -> Unit,
+    onOpenInstallmentPlan: (String) -> Unit,
     onOpenIncomeNew: () -> Unit,
     onOpenIncomeDetail: (String) -> Unit,
     onOpenGoalNew: () -> Unit,
@@ -308,6 +309,7 @@ fun MainShellScreen(
                 1 -> ExpensesListContent(
                     mainRouteEntry = mainRouteEntry,
                     onExpenseClick = onOpenExpenseDetail,
+                    onOpenInstallmentPlan = onOpenInstallmentPlan,
                     onNewExpense = onOpenExpenseNew,
                     modifier = Modifier.fillMaxSize(),
                     viewModel = expensesViewModel,

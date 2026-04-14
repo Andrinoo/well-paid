@@ -2,6 +2,7 @@ package com.wellpaid.ui.expenses
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,12 +17,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Sync
-import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -31,6 +29,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -210,50 +209,70 @@ fun ExpenseFormScreen(
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
+                    val kindLabelStyle = MaterialTheme.typography.labelMedium
+                    val expenseKindChipColors = FilterChipDefaults.filterChipColors(
+                        containerColor = WellPaidCreamMuted,
+                        labelColor = WellPaidNavy,
+                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                        selectedLabelColor = Color.White,
+                    )
                     FilterChip(
                         selected = isSingle,
                         onClick = { if (canEdit) viewModel.setExpenseKind(NewExpenseKind.SINGLE) },
                         label = {
-                            Text(
-                                stringResource(R.string.expense_type_single),
-                                style = MaterialTheme.typography.labelLarge,
-                            )
+                            Box(
+                                modifier = Modifier.fillMaxWidth(),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    stringResource(R.string.expense_type_single),
+                                    style = kindLabelStyle,
+                                    maxLines = 1,
+                                )
+                            }
                         },
-                        leadingIcon = if (isSingle) {
-                            { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                        } else {
-                            null
-                        },
+                        enabled = canEdit,
+                        colors = expenseKindChipColors,
                         modifier = Modifier.weight(1f),
                     )
                     FilterChip(
                         selected = isInst,
                         onClick = { if (canEdit) viewModel.setExpenseKind(NewExpenseKind.INSTALLMENTS) },
                         label = {
-                            Text(
-                                stringResource(R.string.expense_type_installments),
-                                style = MaterialTheme.typography.labelLarge,
-                            )
+                            Box(
+                                modifier = Modifier.fillMaxWidth(),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    stringResource(R.string.expense_type_installments),
+                                    style = kindLabelStyle,
+                                    maxLines = 1,
+                                )
+                            }
                         },
-                        leadingIcon = {
-                            Icon(Icons.Outlined.CalendarMonth, contentDescription = null, modifier = Modifier.size(16.dp))
-                        },
+                        enabled = canEdit,
+                        colors = expenseKindChipColors,
                         modifier = Modifier.weight(1f),
                     )
                     FilterChip(
                         selected = isRec,
                         onClick = { if (canEdit) viewModel.setExpenseKind(NewExpenseKind.RECURRING) },
                         label = {
-                            Text(
-                                stringResource(R.string.expense_type_recurring),
-                                style = MaterialTheme.typography.labelLarge,
-                            )
+                            Box(
+                                modifier = Modifier.fillMaxWidth(),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    stringResource(R.string.expense_type_recurring),
+                                    style = kindLabelStyle,
+                                    maxLines = 1,
+                                )
+                            }
                         },
-                        leadingIcon = {
-                            Icon(Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(16.dp))
-                        },
+                        enabled = canEdit,
+                        colors = expenseKindChipColors,
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -758,10 +777,18 @@ fun ExpenseFormScreen(
     }
 
     if (state.showDeleteConfirm) {
+        val deleteBody = if (
+            state.loadedExpense?.installmentGroupId != null &&
+            state.loadedExpense?.installmentPlanHasPaid == true
+        ) {
+            stringResource(R.string.expense_delete_message_installment_partial)
+        } else {
+            stringResource(R.string.expense_delete_message)
+        }
         AlertDialog(
             onDismissRequest = { viewModel.dismissDeleteConfirm() },
             title = { Text(stringResource(R.string.expense_delete_title)) },
-            text = { Text(stringResource(R.string.expense_delete_message)) },
+            text = { Text(deleteBody) },
             confirmButton = {
                 TextButton(
                     onClick = { viewModel.delete(onFinishedNeedRefresh) },

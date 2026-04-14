@@ -21,6 +21,7 @@ interface ExpensesApi {
         @Query("month") month: Int? = null,
         @Query("category_id") categoryId: String? = null,
         @Query("status") status: String? = null,
+        @Query("installment_group_id") installmentGroupId: String? = null,
     ): List<ExpenseDto>
 
     @GET("expenses/{id}")
@@ -36,7 +37,11 @@ interface ExpensesApi {
     ): ExpenseDto
 
     @DELETE("expenses/{id}")
-    suspend fun deleteExpense(@Path("id") id: String): Response<Void>
+    suspend fun deleteExpense(
+        @Path("id") id: String,
+        @Query("delete_target") deleteTarget: String? = null,
+        @Query("delete_scope") deleteScope: String? = null,
+    ): Response<Void>
 
     @POST("expenses/{id}/pay")
     suspend fun payExpense(

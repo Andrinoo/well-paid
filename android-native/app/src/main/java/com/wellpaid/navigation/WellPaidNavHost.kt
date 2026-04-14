@@ -27,6 +27,7 @@ import dagger.hilt.android.EntryPointAccessors
 import com.wellpaid.ui.auth.ForgotPasswordScreen
 import com.wellpaid.ui.auth.ResetPasswordScreen
 import com.wellpaid.ui.expenses.ExpenseFormScreen
+import com.wellpaid.ui.expenses.InstallmentPlanScreen
 import com.wellpaid.ui.goals.GoalDetailScreen
 import com.wellpaid.ui.goals.GoalFormScreen
 import com.wellpaid.ui.incomes.IncomeFormScreen
@@ -207,6 +208,9 @@ fun WellPaidNavHost(
                         onOpenExpenseDetail = { id ->
                             navController.navigate(NavRoutes.expenseDetail(id))
                         },
+                        onOpenInstallmentPlan = { groupId ->
+                            navController.navigate(NavRoutes.installmentPlan(groupId))
+                        },
                         onOpenIncomeNew = {
                             navController.navigate(NavRoutes.IncomeNew)
                         },
@@ -228,6 +232,19 @@ fun WellPaidNavHost(
                     ExpenseFormScreen(
                         onNavigateBack = { navController.popBackStack() },
                         onFinishedNeedRefresh = refreshExpensesAndPop,
+                    )
+                }
+                composable(
+                    route = NavRoutes.InstallmentPlanRoute,
+                    arguments = listOf(
+                        navArgument("groupId") { type = NavType.StringType },
+                    ),
+                ) {
+                    InstallmentPlanScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                        onOpenExpenseDetail = { id ->
+                            navController.navigate(NavRoutes.expenseDetail(id))
+                        },
                     )
                 }
                 composable(

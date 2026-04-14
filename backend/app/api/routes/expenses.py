@@ -401,7 +401,6 @@ def create_expense(
     n = body.installment_total
     today = date.today()
     now_utc = datetime.now(UTC)
-    start_date = body.start_date or body.expense_date
     if n == 1:
         # Para recorrência, a primeira competência é sempre a data de vencimento informada.
         first_occurrence_date = (
@@ -454,10 +453,12 @@ def create_expense(
     assert body.due_date is not None
     first_due_date = body.due_date
     for i in range(n):
-        # Parcelas seguem a competência de vencimento; "start_date" é referência de origem.
+        # Parcelas mensais a partir do primeiro vencimento; competência = data de vencimento.
         dd = add_months(first_due_date, i)
         ed = dd
-        auto_paid = dd <= today and start_date <= dd
+        # Parcelas com vencimento/competência já passados ficam como pagas ao criar o plano
+        # (ex.: primeira competência dia 10, registo dia 14 — a parcela do dia 10 não fica pendente).
+        auto_paid = dd <= today
         row_status = ExpenseStatus.PAID.value if auto_paid else ExpenseStatus.PENDING.value
         row = Expense(
             owner_user_id=user.id,
@@ -623,6 +624,18 @@ def delete_expense(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Parcelamento: use delete_target=series",
+        )
+    if (
+        e.installment_group_id is not None
+        and delete_scope == ExpenseDeleteScope.all
+        and installment_plan_has_paid(db, user.id, e.installment_group_id)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "Este plano tem parcelas já pagas. Use delete_scope=future_unpaid para remover "
+                "apenas as parcelas pendentes futuras (não apaga histórico pago)."
+            ),
         )
     if (
         e.recurring_series_id is not None

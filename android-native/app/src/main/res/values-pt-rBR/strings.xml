@@ -166,6 +166,7 @@
     <string name="expense_delete">Eliminar</string>
     <string name="expense_delete_title">Eliminar despesa</string>
     <string name="expense_delete_message">Esta ação não pode ser anulada na aplicação. Continuar?</string>
+    <string name="expense_delete_message_installment_partial">Este plano tem parcelas já pagas. Só serão removidas as parcelas pendentes futuras; o histórico pago mantém-se.</string>
     <string name="expense_delete_confirm">Eliminar</string>
     <string name="expense_delete_cancel">Cancelar</string>
     <string name="expense_readonly_not_mine">Esta despesa pertence a outro membro da família. Só pode consultar.</string>
@@ -176,6 +177,12 @@
     <string name="expense_error_date">Data da despesa inválida.</string>
     <string name="expense_error_due_date">Data de vencimento inválida.</string>
     <string name="expense_error_category">Escolha uma categoria.</string>
+    <string name="installment_plan_title">Plano de parcelas</string>
+    <string name="installment_plan_empty">Nenhuma parcela encontrada para este plano.</string>
+    <string name="installment_plan_summary">%1$d prestações neste plano</string>
+    <string name="installment_plan_due_line">Venc. %1$s</string>
+    <string name="installment_plan_status_paid">Paga</string>
+    <string name="installment_plan_status_due">A vencer</string>
     <string name="expense_fab_new">Nova despesa</string>
     <string name="expense_type_single">Única</string>
     <string name="expense_type_installments">Parcelas</string>

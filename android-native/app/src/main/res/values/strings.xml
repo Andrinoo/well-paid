@@ -166,6 +166,7 @@
     <string name="expense_delete">Delete</string>
     <string name="expense_delete_title">Delete expense</string>
     <string name="expense_delete_message">This cannot be undone in the app. Continue?</string>
+    <string name="expense_delete_message_installment_partial">This plan has paid installments. Only future pending installments will be removed; paid records stay in history.</string>
     <string name="expense_delete_confirm">Delete</string>
     <string name="expense_delete_cancel">Cancel</string>
     <string name="expense_readonly_not_mine">This expense belongs to another family member. View only.</string>
@@ -176,6 +177,12 @@
     <string name="expense_error_date">Invalid expense date.</string>
     <string name="expense_error_due_date">Invalid due date.</string>
     <string name="expense_error_category">Choose a category.</string>
+    <string name="installment_plan_title">Installment plan</string>
+    <string name="installment_plan_empty">No installments found for this plan.</string>
+    <string name="installment_plan_summary">%1$d installments in this plan</string>
+    <string name="installment_plan_due_line">Due %1$s</string>
+    <string name="installment_plan_status_paid">Paid</string>
+    <string name="installment_plan_status_due">Due</string>
     <string name="expense_fab_new">New expense</string>
     <string name="expense_type_single">One-time</string>
     <string name="expense_type_installments">Installments</string>

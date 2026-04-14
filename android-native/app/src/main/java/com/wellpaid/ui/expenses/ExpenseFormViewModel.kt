@@ -422,7 +422,17 @@ class ExpenseFormViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true, errorMessage = null, showDeleteConfirm = false) }
             runCatching {
-                val resp = expensesApi.deleteExpense(id)
+                val e = _uiState.value.loadedExpense
+                val resp = if (e != null && !e.installmentGroupId.isNullOrBlank()) {
+                    val scope = if (e.installmentPlanHasPaid == true) "future_unpaid" else "all"
+                    expensesApi.deleteExpense(
+                        id,
+                        deleteTarget = "series",
+                        deleteScope = scope,
+                    )
+                } else {
+                    expensesApi.deleteExpense(id)
+                }
                 if (!resp.isSuccessful) {
                     error("HTTP ${resp.code()}")
                 }
