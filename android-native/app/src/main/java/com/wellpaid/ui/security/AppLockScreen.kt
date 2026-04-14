@@ -2,7 +2,6 @@ package com.wellpaid.ui.security
 
 import android.app.Activity
 import android.os.Build
-import android.graphics.Color as AndroidColor
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.background
@@ -87,17 +86,14 @@ fun AppLockScreen(
         val window = (context as Activity).window
         val decor = window.decorView
         val controller = WindowCompat.getInsetsController(window, decor)
-        val prevStatus = window.statusBarColor
-        val prevNav = window.navigationBarColor
         val prevLightStatus = controller.isAppearanceLightStatusBars
         val prevLightNav = controller.isAppearanceLightNavigationBars
-        window.statusBarColor = AndroidColor.BLACK
-        window.navigationBarColor = AndroidColor.BLACK
+        // Conteúdo preto em ecrã completo (sem Window.statusBarColor/navigationBarColor — API deprecadas).
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         controller.isAppearanceLightStatusBars = false
         controller.isAppearanceLightNavigationBars = false
         onDispose {
-            window.statusBarColor = prevStatus
-            window.navigationBarColor = prevNav
+            WindowCompat.setDecorFitsSystemWindows(window, true)
             controller.isAppearanceLightStatusBars = prevLightStatus
             controller.isAppearanceLightNavigationBars = prevLightNav
         }
