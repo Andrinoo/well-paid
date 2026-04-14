@@ -13,6 +13,7 @@ class ExpenseCreate(BaseModel):
     description: str = Field(min_length=1, max_length=500)
     amount_cents: int = Field(gt=0)
     expense_date: date
+    start_date: date | None = None
     due_date: date | None = None
     category_id: uuid.UUID
     status: ExpenseStatus = ExpenseStatus.PENDING
@@ -36,6 +37,10 @@ class ExpenseCreate(BaseModel):
         if self.installment_total > 1 and self.recurring_frequency is not None:
             raise ValueError(
                 "Use parcelas OU recorrência, não ambos (Telas §5.6)."
+            )
+        if (self.installment_total > 1 or self.recurring_frequency is not None) and self.due_date is None:
+            raise ValueError(
+                "Parceladas/recorrentes exigem data de vencimento (primeira competência)."
             )
         if not self.is_shared and self.shared_with_user_id is not None:
             raise ValueError("shared_with_user_id exige is_shared true")
@@ -111,6 +116,10 @@ class ExpenseResponse(BaseModel):
         default=False,
         description="Ocorrência recorrente mensal ainda não persistida (pré-visualização).",
     )
+    is_advanced_payment: bool = Field(
+        default=False,
+        description="Pagamento adiantado em relação ao vencimento configurado.",
+    )
 
 
 class ExpenseCreateOutcome(BaseModel):
@@ -122,3 +131,8 @@ class ExpenseCreateOutcome(BaseModel):
         "liga todas as parcelas (não é uma linha extra na BD).",
     )
     expenses: list[ExpenseResponse]
+
+
+class ExpensePayRequest(BaseModel):
+    allow_advance: bool = False
+    amount_cents: int | None = Field(default=None, gt=0)
