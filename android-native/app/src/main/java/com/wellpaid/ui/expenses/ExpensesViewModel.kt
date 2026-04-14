@@ -7,6 +7,7 @@ import com.wellpaid.R
 import com.wellpaid.core.model.auth.TokenStorage
 import com.wellpaid.core.model.expense.ExpenseDto
 import com.wellpaid.core.network.ExpensesApi
+import com.wellpaid.data.MainPrefetchTiming
 import com.wellpaid.util.FastApiErrorMapper
 import com.wellpaid.util.sortExpensesNewestFirst
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -14,6 +15,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.YearMonth
@@ -37,13 +39,17 @@ class ExpensesViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context,
     private val expensesApi: ExpensesApi,
     private val tokenStorage: TokenStorage,
+    private val prefetchTiming: MainPrefetchTiming,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ExpensesUiState())
     val uiState: StateFlow<ExpensesUiState> = _uiState.asStateFlow()
 
     init {
-        refresh()
+        viewModelScope.launch {
+            delay(prefetchTiming.expensesDelayMs)
+            refresh()
+        }
     }
 
     fun refresh() {

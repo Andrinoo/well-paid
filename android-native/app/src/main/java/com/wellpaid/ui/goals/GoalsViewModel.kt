@@ -7,12 +7,14 @@ import com.wellpaid.R
 import com.wellpaid.core.model.auth.TokenStorage
 import com.wellpaid.core.model.goal.GoalDto
 import com.wellpaid.core.network.GoalsApi
+import com.wellpaid.data.MainPrefetchTiming
 import com.wellpaid.util.FastApiErrorMapper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -22,13 +24,17 @@ class GoalsViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context,
     private val goalsApi: GoalsApi,
     private val tokenStorage: TokenStorage,
+    private val prefetchTiming: MainPrefetchTiming,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(GoalsUiState())
     val uiState: StateFlow<GoalsUiState> = _uiState.asStateFlow()
 
     init {
-        refresh()
+        viewModelScope.launch {
+            delay(prefetchTiming.goalsDelayMs)
+            refresh()
+        }
     }
 
     fun refresh() {

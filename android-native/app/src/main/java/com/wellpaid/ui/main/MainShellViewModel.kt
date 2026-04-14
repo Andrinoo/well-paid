@@ -6,9 +6,11 @@ import com.wellpaid.core.model.auth.LogoutRequestDto
 import com.wellpaid.core.model.auth.TokenStorage
 import com.wellpaid.core.network.auth.AuthApi
 import com.wellpaid.data.FamilyMeRepository
+import com.wellpaid.data.MainPrefetchTiming
 import com.wellpaid.security.AppSecurityManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -19,13 +21,17 @@ class MainShellViewModel @Inject constructor(
     private val tokenStorage: TokenStorage,
     private val familyMeRepository: FamilyMeRepository,
     private val appSecurityManager: AppSecurityManager,
+    private val prefetchTiming: MainPrefetchTiming,
 ) : ViewModel() {
 
     private val loggedOut = Channel<Unit>(Channel.BUFFERED)
     val loggedOutEvents = loggedOut.receiveAsFlow()
 
     init {
-        viewModelScope.launch { familyMeRepository.refresh() }
+        viewModelScope.launch {
+            delay(prefetchTiming.familyAfterMainDelayMs)
+            familyMeRepository.refresh()
+        }
     }
 
     fun logout() {

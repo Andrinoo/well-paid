@@ -83,3 +83,15 @@ class ForgotPasswordResponse(BaseModel):
 class ResetPasswordRequest(BaseModel):
     token: str = Field(min_length=10, max_length=256)
     new_password: str = Field(min_length=8)
+
+
+class UserMeResponse(BaseModel):
+    email: str
+    full_name: str | None = None
+    display_name: str | None = None
+
+
+class UserProfilePatch(BaseModel):
+    """Corpo para PATCH /auth/me ou POST /auth/profile/display-name."""
+
+    display_name: str | None = Field(default=None, max_length=200)

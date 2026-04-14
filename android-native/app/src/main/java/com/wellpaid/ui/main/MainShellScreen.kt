@@ -65,6 +65,7 @@ import com.wellpaid.ui.expenses.ExpensesViewModel
 import com.wellpaid.ui.goals.GoalsListContent
 import com.wellpaid.ui.goals.GoalsViewModel
 import com.wellpaid.ui.home.HomeDashboardContent
+import com.wellpaid.ui.home.HomeViewModel
 import com.wellpaid.ui.incomes.IncomesListContent
 import com.wellpaid.ui.incomes.IncomesViewModel
 import com.wellpaid.ui.shopping.ShoppingListsViewModel
@@ -99,6 +100,8 @@ fun MainShellScreen(
 
     // Prefetch: scope ViewModels to Main (or Activity for shopping lists) so init { refresh() }
     // runs as soon as the shell is shown — lists are ready when the user opens each tab/screen.
+    // Home first: dashboard + utilizador competem com menos ecrãs em paralelo.
+    val homeViewModel = hiltViewModel<HomeViewModel>(mainRouteEntry)
     val expensesViewModel = hiltViewModel<ExpensesViewModel>(mainRouteEntry)
     val incomesViewModel = hiltViewModel<IncomesViewModel>(mainRouteEntry)
     val goalsViewModel = hiltViewModel<GoalsViewModel>(mainRouteEntry)
@@ -300,6 +303,7 @@ fun MainShellScreen(
                     modifier = Modifier.fillMaxSize(),
                     mainRouteEntry = mainRouteEntry,
                     onOpenSettings = onOpenSettings,
+                    viewModel = homeViewModel,
                 )
                 1 -> ExpensesListContent(
                     mainRouteEntry = mainRouteEntry,

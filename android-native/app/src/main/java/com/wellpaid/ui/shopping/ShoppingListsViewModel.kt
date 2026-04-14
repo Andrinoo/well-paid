@@ -9,12 +9,14 @@ import com.wellpaid.core.model.shopping.ShoppingListCreateDto
 import com.wellpaid.core.model.shopping.ShoppingListDetailDto
 import com.wellpaid.core.model.shopping.ShoppingListSummaryDto
 import com.wellpaid.core.network.ShoppingListsApi
+import com.wellpaid.data.MainPrefetchTiming
 import com.wellpaid.util.FastApiErrorMapper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -32,13 +34,17 @@ class ShoppingListsViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context,
     private val api: ShoppingListsApi,
     private val tokenStorage: TokenStorage,
+    private val prefetchTiming: MainPrefetchTiming,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ShoppingListsUiState())
     val uiState: StateFlow<ShoppingListsUiState> = _uiState.asStateFlow()
 
     init {
-        refresh()
+        viewModelScope.launch {
+            delay(prefetchTiming.shoppingDelayMs)
+            refresh()
+        }
     }
 
     /**

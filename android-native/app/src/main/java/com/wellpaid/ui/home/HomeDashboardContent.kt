@@ -64,7 +64,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
 import com.wellpaid.R
@@ -87,9 +86,9 @@ import java.util.Locale
 @Composable
 fun HomeDashboardContent(
     mainRouteEntry: NavBackStackEntry,
+    viewModel: HomeViewModel,
     modifier: Modifier = Modifier,
     onOpenSettings: () -> Unit = {},
-    viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()

@@ -9,12 +9,14 @@ import com.wellpaid.core.model.income.IncomeCategoryDto
 import com.wellpaid.core.model.income.IncomeDto
 import com.wellpaid.core.network.IncomeCategoriesApi
 import com.wellpaid.core.network.IncomesApi
+import com.wellpaid.data.MainPrefetchTiming
 import com.wellpaid.util.FastApiErrorMapper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.YearMonth
@@ -26,13 +28,17 @@ class IncomesViewModel @Inject constructor(
     private val incomesApi: IncomesApi,
     private val incomeCategoriesApi: IncomeCategoriesApi,
     private val tokenStorage: TokenStorage,
+    private val prefetchTiming: MainPrefetchTiming,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(IncomesUiState())
     val uiState: StateFlow<IncomesUiState> = _uiState.asStateFlow()
 
     init {
-        refresh(loadCategoriesToo = true)
+        viewModelScope.launch {
+            delay(prefetchTiming.incomesDelayMs)
+            refresh(loadCategoriesToo = true)
+        }
     }
 
     fun refresh(loadCategoriesToo: Boolean = false) {

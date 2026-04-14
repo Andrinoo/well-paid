@@ -10,6 +10,7 @@ import com.wellpaid.core.model.emergency.EmergencyReserveDto
 import com.wellpaid.core.model.emergency.EmergencyReserveUpdateDto
 import com.wellpaid.core.network.EmergencyReserveApi
 import com.wellpaid.data.FamilyMeRepository
+import com.wellpaid.data.MainPrefetchTiming
 import com.wellpaid.util.FastApiErrorMapper
 import com.wellpaid.util.centsToBrlInput
 import com.wellpaid.util.parseBrlToCents
@@ -20,6 +21,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import java.time.Month
@@ -44,6 +46,7 @@ class EmergencyReserveViewModel @Inject constructor(
     private val api: EmergencyReserveApi,
     private val tokenStorage: TokenStorage,
     familyMeRepository: FamilyMeRepository,
+    private val prefetchTiming: MainPrefetchTiming,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(EmergencyReserveUiState())
@@ -56,7 +59,10 @@ class EmergencyReserveViewModel @Inject constructor(
                 _uiState.update { it.copy(canEditReserve = can) }
             }
             .launchIn(viewModelScope)
-        refresh()
+        viewModelScope.launch {
+            delay(prefetchTiming.emergencyDelayMs)
+            refresh()
+        }
     }
 
     fun refresh() {

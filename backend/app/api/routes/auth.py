@@ -24,6 +24,7 @@ from app.core.security import (
 from app.models.email_verification_token import EmailVerificationToken
 from app.models.password_reset_token import PasswordResetToken
 from app.models.refresh_token import RefreshToken
+from app.api.deps import get_current_user
 from app.models.user import User
 from app.schemas.auth import (
     ForgotPasswordRequest,
@@ -38,6 +39,8 @@ from app.schemas.auth import (
     ResendVerificationResponse,
     ResetPasswordRequest,
     TokenPairResponse,
+    UserMeResponse,
+    UserProfilePatch,
     VerifyEmailRequest,
 )
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -477,3 +480,52 @@ def reset_password(
     db.commit()
 
     return MessageResponse(message="Senha atualizada. Pode entrar com a nova senha.")
+
+
+@router.get("/me", response_model=UserMeResponse)
+def read_me(current: User = Depends(get_current_user)) -> UserMeResponse:
+    """Perfil mínimo para a app (saudação, ecrã inicial)."""
+    return UserMeResponse(
+        email=current.email,
+        full_name=current.full_name,
+        display_name=current.display_name,
+    )
+
+
+@router.patch("/me", response_model=UserMeResponse)
+def patch_me(
+    body: UserProfilePatch,
+    current: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> UserMeResponse:
+    if body.display_name is not None:
+        s = body.display_name.strip()
+        current.display_name = s if s else None
+    db.add(current)
+    db.commit()
+    db.refresh(current)
+    return UserMeResponse(
+        email=current.email,
+        full_name=current.full_name,
+        display_name=current.display_name,
+    )
+
+
+@router.post("/profile/display-name", response_model=UserMeResponse)
+def post_profile_display_name(
+    body: UserProfilePatch,
+    current: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> UserMeResponse:
+    """Alias POST para clientes que evitam PATCH (proxy/CDN); mesmo contrato que PATCH em display_name."""
+    if body.display_name is not None:
+        s = body.display_name.strip()
+        current.display_name = s if s else None
+    db.add(current)
+    db.commit()
+    db.refresh(current)
+    return UserMeResponse(
+        email=current.email,
+        full_name=current.full_name,
+        display_name=current.display_name,
+    )
