@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -39,12 +38,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
@@ -59,6 +61,7 @@ import com.wellpaid.ui.theme.WellPaidNavy
 import com.wellpaid.util.formatIsoToUiDate
 import com.wellpaid.util.localDateToIso
 import com.wellpaid.util.parseIsoDateLocal
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.Month
@@ -69,6 +72,11 @@ import java.util.Locale
 private const val MIN_YEAR = 2000
 private const val MAX_YEAR = 2100
 private val wheelPageSize = PageSize.Fixed(44.dp)
+
+/** Larguras mínimas para não cortar rótulos (ex.: “Setembro”) nem anos de 4 dígitos. */
+private val wheelDayMinWidth = 56.dp
+private val wheelMonthMinWidth = 132.dp
+private val wheelYearMinWidth = 68.dp
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -159,6 +167,7 @@ private fun WellPaidDateWheelContent(
     onConfirm: (LocalDate) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
+    val haptic = LocalHapticFeedback.current
     val yearCount = MAX_YEAR - MIN_YEAR + 1
 
     val yearPager = rememberPagerState(
@@ -187,6 +196,43 @@ private fun WellPaidDateWheelContent(
         }
     }
 
+    var hapticYearPrimed by remember { mutableStateOf(false) }
+    LaunchedEffect(yearPager) {
+        snapshotFlow { yearPager.settledPage }
+            .distinctUntilChanged()
+            .collect {
+                if (!hapticYearPrimed) {
+                    hapticYearPrimed = true
+                } else {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                }
+            }
+    }
+    var hapticMonthPrimed by remember { mutableStateOf(false) }
+    LaunchedEffect(monthPager) {
+        snapshotFlow { monthPager.settledPage }
+            .distinctUntilChanged()
+            .collect {
+                if (!hapticMonthPrimed) {
+                    hapticMonthPrimed = true
+                } else {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                }
+            }
+    }
+    var hapticDayPrimed by remember { mutableStateOf(false) }
+    LaunchedEffect(dayPager) {
+        snapshotFlow { dayPager.settledPage }
+            .distinctUntilChanged()
+            .collect {
+                if (!hapticDayPrimed) {
+                    hapticDayPrimed = true
+                } else {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                }
+            }
+    }
+
     fun yFromPager(): Int = MIN_YEAR + yearPager.settledPage
     fun mFromPager(): Int = monthPager.settledPage + 1
 
@@ -211,9 +257,24 @@ private fun WellPaidDateWheelContent(
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            WheelColumnLabel(stringResource(R.string.datepicker_wheel_day))
-            WheelColumnLabel(stringResource(R.string.datepicker_wheel_month))
-            WheelColumnLabel(stringResource(R.string.datepicker_wheel_year))
+            WheelColumnLabel(
+                text = stringResource(R.string.datepicker_wheel_day),
+                modifier = Modifier
+                    .weight(1f)
+                    .widthIn(min = wheelDayMinWidth),
+            )
+            WheelColumnLabel(
+                text = stringResource(R.string.datepicker_wheel_month),
+                modifier = Modifier
+                    .weight(1.5f)
+                    .widthIn(min = wheelMonthMinWidth),
+            )
+            WheelColumnLabel(
+                text = stringResource(R.string.datepicker_wheel_year),
+                modifier = Modifier
+                    .weight(1f)
+                    .widthIn(min = wheelYearMinWidth),
+            )
         }
         Spacer(Modifier.height(4.dp))
 
@@ -224,7 +285,11 @@ private fun WellPaidDateWheelContent(
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            WheelFadeBox {
+            WheelFadeBox(
+                modifier = Modifier
+                    .weight(1f)
+                    .widthIn(min = wheelDayMinWidth),
+            ) {
                 VerticalPager(
                     state = dayPager,
                     modifier = Modifier.fillMaxSize(),
@@ -242,7 +307,11 @@ private fun WellPaidDateWheelContent(
                     )
                 }
             }
-            WheelFadeBox {
+            WheelFadeBox(
+                modifier = Modifier
+                    .weight(1.5f)
+                    .widthIn(min = wheelMonthMinWidth),
+            ) {
                 VerticalPager(
                     state = monthPager,
                     modifier = Modifier.fillMaxSize(),
@@ -263,7 +332,11 @@ private fun WellPaidDateWheelContent(
                     )
                 }
             }
-            WheelFadeBox {
+            WheelFadeBox(
+                modifier = Modifier
+                    .weight(1f)
+                    .widthIn(min = wheelYearMinWidth),
+            ) {
                 VerticalPager(
                     state = yearPager,
                     modifier = Modifier.fillMaxSize(),
@@ -312,25 +385,25 @@ private fun WellPaidDateWheelContent(
 }
 
 @Composable
-private fun RowScope.WheelColumnLabel(text: String) {
+private fun WheelColumnLabel(text: String, modifier: Modifier = Modifier) {
     Text(
         text = text,
         style = MaterialTheme.typography.labelMedium,
         fontWeight = FontWeight.SemiBold,
         color = WellPaidNavy.copy(alpha = 0.55f),
         textAlign = TextAlign.Center,
-        modifier = Modifier
-            .weight(1f)
-            .padding(horizontal = 4.dp),
+        modifier = modifier.padding(horizontal = 4.dp),
     )
 }
 
 @Composable
-private fun RowScope.WheelFadeBox(content: @Composable () -> Unit) {
+private fun WheelFadeBox(
+    modifier: Modifier,
+    content: @Composable () -> Unit,
+) {
     val surface = MaterialTheme.colorScheme.surface
     Box(
-        modifier = Modifier
-            .weight(1f)
+        modifier = modifier
             .height(220.dp)
             .drawWithContent {
                 drawContent()
