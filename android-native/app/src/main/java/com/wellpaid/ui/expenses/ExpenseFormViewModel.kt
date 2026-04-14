@@ -8,6 +8,7 @@ import com.wellpaid.R
 import com.wellpaid.core.model.expense.CategoryDto
 import com.wellpaid.core.model.expense.ExpenseCreateDto
 import com.wellpaid.core.model.expense.ExpenseDto
+import com.wellpaid.core.model.expense.ExpensePayDto
 import com.wellpaid.core.model.expense.ExpenseUpdateDto
 import com.wellpaid.core.model.family.FamilyMemberDto
 import com.wellpaid.core.network.CategoriesApi
@@ -57,6 +58,9 @@ data class ExpenseFormUiState(
     val isShared: Boolean = false,
     /** `null` = partilha com toda a família quando [isShared] é true. */
     val sharedWithUserId: String? = null,
+    val showPayConfirm: Boolean = false,
+    val payAllowAdvance: Boolean = false,
+    val payAmountText: String = "",
 )
 
 @HiltViewModel
@@ -138,7 +142,7 @@ class ExpenseFormViewModel @Inject constructor(
     }
 
     fun setInstallmentTotal(value: Int) {
-        _uiState.update { it.copy(installmentTotal = value.coerceIn(2, 60)) }
+        _uiState.update { it.copy(installmentTotal = value.coerceIn(2, 24)) }
     }
 
     fun setRecurringFrequency(value: String) {
@@ -211,6 +215,30 @@ class ExpenseFormViewModel @Inject constructor(
         return e.isMine && e.status == "pending"
     }
 
+    fun requestPayConfirm() {
+        val e = _uiState.value.loadedExpense ?: return
+        _uiState.update {
+            it.copy(
+                showPayConfirm = true,
+                payAllowAdvance = false,
+                payAmountText = centsToBrlInput(e.amountCents),
+                errorMessage = null,
+            )
+        }
+    }
+
+    fun dismissPayConfirm() {
+        _uiState.update { it.copy(showPayConfirm = false, payAllowAdvance = false) }
+    }
+
+    fun setPayAllowAdvance(value: Boolean) {
+        _uiState.update { it.copy(payAllowAdvance = value) }
+    }
+
+    fun setPayAmountText(value: String) {
+        _uiState.update { it.copy(payAmountText = value) }
+    }
+
     fun canDelete(): Boolean {
         val e = _uiState.value.loadedExpense ?: return false
         return e.isMine && !e.isProjected
@@ -259,6 +287,12 @@ class ExpenseFormViewModel @Inject constructor(
                 _uiState.update { it.copy(errorMessage = appContext.getString(R.string.expense_error_due_date)) }
                 return
             }
+            if ((s.expenseKind == NewExpenseKind.INSTALLMENTS || s.expenseKind == NewExpenseKind.RECURRING) &&
+                (!s.hasDueDate || dueParsed == null)
+            ) {
+                _uiState.update { it.copy(errorMessage = appContext.getString(R.string.expense_error_due_date)) }
+                return
+            }
         }
         val cat = s.categoryId ?: run {
             _uiState.update { it.copy(errorMessage = appContext.getString(R.string.expense_error_category)) }
@@ -270,7 +304,7 @@ class ExpenseFormViewModel @Inject constructor(
             val result = runCatching {
                 if (expenseId == null) {
                     val installmentOut = when (s.expenseKind) {
-                        NewExpenseKind.INSTALLMENTS -> s.installmentTotal.coerceIn(2, 60)
+                        NewExpenseKind.INSTALLMENTS -> s.installmentTotal.coerceIn(2, 24)
                         else -> 1
                     }
                     val recurringOut = when (s.expenseKind) {
@@ -287,6 +321,7 @@ class ExpenseFormViewModel @Inject constructor(
                             description = desc,
                             amountCents = cents,
                             expenseDate = expenseDateStr,
+                            startDate = expenseDateStr,
                             dueDate = dueOut,
                             categoryId = cat,
                             status = if (s.alreadyPaid) "paid" else "pending",
@@ -328,9 +363,31 @@ class ExpenseFormViewModel @Inject constructor(
 
     fun pay(onSuccess: () -> Unit) {
         val id = expenseId ?: return
+        val current = _uiState.value.loadedExpense ?: return
         viewModelScope.launch {
-            _uiState.update { it.copy(isSaving = true, errorMessage = null) }
-            runCatching { expensesApi.payExpense(id) }
+            val payAmountCents = if (!current.recurringSeriesId.isNullOrBlank()) {
+                val txt = _uiState.value.payAmountText.trim()
+                if (txt.isBlank()) null else parseBrlToCents(txt)
+            } else {
+                null
+            }
+            if (!current.recurringSeriesId.isNullOrBlank() && payAmountCents != null && payAmountCents <= 0) {
+                _uiState.update {
+                    it.copy(errorMessage = appContext.getString(R.string.expense_error_amount))
+                }
+                return@launch
+            }
+
+            _uiState.update { it.copy(isSaving = true, errorMessage = null, showPayConfirm = false) }
+            runCatching {
+                expensesApi.payExpense(
+                    id,
+                    ExpensePayDto(
+                        allowAdvance = _uiState.value.payAllowAdvance,
+                        amountCents = payAmountCents,
+                    ),
+                )
+            }
                 .onSuccess { e ->
                     _uiState.update {
                         it.copy(

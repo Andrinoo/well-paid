@@ -152,6 +152,11 @@
     <string name="expense_save">Salvar</string>
     <string name="expense_saving">A guardar…</string>
     <string name="expense_mark_paid">Marcar como paga</string>
+    <string name="expense_pay_title">Pagar despesa</string>
+    <string name="expense_pay_message">Confirme os detalhes do pagamento.</string>
+    <string name="expense_pay_allow_advance">Antecipar pagamento</string>
+    <string name="expense_pay_amount_optional">Valor da recorrência (opcional)</string>
+    <string name="expense_pay_confirm">Confirmar pagamento</string>
     <string name="expense_delete">Eliminar</string>
     <string name="expense_delete_title">Eliminar despesa</string>
     <string name="expense_delete_message">Esta ação não pode ser anulada na aplicação. Continuar?</string>
@@ -283,6 +288,11 @@
     <string name="manage_categories_name_hint">Nome</string>
     <string name="manage_categories_add">Adicionar</string>
     <string name="manage_categories_saving">A guardar…</string>
+    <string name="manage_categories_saved_expense">Categoria de despesa registada com sucesso.</string>
+    <string name="manage_categories_saved_income">Categoria de provento registada com sucesso.</string>
+    <string name="manage_categories_existing_dropdown_label">Ver registadas</string>
+    <string name="manage_categories_existing_summary">%d registadas — toque para ver</string>
+    <string name="manage_categories_existing_empty">Ainda não há — adicione acima</string>
     <string name="settings_tile_display_name">Nome na saudação</string>
     <string name="settings_tile_language">Idioma</string>
     <string name="settings_tile_security">Segurança</string>

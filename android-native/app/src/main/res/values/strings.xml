@@ -152,6 +152,11 @@
     <string name="expense_save">Save</string>
     <string name="expense_saving">Saving…</string>
     <string name="expense_mark_paid">Mark as paid</string>
+    <string name="expense_pay_title">Pay expense</string>
+    <string name="expense_pay_message">Confirm payment details.</string>
+    <string name="expense_pay_allow_advance">Advance payment</string>
+    <string name="expense_pay_amount_optional">Recurring amount (optional)</string>
+    <string name="expense_pay_confirm">Confirm payment</string>
     <string name="expense_delete">Delete</string>
     <string name="expense_delete_title">Delete expense</string>
     <string name="expense_delete_message">This cannot be undone in the app. Continue?</string>
@@ -283,6 +288,11 @@
     <string name="manage_categories_name_hint">Name</string>
     <string name="manage_categories_add">Add</string>
     <string name="manage_categories_saving">Saving…</string>
+    <string name="manage_categories_saved_expense">Expense category saved.</string>
+    <string name="manage_categories_saved_income">Income category saved.</string>
+    <string name="manage_categories_existing_dropdown_label">View registered</string>
+    <string name="manage_categories_existing_summary">%d registered — tap to open</string>
+    <string name="manage_categories_existing_empty">None yet — add one above</string>
     <string name="settings_tile_display_name">Greeting name</string>
     <string name="settings_tile_language">Language</string>
     <string name="settings_tile_security">Security</string>

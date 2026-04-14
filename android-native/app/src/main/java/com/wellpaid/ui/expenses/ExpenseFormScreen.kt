@@ -305,7 +305,7 @@ fun ExpenseFormScreen(
                         onValueChange = { txt ->
                             if (!canEdit) return@OutlinedTextField
                             val n = txt.filter { it.isDigit() }.toIntOrNull() ?: return@OutlinedTextField
-                            viewModel.setInstallmentTotal(n.coerceIn(2, 60))
+                            viewModel.setInstallmentTotal(n.coerceIn(2, 24))
                         },
                         label = { Text(stringResource(R.string.expense_installment_count)) },
                         modifier = Modifier.fillMaxWidth(),
@@ -582,7 +582,7 @@ fun ExpenseFormScreen(
             if (canPay) {
                 Spacer(Modifier.height(8.dp))
                 OutlinedButton(
-                    onClick = { viewModel.pay(onFinishedNeedRefresh) },
+                    onClick = { viewModel.requestPayConfirm() },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !state.isSaving,
                 ) {
@@ -621,6 +621,61 @@ fun ExpenseFormScreen(
             dismissButton = {
                 TextButton(onClick = { viewModel.dismissDeleteConfirm() }) {
                     Text(stringResource(R.string.expense_delete_cancel))
+                }
+            },
+        )
+    }
+
+    if (state.showPayConfirm) {
+        val isRecurring = state.loadedExpense?.recurringSeriesId?.isNotBlank() == true
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissPayConfirm() },
+            title = { Text(stringResource(R.string.expense_pay_title)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(stringResource(R.string.expense_pay_message))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text(
+                            text = stringResource(R.string.expense_pay_allow_advance),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = WellPaidNavy,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Switch(
+                            checked = state.payAllowAdvance,
+                            onCheckedChange = { viewModel.setPayAllowAdvance(it) },
+                            enabled = !state.isSaving,
+                        )
+                    }
+                    if (isRecurring) {
+                        OutlinedTextField(
+                            value = state.payAmountText,
+                            onValueChange = { viewModel.setPayAmountText(it) },
+                            label = { Text(stringResource(R.string.expense_pay_amount_optional)) },
+                            singleLine = true,
+                            enabled = !state.isSaving,
+                            shape = fieldShape,
+                            colors = fieldColors,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { viewModel.pay(onFinishedNeedRefresh) },
+                    enabled = !state.isSaving,
+                ) {
+                    Text(stringResource(R.string.expense_pay_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissPayConfirm() }) {
+                    Text(stringResource(R.string.common_cancel))
                 }
             },
         )

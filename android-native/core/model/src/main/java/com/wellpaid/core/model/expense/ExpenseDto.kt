@@ -31,4 +31,5 @@ data class ExpenseDto(
     @SerialName("paid_at") val paidAt: String? = null,
     @SerialName("installment_plan_has_paid") val installmentPlanHasPaid: Boolean? = null,
     @SerialName("is_projected") val isProjected: Boolean = false,
+    @SerialName("is_advanced_payment") val isAdvancedPayment: Boolean = false,
 )

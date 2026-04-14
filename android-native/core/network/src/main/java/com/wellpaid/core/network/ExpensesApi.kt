@@ -3,6 +3,7 @@ package com.wellpaid.core.network
 import com.wellpaid.core.model.expense.ExpenseCreateDto
 import com.wellpaid.core.model.expense.ExpenseCreateOutcomeDto
 import com.wellpaid.core.model.expense.ExpenseDto
+import com.wellpaid.core.model.expense.ExpensePayDto
 import com.wellpaid.core.model.expense.ExpenseUpdateDto
 import retrofit2.Response
 import retrofit2.http.Body
@@ -38,5 +39,8 @@ interface ExpensesApi {
     suspend fun deleteExpense(@Path("id") id: String): Response<Void>
 
     @POST("expenses/{id}/pay")
-    suspend fun payExpense(@Path("id") id: String): ExpenseDto
+    suspend fun payExpense(
+        @Path("id") id: String,
+        @Body body: ExpensePayDto = ExpensePayDto(),
+    ): ExpenseDto
 }

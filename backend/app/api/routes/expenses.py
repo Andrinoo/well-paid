@@ -21,6 +21,7 @@ from app.schemas.dashboard import ExpenseStatus
 from app.schemas.expense import (
     ExpenseCreate,
     ExpenseCreateOutcome,
+    ExpensePayRequest,
     ExpenseResponse,
     ExpenseUpdate,
 )
@@ -67,6 +68,9 @@ def _to_response(
     installment_plan_has_paid: bool | None = None,
     is_projected: bool = False,
 ) -> ExpenseResponse:
+    is_advanced_payment = False
+    if e.status == ExpenseStatus.PAID.value and e.paid_at is not None and e.due_date is not None:
+        is_advanced_payment = e.paid_at.date() < e.due_date
     return ExpenseResponse(
         id=e.id,
         owner_user_id=e.owner_user_id,
@@ -94,6 +98,7 @@ def _to_response(
         paid_at=e.paid_at,
         installment_plan_has_paid=installment_plan_has_paid,
         is_projected=is_projected,
+        is_advanced_payment=is_advanced_payment,
     )
 
 
@@ -394,24 +399,38 @@ def create_expense(
             detail=str(err),
         ) from err
     n = body.installment_total
+    today = date.today()
+    now_utc = datetime.now(UTC)
+    start_date = body.start_date or body.expense_date
     if n == 1:
+        # Para recorrência, a primeira competência é sempre a data de vencimento informada.
+        first_occurrence_date = (
+            body.due_date if body.recurring_frequency is not None and body.due_date is not None else body.expense_date
+        )
         recurring_series_id = uuid.uuid4() if body.recurring_frequency else None
+        auto_paid = (
+            body.recurring_frequency is not None
+            and body.due_date is not None
+            and first_occurrence_date <= today
+        )
+        row_status = ExpenseStatus.PAID.value if auto_paid else body.status.value
         e = Expense(
             owner_user_id=user.id,
             description=body.description.strip(),
             amount_cents=body.amount_cents,
-            expense_date=body.expense_date,
+            expense_date=first_occurrence_date,
             due_date=body.due_date,
-            status=body.status.value,
+            status=row_status,
             category_id=body.category_id,
             installment_total=1,
             installment_number=1,
             installment_group_id=None,
             recurring_frequency=body.recurring_frequency,
             recurring_series_id=recurring_series_id,
-            recurring_generated_until=body.expense_date if body.recurring_frequency else None,
+            recurring_generated_until=first_occurrence_date if body.recurring_frequency else None,
             is_shared=is_s,
             shared_with_user_id=sw,
+            paid_at=now_utc if row_status == ExpenseStatus.PAID.value else None,
         )
         db.add(e)
         try:
@@ -432,16 +451,21 @@ def create_expense(
 
     group_id = uuid.uuid4()
     first_id: uuid.UUID | None = None
+    assert body.due_date is not None
+    first_due_date = body.due_date
     for i in range(n):
-        ed = add_months(body.expense_date, i)
-        dd = add_months(body.due_date, i) if body.due_date else None
+        # Parcelas seguem a competência de vencimento; "start_date" é referência de origem.
+        dd = add_months(first_due_date, i)
+        ed = dd
+        auto_paid = dd <= today and start_date <= dd
+        row_status = ExpenseStatus.PAID.value if auto_paid else ExpenseStatus.PENDING.value
         row = Expense(
             owner_user_id=user.id,
             description=body.description.strip(),
             amount_cents=body.amount_cents,
             expense_date=ed,
             due_date=dd,
-            status=body.status.value,
+            status=row_status,
             category_id=body.category_id,
             installment_total=n,
             installment_number=i + 1,
@@ -451,6 +475,7 @@ def create_expense(
             recurring_generated_until=None,
             is_shared=is_s,
             shared_with_user_id=sw,
+            paid_at=now_utc if row_status == ExpenseStatus.PAID.value else None,
         )
         db.add(row)
         if i == 0:
@@ -628,9 +653,11 @@ def delete_expense(
 @router.post("/{expense_id}/pay", response_model=ExpenseResponse)
 def pay_expense(
     expense_id: uuid.UUID,
+    body: ExpensePayRequest | None = None,
     user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> ExpenseResponse:
+    req = body or ExpensePayRequest()
     e = _get_owned(db, expense_id, user.id)
     if e is None:
         hit = find_anchor_and_occurrence_for_projected_id(db, user.id, expense_id)
@@ -645,9 +672,27 @@ def pay_expense(
             status_code=status.HTTP_409_CONFLICT,
             detail="Só despesas pendentes podem ser quitadas",
         )
+    today = date.today()
+    if (
+        e.due_date is not None
+        and e.due_date > today
+        and (e.due_date - today).days > 5
+        and not req.allow_advance
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Pagamento antecipado só é permitido a até 5 dias do vencimento ou com antecipação ativa.",
+        )
     now = datetime.now(UTC)
+    if req.amount_cents is not None:
+        e.amount_cents = int(req.amount_cents)
     e.status = ExpenseStatus.PAID.value
     e.paid_at = now
+    paid_date_tag = now.date().strftime("%d/%m/%Y")
+    if f"[Pago em {paid_date_tag}]" not in e.description:
+        base_desc = e.description.strip()
+        tagged = f"{base_desc} [Pago em {paid_date_tag}]"
+        e.description = tagged[:500]
     db.commit()
     db.refresh(e)
     e = _get_owned(db, expense_id, user.id)

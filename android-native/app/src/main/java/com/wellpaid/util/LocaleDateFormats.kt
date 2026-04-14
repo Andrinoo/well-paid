@@ -2,7 +2,7 @@ package com.wellpaid.util
 
 import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 import java.time.format.ResolverStyle
@@ -39,11 +39,11 @@ fun parseUiDateOrIso(text: String, locale: Locale): LocalDate? {
 
 fun localDateToIso(d: LocalDate): String = d.format(isoDateFormatter)
 
-fun localDateToUtcStartMillis(d: LocalDate, zone: ZoneId = ZoneId.systemDefault()): Long =
-    d.atStartOfDay(zone).toInstant().toEpochMilli()
+fun localDateToUtcStartMillis(d: LocalDate): Long =
+    d.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
 
-fun millisToLocalDate(ms: Long, zone: ZoneId = ZoneId.systemDefault()): LocalDate =
-    Instant.ofEpochMilli(ms).atZone(zone).toLocalDate()
+fun millisToLocalDate(ms: Long): LocalDate =
+    Instant.ofEpochMilli(ms).atZone(ZoneOffset.UTC).toLocalDate()
 
 /** Listas / resumo: dd/MM/yyyy (pt) ou M/d/yyyy (en) — separador / para leitura rápida. */
 fun formatIsoDateForList(isoDate: String, locale: Locale): String {

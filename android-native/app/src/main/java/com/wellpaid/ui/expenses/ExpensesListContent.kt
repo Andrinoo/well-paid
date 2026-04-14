@@ -240,6 +240,9 @@ private fun showParTag(expense: ExpenseDto): Boolean = expense.installmentTotal 
 private fun showRecTag(expense: ExpenseDto): Boolean =
     expense.installmentTotal <= 1 && !expense.recurringSeriesId.isNullOrBlank()
 
+private fun showAntTag(expense: ExpenseDto): Boolean =
+    expense.isAdvancedPayment
+
 @Composable
 private fun ExpenseTypeTagPar() {
     Surface(
@@ -270,6 +273,23 @@ private fun ExpenseTypeTagRec() {
             fontSize = 10.sp,
             fontWeight = FontWeight.SemiBold,
             color = WellPaidNavy,
+        )
+    }
+}
+
+@Composable
+private fun ExpenseTypeTagAnt() {
+    Surface(
+        shape = RoundedCornerShape(6.dp),
+        color = Color(0xFFE8F5E9),
+    ) {
+        Text(
+            text = "ANT",
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+            style = MaterialTheme.typography.labelSmall,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color(0xFF2E7D32),
         )
     }
 }
@@ -428,6 +448,9 @@ private fun ExpenseListRow(
                     }
                     if (showRecTag(expense)) {
                         ExpenseTypeTagRec()
+                    }
+                    if (showAntTag(expense)) {
+                        ExpenseTypeTagAnt()
                     }
                     Text(
                         text = formatBrlFromCents(expense.amountCents),

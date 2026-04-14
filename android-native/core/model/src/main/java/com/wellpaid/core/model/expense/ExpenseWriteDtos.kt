@@ -8,6 +8,7 @@ data class ExpenseCreateDto(
     val description: String,
     @SerialName("amount_cents") val amountCents: Int,
     @SerialName("expense_date") val expenseDate: String,
+    @SerialName("start_date") val startDate: String? = null,
     @SerialName("due_date") val dueDate: String? = null,
     @SerialName("category_id") val categoryId: String,
     val status: String = "pending",
@@ -33,4 +34,10 @@ data class ExpenseUpdateDto(
     val status: String,
     @SerialName("is_shared") val isShared: Boolean? = null,
     @SerialName("shared_with_user_id") val sharedWithUserId: String? = null,
+)
+
+@Serializable
+data class ExpensePayDto(
+    @SerialName("allow_advance") val allowAdvance: Boolean = false,
+    @SerialName("amount_cents") val amountCents: Int? = null,
 )
