@@ -5,6 +5,10 @@
     <string name="common_ok">OK</string>
     <string name="common_cancel">Cancel</string>
     <string name="common_continue">Continue</string>
+    <string name="datepicker_sheet_title">Select date</string>
+    <string name="datepicker_wheel_day">Day</string>
+    <string name="datepicker_wheel_month">Month</string>
+    <string name="datepicker_wheel_year">Year</string>
     <string name="incomes_primary_add">Add income</string>
     <string name="incomes_list_caption">Amounts in Brazilian reais with exact cents; accrual by income date.</string>
     <string name="goals_primary_add">Add goal</string>

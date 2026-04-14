@@ -5,6 +5,10 @@
     <string name="common_ok">OK</string>
     <string name="common_cancel">Cancelar</string>
     <string name="common_continue">Continuar</string>
+    <string name="datepicker_sheet_title">Escolher data</string>
+    <string name="datepicker_wheel_day">Dia</string>
+    <string name="datepicker_wheel_month">Mês</string>
+    <string name="datepicker_wheel_year">Ano</string>
     <string name="incomes_primary_add">Adicionar provento</string>
     <string name="incomes_list_caption">Valores em reais com centavos exactos; competência pelo dia do provento.</string>
     <string name="goals_primary_add">Adicionar meta</string>
