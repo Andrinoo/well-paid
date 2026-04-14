@@ -653,9 +653,9 @@ def delete_expense(
 @router.post("/{expense_id}/pay", response_model=ExpenseResponse)
 def pay_expense(
     expense_id: uuid.UUID,
-    body: ExpensePayRequest | None = None,
     user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
+    body: ExpensePayRequest | None = None,
 ) -> ExpenseResponse:
     req = body or ExpensePayRequest()
     e = _get_owned(db, expense_id, user.id)
