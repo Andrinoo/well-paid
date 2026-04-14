@@ -245,6 +245,13 @@ fun WellPaidNavHost(
                         onOpenExpenseDetail = { id ->
                             navController.navigate(NavRoutes.expenseDetail(id))
                         },
+                        onPlanDeletedNavigateBack = {
+                            runCatching {
+                                navController.getBackStackEntry(NavRoutes.Main).savedStateHandle["expense_list_dirty"] =
+                                    System.currentTimeMillis()
+                            }
+                            navController.popBackStack()
+                        },
                     )
                 }
                 composable(

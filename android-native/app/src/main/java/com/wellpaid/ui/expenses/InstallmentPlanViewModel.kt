@@ -19,6 +19,7 @@ import javax.inject.Inject
 
 data class InstallmentPlanUiState(
     val isLoading: Boolean = true,
+    val isDeleting: Boolean = false,
     val errorMessage: String? = null,
     val installments: List<ExpenseDto> = emptyList(),
 )
@@ -65,4 +66,62 @@ class InstallmentPlanViewModel @Inject constructor(
     fun descriptionFromFirst(): String =
         _uiState.value.installments.firstOrNull()?.description
             ?: appContext.getString(R.string.installment_plan_title)
+
+    private fun anyLineId(): String? =
+        _uiState.value.installments.firstOrNull()?.id
+
+    fun removeFutureUnpaid(onSuccess: () -> Unit) {
+        val id = anyLineId() ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isDeleting = true, errorMessage = null) }
+            runCatching {
+                val resp = expensesApi.deleteExpense(
+                    id,
+                    deleteTarget = "series",
+                    deleteScope = "future_unpaid",
+                )
+                if (!resp.isSuccessful) error("HTTP ${resp.code()}")
+            }
+                .onSuccess {
+                    _uiState.update { it.copy(isDeleting = false) }
+                    onSuccess()
+                }
+                .onFailure { t ->
+                    _uiState.update {
+                        it.copy(
+                            isDeleting = false,
+                            errorMessage = FastApiErrorMapper.message(appContext, t),
+                        )
+                    }
+                }
+        }
+    }
+
+    fun removeEntirePlanIncludingPaid(onSuccess: () -> Unit) {
+        val id = anyLineId() ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isDeleting = true, errorMessage = null) }
+            runCatching {
+                val resp = expensesApi.deleteExpense(
+                    id,
+                    deleteTarget = "series",
+                    deleteScope = "all",
+                    confirmDeletePaid = true,
+                )
+                if (!resp.isSuccessful) error("HTTP ${resp.code()}")
+            }
+                .onSuccess {
+                    _uiState.update { it.copy(isDeleting = false) }
+                    onSuccess()
+                }
+                .onFailure { t ->
+                    _uiState.update {
+                        it.copy(
+                            isDeleting = false,
+                            errorMessage = FastApiErrorMapper.message(appContext, t),
+                        )
+                    }
+                }
+        }
+    }
 }

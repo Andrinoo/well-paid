@@ -76,6 +76,7 @@ fun ExpenseFormScreen(
     val canEdit = viewModel.canEditFields()
     val canPay = viewModel.canPay()
     val canDelete = viewModel.canDelete()
+    var showInstallmentFullWipeSecond by remember { mutableStateOf(false) }
     var categoryMenuExpanded by remember { mutableStateOf(false) }
     /** Uma linha por defeito; ícone para várias linhas quando precisar. */
     var descriptionExpanded by remember { mutableStateOf(false) }
@@ -761,28 +762,89 @@ fun ExpenseFormScreen(
     }
 
     if (state.showDeleteConfirm) {
-        val deleteBody = if (
-            state.loadedExpense?.installmentGroupId != null &&
-            state.loadedExpense?.installmentPlanHasPaid == true
-        ) {
-            stringResource(R.string.expense_delete_message_installment_partial)
+        val le = state.loadedExpense
+        val isInst = le?.installmentGroupId != null
+        val hasPaid = le?.installmentPlanHasPaid == true
+        if (isInst && hasPaid) {
+            AlertDialog(
+                onDismissRequest = { viewModel.dismissDeleteConfirm() },
+                title = { Text(stringResource(R.string.expense_delete_title)) },
+                text = {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        Text(stringResource(R.string.expense_delete_installment_choice_lead))
+                        TextButton(
+                            onClick = { viewModel.delete(onFinishedNeedRefresh, false) },
+                            enabled = !state.isSaving,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(stringResource(R.string.expense_delete_future_only))
+                        }
+                        TextButton(
+                            onClick = {
+                                viewModel.dismissDeleteConfirm()
+                                showInstallmentFullWipeSecond = true
+                            },
+                            enabled = !state.isSaving,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(stringResource(R.string.expense_delete_entire_plan))
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = { viewModel.dismissDeleteConfirm() },
+                        enabled = !state.isSaving,
+                    ) {
+                        Text(stringResource(R.string.expense_delete_cancel))
+                    }
+                },
+                dismissButton = {},
+            )
         } else {
-            stringResource(R.string.expense_delete_message)
+            val deleteBody = stringResource(R.string.expense_delete_message)
+            AlertDialog(
+                onDismissRequest = { viewModel.dismissDeleteConfirm() },
+                title = { Text(stringResource(R.string.expense_delete_title)) },
+                text = { Text(deleteBody) },
+                confirmButton = {
+                    TextButton(
+                        onClick = { viewModel.delete(onFinishedNeedRefresh, false) },
+                        enabled = !state.isSaving,
+                    ) {
+                        Text(stringResource(R.string.expense_delete_confirm))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { viewModel.dismissDeleteConfirm() }) {
+                        Text(stringResource(R.string.expense_delete_cancel))
+                    }
+                },
+            )
         }
+    }
+
+    if (showInstallmentFullWipeSecond) {
         AlertDialog(
-            onDismissRequest = { viewModel.dismissDeleteConfirm() },
-            title = { Text(stringResource(R.string.expense_delete_title)) },
-            text = { Text(deleteBody) },
+            onDismissRequest = { showInstallmentFullWipeSecond = false },
+            title = { Text(stringResource(R.string.expense_delete_full_wipe_title)) },
+            text = { Text(stringResource(R.string.expense_delete_full_wipe_message)) },
             confirmButton = {
                 TextButton(
-                    onClick = { viewModel.delete(onFinishedNeedRefresh) },
+                    onClick = {
+                        showInstallmentFullWipeSecond = false
+                        viewModel.delete(onFinishedNeedRefresh, true)
+                    },
                     enabled = !state.isSaving,
                 ) {
                     Text(stringResource(R.string.expense_delete_confirm))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { viewModel.dismissDeleteConfirm() }) {
+                TextButton(onClick = { showInstallmentFullWipeSecond = false }) {
                     Text(stringResource(R.string.expense_delete_cancel))
                 }
             },

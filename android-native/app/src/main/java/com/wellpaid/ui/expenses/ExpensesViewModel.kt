@@ -21,6 +21,14 @@ import kotlinx.coroutines.launch
 import java.time.YearMonth
 import javax.inject.Inject
 
+/** Atalho na lista: tipo de eliminação a enviar à API. */
+enum class ExpenseQuickDeleteMode {
+    SIMPLE,
+    INSTALLMENT_FUTURE,
+    INSTALLMENT_FULL,
+    RECURRING_OCCURRENCE,
+}
+
 enum class ExpenseStatusFilter {
     ALL,
     PENDING,
@@ -118,6 +126,44 @@ class ExpensesViewModel @Inject constructor(
                 .onFailure { t ->
                     _uiState.update {
                         it.copy(errorMessage = FastApiErrorMapper.message(appContext, t))
+                    }
+                }
+        }
+    }
+
+    fun deleteExpenseQuick(expense: ExpenseDto, mode: ExpenseQuickDeleteMode) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            runCatching {
+                val resp = when (mode) {
+                    ExpenseQuickDeleteMode.SIMPLE -> expensesApi.deleteExpense(expense.id)
+                    ExpenseQuickDeleteMode.INSTALLMENT_FUTURE -> expensesApi.deleteExpense(
+                        expense.id,
+                        deleteTarget = "series",
+                        deleteScope = "future_unpaid",
+                    )
+                    ExpenseQuickDeleteMode.INSTALLMENT_FULL -> expensesApi.deleteExpense(
+                        expense.id,
+                        deleteTarget = "series",
+                        deleteScope = "all",
+                        confirmDeletePaid = true,
+                    )
+                    ExpenseQuickDeleteMode.RECURRING_OCCURRENCE -> expensesApi.deleteExpense(
+                        expense.id,
+                        deleteTarget = "occurrence",
+                    )
+                }
+                if (!resp.isSuccessful) error("HTTP ${resp.code()}")
+            }
+                .onSuccess {
+                    refresh()
+                }
+                .onFailure { t ->
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = FastApiErrorMapper.message(appContext, t),
+                        )
                     }
                 }
         }

@@ -440,19 +440,31 @@ class ExpenseFormViewModel @Inject constructor(
         }
     }
 
-    fun delete(onSuccess: () -> Unit) {
+    fun delete(onSuccess: () -> Unit, installmentFullWipeIncludingPaid: Boolean = false) {
         val id = expenseId ?: return
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true, errorMessage = null, showDeleteConfirm = false) }
             runCatching {
                 val e = _uiState.value.loadedExpense
                 val resp = if (e != null && !e.installmentGroupId.isNullOrBlank()) {
-                    val scope = if (e.installmentPlanHasPaid == true) "future_unpaid" else "all"
-                    expensesApi.deleteExpense(
-                        id,
-                        deleteTarget = "series",
-                        deleteScope = scope,
-                    )
+                    when {
+                        installmentFullWipeIncludingPaid -> expensesApi.deleteExpense(
+                            id,
+                            deleteTarget = "series",
+                            deleteScope = "all",
+                            confirmDeletePaid = true,
+                        )
+                        e.installmentPlanHasPaid == true -> expensesApi.deleteExpense(
+                            id,
+                            deleteTarget = "series",
+                            deleteScope = "future_unpaid",
+                        )
+                        else -> expensesApi.deleteExpense(
+                            id,
+                            deleteTarget = "series",
+                            deleteScope = "all",
+                        )
+                    }
                 } else {
                     expensesApi.deleteExpense(id)
                 }

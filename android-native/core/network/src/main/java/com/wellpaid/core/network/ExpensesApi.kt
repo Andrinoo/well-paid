@@ -41,6 +41,7 @@ interface ExpensesApi {
         @Path("id") id: String,
         @Query("delete_target") deleteTarget: String? = null,
         @Query("delete_scope") deleteScope: String? = null,
+        @Query("confirm_delete_paid") confirmDeletePaid: Boolean? = null,
     ): Response<Void>
 
     @POST("expenses/{id}/pay")

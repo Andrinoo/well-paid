@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -18,10 +19,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -30,10 +33,13 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,6 +70,13 @@ import java.util.Locale
 private val monthTitleFormatter =
     DateTimeFormatter.ofPattern("LLLL yyyy", Locale("pt", "PT"))
 
+private sealed class ExpenseDeletePrompt {
+    data class Simple(val expense: ExpenseDto) : ExpenseDeletePrompt()
+    data class InstallmentPick(val expense: ExpenseDto) : ExpenseDeletePrompt()
+    data class InstallmentFullSecond(val expense: ExpenseDto) : ExpenseDeletePrompt()
+    data class Recurring(val expense: ExpenseDto) : ExpenseDeletePrompt()
+}
+
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun ExpensesListContent(
@@ -75,6 +88,7 @@ fun ExpensesListContent(
     viewModel: ExpensesViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    var deletePrompt by remember { mutableStateOf<ExpenseDeletePrompt?>(null) }
     val dirtyFlow = remember(mainRouteEntry) {
         mainRouteEntry.savedStateHandle.getStateFlow("expense_list_dirty", 0L)
     }
@@ -97,11 +111,14 @@ fun ExpensesListContent(
         }
     }
 
-    Column(
+    Box(
         modifier = modifier
             .fillMaxSize()
             .fillMaxWidth()
             .wellPaidMaxContentWidth(WellPaidMaxContentWidth),
+    ) {
+    Column(
+        modifier = Modifier.fillMaxSize(),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -215,6 +232,7 @@ fun ExpensesListContent(
                     items(state.expenses, key = { it.id }) { expense ->
                         ExpenseListRow(
                             expense = expense,
+                            deleteEnabled = !state.isLoading,
                             onRowClick = {
                                 val gid = expense.installmentGroupId
                                 if (expense.installmentTotal > 1 && !gid.isNullOrBlank()) {
@@ -228,6 +246,20 @@ fun ExpensesListContent(
                                     viewModel.payExpense(expense.id)
                                 }
                             },
+                            onDeleteClick = if (expense.isMine) {
+                                {
+                                    deletePrompt = when {
+                                        !expense.installmentGroupId.isNullOrBlank() &&
+                                            expense.installmentTotal > 1 ->
+                                            ExpenseDeletePrompt.InstallmentPick(expense)
+                                        !expense.recurringSeriesId.isNullOrBlank() ->
+                                            ExpenseDeletePrompt.Recurring(expense)
+                                        else -> ExpenseDeletePrompt.Simple(expense)
+                                    }
+                                }
+                            } else {
+                                null
+                            },
                         )
                         HorizontalDivider()
                     }
@@ -240,6 +272,119 @@ fun ExpensesListContent(
                 )
             }
         }
+    }
+
+    when (val p = deletePrompt) {
+        null -> Unit
+        is ExpenseDeletePrompt.Simple -> {
+            AlertDialog(
+                onDismissRequest = { deletePrompt = null },
+                title = { Text(stringResource(R.string.expense_list_delete_simple_title)) },
+                text = { Text(stringResource(R.string.expense_delete_message)) },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            deletePrompt = null
+                            viewModel.deleteExpenseQuick(p.expense, ExpenseQuickDeleteMode.SIMPLE)
+                        },
+                        enabled = !state.isLoading,
+                    ) {
+                        Text(stringResource(R.string.expense_delete_confirm))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { deletePrompt = null }) {
+                        Text(stringResource(R.string.expense_delete_cancel))
+                    }
+                },
+            )
+        }
+        is ExpenseDeletePrompt.Recurring -> {
+            AlertDialog(
+                onDismissRequest = { deletePrompt = null },
+                title = { Text(stringResource(R.string.expense_list_delete_recurring_title)) },
+                text = { Text(stringResource(R.string.expense_list_delete_recurring_msg)) },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            deletePrompt = null
+                            viewModel.deleteExpenseQuick(p.expense, ExpenseQuickDeleteMode.RECURRING_OCCURRENCE)
+                        },
+                        enabled = !state.isLoading,
+                    ) {
+                        Text(stringResource(R.string.expense_delete_confirm))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { deletePrompt = null }) {
+                        Text(stringResource(R.string.expense_delete_cancel))
+                    }
+                },
+            )
+        }
+        is ExpenseDeletePrompt.InstallmentPick -> {
+            AlertDialog(
+                onDismissRequest = { deletePrompt = null },
+                title = { Text(stringResource(R.string.expense_delete_title)) },
+                text = {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        Text(stringResource(R.string.expense_delete_installment_choice_lead))
+                        TextButton(
+                            onClick = {
+                                deletePrompt = null
+                                viewModel.deleteExpenseQuick(p.expense, ExpenseQuickDeleteMode.INSTALLMENT_FUTURE)
+                            },
+                            enabled = !state.isLoading,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(stringResource(R.string.expense_delete_future_only))
+                        }
+                        TextButton(
+                            onClick = {
+                                deletePrompt = ExpenseDeletePrompt.InstallmentFullSecond(p.expense)
+                            },
+                            enabled = !state.isLoading,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(stringResource(R.string.expense_delete_entire_plan))
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { deletePrompt = null }, enabled = !state.isLoading) {
+                        Text(stringResource(R.string.expense_delete_cancel))
+                    }
+                },
+                dismissButton = {},
+            )
+        }
+        is ExpenseDeletePrompt.InstallmentFullSecond -> {
+            AlertDialog(
+                onDismissRequest = { deletePrompt = null },
+                title = { Text(stringResource(R.string.expense_delete_full_wipe_title)) },
+                text = { Text(stringResource(R.string.expense_delete_full_wipe_message)) },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            deletePrompt = null
+                            viewModel.deleteExpenseQuick(p.expense, ExpenseQuickDeleteMode.INSTALLMENT_FULL)
+                        },
+                        enabled = !state.isLoading,
+                    ) {
+                        Text(stringResource(R.string.expense_delete_confirm))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { deletePrompt = null }) {
+                        Text(stringResource(R.string.expense_delete_cancel))
+                    }
+                },
+            )
+        }
+    }
     }
 }
 
@@ -305,8 +450,10 @@ private fun ExpenseTypeTagAnt() {
 @Composable
 private fun ExpenseListRow(
     expense: ExpenseDto,
+    deleteEnabled: Boolean,
     onRowClick: () -> Unit,
     onPayClick: () -> Unit,
+    onDeleteClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val isPaid = expense.status == "paid"
@@ -379,45 +526,47 @@ private fun ExpenseListRow(
         }
     }
 
-    Column(
+    Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable { onRowClick() }
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = 10.dp, vertical = 5.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .weight(1f)
+                .clickable { onRowClick() },
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Top,
         ) {
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(end = 8.dp),
+                    .padding(end = 6.dp),
             ) {
                 Text(
                     text = expense.description,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = WellPaidNavy,
                 )
                 Text(
                     text = metaLine,
                     style = MaterialTheme.typography.labelSmall,
-                    fontSize = 11.sp,
-                    lineHeight = 14.sp,
+                    fontSize = 10.sp,
+                    lineHeight = 13.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(top = 3.dp),
+                    modifier = Modifier.padding(top = 2.dp),
                 )
                 if (nextInstallmentBr != null && nextUrgency != null) {
                     Text(
                         text = stringResource(R.string.expenses_next_due, nextInstallmentBr),
                         style = MaterialTheme.typography.labelSmall,
-                        fontSize = 10.sp,
-                        lineHeight = 12.sp,
+                        fontSize = 9.sp,
+                        lineHeight = 11.sp,
                         color = dueUrgencyColorOnLight(nextUrgency),
                         fontWeight = dueUrgencyFontWeight(nextUrgency),
                         maxLines = 1,
@@ -429,7 +578,7 @@ private fun ExpenseListRow(
                     Text(
                         text = stringResource(R.string.expenses_shared_with, label),
                         style = MaterialTheme.typography.labelSmall,
-                        fontSize = 10.sp,
+                        fontSize = 9.sp,
                         color = WellPaidNavy.copy(alpha = 0.5f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -440,7 +589,7 @@ private fun ExpenseListRow(
                     Text(
                         text = stringResource(R.string.expenses_projected_suffix),
                         style = MaterialTheme.typography.labelSmall,
-                        fontSize = 10.sp,
+                        fontSize = 9.sp,
                         color = MaterialTheme.colorScheme.tertiary,
                         modifier = Modifier.padding(top = 2.dp),
                     )
@@ -449,7 +598,7 @@ private fun ExpenseListRow(
             Column(horizontalAlignment = Alignment.End) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(3.dp),
                 ) {
                     if (showParTag(expense)) {
                         ExpenseTypeTagPar()
@@ -462,7 +611,7 @@ private fun ExpenseListRow(
                     }
                     Text(
                         text = formatBrlFromCents(expense.amountCents),
-                        style = MaterialTheme.typography.titleSmall,
+                        style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold,
                         color = WellPaidNavy,
                     )
@@ -470,7 +619,7 @@ private fun ExpenseListRow(
                 if (!isPaid && expense.isMine) {
                     Text(
                         text = stringResource(R.string.expenses_pay),
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier
@@ -481,6 +630,19 @@ private fun ExpenseListRow(
                             ) { onPayClick() },
                     )
                 }
+            }
+        }
+        if (onDeleteClick != null) {
+            IconButton(
+                onClick = onDeleteClick,
+                enabled = deleteEnabled,
+                modifier = Modifier.heightIn(min = 40.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Delete,
+                    contentDescription = stringResource(R.string.expenses_row_delete_cd),
+                    tint = WellPaidNavy.copy(alpha = 0.42f),
+                )
             }
         }
     }

@@ -616,6 +616,7 @@ def delete_expense(
     db: Annotated[Session, Depends(get_db)],
     delete_target: Annotated[ExpenseDeleteTarget, Query()] = ExpenseDeleteTarget.series,
     delete_scope: Annotated[ExpenseDeleteScope, Query()] = ExpenseDeleteScope.all,
+    confirm_delete_paid: Annotated[bool, Query()] = False,
 ) -> None:
     e = _get_owned(db, expense_id, user.id)
     if e is None:
@@ -629,12 +630,15 @@ def delete_expense(
         e.installment_group_id is not None
         and delete_scope == ExpenseDeleteScope.all
         and installment_plan_has_paid(db, user.id, e.installment_group_id)
+        and not confirm_delete_paid
     ):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=(
                 "Este plano tem parcelas já pagas. Use delete_scope=future_unpaid para remover "
-                "apenas as parcelas pendentes futuras (não apaga histórico pago)."
+                "apenas as parcelas pendentes futuras (não apaga histórico pago), ou envie "
+                "confirm_delete_paid=true para apagar o plano inteiro (incluindo pagas) após "
+                "confirmação explícita no cliente."
             ),
         )
     if (
