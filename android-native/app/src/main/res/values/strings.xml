@@ -149,6 +149,7 @@
     <string name="expense_field_expense_date">Expense date (accrual)</string>
     <string name="expense_field_plan_start">Plan start</string>
     <string name="expense_plan_start_footer">Same date sent as contract start (start_date).</string>
+    <string name="expense_installments_anchor_footer">This date sets each installment due date (one per month from this day). Together with the number of installments, it defines the whole plan.</string>
     <string name="expense_field_due_date">Due date</string>
     <string name="expense_field_due_first">First due date</string>
     <string name="expense_field_due_optional">Optional</string>

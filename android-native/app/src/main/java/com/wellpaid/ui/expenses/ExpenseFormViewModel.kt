@@ -141,10 +141,16 @@ class ExpenseFormViewModel @Inject constructor(
         _uiState.update {
             val needDue =
                 kind == NewExpenseKind.INSTALLMENTS || kind == NewExpenseKind.RECURRING
-            it.copy(
+            var next = it.copy(
                 expenseKind = kind,
                 hasDueDate = if (needDue) true else it.hasDueDate,
             )
+            if (kind == NewExpenseKind.INSTALLMENTS) {
+                val today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
+                val due = if (it.dueDate.isBlank()) today else it.dueDate
+                next = next.copy(dueDate = due, expenseDate = due)
+            }
+            next
         }
     }
 
@@ -192,7 +198,13 @@ class ExpenseFormViewModel @Inject constructor(
     }
 
     fun setDueDate(value: String) {
-        _uiState.update { it.copy(dueDate = value) }
+        _uiState.update {
+            if (it.expenseKind == NewExpenseKind.INSTALLMENTS) {
+                it.copy(dueDate = value, expenseDate = value)
+            } else {
+                it.copy(dueDate = value)
+            }
+        }
     }
 
     fun setCategoryId(id: String) {
@@ -268,15 +280,23 @@ class ExpenseFormViewModel @Inject constructor(
             _uiState.update { it.copy(errorMessage = appContext.getString(R.string.expense_error_amount)) }
             return
         }
-        val expenseDateParsed = parseIsoDate(s.expenseDate) ?: run {
-            _uiState.update { it.copy(errorMessage = appContext.getString(R.string.expense_error_date)) }
-            return
-        }
-        val expenseDateStr = expenseDateParsed.format(DateTimeFormatter.ISO_LOCAL_DATE)
         val dueParsed = s.dueDate.trim().takeIf { it.isNotEmpty() }?.let { parseIsoDate(it) }
         if (s.dueDate.isNotBlank() && dueParsed == null) {
             _uiState.update { it.copy(errorMessage = appContext.getString(R.string.expense_error_due_date)) }
             return
+        }
+        val expenseDateStr: String = if (expenseId == null && s.expenseKind == NewExpenseKind.INSTALLMENTS) {
+            val d = dueParsed ?: run {
+                _uiState.update { it.copy(errorMessage = appContext.getString(R.string.expense_error_due_date)) }
+                return
+            }
+            d.format(DateTimeFormatter.ISO_LOCAL_DATE)
+        } else {
+            val expenseDateParsed = parseIsoDate(s.expenseDate) ?: run {
+                _uiState.update { it.copy(errorMessage = appContext.getString(R.string.expense_error_date)) }
+                return
+            }
+            expenseDateParsed.format(DateTimeFormatter.ISO_LOCAL_DATE)
         }
         if (expenseId == null) {
             if (s.expenseKind == NewExpenseKind.INSTALLMENTS && s.installmentTotal < 2) {
@@ -318,17 +338,20 @@ class ExpenseFormViewModel @Inject constructor(
                         NewExpenseKind.RECURRING -> s.recurringFrequency.lowercase()
                         else -> null
                     }
-                    val dueOut = if (s.hasDueDate) {
-                        dueParsed?.format(DateTimeFormatter.ISO_LOCAL_DATE)
-                    } else {
-                        null
+                    val dueOut = when {
+                        s.expenseKind == NewExpenseKind.INSTALLMENTS ->
+                            dueParsed?.format(DateTimeFormatter.ISO_LOCAL_DATE)
+                        s.hasDueDate -> dueParsed?.format(DateTimeFormatter.ISO_LOCAL_DATE)
+                        else -> null
                     }
+                    val startOut: String? =
+                        if (s.expenseKind == NewExpenseKind.INSTALLMENTS) null else expenseDateStr
                     expensesApi.createExpense(
                         ExpenseCreateDto(
                             description = desc,
                             amountCents = cents,
                             expenseDate = expenseDateStr,
-                            startDate = expenseDateStr,
+                            startDate = startOut,
                             dueDate = dueOut,
                             categoryId = cat,
                             status = if (s.alreadyPaid) "paid" else "pending",

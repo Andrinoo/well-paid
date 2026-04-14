@@ -368,23 +368,6 @@ fun ExpenseFormScreen(
                     isInst -> {
                         Spacer(Modifier.height(8.dp))
                         WellPaidDatePickerField(
-                            label = { Text(stringResource(R.string.expense_field_plan_start)) },
-                            isoDate = state.expenseDate,
-                            onIsoDateChange = { if (canEdit) viewModel.setExpenseDate(it) },
-                            enabled = canEdit,
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = fieldColors,
-                            shape = fieldShape,
-                        )
-                        Text(
-                            text = stringResource(R.string.expense_plan_start_footer),
-                            style = MaterialTheme.typography.labelSmall,
-                            lineHeight = 14.sp,
-                            color = WellPaidNavy.copy(alpha = 0.58f),
-                            modifier = Modifier.padding(start = 4.dp, top = 2.dp),
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        WellPaidDatePickerField(
                             label = { Text(stringResource(R.string.expense_field_due_first)) },
                             isoDate = state.dueDate,
                             onIsoDateChange = { if (canEdit) viewModel.setDueDate(it) },
@@ -394,8 +377,9 @@ fun ExpenseFormScreen(
                             shape = fieldShape,
                         )
                         Text(
-                            text = stringResource(R.string.expense_due_required_par_rec),
+                            text = stringResource(R.string.expense_installments_anchor_footer),
                             style = MaterialTheme.typography.labelSmall,
+                            lineHeight = 14.sp,
                             color = WellPaidNavy.copy(alpha = 0.58f),
                             modifier = Modifier.padding(start = 4.dp, top = 2.dp),
                         )

@@ -149,6 +149,7 @@
     <string name="expense_field_expense_date">Data da despesa (competência)</string>
     <string name="expense_field_plan_start">Início do plano</string>
     <string name="expense_plan_start_footer">Mesma data enviada como início do contrato (start_date).</string>
+    <string name="expense_installments_anchor_footer">Esta data define o vencimento de cada parcela (uma por mês a partir deste dia). Com o número de prestações, define o plano completo.</string>
     <string name="expense_field_due_date">Data de vencimento</string>
     <string name="expense_field_due_first">Primeiro vencimento</string>
     <string name="expense_field_due_optional">Opcional</string>
