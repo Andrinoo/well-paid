@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="160dp"
+    android:height="160dp"
+    android:viewportWidth="160"
+    android:viewportHeight="160">
+    <!-- Logo na UI (login, etc.). Quando adicionares PNG/WebP em drawable, podes trocar por
+         @drawable/logo_well_paid e remover este vetor. -->
+    <path
+        android:fillColor="#0D9488"
+        android:pathData="M16,0L144,0A16,16 0,0 1,160 16L160,144A16,16 0,0 1,144 160L16,160A16,16 0,0 1,0 144L0,16A16,16 0,0 1,16 0z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M80,48m-26,0a26,26 0,1 1,52 0a26,26 0,1 1,-52 0" />
+</vector>

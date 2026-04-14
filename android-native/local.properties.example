@@ -1,0 +1,11 @@
+# Copia para local.properties (não commits) e ajusta sdk.dir ao teu Android SDK.
+# No emulador, 10.0.2.2 = localhost do PC (uvicorn). Em telefone físico, usa o IP da
+# rede local (ex.: http://192.168.1.10:8000/) ou `adb reverse tcp:8000 tcp:8000` e
+# `api.base.url=http://127.0.0.1:8000/`.
+#
+# api.base.url — só afecta builds DEBUG (emulador/dev).
+# APK release: URL em gradle.properties → wellpaid.api.release.url (versionado).
+# Para um APK apontar para outro host sem editar gradle.properties: api.release.base.url=...
+
+sdk.dir=C\:\\Users\\SEU_USER\\AppData\\Local\\Android\\Sdk
+api.base.url=http://10.0.2.2:8000/

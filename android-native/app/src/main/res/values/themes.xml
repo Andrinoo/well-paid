@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Arranque: fundo preto + logo; depois passa a Theme.WellPaid.Main (Compose). -->
+    <style name="Theme.WellPaid" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_screen_logo</item>
+        <item name="postSplashScreenTheme">@style/Theme.WellPaid.Main</item>
+    </style>
+
+    <!-- Janela preta até ao primeiro frame Compose (evita flash branco). -->
+    <style name="Theme.WellPaid.Main" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">@color/splash_background</item>
+        <item name="android:colorBackground">@color/splash_background</item>
+        <item name="android:statusBarColor">@color/splash_background</item>
+        <item name="android:navigationBarColor">@color/splash_background</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

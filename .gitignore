@@ -3,6 +3,11 @@
 !.env.example
 env.txt
 
+# Segredos / assinatura Android (nunca versionar)
+*.jks
+*.keystore
+keystore.properties
+
 # IDE / tooling local
 .idea/
 .vscode/

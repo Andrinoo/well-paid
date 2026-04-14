@@ -17,7 +17,7 @@ class ExpenseCreate(BaseModel):
     due_date: date | None = None
     category_id: uuid.UUID
     status: ExpenseStatus = ExpenseStatus.PENDING
-    installment_total: int = Field(default=1, ge=1, le=24)
+    installment_total: int = Field(default=1, ge=1, le=999)
     recurring_frequency: str | None = Field(default=None, max_length=32)
     is_shared: bool = False
     shared_with_user_id: uuid.UUID | None = None

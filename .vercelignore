@@ -1,5 +1,6 @@
 # Limitar upload (<100MB); API só precisa de backend/
 mobile/
+android-native/
 .git/
 .cursor/
 **/.venv/
@@ -9,3 +10,10 @@ mobile/
 **/node_modules/
 *.md
 !backend/**/*.md
+
+# Nunca enviar segredos ou artefactos locais no upload
+.env
+.env.*
+*.jks
+*.keystore
+keystore.properties
