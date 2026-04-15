@@ -68,6 +68,9 @@ Disponibilizar rotas protegidas `/admin/*` na API FastAPI e um painel web (Vite 
 
 - Migração `018` e campo `users.is_admin` no modelo.
 - Rotas: `GET /admin/me`, `GET /admin/users`, `PATCH /admin/users/{id}` (corpo `{ "is_active": true|false }`).
+- `GET /admin/users` com filtros avançados: `is_active`, `is_admin`, `email_verified`, `created_from`, `created_to`, além de `order_by` e `order_dir`.
+- `PATCH /admin/users/{id}` com ações administrativas: `is_active`, `is_admin` e `revoke_sessions` (revoga refresh tokens ativos do utilizador).
+- `GET /admin/users/{id}` para detalhe da conta com resumo de atividade (`events_7d`, `events_30d`, `event_types_30d`).
 - Pacote frontend: [`admin-console/`](../../admin-console/) — `npm run dev` após `npm install` e `.env` a partir de `admin-console/.env.example`.
 - Testes backend existentes: `pytest` continua a passar (sem novos testes dedicados ao admin nesta entrega).
 

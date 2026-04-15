@@ -2,12 +2,10 @@ package com.wellpaid.security
 
 import android.content.Context
 import android.content.SharedPreferences
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
+import com.wellpaid.core.datastore.EncryptedSharedPreferencesFactory
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.IOException
 import java.security.GeneralSecurityException
-import java.security.SecureRandom
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -21,16 +19,7 @@ class AppSecurityPreferences @Inject constructor(
 
     private fun createPrefs(): SharedPreferences {
         return try {
-            val masterKey = MasterKey.Builder(appContext)
-                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                .build()
-            EncryptedSharedPreferences.create(
-                appContext,
-                PREFS_NAME,
-                masterKey,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-            )
+            EncryptedSharedPreferencesFactory.create(appContext, PREFS_NAME)
         } catch (e: GeneralSecurityException) {
             throw IllegalStateException("Falha ao criar EncryptedSharedPreferences (segurança)", e)
         } catch (e: IOException) {

@@ -2,8 +2,6 @@ package com.wellpaid.core.datastore
 
 import android.content.Context
 import android.content.SharedPreferences
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 import com.wellpaid.core.model.auth.TokenStorage
 import java.io.IOException
 import java.security.GeneralSecurityException
@@ -18,16 +16,7 @@ class EncryptedTokenStorage(
 
     private fun createPrefs(): SharedPreferences {
         return try {
-            val masterKey = MasterKey.Builder(appContext)
-                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                .build()
-            EncryptedSharedPreferences.create(
-                appContext,
-                PREFS_NAME,
-                masterKey,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-            )
+            EncryptedSharedPreferencesFactory.create(appContext, PREFS_NAME)
         } catch (e: GeneralSecurityException) {
             throw IllegalStateException("Falha ao criar EncryptedSharedPreferences", e)
         } catch (e: IOException) {

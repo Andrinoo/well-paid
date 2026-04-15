@@ -1,4 +1,5 @@
 from app.models.base import Base
+from app.models.admin_audit_event import AdminAuditEvent
 from app.models.app_usage_event import AppUsageEvent
 from app.models.category import Category
 from app.models.expense import Expense
@@ -17,6 +18,7 @@ from app.models.user import User
 
 __all__ = [
     "Base",
+    "AdminAuditEvent",
     "AppUsageEvent",
     "User",
     "RefreshToken",

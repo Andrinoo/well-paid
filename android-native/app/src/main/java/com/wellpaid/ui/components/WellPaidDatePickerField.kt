@@ -7,8 +7,10 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -33,6 +35,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldColors
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -45,10 +48,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -71,7 +78,12 @@ import java.util.Locale
 
 private const val MIN_YEAR = 2000
 private const val MAX_YEAR = 2100
-private val wheelPageSize = PageSize.Fixed(44.dp)
+
+/** Altura visível das colunas; o item ativo fica ao centro (ver [wheelVerticalContentPadding]). */
+private val wheelRowHeight = 220.dp
+private val wheelPageHeight = 44.dp
+private val wheelVerticalContentPadding = (wheelRowHeight - wheelPageHeight) / 2
+private val wheelPageSize = PageSize.Fixed(wheelPageHeight)
 
 /** Larguras mínimas para não cortar rótulos (ex.: “Setembro”) nem anos de 4 dígitos. */
 private val wheelDayMinWidth = 56.dp
@@ -119,7 +131,10 @@ fun WellPaidDatePickerField(
     )
 
     if (open) {
-        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        val sheetState = rememberModalBottomSheetState(
+            skipPartiallyExpanded = true,
+            confirmValueChange = { new -> new != SheetValue.Hidden },
+        )
         ModalBottomSheet(
             onDismissRequest = { open = false },
             sheetState = sheetState,
@@ -278,13 +293,39 @@ private fun WellPaidDateWheelContent(
         }
         Spacer(Modifier.height(4.dp))
 
-        Row(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(220.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically,
+                .height(wheelRowHeight)
+                .drawWithContent {
+                    drawContent()
+                    val padH = 4.dp.toPx()
+                    val slotH = wheelPageHeight.toPx()
+                    val cy = size.height / 2f
+                    val top = cy - slotH / 2f
+                    val w = (size.width - 2f * padH).coerceAtLeast(0f)
+                    val corner = CornerRadius(10.dp.toPx(), 10.dp.toPx())
+                    drawRoundRect(
+                        color = WellPaidNavy.copy(alpha = 0.10f),
+                        topLeft = Offset(padH, top),
+                        size = Size(w, slotH),
+                        cornerRadius = corner,
+                    )
+                    drawRoundRect(
+                        color = WellPaidNavy.copy(alpha = 0.50f),
+                        topLeft = Offset(padH, top),
+                        size = Size(w, slotH),
+                        cornerRadius = corner,
+                        style = Stroke(width = 1.5.dp.toPx()),
+                    )
+                },
         ) {
+            Row(
+                modifier = Modifier
+                    .matchParentSize(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
             WheelFadeBox(
                 modifier = Modifier
                     .weight(1f)
@@ -293,6 +334,7 @@ private fun WellPaidDateWheelContent(
                 VerticalPager(
                     state = dayPager,
                     modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(vertical = wheelVerticalContentPadding),
                     pageSize = wheelPageSize,
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) { page ->
@@ -315,6 +357,7 @@ private fun WellPaidDateWheelContent(
                 VerticalPager(
                     state = monthPager,
                     modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(vertical = wheelVerticalContentPadding),
                     pageSize = wheelPageSize,
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) { page ->
@@ -340,6 +383,7 @@ private fun WellPaidDateWheelContent(
                 VerticalPager(
                     state = yearPager,
                     modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(vertical = wheelVerticalContentPadding),
                     pageSize = wheelPageSize,
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) { page ->
@@ -353,6 +397,7 @@ private fun WellPaidDateWheelContent(
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
+            }
             }
         }
 
@@ -404,7 +449,7 @@ private fun WheelFadeBox(
     val surface = MaterialTheme.colorScheme.surface
     Box(
         modifier = modifier
-            .height(220.dp)
+            .fillMaxHeight()
             .drawWithContent {
                 drawContent()
                 drawRect(

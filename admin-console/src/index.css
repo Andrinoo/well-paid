@@ -124,6 +124,13 @@ h1 {
   text-align: left;
 }
 
+.wp-info {
+  color: #a8e0d8;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+  text-align: left;
+}
+
 .wp-toolbar {
   display: flex;
   flex-wrap: wrap;
