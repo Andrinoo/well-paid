@@ -7,6 +7,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from app.api.routes import (
+    admin,
     auth,
     categories,
     dashboard,
@@ -18,6 +19,7 @@ from app.api.routes import (
     income_categories,
     incomes,
     shopping_lists,
+    telemetry,
 )
 from app.core.config import get_settings
 from app.core.limiter import limiter
@@ -94,6 +96,7 @@ app.add_middleware(
 
 app.include_router(health.router)
 app.include_router(auth.router)
+app.include_router(admin.router)
 app.include_router(categories.router)
 app.include_router(income_categories.router)
 app.include_router(incomes.router)
@@ -103,3 +106,4 @@ app.include_router(goals.router)
 app.include_router(families.router)
 app.include_router(emergency_reserve.router)
 app.include_router(shopping_lists.router)
+app.include_router(telemetry.router)

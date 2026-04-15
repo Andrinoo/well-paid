@@ -47,3 +47,7 @@ backend/.venv/
 
 # Vercel (ligação local na raiz; `npx vercel link` se necessário)
 .vercel/
+
+# Node (admin console local)
+node_modules/
+admin-console/dist/

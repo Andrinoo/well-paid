@@ -43,10 +43,13 @@ def verify_password(password: str, password_hash: str) -> bool:
         return False
 
 
-def create_access_token(subject: str) -> str:
+def create_access_token(subject: str, *, is_admin: bool = False) -> str:
     expire = datetime.now(UTC) + timedelta(minutes=settings.access_token_expire_minutes)
+    payload: dict = {"sub": subject, "type": "access", "exp": expire}
+    if is_admin:
+        payload["adm"] = True
     return jwt.encode(
-        {"sub": subject, "type": "access", "exp": expire},
+        payload,
         settings.secret_key,
         algorithm=settings.algorithm,
     )

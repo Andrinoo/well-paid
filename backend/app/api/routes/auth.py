@@ -22,6 +22,7 @@ from app.core.security import (
     verify_password,
 )
 from app.models.email_verification_token import EmailVerificationToken
+from app.models.app_usage_event import AppUsageEvent
 from app.models.password_reset_token import PasswordResetToken
 from app.models.refresh_token import RefreshToken
 from app.api.deps import get_current_user
@@ -65,10 +66,13 @@ def _is_dev_env() -> bool:
     return settings.app_env.strip().lower() in _DEV_ENVS
 
 
-def _issue_tokens(db: Session, user: User) -> TokenPairResponse:
+def _issue_tokens(
+    db: Session, user: User, *, event_type: str = "auth_token_issued"
+) -> TokenPairResponse:
     jti = new_jti()
     refresh = create_refresh_token(str(user.id), jti)
-    exp = datetime.now(UTC) + timedelta(days=settings.refresh_token_expire_days)
+    now = datetime.now(UTC)
+    exp = now + timedelta(days=settings.refresh_token_expire_days)
     db.add(
         RefreshToken(
             user_id=user.id,
@@ -77,8 +81,17 @@ def _issue_tokens(db: Session, user: User) -> TokenPairResponse:
             expires_at=exp,
         )
     )
+    user.last_seen_at = now
+    db.add(user)
+    db.add(
+        AppUsageEvent(
+            user_id=user.id,
+            event_type=event_type,
+            occurred_at=now,
+        )
+    )
     db.commit()
-    access = create_access_token(str(user.id))
+    access = create_access_token(str(user.id), is_admin=user.is_admin)
     return TokenPairResponse(access_token=access, refresh_token=refresh)
 
 
@@ -248,7 +261,7 @@ def verify_email(
         update(RefreshToken).where(RefreshToken.user_id == u.id).values(revoked=True)
     )
     db.commit()
-    return _issue_tokens(db, u)
+    return _issue_tokens(db, u, event_type="verify_email_success")
 
 
 @router.post("/resend-verification", response_model=ResendVerificationResponse)
@@ -298,12 +311,12 @@ def login(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Conta inativa",
         )
-    if user.email_verified_at is None:
+    if user.email_verified_at is None and not user.is_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Confirme o seu e-mail antes de entrar. Verifique a caixa de entrada ou reenvie o código.",
         )
-    return _issue_tokens(db, user)
+    return _issue_tokens(db, user, event_type="login_success")
 
 
 @router.post("/refresh", response_model=TokenPairResponse)
@@ -351,12 +364,12 @@ def refresh_token(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Usuário inválido",
         )
-    if user.email_verified_at is None:
+    if user.email_verified_at is None and not user.is_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Confirme o seu e-mail para continuar a sessão.",
         )
-    return _issue_tokens(db, user)
+    return _issue_tokens(db, user, event_type="refresh_success")
 
 
 @router.post("/logout", response_model=MessageResponse)
