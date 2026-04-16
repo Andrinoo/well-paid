@@ -55,18 +55,21 @@ class AnnouncementsViewModel @Inject constructor(
             val banner = async { runCatching { announcementsApi.listActive("home_banner", 50) } }
             val feed = async { runCatching { announcementsApi.listActive("home_feed", 50) } }
             val finance = async { runCatching { announcementsApi.listActive("finance_tab", 50) } }
+            val announcementsOnly =
+                async { runCatching { announcementsApi.listActive("announcements_tab", 50) } }
             val bannerResult = banner.await()
             val feedResult = feed.await()
             val financeResult = finance.await()
+            val announcementsTabResult = announcementsOnly.await()
             val merged = LinkedHashMap<String, AnnouncementDto>()
-            listOf(bannerResult, feedResult, financeResult).forEach { result ->
+            listOf(bannerResult, feedResult, financeResult, announcementsTabResult).forEach { result ->
                 result.getOrNull()?.items?.forEach { row -> merged[row.id] = row }
             }
             val sorted = merged.values.sortedWith(
                 compareByDescending<AnnouncementDto> { it.priority }
                     .thenByDescending { it.createdAt.orEmpty() },
             )
-            val errors = listOf(bannerResult, feedResult, financeResult)
+            val errors = listOf(bannerResult, feedResult, financeResult, announcementsTabResult)
                 .mapNotNull { it.exceptionOrNull() }
             val errorMessage = when {
                 sorted.isNotEmpty() -> null

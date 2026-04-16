@@ -185,6 +185,7 @@ export function AnnouncementsSection(props: AnnouncementsSectionProps) {
           <option value="home_banner">Home banner</option>
           <option value="home_feed">Home feed</option>
           <option value="finance_tab">Aba finanças</option>
+          <option value="announcements_tab">Recados (lista)</option>
         </select>
         <button type="button" className="wp-btn wp-btn-ghost" onClick={props.onClearFilters} disabled={props.busy}>
           Limpar
@@ -280,6 +281,7 @@ export function AnnouncementsSection(props: AnnouncementsSectionProps) {
                 <option value="home_banner">Home banner</option>
                 <option value="home_feed">Home feed</option>
                 <option value="finance_tab">Aba finanças</option>
+                <option value="announcements_tab">Recados (lista)</option>
               </select>
               <input className="wp-search" type="number" min={0} max={100} value={form.priority} onChange={(e) => setForm((f) => ({ ...f, priority: Number(e.target.value) }))} title="Prioridade" />
               <label className="wp-check">

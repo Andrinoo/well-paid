@@ -591,7 +591,13 @@ export default function App() {
         if (parsed.status === 'all' || parsed.status === 'active' || parsed.status === 'inactive') {
           setAnnouncementStatusFilter(parsed.status)
         }
-        if (parsed.placement === 'all' || parsed.placement === 'home_banner' || parsed.placement === 'home_feed' || parsed.placement === 'finance_tab') {
+        if (
+          parsed.placement === 'all' ||
+          parsed.placement === 'home_banner' ||
+          parsed.placement === 'home_feed' ||
+          parsed.placement === 'finance_tab' ||
+          parsed.placement === 'announcements_tab'
+        ) {
           setAnnouncementPlacementFilter(parsed.placement)
         }
       } catch {

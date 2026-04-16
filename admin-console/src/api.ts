@@ -301,7 +301,11 @@ export type AdminAuditListResponse = {
 }
 
 export type AnnouncementKind = 'info' | 'warning' | 'tip' | 'material'
-export type AnnouncementPlacement = 'home_banner' | 'home_feed' | 'finance_tab'
+export type AnnouncementPlacement =
+  | 'home_banner'
+  | 'home_feed'
+  | 'finance_tab'
+  | 'announcements_tab'
 
 export type AnnouncementRow = {
   id: string

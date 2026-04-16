@@ -5,7 +5,12 @@ from typing import Literal
 from pydantic import BaseModel, Field, HttpUrl, field_validator
 
 AnnouncementKind = Literal["info", "warning", "tip", "material"]
-AnnouncementPlacement = Literal["home_banner", "home_feed", "finance_tab"]
+AnnouncementPlacement = Literal[
+    "home_banner",
+    "home_feed",
+    "finance_tab",
+    "announcements_tab",
+]
 
 
 class AnnouncementRow(BaseModel):
