@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,6 +27,8 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
@@ -34,6 +37,7 @@ import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -57,6 +61,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -67,6 +72,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
 import com.wellpaid.R
+import com.wellpaid.core.model.announcement.AnnouncementDto
 import com.wellpaid.ui.theme.WellPaidCream
 import com.wellpaid.ui.theme.WellPaidGold
 import com.wellpaid.ui.theme.WellPaidNavy
@@ -106,6 +112,7 @@ fun HomeDashboardContent(
         refreshing = pullRefreshing,
         onRefresh = { viewModel.refresh() },
     )
+    val uriHandler = LocalUriHandler.current
 
     LaunchedEffect(mainRouteEntry) {
         snapshotFlow {
@@ -275,34 +282,15 @@ fun HomeDashboardContent(
                             )
                         }
                         if (state.announcements.isNotEmpty()) {
-                            val topAnnouncement = state.announcements.first()
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 6.dp),
-                                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF8E1)),
-                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                            ) {
-                                Column(modifier = Modifier.padding(12.dp)) {
-                                    Text(
-                                        text = topAnnouncement.title,
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = WellPaidNavyDeep,
-                                    )
-                                    Spacer(Modifier.height(4.dp))
-                                    Text(
-                                        text = topAnnouncement.body,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = WellPaidNavy,
-                                        maxLines = 3,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                }
-                            }
+                            HomeAnnouncementBanner(
+                                announcement = state.announcements.first(),
+                                onOpenLink = { url -> runCatching { uriHandler.openUri(url) } },
+                                modifier = Modifier.padding(bottom = 6.dp),
+                            )
                         } else if (state.announcementsError != null) {
+                            val announcementsError = state.announcementsError
                             Text(
-                                text = state.announcementsError,
+                                text = announcementsError ?: "",
                                 modifier = Modifier.padding(bottom = 4.dp),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.error,
@@ -479,6 +467,104 @@ fun HomeDashboardContent(
                         state = pullRefreshState,
                         modifier = Modifier.align(Alignment.TopCenter),
                     )
+                }
+            }
+        }
+    }
+}
+
+private const val HOME_ANNOUNCEMENT_BODY_EXPAND_THRESHOLD = 100
+
+@Composable
+private fun HomeAnnouncementBanner(
+    announcement: AnnouncementDto,
+    onOpenLink: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val needsExpansion = announcement.body.length > HOME_ANNOUNCEMENT_BODY_EXPAND_THRESHOLD
+    var expanded by remember(announcement.id) { mutableStateOf(false) }
+    LaunchedEffect(announcement.id) {
+        expanded = false
+    }
+
+    val accent = when (announcement.kind.lowercase()) {
+        "warning" -> Color(0xFFB45309)
+        "tip" -> Color(0xFF047857)
+        "material" -> Color(0xFF6D28D9)
+        else -> WellPaidGold
+    }
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF8E1)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(
+                        if (needsExpansion) {
+                            Modifier.clickable { expanded = !expanded }
+                        } else {
+                            Modifier
+                        },
+                    ),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = announcement.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = WellPaidNavyDeep,
+                    modifier = Modifier.weight(1f),
+                )
+                if (needsExpansion) {
+                    Icon(
+                        imageVector = if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                        contentDescription = stringResource(R.string.announcements_toggle_expand),
+                        tint = WellPaidNavyDeep,
+                    )
+                }
+            }
+            when {
+                !needsExpansion -> {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = announcement.body,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = WellPaidNavy,
+                    )
+                    val ctaShort = announcement.ctaUrl?.trim().orEmpty()
+                    val labelShort = announcement.ctaLabel?.trim().orEmpty()
+                    if (ctaShort.isNotEmpty()) {
+                        Spacer(Modifier.height(8.dp))
+                        TextButton(onClick = { onOpenLink(ctaShort) }) {
+                            Text(
+                                text = labelShort.ifEmpty { stringResource(R.string.announcements_open_link) },
+                                color = accent,
+                            )
+                        }
+                    }
+                }
+                expanded -> {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = announcement.body,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = WellPaidNavy,
+                    )
+                    val cta = announcement.ctaUrl?.trim().orEmpty()
+                    val label = announcement.ctaLabel?.trim().orEmpty()
+                    if (cta.isNotEmpty()) {
+                        Spacer(Modifier.height(8.dp))
+                        TextButton(onClick = { onOpenLink(cta) }) {
+                            Text(
+                                text = label.ifEmpty { stringResource(R.string.announcements_open_link) },
+                                color = accent,
+                            )
+                        }
+                    }
                 }
             }
         }

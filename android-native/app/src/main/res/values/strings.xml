@@ -116,7 +116,13 @@
     <string name="home_donut_center_total">Total expenses</string>
     <string name="home_donut_selected_percent">%1$d%% of total</string>
     <string name="home_shortcut_pending_pay">To pay</string>
+    <string name="home_shortcut_announcements">News &amp; tips</string>
     <string name="home_shortcut_shopping_lists">Shopping lists</string>
+    <string name="announcements_screen_title">News &amp; tips</string>
+    <string name="announcements_empty">No announcements right now.</string>
+    <string name="announcements_need_login">Sign in to see announcements from the team.</string>
+    <string name="announcements_open_link">Open link</string>
+    <string name="announcements_toggle_expand">Expand or collapse announcement</string>
     <string name="home_shortcut_coming_soon">Coming soon</string>
     <string name="home_shortcuts_expand">Show more shortcuts</string>
     <string name="home_shortcuts_collapse">Hide shortcuts</string>

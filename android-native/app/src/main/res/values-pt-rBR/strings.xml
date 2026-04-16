@@ -116,7 +116,13 @@
     <string name="home_donut_center_total">Total despesas</string>
     <string name="home_donut_selected_percent">%1$d%% do total</string>
     <string name="home_shortcut_pending_pay">A pagar</string>
+    <string name="home_shortcut_announcements">Recados</string>
     <string name="home_shortcut_shopping_lists">Listas de compras</string>
+    <string name="announcements_screen_title">Recados</string>
+    <string name="announcements_empty">Sem recados no momento.</string>
+    <string name="announcements_need_login">Inicie sessão para ver os recados da equipa.</string>
+    <string name="announcements_open_link">Abrir link</string>
+    <string name="announcements_toggle_expand">Expandir ou fechar recado</string>
     <string name="home_shortcut_coming_soon">Em breve</string>
     <string name="home_shortcuts_expand">Mostrar mais atalhos</string>
     <string name="home_shortcuts_collapse">Ocultar atalhos</string>

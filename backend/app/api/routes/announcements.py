@@ -4,7 +4,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import and_, func, or_, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.api.deps import get_current_admin_user, get_current_user
 from app.core.database import get_db
@@ -25,11 +25,35 @@ router = APIRouter(tags=["announcements"])
 _MAX_LIMIT = 100
 
 
+def _resolve_target_user_id(db: Session, email: str | None) -> uuid.UUID | None:
+    if not email or not email.strip():
+        return None
+    s = email.strip().lower()
+    user = db.scalar(select(User).where(User.email == s))
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Utilizador não encontrado para este e-mail.",
+        )
+    return user.id
+
+
+def _announcement_to_row(db: Session, row: Announcement) -> AnnouncementRow:
+    base = AnnouncementRow.model_validate(row)
+    email: str | None = None
+    if row.target_user_id:
+        u = row.target_user
+        if u is None:
+            u = db.get(User, row.target_user_id)
+        email = u.email if u else None
+    return base.model_copy(update={"target_user_email": email})
+
+
 @router.get("/announcements/active", response_model=AnnouncementListResponse)
 @limiter.limit("120/minute")
 def list_active_announcements(
     request: Request,
-    _user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
     placement: AnnouncementPlacement = "home_banner",
     limit: Annotated[int, Query(ge=1, le=_MAX_LIMIT)] = 20,
@@ -40,24 +64,28 @@ def list_active_announcements(
         or_(Announcement.starts_at.is_(None), Announcement.starts_at <= now),
         or_(Announcement.ends_at.is_(None), Announcement.ends_at >= now),
     )
+    audience = or_(
+        Announcement.target_user_id.is_(None),
+        Announcement.target_user_id == user.id,
+    )
     total = int(
         db.scalar(
             select(func.count())
             .select_from(Announcement)
-            .where(active_window, Announcement.placement == placement)
+            .where(active_window, Announcement.placement == placement, audience)
         )
         or 0
     )
     rows = list(
         db.scalars(
             select(Announcement)
-            .where(active_window, Announcement.placement == placement)
+            .where(active_window, Announcement.placement == placement, audience)
             .order_by(Announcement.priority.desc(), Announcement.created_at.desc())
             .limit(limit)
         ).all()
     )
     return AnnouncementListResponse(
-        items=[AnnouncementRow.model_validate(row) for row in rows],
+        items=[_announcement_to_row(db, r) for r in rows],
         total=total,
         skip=0,
         limit=limit,
@@ -75,7 +103,7 @@ def list_admin_announcements(
     skip: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=_MAX_LIMIT)] = 50,
 ) -> AnnouncementListResponse:
-    stmt = select(Announcement)
+    stmt = select(Announcement).options(joinedload(Announcement.target_user))
     count_stmt = select(func.count()).select_from(Announcement)
     if placement is not None:
         flt = Announcement.placement == placement
@@ -89,10 +117,10 @@ def list_admin_announcements(
     rows = list(
         db.scalars(
             stmt.order_by(Announcement.created_at.desc()).offset(skip).limit(limit)
-        ).all()
+        ).unique().all()
     )
     return AnnouncementListResponse(
-        items=[AnnouncementRow.model_validate(row) for row in rows],
+        items=[_announcement_to_row(db, r) for r in rows],
         total=total,
         skip=skip,
         limit=limit,
@@ -111,6 +139,7 @@ def create_announcement(
     admin_user: Annotated[User, Depends(get_current_admin_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> AnnouncementRow:
+    tid = _resolve_target_user_id(db, body.target_user_email)
     row = Announcement(
         title=body.title,
         body=body.body,
@@ -123,6 +152,7 @@ def create_announcement(
         starts_at=body.starts_at,
         ends_at=body.ends_at,
         created_by_user_id=admin_user.id,
+        target_user_id=tid,
     )
     db.add(row)
     db.add(
@@ -130,12 +160,22 @@ def create_announcement(
             actor_user_id=admin_user.id,
             actor_email=admin_user.email,
             action="announcement.create",
-            details={"placement": row.placement, "kind": row.kind, "is_active": row.is_active},
+            details={
+                "placement": row.placement,
+                "kind": row.kind,
+                "is_active": row.is_active,
+                "target_user_id": str(tid) if tid else None,
+            },
         )
     )
     db.commit()
     db.refresh(row)
-    return AnnouncementRow.model_validate(row)
+    row = db.scalars(
+        select(Announcement)
+        .where(Announcement.id == row.id)
+        .options(joinedload(Announcement.target_user))
+    ).one()
+    return _announcement_to_row(db, row)
 
 
 @router.patch("/admin/announcements/{announcement_id}", response_model=AnnouncementRow)
@@ -159,6 +199,16 @@ def patch_announcement(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Nenhum campo para atualizar",
         )
+    target_email_update: str | None | object = object()
+    if "target_user_email" in changes:
+        raw = changes.pop("target_user_email")
+        if raw is None:
+            target_email_update = None  # explicit null → todos (sem destinatário)
+        elif isinstance(raw, str) and raw == "":
+            target_email_update = ""
+        else:
+            target_email_update = raw if isinstance(raw, str) else None
+
     if "title" in changes and isinstance(changes["title"], str):
         changes["title"] = changes["title"].strip()
     if "body" in changes and isinstance(changes["body"], str):
@@ -176,15 +226,27 @@ def patch_announcement(
         )
     for key, value in changes.items():
         setattr(row, key, value)
+
+    if target_email_update is not object():
+        if target_email_update is None or target_email_update == "":
+            row.target_user_id = None
+        else:
+            row.target_user_id = _resolve_target_user_id(db, str(target_email_update))
+
     db.add(
         AdminAuditEvent(
             actor_user_id=admin_user.id,
             actor_email=admin_user.email,
             action="announcement.patch",
-            details={"announcement_id": str(row.id), "fields": sorted(changes.keys())},
+            details={"announcement_id": str(row.id), "fields": sorted(body.model_dump(exclude_unset=True).keys())},
         )
     )
     db.add(row)
     db.commit()
     db.refresh(row)
-    return AnnouncementRow.model_validate(row)
+    row = db.scalars(
+        select(Announcement)
+        .where(Announcement.id == row.id)
+        .options(joinedload(Announcement.target_user))
+    ).one()
+    return _announcement_to_row(db, row)

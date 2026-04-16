@@ -42,6 +42,7 @@ import com.wellpaid.ui.settings.DisplayNameScreen
 import com.wellpaid.ui.settings.SettingsScreen
 import com.wellpaid.ui.shopping.ShoppingListDetailScreen
 import com.wellpaid.ui.shopping.ShoppingListFormScreen
+import com.wellpaid.ui.announcements.AnnouncementsScreen
 import com.wellpaid.ui.shopping.ShoppingListsScreen
 import com.wellpaid.ui.shopping.ShoppingListsViewModel
 
@@ -226,6 +227,14 @@ fun WellPaidNavHost(
                         onOpenShoppingLists = {
                             navController.navigate(NavRoutes.ShoppingLists)
                         },
+                        onOpenAnnouncements = {
+                            navController.navigate(NavRoutes.Announcements)
+                        },
+                    )
+                }
+                composable(NavRoutes.Announcements) {
+                    AnnouncementsScreen(
+                        onNavigateBack = { navController.popBackStack() },
                     )
                 }
                 composable(NavRoutes.ExpenseNew) {

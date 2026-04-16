@@ -16,6 +16,7 @@ data class AnnouncementDto(
     @SerialName("is_active") val isActive: Boolean,
     @SerialName("starts_at") val startsAt: String? = null,
     @SerialName("ends_at") val endsAt: String? = null,
+    @SerialName("created_at") val createdAt: String? = null,
 )
 
 @Serializable

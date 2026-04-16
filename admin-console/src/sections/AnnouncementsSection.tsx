@@ -13,6 +13,8 @@ type AnnouncementForm = {
   is_active: boolean
   starts_at: string
   ends_at: string
+  /** Vazio = visível para todos os utilizadores. */
+  target_user_email: string
 }
 
 type AnnouncementsSectionProps = {
@@ -35,6 +37,7 @@ type AnnouncementsSectionProps = {
     is_active: boolean
     starts_at: string | null
     ends_at: string | null
+    target_user_email: string
   }) => Promise<void>
   onUpdate: (
     id: string,
@@ -49,6 +52,7 @@ type AnnouncementsSectionProps = {
       is_active: boolean
       starts_at: string | null
       ends_at: string | null
+      target_user_email: string
     },
   ) => Promise<void>
   formatDt: (iso: string | null) => string
@@ -72,6 +76,7 @@ function emptyForm(): AnnouncementForm {
     is_active: false,
     starts_at: '',
     ends_at: '',
+    target_user_email: '',
   }
 }
 
@@ -128,6 +133,7 @@ export function AnnouncementsSection(props: AnnouncementsSectionProps) {
       is_active: row.is_active,
       starts_at: toInputDateTime(row.starts_at),
       ends_at: toInputDateTime(row.ends_at),
+      target_user_email: row.target_user_email ?? '',
     })
   }
 
@@ -144,6 +150,7 @@ export function AnnouncementsSection(props: AnnouncementsSectionProps) {
       is_active: form.is_active,
       starts_at: toIsoOrNull(form.starts_at),
       ends_at: toIsoOrNull(form.ends_at),
+      target_user_email: form.target_user_email.trim(),
     }
     if (creating) {
       await props.onCreate(payload)
@@ -188,6 +195,7 @@ export function AnnouncementsSection(props: AnnouncementsSectionProps) {
           <thead>
             <tr>
               <th>Título</th>
+              <th>Destinatário</th>
               <th>Tipo</th>
               <th>Local</th>
               <th>Estado</th>
@@ -200,6 +208,7 @@ export function AnnouncementsSection(props: AnnouncementsSectionProps) {
             {props.items.map((row) => (
               <tr key={row.id}>
                 <td>{row.title}</td>
+                <td>{row.target_user_email?.trim() ? row.target_user_email : <span className="wp-muted">Todos</span>}</td>
                 <td>{row.kind}</td>
                 <td>{row.placement}</td>
                 <td>{row.is_active ? <span className="wp-badge wp-badge-ok">Ativo</span> : <span className="wp-badge wp-badge-no">Inativo</span>}</td>
@@ -214,7 +223,7 @@ export function AnnouncementsSection(props: AnnouncementsSectionProps) {
             ))}
             {props.items.length === 0 ? (
               <tr>
-                <td colSpan={7}>
+                <td colSpan={8}>
                   <div className="wp-empty-state">
                     {props.busy ? 'A carregar avisos...' : 'Sem conteúdos para os filtros aplicados.'}
                   </div>
@@ -244,7 +253,21 @@ export function AnnouncementsSection(props: AnnouncementsSectionProps) {
             </div>
             <div className="wp-field">
               <label htmlFor="ann-body">Conteúdo</label>
-              <textarea id="ann-body" value={form.body} onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))} required rows={5} />
+              <textarea id="ann-body" value={form.body} onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))} required rows={12} />
+            </div>
+            <div className="wp-field">
+              <label htmlFor="ann-target-email">E-mail do destinatário (opcional)</label>
+              <input
+                id="ann-target-email"
+                type="email"
+                autoComplete="off"
+                placeholder="Vazio = todos os utilizadores"
+                value={form.target_user_email}
+                onChange={(e) => setForm((f) => ({ ...f, target_user_email: e.target.value }))}
+              />
+              <p className="wp-muted" style={{ fontSize: '0.8rem', marginTop: 6 }}>
+                Se preencher, só essa conta vê o recado (o e-mail tem de existir no sistema).
+              </p>
             </div>
             <div className="wp-filter-grid">
               <select className="wp-search" value={form.kind} onChange={(e) => setForm((f) => ({ ...f, kind: e.target.value as AnnouncementKind }))}>

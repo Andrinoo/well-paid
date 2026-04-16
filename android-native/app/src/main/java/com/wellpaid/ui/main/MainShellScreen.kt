@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Home
@@ -105,6 +106,7 @@ fun MainShellScreen(
     onOpenGoalNew: () -> Unit,
     onOpenGoalDetail: (String) -> Unit,
     onOpenShoppingLists: () -> Unit,
+    onOpenAnnouncements: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: MainShellViewModel = hiltViewModel(),
 ) {
@@ -234,6 +236,23 @@ fun MainShellScreen(
                                     Spacer(Modifier.height(2.dp))
                                     Text(
                                         stringResource(R.string.home_shortcut_pending_pay),
+                                        style = MaterialTheme.typography.labelSmall,
+                                    )
+                                }
+                            }
+                            TextButton(onClick = {
+                                shortcutsExpanded = false
+                                onOpenAnnouncements()
+                            }) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(
+                                        Icons.Filled.Campaign,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                    )
+                                    Spacer(Modifier.height(2.dp))
+                                    Text(
+                                        stringResource(R.string.home_shortcut_announcements),
                                         style = MaterialTheme.typography.labelSmall,
                                     )
                                 }

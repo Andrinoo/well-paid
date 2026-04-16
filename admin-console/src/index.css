@@ -105,6 +105,24 @@ h1 {
   outline-offset: 1px;
 }
 
+.wp-field textarea {
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid var(--wp-border);
+  background: color-mix(in srgb, var(--wp-surface-0) 85%, transparent);
+  color: var(--wp-text);
+  font-size: 1rem;
+  line-height: 1.45;
+  min-height: 12rem;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.wp-field textarea:focus {
+  outline: 2px solid rgba(201, 169, 78, 0.45);
+  outline-offset: 1px;
+}
+
 .wp-btn {
   display: inline-flex;
   align-items: center;

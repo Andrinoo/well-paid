@@ -933,6 +933,7 @@ export default function App() {
     is_active: boolean
     starts_at: string | null
     ends_at: string | null
+    target_user_email: string
   }) {
     if (!accessToken) return
     setError(null)
@@ -943,6 +944,7 @@ export default function App() {
         ...payload,
         cta_label: payload.cta_label || null,
         cta_url: payload.cta_url || null,
+        target_user_email: payload.target_user_email.trim() || null,
       })
       await loadAnnouncements(accessToken, { skip: announcementSkip })
       setInfo('Aviso criado com sucesso.')
@@ -967,6 +969,7 @@ export default function App() {
       is_active: boolean
       starts_at: string | null
       ends_at: string | null
+      target_user_email: string
     },
   ) {
     if (!accessToken) return
@@ -978,6 +981,7 @@ export default function App() {
         ...payload,
         cta_label: payload.cta_label || null,
         cta_url: payload.cta_url || null,
+        target_user_email: payload.target_user_email.trim(),
       })
       await loadAnnouncements(accessToken, { skip: announcementSkip })
       setInfo('Aviso atualizado com sucesso.')

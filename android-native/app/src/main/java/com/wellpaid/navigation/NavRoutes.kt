@@ -65,4 +65,7 @@ object NavRoutes {
     fun shoppingListDetail(listId: String): String = "$SHOPPING_LIST/$listId"
 
     const val ShoppingListNew = "shopping_list_new"
+
+    /** Recados / avisos publicados pelo admin. */
+    const val Announcements = "announcements"
 }

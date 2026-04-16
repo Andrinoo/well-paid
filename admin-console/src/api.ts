@@ -316,6 +316,9 @@ export type AnnouncementRow = {
   starts_at: string | null
   ends_at: string | null
   created_by_user_id: string | null
+  target_user_id: string | null
+  /** E-mail do destinatário quando o recado é só para uma conta; vazio em avisos globais. */
+  target_user_email: string | null
   created_at: string
   updated_at: string
 }
@@ -489,6 +492,8 @@ export async function createAnnouncement(
     is_active: boolean
     starts_at?: string | null
     ends_at?: string | null
+    /** E-mail do utilizador, ou omitir / vazio para todos. */
+    target_user_email?: string | null
   },
 ): Promise<AnnouncementRow> {
   try {
@@ -521,6 +526,8 @@ export async function patchAnnouncement(
     is_active?: boolean
     starts_at?: string | null
     ends_at?: string | null
+    /** String vazia = todos; e-mail = só esse utilizador. */
+    target_user_email?: string | null
   },
 ): Promise<AnnouncementRow> {
   try {
