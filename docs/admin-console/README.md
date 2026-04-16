@@ -11,3 +11,4 @@ Documentação de **processo e execução** por fase do console web de administr
 
 - **Fase 1:** backend FastAPI com `is_admin`, rotas `/admin/*`, JWT com claim de admin; painel Vite/React local com login e listagem de contas.
 - **Fase 2:** instrumentação adicional (BD e opcionalmente APK) para “tempo de uso” ou última atividade — ver documento dedicado.
+- **Conteúdo editorial:** módulo de avisos em `/admin/announcements` para publicação de dicas e avisos financeiros consumidos pelo app em `/announcements/active`.

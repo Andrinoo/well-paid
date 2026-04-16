@@ -300,6 +300,33 @@ export type AdminAuditListResponse = {
   limit: number
 }
 
+export type AnnouncementKind = 'info' | 'warning' | 'tip' | 'material'
+export type AnnouncementPlacement = 'home_banner' | 'home_feed' | 'finance_tab'
+
+export type AnnouncementRow = {
+  id: string
+  title: string
+  body: string
+  kind: AnnouncementKind
+  placement: AnnouncementPlacement
+  priority: number
+  cta_label: string | null
+  cta_url: string | null
+  is_active: boolean
+  starts_at: string | null
+  ends_at: string | null
+  created_by_user_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type AnnouncementListResponse = {
+  items: AnnouncementRow[]
+  total: number
+  skip: number
+  limit: number
+}
+
 export type AdminProductFunnel = {
   users_total: number
   email_verified_total: number
@@ -397,17 +424,116 @@ export async function getProductFunnel(accessToken: string): Promise<AdminProduc
 
 export async function listAuditEvents(
   accessToken: string,
-  params: { skip?: number; limit?: number },
+  params: {
+    skip?: number
+    limit?: number
+    actor_email?: string
+    action?: string
+    created_from?: string
+    created_to?: string
+  },
 ): Promise<AdminAuditListResponse> {
   const sp = new URLSearchParams()
   if (params.skip != null) sp.set('skip', String(params.skip))
   if (params.limit != null) sp.set('limit', String(params.limit))
+  if (params.actor_email) sp.set('actor_email', params.actor_email)
+  if (params.action) sp.set('action', params.action)
+  if (params.created_from) sp.set('created_from', params.created_from)
+  if (params.created_to) sp.set('created_to', params.created_to)
   try {
     const res = await fetch(`${getApiBase()}/admin/audit/events?${sp.toString()}`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     })
     if (!res.ok) throw new Error(await parseDetail(res))
     return res.json() as Promise<AdminAuditListResponse>
+  } catch (e) {
+    throw explainNetworkError(e)
+  }
+}
+
+export async function listAnnouncements(
+  accessToken: string,
+  params: {
+    skip?: number
+    limit?: number
+    placement?: AnnouncementPlacement
+    is_active?: boolean
+  },
+): Promise<AnnouncementListResponse> {
+  const sp = new URLSearchParams()
+  if (params.skip != null) sp.set('skip', String(params.skip))
+  if (params.limit != null) sp.set('limit', String(params.limit))
+  if (params.placement) sp.set('placement', params.placement)
+  if (params.is_active != null) sp.set('is_active', String(params.is_active))
+  try {
+    const res = await fetch(`${getApiBase()}/admin/announcements?${sp.toString()}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    if (!res.ok) throw new Error(await parseDetail(res))
+    return res.json() as Promise<AnnouncementListResponse>
+  } catch (e) {
+    throw explainNetworkError(e)
+  }
+}
+
+export async function createAnnouncement(
+  accessToken: string,
+  payload: {
+    title: string
+    body: string
+    kind: AnnouncementKind
+    placement: AnnouncementPlacement
+    priority: number
+    cta_label?: string | null
+    cta_url?: string | null
+    is_active: boolean
+    starts_at?: string | null
+    ends_at?: string | null
+  },
+): Promise<AnnouncementRow> {
+  try {
+    const res = await fetch(`${getApiBase()}/admin/announcements`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    })
+    if (!res.ok) throw new Error(await parseDetail(res))
+    return res.json() as Promise<AnnouncementRow>
+  } catch (e) {
+    throw explainNetworkError(e)
+  }
+}
+
+export async function patchAnnouncement(
+  accessToken: string,
+  announcementId: string,
+  payload: {
+    title?: string
+    body?: string
+    kind?: AnnouncementKind
+    placement?: AnnouncementPlacement
+    priority?: number
+    cta_label?: string | null
+    cta_url?: string | null
+    is_active?: boolean
+    starts_at?: string | null
+    ends_at?: string | null
+  },
+): Promise<AnnouncementRow> {
+  try {
+    const res = await fetch(`${getApiBase()}/admin/announcements/${announcementId}`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    })
+    if (!res.ok) throw new Error(await parseDetail(res))
+    return res.json() as Promise<AnnouncementRow>
   } catch (e) {
     throw explainNetworkError(e)
   }

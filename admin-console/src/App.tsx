@@ -1,33 +1,56 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   adminMe,
   clearTokens,
+  createAnnouncement,
+  getApiBase,
   getFamilyDetail,
   getFinanceSummary,
-  listAuditEvents,
   getProductFunnel,
-  getUserDetail,
   getUsageSummary,
-  getApiBase,
+  getUserDetail,
+  listAnnouncements,
+  listAuditEvents,
   listFamilies,
   listUsers,
   loadStoredTokens,
   loginRequest,
   patchUserActive,
+  patchAnnouncement,
   saveTokens,
+  type AnnouncementPlacement,
+  type AnnouncementRow,
+  type AdminAuditEventRow,
   type AdminFamilyDetailResponse,
   type AdminFamilyRow,
   type AdminFinanceSummary,
-  type AdminAuditEventRow,
   type AdminProductFunnel,
-  type AdminUserDetailResponse,
   type AdminUsageSummary,
+  type AdminUserDetailResponse,
   type AdminUserRow,
 } from './api'
+import { AdminShell, Dropdown, Modal, SectionHeader, StatCard } from './components/admin-ui'
+import { UsersSection } from './sections/UsersSection'
+import { FamiliesSection } from './sections/FamiliesSection'
+import { FinanceSection } from './sections/FinanceSection'
+import { FunnelSection } from './sections/FunnelSection'
+import { AuditSection } from './sections/AuditSection'
+import { AnnouncementsSection } from './sections/AnnouncementsSection'
 
 type View = 'boot' | 'login' | 'users'
-type AdminSection = 'users' | 'families' | 'finance' | 'funnel' | 'audit'
+type AdminSection = 'users' | 'families' | 'finance' | 'funnel' | 'audit' | 'announcements'
 type TriState = 'all' | 'yes' | 'no'
+type UiTheme = 'dark' | 'light'
+
+const STORAGE_UI_THEME = 'wellpaid_admin_ui_theme'
+const STORAGE_UI_DENSITY = 'wellpaid_admin_ui_density'
+const STORAGE_UI_SECTION = 'wellpaid_admin_ui_section'
+const STORAGE_UI_SIDEBAR = 'wellpaid_admin_ui_sidebar_collapsed'
+const STORAGE_UI_USERS_COLS = 'wellpaid_admin_ui_users_cols'
+const STORAGE_UI_FAMILIES_COLS = 'wellpaid_admin_ui_families_cols'
+const STORAGE_UI_AUDIT_COLS = 'wellpaid_admin_ui_audit_cols'
+const STORAGE_UI_AUDIT_FILTERS = 'wellpaid_admin_ui_audit_filters'
+const STORAGE_UI_ANNOUNCEMENTS_FILTERS = 'wellpaid_admin_ui_announcements_filters'
 
 function formatDt(iso: string | null): string {
   if (!iso) return '—'
@@ -63,6 +86,17 @@ function formatAuditDetails(details: Record<string, unknown> | null): string {
 function escapeCsvCell(s: string): string {
   if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`
   return s
+}
+
+function downloadCsv(filename: string, headers: string[], lines: string[][]): void {
+  const content = [headers.join(','), ...lines.map((row) => row.map((c) => escapeCsvCell(String(c))).join(','))].join('\n')
+  const blob = new Blob(['\ufeff' + content], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
 }
 
 async function fetchAllUsersForExport(
@@ -115,35 +149,23 @@ function downloadUsersCsv(rows: AdminUserRow[]): void {
     'created_at',
     'updated_at',
   ]
-  const lines = [
-    headers.join(','),
-    ...rows.map((r) =>
-      [
-        r.id,
-        r.email,
-        r.full_name ?? '',
-        r.display_name ?? '',
-        r.phone ?? '',
-        String(r.is_active),
-        String(r.is_admin),
-        r.email_verified_at ?? '',
-        r.last_seen_at ?? '',
-        r.created_at,
-        r.updated_at,
-      ]
-        .map((c) => escapeCsvCell(String(c)))
-        .join(','),
-    ),
-  ]
-  const blob = new Blob(['\ufeff' + lines.join('\n')], {
-    type: 'text/csv;charset=utf-8',
-  })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `wellpaid-contas-${new Date().toISOString().slice(0, 10)}.csv`
-  a.click()
-  URL.revokeObjectURL(url)
+  downloadCsv(
+    `wellpaid-contas-${new Date().toISOString().slice(0, 10)}.csv`,
+    headers,
+    rows.map((r) => [
+      r.id,
+      r.email,
+      r.full_name ?? '',
+      r.display_name ?? '',
+      r.phone ?? '',
+      String(r.is_active),
+      String(r.is_admin),
+      r.email_verified_at ?? '',
+      r.last_seen_at ?? '',
+      r.created_at,
+      r.updated_at,
+    ]),
+  )
 }
 
 function maxEventsInSeries(summary: AdminUsageSummary | null): number {
@@ -190,6 +212,43 @@ export default function App() {
   const [auditItems, setAuditItems] = useState<AdminAuditEventRow[]>([])
   const [auditTotal, setAuditTotal] = useState(0)
   const [auditSkip, setAuditSkip] = useState(0)
+  const [auditActorEmail, setAuditActorEmail] = useState('')
+  const [auditAction, setAuditAction] = useState('')
+  const [auditFrom, setAuditFrom] = useState('')
+  const [auditTo, setAuditTo] = useState('')
+  const [auditActorEmailDebounced, setAuditActorEmailDebounced] = useState('')
+  const [auditActionDebounced, setAuditActionDebounced] = useState('')
+  const [auditFromDebounced, setAuditFromDebounced] = useState('')
+  const [auditToDebounced, setAuditToDebounced] = useState('')
+  const [announcementItems, setAnnouncementItems] = useState<AnnouncementRow[]>([])
+  const [announcementTotal, setAnnouncementTotal] = useState(0)
+  const [announcementSkip, setAnnouncementSkip] = useState(0)
+  const [announcementStatusFilter, setAnnouncementStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
+  const [announcementPlacementFilter, setAnnouncementPlacementFilter] = useState<'all' | AnnouncementPlacement>('all')
+  const [tableDensity, setTableDensity] = useState<'comfortable' | 'compact'>('comfortable')
+  const [uiTheme, setUiTheme] = useState<UiTheme>('dark')
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [usersVisibleColumns, setUsersVisibleColumns] = useState({
+    email: true,
+    name: true,
+    active: true,
+    admin: true,
+    verified: true,
+    lastSeen: true,
+    created: true,
+  })
+  const [familiesVisibleColumns, setFamiliesVisibleColumns] = useState({
+    name: true,
+    members: true,
+    created: true,
+  })
+  const [auditVisibleColumns, setAuditVisibleColumns] = useState({
+    when: true,
+    who: true,
+    action: true,
+    target: true,
+    details: true,
+  })
 
   const logout = useCallback(() => {
     clearTokens()
@@ -201,6 +260,8 @@ export default function App() {
     setFunnelMetrics(null)
     setAuditItems([])
     setAuditTotal(0)
+    setAnnouncementItems([])
+    setAnnouncementTotal(0)
     setAdminSection('users')
     setView('login')
   }, [])
@@ -268,13 +329,36 @@ export default function App() {
 
   const loadAudit = useCallback(async (token: string, opts: { skip: number }) => {
     const [data, usage] = await Promise.all([
-      listAuditEvents(token, { skip: opts.skip, limit }),
+      listAuditEvents(token, {
+        skip: opts.skip,
+        limit,
+        actor_email: auditActorEmailDebounced.trim() || undefined,
+        action: auditActionDebounced.trim() || undefined,
+        created_from: auditFromDebounced ? `${auditFromDebounced}T00:00:00Z` : undefined,
+        created_to: auditToDebounced ? `${auditToDebounced}T23:59:59Z` : undefined,
+      }),
       getUsageSummary(token, 14),
     ])
     setAuditItems(data.items)
     setAuditTotal(data.total)
     setSummary(usage)
-  }, [])
+  }, [auditActorEmailDebounced, auditActionDebounced, auditFromDebounced, auditToDebounced])
+
+  const loadAnnouncements = useCallback(async (token: string, opts: { skip: number }) => {
+    const [data, usage] = await Promise.all([
+      listAnnouncements(token, {
+        skip: opts.skip,
+        limit,
+        placement: announcementPlacementFilter === 'all' ? undefined : announcementPlacementFilter,
+        is_active:
+          announcementStatusFilter === 'all' ? undefined : announcementStatusFilter === 'active',
+      }),
+      getUsageSummary(token, 14),
+    ])
+    setAnnouncementItems(data.items)
+    setAnnouncementTotal(data.total)
+    setSummary(usage)
+  }, [announcementPlacementFilter, announcementStatusFilter])
 
   useEffect(() => {
     const t = window.setTimeout(() => setQDebounced(q.trim()), 350)
@@ -285,6 +369,16 @@ export default function App() {
     const t = window.setTimeout(() => setFamilyQDebounced(familyQ.trim()), 350)
     return () => window.clearTimeout(t)
   }, [familyQ])
+
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      setAuditActorEmailDebounced(auditActorEmail.trim())
+      setAuditActionDebounced(auditAction.trim())
+      setAuditFromDebounced(auditFrom)
+      setAuditToDebounced(auditTo)
+    }, 450)
+    return () => window.clearTimeout(t)
+  }, [auditActorEmail, auditAction, auditFrom, auditTo])
 
   useEffect(() => {
     if (view !== 'users' || !accessToken || adminSection !== 'users') return
@@ -382,12 +476,196 @@ export default function App() {
   }, [view, accessToken, adminSection, auditSkip, loadAudit])
 
   useEffect(() => {
+    if (view !== 'users' || !accessToken || adminSection !== 'announcements') return
+    let cancelled = false
+    setBusy(true)
+    loadAnnouncements(accessToken, { skip: announcementSkip })
+      .catch((e) => {
+        if (!cancelled) {
+          setInfo(null)
+          setError(e instanceof Error ? e.message : 'Erro ao carregar avisos')
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setBusy(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [view, accessToken, adminSection, announcementSkip, loadAnnouncements])
+
+  useEffect(() => {
+    setAuditSkip(0)
+  }, [auditActorEmailDebounced, auditActionDebounced, auditFromDebounced, auditToDebounced])
+
+  useEffect(() => {
+    setAnnouncementSkip(0)
+  }, [announcementStatusFilter, announcementPlacementFilter])
+
+  useEffect(() => {
     setSkip(0)
   }, [qDebounced, isActiveFilter, isAdminFilter, emailVerifiedFilter, createdFrom, createdTo, orderBy, orderDir])
 
   useEffect(() => {
     setFamilySkip(0)
   }, [familyQDebounced, familyOrderBy, familyOrderDir])
+
+  useEffect(() => {
+    const savedTheme = sessionStorage.getItem(STORAGE_UI_THEME)
+    if (savedTheme === 'dark' || savedTheme === 'light') {
+      setUiTheme(savedTheme)
+    }
+    const savedDensity = sessionStorage.getItem(STORAGE_UI_DENSITY)
+    if (savedDensity === 'comfortable' || savedDensity === 'compact') {
+      setTableDensity(savedDensity)
+    }
+    const savedSection = sessionStorage.getItem(STORAGE_UI_SECTION)
+    if (savedSection === 'users' || savedSection === 'families' || savedSection === 'finance' || savedSection === 'funnel' || savedSection === 'audit' || savedSection === 'announcements') {
+      setAdminSection(savedSection)
+    }
+    const savedSidebar = sessionStorage.getItem(STORAGE_UI_SIDEBAR)
+    if (savedSidebar === '1' || savedSidebar === '0') {
+      setSidebarCollapsed(savedSidebar === '1')
+    }
+    const savedUserCols = sessionStorage.getItem(STORAGE_UI_USERS_COLS)
+    if (savedUserCols) {
+      try {
+        const parsed = JSON.parse(savedUserCols) as Partial<typeof usersVisibleColumns>
+        setUsersVisibleColumns((prev) => ({ ...prev, ...parsed }))
+      } catch {
+        /* ignore */
+      }
+    }
+    const savedFamiliesCols = sessionStorage.getItem(STORAGE_UI_FAMILIES_COLS)
+    if (savedFamiliesCols) {
+      try {
+        const parsed = JSON.parse(savedFamiliesCols) as Partial<typeof familiesVisibleColumns>
+        setFamiliesVisibleColumns((prev) => ({ ...prev, ...parsed }))
+      } catch {
+        /* ignore */
+      }
+    }
+    const savedAuditCols = sessionStorage.getItem(STORAGE_UI_AUDIT_COLS)
+    if (savedAuditCols) {
+      try {
+        const parsed = JSON.parse(savedAuditCols) as Partial<typeof auditVisibleColumns>
+        setAuditVisibleColumns((prev) => ({ ...prev, ...parsed }))
+      } catch {
+        /* ignore */
+      }
+    }
+
+    const savedAuditFiltersRaw = sessionStorage.getItem(STORAGE_UI_AUDIT_FILTERS)
+    if (savedAuditFiltersRaw) {
+      try {
+        const parsed = JSON.parse(savedAuditFiltersRaw) as Partial<{
+          actorEmail: string
+          action: string
+          from: string
+          to: string
+        }>
+        const nextActor = typeof parsed.actorEmail === 'string' ? parsed.actorEmail : ''
+        const nextAction = typeof parsed.action === 'string' ? parsed.action : ''
+        const nextFrom = typeof parsed.from === 'string' ? parsed.from : ''
+        const nextTo = typeof parsed.to === 'string' ? parsed.to : ''
+        setAuditActorEmail(nextActor)
+        setAuditAction(nextAction)
+        setAuditFrom(nextFrom)
+        setAuditTo(nextTo)
+        setAuditActorEmailDebounced(nextActor)
+        setAuditActionDebounced(nextAction)
+        setAuditFromDebounced(nextFrom)
+        setAuditToDebounced(nextTo)
+      } catch {
+        /* ignore */
+      }
+    }
+
+    const savedAnnouncementsFiltersRaw = sessionStorage.getItem(STORAGE_UI_ANNOUNCEMENTS_FILTERS)
+    if (savedAnnouncementsFiltersRaw) {
+      try {
+        const parsed = JSON.parse(savedAnnouncementsFiltersRaw) as Partial<{
+          status: 'all' | 'active' | 'inactive'
+          placement: 'all' | AnnouncementPlacement
+        }>
+        if (parsed.status === 'all' || parsed.status === 'active' || parsed.status === 'inactive') {
+          setAnnouncementStatusFilter(parsed.status)
+        }
+        if (parsed.placement === 'all' || parsed.placement === 'home_banner' || parsed.placement === 'home_feed' || parsed.placement === 'finance_tab') {
+          setAnnouncementPlacementFilter(parsed.placement)
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    sessionStorage.setItem(STORAGE_UI_THEME, uiTheme)
+    document.documentElement.setAttribute('data-wp-theme', uiTheme)
+  }, [uiTheme])
+
+  useEffect(() => {
+    sessionStorage.setItem(STORAGE_UI_DENSITY, tableDensity)
+  }, [tableDensity])
+
+  useEffect(() => {
+    sessionStorage.setItem(STORAGE_UI_SECTION, adminSection)
+  }, [adminSection])
+
+  useEffect(() => {
+    sessionStorage.setItem(STORAGE_UI_SIDEBAR, sidebarCollapsed ? '1' : '0')
+  }, [sidebarCollapsed])
+
+  useEffect(() => {
+    sessionStorage.setItem(STORAGE_UI_USERS_COLS, JSON.stringify(usersVisibleColumns))
+  }, [usersVisibleColumns])
+
+  useEffect(() => {
+    sessionStorage.setItem(STORAGE_UI_FAMILIES_COLS, JSON.stringify(familiesVisibleColumns))
+  }, [familiesVisibleColumns])
+
+  useEffect(() => {
+    sessionStorage.setItem(STORAGE_UI_AUDIT_COLS, JSON.stringify(auditVisibleColumns))
+  }, [auditVisibleColumns])
+
+  useEffect(() => {
+    sessionStorage.setItem(
+      STORAGE_UI_AUDIT_FILTERS,
+      JSON.stringify({ actorEmail: auditActorEmail, action: auditAction, from: auditFrom, to: auditTo }),
+    )
+  }, [auditActorEmail, auditAction, auditFrom, auditTo])
+
+  useEffect(() => {
+    sessionStorage.setItem(
+      STORAGE_UI_ANNOUNCEMENTS_FILTERS,
+      JSON.stringify({ status: announcementStatusFilter, placement: announcementPlacementFilter }),
+    )
+  }, [announcementStatusFilter, announcementPlacementFilter])
+
+  const toggleUsersColumn = useCallback((k: keyof typeof usersVisibleColumns) => {
+    setUsersVisibleColumns((prev) => {
+      const next = { ...prev, [k]: !prev[k] }
+      if (Object.values(next).some(Boolean)) return next
+      return prev
+    })
+  }, [])
+
+  const toggleFamiliesColumn = useCallback((k: keyof typeof familiesVisibleColumns) => {
+    setFamiliesVisibleColumns((prev) => {
+      const next = { ...prev, [k]: !prev[k] }
+      if (Object.values(next).some(Boolean)) return next
+      return prev
+    })
+  }, [])
+
+  const toggleAuditColumn = useCallback((k: keyof typeof auditVisibleColumns) => {
+    setAuditVisibleColumns((prev) => {
+      const next = { ...prev, [k]: !prev[k] }
+      if (Object.values(next).some(Boolean)) return next
+      return prev
+    })
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -451,6 +729,107 @@ export default function App() {
       downloadUsersCsv(all)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Erro ao exportar')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function exportFamiliesCsv() {
+    if (!accessToken) return
+    setError(null)
+    setInfo(null)
+    setBusy(true)
+    try {
+      const pageSize = 200
+      const all: AdminFamilyRow[] = []
+      let skip = 0
+      while (true) {
+        const data = await listFamilies(accessToken, {
+          q: familyQDebounced || undefined,
+          skip,
+          limit: pageSize,
+          order_by: familyOrderBy,
+          order_dir: familyOrderDir,
+        })
+        all.push(...data.items)
+        if (data.items.length < pageSize || all.length >= data.total) break
+        skip += pageSize
+      }
+
+      const headers: string[] = []
+      if (familiesVisibleColumns.name) headers.push('name')
+      if (familiesVisibleColumns.members) headers.push('member_count')
+      if (familiesVisibleColumns.created) headers.push('created_at')
+      headers.push('id')
+
+      downloadCsv(
+        `wellpaid-familias-${new Date().toISOString().slice(0, 10)}.csv`,
+        headers,
+        all.map((r) => {
+          const row: string[] = []
+          if (familiesVisibleColumns.name) row.push(r.name)
+          if (familiesVisibleColumns.members) row.push(String(r.member_count))
+          if (familiesVisibleColumns.created) row.push(r.created_at)
+          row.push(r.id)
+          return row
+        }),
+      )
+      setInfo(`Exportadas ${all.length} famílias.`)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Erro ao exportar famílias')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function exportAuditCsv() {
+    if (!accessToken) return
+    setError(null)
+    setInfo(null)
+    setBusy(true)
+    try {
+      const pageSize = 300
+      const all: AdminAuditEventRow[] = []
+      let skip = 0
+      while (true) {
+        const data = await listAuditEvents(accessToken, {
+          skip,
+          limit: pageSize,
+        actor_email: auditActorEmailDebounced.trim() || undefined,
+        action: auditActionDebounced.trim() || undefined,
+        created_from: auditFromDebounced ? `${auditFromDebounced}T00:00:00Z` : undefined,
+        created_to: auditToDebounced ? `${auditToDebounced}T23:59:59Z` : undefined,
+        })
+        all.push(...data.items)
+        if (data.items.length < pageSize || all.length >= data.total) break
+        skip += pageSize
+      }
+
+      const headers: string[] = []
+      if (auditVisibleColumns.when) headers.push('created_at')
+      if (auditVisibleColumns.who) headers.push('actor_email')
+      if (auditVisibleColumns.action) headers.push('action')
+      if (auditVisibleColumns.target) headers.push('target_email')
+      if (auditVisibleColumns.details) headers.push('details')
+      headers.push('id')
+
+      downloadCsv(
+        `wellpaid-auditoria-${new Date().toISOString().slice(0, 10)}.csv`,
+        headers,
+        all.map((ev) => {
+          const row: string[] = []
+          if (auditVisibleColumns.when) row.push(ev.created_at)
+          if (auditVisibleColumns.who) row.push(ev.actor_email)
+          if (auditVisibleColumns.action) row.push(ev.action)
+          if (auditVisibleColumns.target) row.push(ev.target_email ?? '')
+          if (auditVisibleColumns.details) row.push(formatAuditDetails(ev.details))
+          row.push(ev.id)
+          return row
+        }),
+      )
+      setInfo(`Exportados ${all.length} eventos de auditoria.`)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Erro ao exportar auditoria')
     } finally {
       setBusy(false)
     }
@@ -543,49 +922,92 @@ export default function App() {
     }
   }
 
-  if (view === 'boot') {
-    return (
-      <div className="wp-card">
-        <p className="wp-muted" style={{ margin: 0 }}>
-          A carregar…
-        </p>
-      </div>
-    )
+  async function handleCreateAnnouncement(payload: {
+    title: string
+    body: string
+    kind: 'info' | 'warning' | 'tip' | 'material'
+    placement: AnnouncementPlacement
+    priority: number
+    cta_label: string
+    cta_url: string
+    is_active: boolean
+    starts_at: string | null
+    ends_at: string | null
+  }) {
+    if (!accessToken) return
+    setError(null)
+    setInfo(null)
+    setBusy(true)
+    try {
+      await createAnnouncement(accessToken, {
+        ...payload,
+        cta_label: payload.cta_label || null,
+        cta_url: payload.cta_url || null,
+      })
+      await loadAnnouncements(accessToken, { skip: announcementSkip })
+      setInfo('Aviso criado com sucesso.')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Erro ao criar aviso')
+      throw e
+    } finally {
+      setBusy(false)
+    }
   }
+
+  async function handleUpdateAnnouncement(
+    id: string,
+    payload: {
+      title: string
+      body: string
+      kind: 'info' | 'warning' | 'tip' | 'material'
+      placement: AnnouncementPlacement
+      priority: number
+      cta_label: string
+      cta_url: string
+      is_active: boolean
+      starts_at: string | null
+      ends_at: string | null
+    },
+  ) {
+    if (!accessToken) return
+    setError(null)
+    setInfo(null)
+    setBusy(true)
+    try {
+      await patchAnnouncement(accessToken, id, {
+        ...payload,
+        cta_label: payload.cta_label || null,
+        cta_url: payload.cta_url || null,
+      })
+      await loadAnnouncements(accessToken, { skip: announcementSkip })
+      setInfo('Aviso atualizado com sucesso.')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Erro ao atualizar aviso')
+      throw e
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const sectionLabel = useMemo<Record<AdminSection, string>>(
+    () => ({ users: 'Contas', families: 'Famílias', finance: 'Finanças', funnel: 'Funil', audit: 'Auditoria', announcements: 'Avisos' }),
+    [],
+  )
+  const navItems: AdminSection[] = ['users', 'families', 'finance', 'funnel', 'audit', 'announcements']
+
+  if (view === 'boot') return <div className="wp-loading">A carregar…</div>
 
   if (view === 'login') {
     return (
-      <div>
-        <h1>Well Paid — Admin</h1>
-        <p className="wp-muted">API: {getApiBase()}</p>
-        <div className="wp-card" style={{ maxWidth: 420, margin: '0 auto' }}>
+      <div className="wp-login-shell">
+        <div className="wp-login-card wp-card">
+          <h1>Well Paid Admin Console</h1>
+          <p className="wp-muted">API: {getApiBase()}</p>
           <form onSubmit={handleLogin}>
             {error ? <div className="wp-error">{error}</div> : null}
-            <div className="wp-field">
-              <label htmlFor="email">E-mail</label>
-              <input
-                id="email"
-                type="email"
-                autoComplete="username"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div className="wp-field">
-              <label htmlFor="password">Senha</label>
-              <input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-            <button className="wp-btn" type="submit" disabled={busy} style={{ width: '100%' }}>
-              {busy ? 'A entrar…' : 'Entrar'}
-            </button>
+            <div className="wp-field"><label htmlFor="email">E-mail</label><input id="email" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required /></div>
+            <div className="wp-field"><label htmlFor="password">Senha</label><input id="password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required /></div>
+            <button className="wp-btn" type="submit" disabled={busy} style={{ width: '100%' }}>{busy ? 'A entrar…' : 'Entrar'}</button>
           </form>
         </div>
       </div>
@@ -601,973 +1023,394 @@ export default function App() {
   const auditMaxSkip = Math.max(0, auditTotal - limit)
   const auditPage = Math.floor(auditSkip / limit) + 1
   const auditTotalPages = Math.max(1, Math.ceil(auditTotal / limit))
+  const annMaxSkip = Math.max(0, announcementTotal - limit)
+  const annPage = Math.floor(announcementSkip / limit) + 1
+  const annTotalPages = Math.max(1, Math.ceil(announcementTotal / limit))
   const peakEvents = maxEventsInSeries(summary)
-
   return (
-    <div>
-      <div className="wp-toolbar">
+    <AdminShell
+      sidebarCollapsed={sidebarCollapsed}
+      sidebar={
         <div>
-          <div
-            style={{
-              display: 'flex',
-              gap: '0.5rem',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              marginBottom: '0.35rem',
-            }}
-          >
-            <button
-              type="button"
-              className={adminSection === 'users' ? 'wp-btn' : 'wp-btn wp-btn-ghost'}
-              style={{ fontSize: '0.88rem' }}
-              onClick={() => {
-                setAdminSection('users')
-                setSelectedFamily(null)
-              }}
-            >
-              Contas
-            </button>
-            <button
-              type="button"
-              className={adminSection === 'families' ? 'wp-btn' : 'wp-btn wp-btn-ghost'}
-              style={{ fontSize: '0.88rem' }}
-              onClick={() => {
-                setAdminSection('families')
-                setSelectedUser(null)
-              }}
-            >
-              Famílias
-            </button>
-            <button
-              type="button"
-              className={adminSection === 'finance' ? 'wp-btn' : 'wp-btn wp-btn-ghost'}
-              style={{ fontSize: '0.88rem' }}
-              onClick={() => {
-                setAdminSection('finance')
-                setSelectedUser(null)
-                setSelectedFamily(null)
-              }}
-            >
-              Finanças
-            </button>
-            <button
-              type="button"
-              className={adminSection === 'funnel' ? 'wp-btn' : 'wp-btn wp-btn-ghost'}
-              style={{ fontSize: '0.88rem' }}
-              onClick={() => {
-                setAdminSection('funnel')
-                setSelectedUser(null)
-                setSelectedFamily(null)
-              }}
-            >
-              Funil
-            </button>
-            <button
-              type="button"
-              className={adminSection === 'audit' ? 'wp-btn' : 'wp-btn wp-btn-ghost'}
-              style={{ fontSize: '0.88rem' }}
-              onClick={() => {
-                setAdminSection('audit')
-                setSelectedUser(null)
-                setSelectedFamily(null)
-              }}
-            >
-              Auditoria
-            </button>
+          <div className="wp-brand">{sidebarCollapsed ? 'WP' : 'Well Paid Admin'}</div>
+          {sidebarCollapsed ? null : <p className="wp-muted">Sessão: {adminEmail ?? '—'}</p>}
+          <nav className="wp-nav-list">
+            {navItems.map((item) => (
+              <button
+                key={item}
+                type="button"
+                className={adminSection === item ? 'wp-nav-item wp-nav-item-active' : 'wp-nav-item'}
+                onClick={() => {
+                  setAdminSection(item)
+                  setSelectedFamily(null)
+                  setSelectedUser(null)
+                }}
+                title={sectionLabel[item]}
+              >
+                {sidebarCollapsed ? sectionLabel[item].slice(0, 1) : sectionLabel[item]}
+              </button>
+            ))}
+          </nav>
+        </div>
+      }
+      topbar={
+        <div className="wp-toolbar">
+          <div>
+            <h1 className="wp-h1">{sectionLabel[adminSection]}</h1>
+            <p className="wp-muted">Console administrativo moderno e responsivo</p>
           </div>
-          <p className="wp-muted" style={{ margin: 0 }}>
-            Sessão: {adminEmail ?? '—'}
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          {adminSection === 'users' ? (
-            <button
-              type="button"
-              className="wp-btn wp-btn-ghost"
-              onClick={() => void exportCsv()}
-              disabled={busy}
+          <div className="wp-toolbar">
+            <Dropdown
+              button={<button type="button" className="wp-btn wp-btn-ghost">Preferências</button>}
             >
-              Exportar CSV
-            </button>
-          ) : null}
-          <button type="button" className="wp-btn wp-btn-ghost" onClick={logout}>
-            Sair
-          </button>
+              <div className="wp-pref-grid">
+                <div className="wp-pref-row">
+                  <label>Tema</label>
+                  <select
+                    className="wp-search"
+                    value={uiTheme}
+                    onChange={(e) => setUiTheme(e.target.value as UiTheme)}
+                  >
+                    <option value="dark">Escuro</option>
+                    <option value="light">Claro</option>
+                  </select>
+                </div>
+                <div className="wp-pref-row">
+                  <label>Densidade</label>
+                  <select
+                    className="wp-search"
+                    value={tableDensity}
+                    onChange={(e) => setTableDensity(e.target.value as 'comfortable' | 'compact')}
+                  >
+                    <option value="comfortable">Confortável</option>
+                    <option value="compact">Compacta</option>
+                  </select>
+                </div>
+                <div className="wp-pref-row">
+                  <label>Sidebar</label>
+                  <button
+                    type="button"
+                    className="wp-btn wp-btn-ghost"
+                    onClick={() => setSidebarCollapsed((v) => !v)}
+                  >
+                    {sidebarCollapsed ? 'Expandir' : 'Colapsar'}
+                  </button>
+                </div>
+              </div>
+            </Dropdown>
+            {adminSection === 'users' ? (
+              <button type="button" className="wp-btn wp-btn-ghost" onClick={() => void exportCsv()} disabled={busy}>
+                Exportar CSV
+              </button>
+            ) : null}
+            {adminSection === 'families' ? (
+              <button type="button" className="wp-btn wp-btn-ghost" onClick={() => void exportFamiliesCsv()} disabled={busy}>
+                Exportar CSV
+              </button>
+            ) : null}
+            {adminSection === 'audit' ? (
+              <button type="button" className="wp-btn wp-btn-ghost" onClick={() => void exportAuditCsv()} disabled={busy}>
+                Exportar CSV
+              </button>
+            ) : null}
+            <button type="button" className="wp-btn wp-btn-ghost" onClick={logout}>Sair</button>
+          </div>
         </div>
-      </div>
+      }
+    >
 
       {error ? <div className="wp-error">{error}</div> : null}
       {info ? <div className="wp-info">{info}</div> : null}
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-          gap: '0.75rem',
-          marginBottom: '0.9rem',
-        }}
-      >
-        <div className="wp-card" style={{ padding: '0.85rem 1rem' }}>
-          <div className="wp-muted" style={{ margin: 0, fontSize: '0.75rem' }}>
-            Eventos (24h)
-          </div>
-          <div style={{ fontSize: '1.3rem', fontWeight: 700 }}>{summary?.events_24h ?? '—'}</div>
-        </div>
-        <div className="wp-card" style={{ padding: '0.85rem 1rem' }}>
-          <div className="wp-muted" style={{ margin: 0, fontSize: '0.75rem' }}>
-            Utilizadores ativos (7d)
-          </div>
-          <div style={{ fontSize: '1.3rem', fontWeight: 700 }}>{summary?.dau_7d ?? '—'}</div>
-        </div>
-        <div className="wp-card" style={{ padding: '0.85rem 1rem' }}>
-          <div className="wp-muted" style={{ margin: 0, fontSize: '0.75rem' }}>
-            Utilizadores ativos (30d)
-          </div>
-          <div style={{ fontSize: '1.3rem', fontWeight: 700 }}>{summary?.mau_30d ?? '—'}</div>
-        </div>
+      <div className="wp-kpi-grid wp-kpi-grid-top">
+        <StatCard label="Eventos (24h)" value={summary?.events_24h ?? '—'} />
+        <StatCard label="Utilizadores ativos (7d)" value={summary?.dau_7d ?? '—'} />
+        <StatCard label="Utilizadores ativos (30d)" value={summary?.mau_30d ?? '—'} />
       </div>
 
-      <div className="wp-card" style={{ marginBottom: '0.9rem' }}>
-        <div className="wp-toolbar" style={{ marginTop: 0, marginBottom: '0.6rem' }}>
-          <h1 style={{ margin: 0, fontSize: '1.05rem' }}>Tendência de uso (14 dias)</h1>
-          <span className="wp-muted" style={{ fontSize: '0.8rem' }}>
-            Eventos de autenticação por dia
-          </span>
-        </div>
+      <div className="wp-card">
+        <SectionHeader title="Tendência de uso (14 dias)" subtitle="Eventos de autenticação por dia" />
         {summary && summary.series.length > 0 ? (
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.3rem', minHeight: 120 }}>
+          <div className="wp-trend-bars">
             {summary.series.map((p) => {
               const h = peakEvents > 0 ? Math.max(6, Math.round((p.events / peakEvents) * 90)) : 6
               return (
                 <div
                   key={p.day}
                   title={`${p.day}: ${p.events} eventos / ${p.active_users} ativos`}
-                  style={{
-                    flex: 1,
-                    minWidth: 8,
-                    height: h,
-                    borderRadius: 4,
-                    background: 'linear-gradient(180deg, rgba(201,169,78,0.95), rgba(184,148,61,0.85))',
-                  }}
+                  className="wp-trend-bar"
+                  style={{ height: h }}
                 />
               )
             })}
           </div>
         ) : (
-          <p className="wp-muted" style={{ margin: 0 }}>
+          <p className="wp-muted">
             Ainda sem eventos suficientes para mostrar tendência.
           </p>
         )}
       </div>
 
       {adminSection === 'users' ? (
-        <div className="wp-card">
-        <div className="wp-toolbar" style={{ marginTop: 0 }}>
-          <input
-            className="wp-search"
-            type="search"
-            placeholder="Filtrar por e-mail…"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            aria-label="Filtrar por e-mail"
-          />
-          <select
-            className="wp-search"
-            style={{ maxWidth: 170 }}
-            value={isActiveFilter}
-            onChange={(e) => setIsActiveFilter(e.target.value as TriState)}
-            aria-label="Filtrar por ativo"
-          >
-            <option value="all">Ativo: todos</option>
-            <option value="yes">Ativo: sim</option>
-            <option value="no">Ativo: não</option>
-          </select>
-          <select
-            className="wp-search"
-            style={{ maxWidth: 170 }}
-            value={isAdminFilter}
-            onChange={(e) => setIsAdminFilter(e.target.value as TriState)}
-            aria-label="Filtrar por admin"
-          >
-            <option value="all">Admin: todos</option>
-            <option value="yes">Admin: sim</option>
-            <option value="no">Admin: não</option>
-          </select>
-          <select
-            className="wp-search"
-            style={{ maxWidth: 190 }}
-            value={emailVerifiedFilter}
-            onChange={(e) => setEmailVerifiedFilter(e.target.value as TriState)}
-            aria-label="Filtrar por e-mail verificado"
-          >
-            <option value="all">Verificado: todos</option>
-            <option value="yes">Verificado: sim</option>
-            <option value="no">Verificado: não</option>
-          </select>
-          <input
-            className="wp-search"
-            style={{ maxWidth: 170 }}
-            type="date"
-            value={createdFrom}
-            onChange={(e) => setCreatedFrom(e.target.value)}
-            aria-label="Criado de"
-            title="Criado de"
-          />
-          <input
-            className="wp-search"
-            style={{ maxWidth: 170 }}
-            type="date"
-            value={createdTo}
-            onChange={(e) => setCreatedTo(e.target.value)}
-            aria-label="Criado até"
-            title="Criado até"
-          />
-          <select
-            className="wp-search"
-            style={{ maxWidth: 180 }}
-            value={orderBy}
-            onChange={(e) => setOrderBy(e.target.value as 'created_at' | 'last_seen_at' | 'email')}
-            aria-label="Ordenar por"
-          >
-            <option value="created_at">Ordem: criado</option>
-            <option value="last_seen_at">Ordem: última atividade</option>
-            <option value="email">Ordem: e-mail</option>
-          </select>
-          <select
-            className="wp-search"
-            style={{ maxWidth: 130 }}
-            value={orderDir}
-            onChange={(e) => setOrderDir(e.target.value as 'asc' | 'desc')}
-            aria-label="Direção da ordenação"
-          >
-            <option value="desc">Desc</option>
-            <option value="asc">Asc</option>
-          </select>
-          <span className="wp-muted" style={{ fontSize: '0.85rem' }}>
-            {total} conta(s)
-            {busy ? ' · a atualizar…' : ''}
-          </span>
-        </div>
-        <div className="wp-table-wrap">
-          <table className="wp-table">
-            <thead>
-              <tr>
-                <th>E-mail</th>
-                <th>Nome</th>
-                <th>Ativo</th>
-                <th>Admin</th>
-                <th>E-mail verificado</th>
-                <th>Última actividade</th>
-                <th>Criado</th>
-                <th>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.id}>
-                  <td>{r.email}</td>
-                  <td>{r.display_name || r.full_name || '—'}</td>
-                  <td>
-                    {r.is_active ? (
-                      <span className="wp-badge wp-badge-ok">Sim</span>
-                    ) : (
-                      <span className="wp-badge wp-badge-no">Não</span>
-                    )}
-                  </td>
-                  <td>{r.is_admin ? 'Sim' : '—'}</td>
-                  <td>{formatDt(r.email_verified_at)}</td>
-                  <td>{formatDt(r.last_seen_at)}</td>
-                  <td>{formatDt(r.created_at)}</td>
-                  <td>
-                    <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
-                      <button
-                        type="button"
-                        className="wp-btn wp-btn-ghost"
-                        style={{ padding: '0.35rem 0.65rem', fontSize: '0.8rem' }}
-                        onClick={() => openUserDetail(r)}
-                        disabled={busy}
-                      >
-                        Detalhe
-                      </button>
-                      <button
-                        type="button"
-                        className="wp-btn wp-btn-ghost"
-                        style={{ padding: '0.35rem 0.65rem', fontSize: '0.8rem' }}
-                        onClick={() => toggleActive(r)}
-                        disabled={busy}
-                      >
-                        {r.is_active ? 'Desativar' : 'Reativar'}
-                      </button>
-                      <button
-                        type="button"
-                        className="wp-btn wp-btn-ghost"
-                        style={{ padding: '0.35rem 0.65rem', fontSize: '0.8rem' }}
-                        onClick={() => toggleAdmin(r)}
-                        disabled={busy}
-                      >
-                        {r.is_admin ? 'Rebaixar admin' : 'Promover admin'}
-                      </button>
-                      <button
-                        type="button"
-                        className="wp-btn wp-btn-ghost"
-                        style={{ padding: '0.35rem 0.65rem', fontSize: '0.8rem' }}
-                        onClick={() => revokeSessions(r)}
-                        disabled={busy}
-                      >
-                        Revogar sessões
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {total > limit ? (
-          <div
-            style={{
-              display: 'flex',
-              gap: '0.75rem',
-              alignItems: 'center',
-              justifyContent: 'flex-end',
-              marginTop: '1rem',
-            }}
-          >
-            <button
-              type="button"
-              className="wp-btn wp-btn-ghost"
-              disabled={skip <= 0 || busy}
-              onClick={() => setSkip((s) => Math.max(0, s - limit))}
-            >
-              Anterior
-            </button>
-            <span className="wp-muted" style={{ fontSize: '0.85rem' }}>
-              Página {page} / {totalPages}
-            </span>
-            <button
-              type="button"
-              className="wp-btn wp-btn-ghost"
-              disabled={skip >= maxSkip || busy}
-              onClick={() => setSkip((s) => s + limit)}
-            >
-              Seguinte
-            </button>
-          </div>
-        ) : null}
-        </div>
-      ) : adminSection === 'families' ? (
-        <div className="wp-card">
-          <div className="wp-toolbar" style={{ marginTop: 0 }}>
-            <input
-              className="wp-search"
-              type="search"
-              placeholder="Filtrar por nome…"
-              value={familyQ}
-              onChange={(e) => setFamilyQ(e.target.value)}
-              aria-label="Filtrar por nome"
-            />
-            <select
-              className="wp-search"
-              style={{ maxWidth: 180 }}
-              value={familyOrderBy}
-              onChange={(e) => setFamilyOrderBy(e.target.value as 'created_at' | 'name')}
-              aria-label="Ordenar famílias por"
-            >
-              <option value="created_at">Ordem: criado</option>
-              <option value="name">Ordem: nome</option>
-            </select>
-            <select
-              className="wp-search"
-              style={{ maxWidth: 130 }}
-              value={familyOrderDir}
-              onChange={(e) => setFamilyOrderDir(e.target.value as 'asc' | 'desc')}
-              aria-label="Direção da ordenação (famílias)"
-            >
-              <option value="desc">Desc</option>
-              <option value="asc">Asc</option>
-            </select>
-            <span className="wp-muted" style={{ fontSize: '0.85rem' }}>
-              {familyTotal} família(s)
-              {busy ? ' · a atualizar…' : ''}
-            </span>
-          </div>
-          <div className="wp-table-wrap">
-            <table className="wp-table">
-              <thead>
-                <tr>
-                  <th>Nome</th>
-                  <th>Membros</th>
-                  <th>Criado</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {familyRows.map((r) => (
-                  <tr key={r.id}>
-                    <td>{r.name}</td>
-                    <td>{r.member_count}</td>
-                    <td>{formatDt(r.created_at)}</td>
-                    <td>
-                      <button
-                        type="button"
-                        className="wp-btn wp-btn-ghost"
-                        style={{ padding: '0.35rem 0.65rem', fontSize: '0.8rem' }}
-                        onClick={() => openFamilyDetail(r)}
-                        disabled={busy}
-                      >
-                        Detalhe
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {familyTotal > limit ? (
-            <div
-              style={{
-                display: 'flex',
-                gap: '0.75rem',
-                alignItems: 'center',
-                justifyContent: 'flex-end',
-                marginTop: '1rem',
-              }}
-            >
-              <button
-                type="button"
-                className="wp-btn wp-btn-ghost"
-                disabled={familySkip <= 0 || busy}
-                onClick={() => setFamilySkip((s) => Math.max(0, s - limit))}
-              >
-                Anterior
-              </button>
-              <span className="wp-muted" style={{ fontSize: '0.85rem' }}>
-                Página {familyPage} / {familyTotalPages}
-              </span>
-              <button
-                type="button"
-                className="wp-btn wp-btn-ghost"
-                disabled={familySkip >= familyMaxSkip || busy}
-                onClick={() => setFamilySkip((s) => s + limit)}
-              >
-                Seguinte
-              </button>
-            </div>
-          ) : null}
-        </div>
-      ) : adminSection === 'finance' ? (
-        <div className="wp-card">
-          <div className="wp-toolbar" style={{ marginTop: 0, marginBottom: '0.75rem' }}>
-            <h1 style={{ margin: 0, fontSize: '1.05rem' }}>Núcleo financeiro</h1>
-            <span className="wp-muted" style={{ fontSize: '0.8rem' }}>
-              Agregados na base de dados (sem linhas individuais)
-            </span>
-          </div>
-          {financeSummary ? (
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                gap: '0.75rem',
-              }}
-            >
-              <div className="wp-card" style={{ padding: '0.75rem 0.9rem' }}>
-                <div className="wp-muted" style={{ margin: 0, fontSize: '0.72rem' }}>
-                  Despesas (total)
-                </div>
-                <div style={{ fontSize: '1.15rem', fontWeight: 700 }}>{financeSummary.expenses_total}</div>
-              </div>
-              <div className="wp-card" style={{ padding: '0.75rem 0.9rem' }}>
-                <div className="wp-muted" style={{ margin: 0, fontSize: '0.72rem' }}>
-                  Despesas ativas
-                </div>
-                <div style={{ fontSize: '1.15rem', fontWeight: 700 }}>{financeSummary.expenses_active}</div>
-              </div>
-              <div className="wp-card" style={{ padding: '0.75rem 0.9rem' }}>
-                <div className="wp-muted" style={{ margin: 0, fontSize: '0.72rem' }}>
-                  Despesas removidas (soft delete)
-                </div>
-                <div style={{ fontSize: '1.15rem', fontWeight: 700 }}>{financeSummary.expenses_deleted}</div>
-              </div>
-              <div className="wp-card" style={{ padding: '0.75rem 0.9rem' }}>
-                <div className="wp-muted" style={{ margin: 0, fontSize: '0.72rem' }}>
-                  Despesas partilhadas
-                </div>
-                <div style={{ fontSize: '1.15rem', fontWeight: 700 }}>{financeSummary.expenses_shared}</div>
-              </div>
-              <div className="wp-card" style={{ padding: '0.75rem 0.9rem' }}>
-                <div className="wp-muted" style={{ margin: 0, fontSize: '0.72rem' }}>
-                  Soma despesas (30d, ativas)
-                </div>
-                <div style={{ fontSize: '1.15rem', fontWeight: 700 }}>
-                  {formatEurFromCents(financeSummary.expenses_sum_cents_30d)}
-                </div>
-              </div>
-              <div className="wp-card" style={{ padding: '0.75rem 0.9rem' }}>
-                <div className="wp-muted" style={{ margin: 0, fontSize: '0.72rem' }}>
-                  Receitas (linhas)
-                </div>
-                <div style={{ fontSize: '1.15rem', fontWeight: 700 }}>{financeSummary.incomes_total}</div>
-              </div>
-              <div className="wp-card" style={{ padding: '0.75rem 0.9rem' }}>
-                <div className="wp-muted" style={{ margin: 0, fontSize: '0.72rem' }}>
-                  Soma receitas (30d)
-                </div>
-                <div style={{ fontSize: '1.15rem', fontWeight: 700 }}>
-                  {formatEurFromCents(financeSummary.incomes_sum_cents_30d)}
-                </div>
-              </div>
-              <div className="wp-card" style={{ padding: '0.75rem 0.9rem' }}>
-                <div className="wp-muted" style={{ margin: 0, fontSize: '0.72rem' }}>
-                  Objetivos
-                </div>
-                <div style={{ fontSize: '1.15rem', fontWeight: 700 }}>{financeSummary.goals_total}</div>
-              </div>
-              <div className="wp-card" style={{ padding: '0.75rem 0.9rem' }}>
-                <div className="wp-muted" style={{ margin: 0, fontSize: '0.72rem' }}>
-                  Contribuições para objetivos
-                </div>
-                <div style={{ fontSize: '1.15rem', fontWeight: 700 }}>
-                  {financeSummary.goal_contributions_total}
-                </div>
-              </div>
-              <div className="wp-card" style={{ padding: '0.75rem 0.9rem' }}>
-                <div className="wp-muted" style={{ margin: 0, fontSize: '0.72rem' }}>
-                  Listas de compras
-                </div>
-                <div style={{ fontSize: '1.15rem', fontWeight: 700 }}>{financeSummary.shopping_lists_total}</div>
-              </div>
-              <div className="wp-card" style={{ padding: '0.75rem 0.9rem' }}>
-                <div className="wp-muted" style={{ margin: 0, fontSize: '0.72rem' }}>
-                  Linhas em listas
-                </div>
-                <div style={{ fontSize: '1.15rem', fontWeight: 700 }}>
-                  {financeSummary.shopping_list_items_total}
-                </div>
-              </div>
-              <div className="wp-card" style={{ padding: '0.75rem 0.9rem' }}>
-                <div className="wp-muted" style={{ margin: 0, fontSize: '0.72rem' }}>
-                  Reservas de emergência
-                </div>
-                <div style={{ fontSize: '1.15rem', fontWeight: 700 }}>
-                  {financeSummary.emergency_reserves_total}
-                </div>
-              </div>
-              <div className="wp-card" style={{ padding: '0.75rem 0.9rem' }}>
-                <div className="wp-muted" style={{ margin: 0, fontSize: '0.72rem' }}>
-                  Créditos mensais (reserva)
-                </div>
-                <div style={{ fontSize: '1.15rem', fontWeight: 700 }}>
-                  {financeSummary.emergency_reserve_accruals_total}
-                </div>
-              </div>
-              <div className="wp-card" style={{ padding: '0.75rem 0.9rem' }}>
-                <div className="wp-muted" style={{ margin: 0, fontSize: '0.72rem' }}>
-                  Categorias de despesa
-                </div>
-                <div style={{ fontSize: '1.15rem', fontWeight: 700 }}>{financeSummary.categories_total}</div>
-              </div>
-              <div className="wp-card" style={{ padding: '0.75rem 0.9rem' }}>
-                <div className="wp-muted" style={{ margin: 0, fontSize: '0.72rem' }}>
-                  Categorias de receita
-                </div>
-                <div style={{ fontSize: '1.15rem', fontWeight: 700 }}>{financeSummary.income_categories_total}</div>
-              </div>
-            </div>
-          ) : (
-            <p className="wp-muted" style={{ margin: 0 }}>
-              {busy ? 'A carregar…' : 'Sem dados.'}
-            </p>
-          )}
-        </div>
-      ) : adminSection === 'funnel' ? (
-        <div className="wp-card">
-          <div className="wp-toolbar" style={{ marginTop: 0, marginBottom: '0.75rem' }}>
-            <h1 style={{ margin: 0, fontSize: '1.05rem' }}>Funil de produto</h1>
-            <span className="wp-muted" style={{ fontSize: '0.8rem' }}>
-              Contagens globais; % face ao total de contas
-            </span>
-          </div>
-          {funnelMetrics ? (
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                gap: '0.75rem',
-              }}
-            >
-              <div className="wp-card" style={{ padding: '0.75rem 0.9rem' }}>
-                <div className="wp-muted" style={{ margin: 0, fontSize: '0.72rem' }}>
-                  Contas registadas
-                </div>
-                <div style={{ fontSize: '1.15rem', fontWeight: 700 }}>{funnelMetrics.users_total}</div>
-              </div>
-              <div className="wp-card" style={{ padding: '0.75rem 0.9rem' }}>
-                <div className="wp-muted" style={{ margin: 0, fontSize: '0.72rem' }}>
-                  E-mail verificado
-                </div>
-                <div style={{ fontSize: '1.15rem', fontWeight: 700 }}>
-                  {funnelMetrics.email_verified_total}
-                  <span className="wp-muted" style={{ fontSize: '0.78rem', marginLeft: '0.35rem' }}>
-                    ({pctOf(funnelMetrics.email_verified_total, funnelMetrics.users_total)})
-                  </span>
-                </div>
-              </div>
-              <div className="wp-card" style={{ padding: '0.75rem 0.9rem' }}>
-                <div className="wp-muted" style={{ margin: 0, fontSize: '0.72rem' }}>
-                  Utilizadores em família
-                </div>
-                <div style={{ fontSize: '1.15rem', fontWeight: 700 }}>
-                  {funnelMetrics.users_with_family_total}
-                  <span className="wp-muted" style={{ fontSize: '0.78rem', marginLeft: '0.35rem' }}>
-                    ({pctOf(funnelMetrics.users_with_family_total, funnelMetrics.users_total)})
-                  </span>
-                </div>
-              </div>
-              <div className="wp-card" style={{ padding: '0.75rem 0.9rem' }}>
-                <div className="wp-muted" style={{ margin: 0, fontSize: '0.72rem' }}>
-                  Com ≥1 despesa ativa
-                </div>
-                <div style={{ fontSize: '1.15rem', fontWeight: 700 }}>
-                  {funnelMetrics.users_with_expense_total}
-                  <span className="wp-muted" style={{ fontSize: '0.78rem', marginLeft: '0.35rem' }}>
-                    ({pctOf(funnelMetrics.users_with_expense_total, funnelMetrics.users_total)})
-                  </span>
-                </div>
-              </div>
-              <div className="wp-card" style={{ padding: '0.75rem 0.9rem' }}>
-                <div className="wp-muted" style={{ margin: 0, fontSize: '0.72rem' }}>
-                  Com ≥1 receita
-                </div>
-                <div style={{ fontSize: '1.15rem', fontWeight: 700 }}>
-                  {funnelMetrics.users_with_income_total}
-                  <span className="wp-muted" style={{ fontSize: '0.78rem', marginLeft: '0.35rem' }}>
-                    ({pctOf(funnelMetrics.users_with_income_total, funnelMetrics.users_total)})
-                  </span>
-                </div>
-              </div>
-              <div className="wp-card" style={{ padding: '0.75rem 0.9rem' }}>
-                <div className="wp-muted" style={{ margin: 0, fontSize: '0.72rem' }}>
-                  app_open distintos (7d)
-                </div>
-                <div style={{ fontSize: '1.15rem', fontWeight: 700 }}>
-                  {funnelMetrics.users_app_open_7d}
-                  <span className="wp-muted" style={{ fontSize: '0.78rem', marginLeft: '0.35rem' }}>
-                    ({pctOf(funnelMetrics.users_app_open_7d, funnelMetrics.users_total)})
-                  </span>
-                </div>
-              </div>
-              <div className="wp-card" style={{ padding: '0.75rem 0.9rem' }}>
-                <div className="wp-muted" style={{ margin: 0, fontSize: '0.72rem' }}>
-                  Novas contas (7d)
-                </div>
-                <div style={{ fontSize: '1.15rem', fontWeight: 700 }}>{funnelMetrics.signups_7d}</div>
-              </div>
-              <div className="wp-card" style={{ padding: '0.75rem 0.9rem' }}>
-                <div className="wp-muted" style={{ margin: 0, fontSize: '0.72rem' }}>
-                  Novas contas (30d)
-                </div>
-                <div style={{ fontSize: '1.15rem', fontWeight: 700 }}>{funnelMetrics.signups_30d}</div>
-              </div>
-            </div>
-          ) : (
-            <p className="wp-muted" style={{ margin: 0 }}>
-              {busy ? 'A carregar…' : 'Sem dados.'}
-            </p>
-          )}
-        </div>
-      ) : (
-        <div className="wp-card">
-          <div className="wp-toolbar" style={{ marginTop: 0, marginBottom: '0.6rem' }}>
-            <h1 style={{ margin: 0, fontSize: '1.05rem' }}>Auditoria admin</h1>
-            <span className="wp-muted" style={{ fontSize: '0.85rem' }}>
-              {auditTotal} evento(s)
-              {busy ? ' · a atualizar…' : ''}
-            </span>
-          </div>
-          <div className="wp-table-wrap">
-            <table className="wp-table">
-              <thead>
-                <tr>
-                  <th>Quando</th>
-                  <th>Quem</th>
-                  <th>Ação</th>
-                  <th>Alvo</th>
-                  <th>Detalhes</th>
-                </tr>
-              </thead>
-              <tbody>
-                {auditItems.map((ev) => (
-                  <tr key={ev.id}>
-                    <td style={{ whiteSpace: 'nowrap' }}>{formatDt(ev.created_at)}</td>
-                    <td>{ev.actor_email}</td>
-                    <td>{ev.action}</td>
-                    <td>{ev.target_email ?? '—'}</td>
-                    <td
-                      style={{
-                        maxWidth: 280,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        fontSize: '0.78rem',
-                      }}
-                      title={formatAuditDetails(ev.details)}
-                    >
-                      {formatAuditDetails(ev.details)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {auditTotal > limit ? (
-            <div
-              style={{
-                display: 'flex',
-                gap: '0.75rem',
-                alignItems: 'center',
-                justifyContent: 'flex-end',
-                marginTop: '1rem',
-              }}
-            >
-              <button
-                type="button"
-                className="wp-btn wp-btn-ghost"
-                disabled={auditSkip <= 0 || busy}
-                onClick={() => setAuditSkip((s) => Math.max(0, s - limit))}
-              >
-                Anterior
-              </button>
-              <span className="wp-muted" style={{ fontSize: '0.85rem' }}>
-                Página {auditPage} / {auditTotalPages}
-              </span>
-              <button
-                type="button"
-                className="wp-btn wp-btn-ghost"
-                disabled={auditSkip >= auditMaxSkip || busy}
-                onClick={() => setAuditSkip((s) => s + limit)}
-              >
-                Seguinte
-              </button>
-            </div>
-          ) : null}
-        </div>
-      )}
-      {selectedUser ? (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.45)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '1rem',
-            zIndex: 50,
+        <UsersSection
+          rows={rows}
+          total={total}
+          busy={busy}
+          q={q}
+          isActiveFilter={isActiveFilter}
+          isAdminFilter={isAdminFilter}
+          emailVerifiedFilter={emailVerifiedFilter}
+          createdFrom={createdFrom}
+          createdTo={createdTo}
+          orderBy={orderBy}
+          orderDir={orderDir}
+          onQChange={setQ}
+          onIsActiveFilterChange={setIsActiveFilter}
+          onIsAdminFilterChange={setIsAdminFilter}
+          onEmailVerifiedFilterChange={setEmailVerifiedFilter}
+          onCreatedFromChange={setCreatedFrom}
+          onCreatedToChange={setCreatedTo}
+          onOrderByChange={setOrderBy}
+          onOrderDirChange={setOrderDir}
+          onOpenUserDetail={(r) => void openUserDetail(r)}
+          onToggleActive={(r) => void toggleActive(r)}
+          onToggleAdmin={(r) => void toggleAdmin(r)}
+          onRevokeSessions={(r) => void revokeSessions(r)}
+          formatDt={formatDt}
+          page={page}
+          totalPages={totalPages}
+          onPrevPage={() => setSkip((s) => Math.max(0, s - limit))}
+          onNextPage={() => setSkip((s) => s + limit)}
+          disablePrevPage={skip <= 0 || busy}
+          disableNextPage={skip >= maxSkip || busy}
+          density={tableDensity}
+          onDensityChange={setTableDensity}
+          visibleColumns={usersVisibleColumns}
+          onToggleColumn={toggleUsersColumn}
+        />
+      ) : null}
+      {adminSection === 'families' ? (
+        <FamiliesSection
+          rows={familyRows}
+          total={familyTotal}
+          busy={busy}
+          q={familyQ}
+          orderBy={familyOrderBy}
+          orderDir={familyOrderDir}
+          onQChange={setFamilyQ}
+          onOrderByChange={setFamilyOrderBy}
+          onOrderDirChange={setFamilyOrderDir}
+          onOpenDetail={(r) => void openFamilyDetail(r)}
+          formatDt={formatDt}
+          page={familyPage}
+          totalPages={familyTotalPages}
+          onPrevPage={() => setFamilySkip((s) => Math.max(0, s - limit))}
+          onNextPage={() => setFamilySkip((s) => s + limit)}
+          disablePrevPage={familySkip <= 0 || busy}
+          disableNextPage={familySkip >= familyMaxSkip || busy}
+          density={tableDensity}
+          onDensityChange={setTableDensity}
+          visibleColumns={familiesVisibleColumns}
+          onToggleColumn={toggleFamiliesColumn}
+        />
+      ) : null}
+      {adminSection === 'finance' ? <FinanceSection summary={financeSummary} busy={busy} formatEurFromCents={formatEurFromCents} /> : null}
+      {adminSection === 'funnel' ? <FunnelSection metrics={funnelMetrics} busy={busy} pctOf={pctOf} /> : null}
+      {adminSection === 'audit' ? (
+        <AuditSection
+          items={auditItems}
+          total={auditTotal}
+          busy={busy}
+          formatDt={formatDt}
+          formatAuditDetails={formatAuditDetails}
+          filters={{ actorEmail: auditActorEmail, action: auditAction, from: auditFrom, to: auditTo }}
+          onFiltersChange={(next) => {
+            setAuditActorEmail(next.actorEmail)
+            setAuditAction(next.action)
+            setAuditFrom(next.from)
+            setAuditTo(next.to)
           }}
-          onClick={() => setSelectedUser(null)}
-        >
-          <div
-            className="wp-card"
-            style={{ width: 'min(760px, 95vw)', maxHeight: '85vh', overflow: 'auto' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="wp-toolbar" style={{ marginTop: 0 }}>
-              <h1 style={{ margin: 0, fontSize: '1.1rem' }}>Detalhe da conta</h1>
-              <button type="button" className="wp-btn wp-btn-ghost" onClick={() => setSelectedUser(null)}>
-                Fechar
-              </button>
+          page={auditPage}
+          totalPages={auditTotalPages}
+          onPrevPage={() => setAuditSkip((s) => Math.max(0, s - limit))}
+          onNextPage={() => setAuditSkip((s) => s + limit)}
+          disablePrevPage={auditSkip <= 0 || busy}
+          disableNextPage={auditSkip >= auditMaxSkip || busy}
+          density={tableDensity}
+          onDensityChange={setTableDensity}
+          visibleColumns={auditVisibleColumns}
+          onToggleColumn={toggleAuditColumn}
+        />
+      ) : null}
+      {adminSection === 'announcements' ? (
+        <AnnouncementsSection
+          items={announcementItems}
+          total={announcementTotal}
+          busy={busy}
+          statusFilter={announcementStatusFilter}
+          placementFilter={announcementPlacementFilter}
+          onStatusFilterChange={setAnnouncementStatusFilter}
+          onPlacementFilterChange={setAnnouncementPlacementFilter}
+          onClearFilters={() => {
+            setAnnouncementStatusFilter('all')
+            setAnnouncementPlacementFilter('all')
+          }}
+          onCreate={(payload) => handleCreateAnnouncement(payload)}
+          onUpdate={(id, payload) => handleUpdateAnnouncement(id, payload)}
+          formatDt={formatDt}
+          page={annPage}
+          totalPages={annTotalPages}
+          onPrevPage={() => setAnnouncementSkip((s) => Math.max(0, s - limit))}
+          onNextPage={() => setAnnouncementSkip((s) => s + limit)}
+          disablePrevPage={announcementSkip <= 0 || busy}
+          disableNextPage={announcementSkip >= annMaxSkip || busy}
+        />
+      ) : null}
+      {selectedUser ? (
+        <Modal title="Detalhe da conta" onClose={() => setSelectedUser(null)}>
+          <div className="wp-detail-grid">
+            <div className="wp-detail-item">
+              <p className="wp-detail-label">E-mail</p>
+              <p className="wp-detail-value" title={selectedUser.user.email}>{selectedUser.user.email}</p>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '0.7rem' }}>
-              <div>
-                <div className="wp-muted" style={{ marginBottom: '0.2rem', fontSize: '0.78rem' }}>E-mail</div>
-                <div>{selectedUser.user.email}</div>
-              </div>
-              <div>
-                <div className="wp-muted" style={{ marginBottom: '0.2rem', fontSize: '0.78rem' }}>Nome</div>
-                <div>{selectedUser.user.display_name || selectedUser.user.full_name || '—'}</div>
-              </div>
-              <div>
-                <div className="wp-muted" style={{ marginBottom: '0.2rem', fontSize: '0.78rem' }}>Última atividade</div>
-                <div>{formatDt(selectedUser.user.last_seen_at)}</div>
-              </div>
-              <div>
-                <div className="wp-muted" style={{ marginBottom: '0.2rem', fontSize: '0.78rem' }}>Criado em</div>
-                <div>{formatDt(selectedUser.user.created_at)}</div>
-              </div>
-              <div>
-                <div className="wp-muted" style={{ marginBottom: '0.2rem', fontSize: '0.78rem' }}>Eventos 7d</div>
-                <div>{selectedUser.events_7d}</div>
-              </div>
-              <div>
-                <div className="wp-muted" style={{ marginBottom: '0.2rem', fontSize: '0.78rem' }}>Eventos 30d</div>
-                <div>{selectedUser.events_30d}</div>
-              </div>
+            <div className="wp-detail-item">
+              <p className="wp-detail-label">Nome</p>
+              <p className="wp-detail-value" title={selectedUser.user.display_name || selectedUser.user.full_name || '—'}>
+                {selectedUser.user.display_name || selectedUser.user.full_name || '—'}
+              </p>
             </div>
-            <div style={{ marginTop: '0.9rem' }}>
-              <div className="wp-muted" style={{ marginBottom: '0.4rem', fontSize: '0.78rem' }}>
-                Tipos de evento (30d)
-              </div>
-              {Object.keys(selectedUser.event_types_30d).length > 0 ? (
-                <div style={{ display: 'grid', gap: '0.35rem' }}>
-                  {Object.entries(selectedUser.event_types_30d).map(([k, v]) => (
-                    <div key={k} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span>{k}</span>
-                      <strong>{v}</strong>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="wp-muted" style={{ margin: 0 }}>
-                  Sem eventos no período.
-                </div>
-              )}
+            <div className="wp-detail-item">
+              <p className="wp-detail-label">Última atividade</p>
+              <p className="wp-detail-value">{formatDt(selectedUser.user.last_seen_at)}</p>
             </div>
-            <div style={{ marginTop: '0.9rem' }}>
-              <div className="wp-muted" style={{ marginBottom: '0.4rem', fontSize: '0.78rem' }}>
-                Últimos eventos (até 30)
-              </div>
-              {selectedUser.recent_events.length > 0 ? (
-                <ul
-                  style={{
-                    margin: 0,
-                    paddingLeft: '1.1rem',
-                    fontSize: '0.85rem',
-                    display: 'grid',
-                    gap: '0.35rem',
-                  }}
-                >
-                  {selectedUser.recent_events.map((ev, i) => (
-                    <li key={`${ev.occurred_at}-${ev.event_type}-${i}`} style={{ lineHeight: 1.35 }}>
-                      <span className="wp-muted">{formatDt(ev.occurred_at)}</span>
-                      {' · '}
-                      <span>{ev.event_type}</span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <div className="wp-muted" style={{ margin: 0 }}>
-                  Sem eventos registados.
-                </div>
-              )}
+            <div className="wp-detail-item">
+              <p className="wp-detail-label">Criado em</p>
+              <p className="wp-detail-value">{formatDt(selectedUser.user.created_at)}</p>
+            </div>
+            <div className="wp-detail-item">
+              <p className="wp-detail-label">Eventos 7d</p>
+              <p className="wp-detail-value">{selectedUser.events_7d}</p>
+            </div>
+            <div className="wp-detail-item">
+              <p className="wp-detail-label">Eventos 30d</p>
+              <p className="wp-detail-value">{selectedUser.events_30d}</p>
             </div>
           </div>
-        </div>
+
+          <div className="wp-detail-section">
+            <p className="wp-detail-label">Tipos de evento (30d)</p>
+            {Object.keys(selectedUser.event_types_30d).length > 0 ? (
+              <div className="wp-kv-list">
+                {Object.entries(selectedUser.event_types_30d).map(([k, v]) => (
+                  <div key={k} className="wp-kv-row">
+                    <span>{k}</span>
+                    <strong>{v}</strong>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="wp-muted">Sem eventos no período.</p>
+            )}
+          </div>
+
+          <div className="wp-detail-section">
+            <p className="wp-detail-label">Últimos eventos (até 30)</p>
+            {selectedUser.recent_events.length > 0 ? (
+              <ul className="wp-event-list">
+                {selectedUser.recent_events.map((ev, i) => (
+                  <li key={`${ev.occurred_at}-${ev.event_type}-${i}`}>
+                    <span className="wp-muted">{formatDt(ev.occurred_at)}</span>
+                    {' · '}
+                    <span>{ev.event_type}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="wp-muted">Sem eventos registados.</p>
+            )}
+          </div>
+        </Modal>
       ) : null}
       {selectedFamily ? (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.45)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '1rem',
-            zIndex: 50,
-          }}
-          onClick={() => setSelectedFamily(null)}
-        >
-          <div
-            className="wp-card"
-            style={{ width: 'min(760px, 95vw)', maxHeight: '85vh', overflow: 'auto' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="wp-toolbar" style={{ marginTop: 0 }}>
-              <h1 style={{ margin: 0, fontSize: '1.1rem' }}>Detalhe da família</h1>
-              <button type="button" className="wp-btn wp-btn-ghost" onClick={() => setSelectedFamily(null)}>
-                Fechar
-              </button>
+        <Modal title="Detalhe da família" onClose={() => setSelectedFamily(null)}>
+          <div className="wp-detail-grid">
+            <div className="wp-detail-item">
+              <p className="wp-detail-label">Nome</p>
+              <p className="wp-detail-value">{selectedFamily.name}</p>
             </div>
-            <div
-              style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '0.7rem' }}
-            >
-              <div>
-                <div className="wp-muted" style={{ marginBottom: '0.2rem', fontSize: '0.78rem' }}>Nome</div>
-                <div>{selectedFamily.name}</div>
-              </div>
-              <div>
-                <div className="wp-muted" style={{ marginBottom: '0.2rem', fontSize: '0.78rem' }}>
-                  Membros
-                </div>
-                <div>
-                  {selectedFamily.member_count} / {selectedFamily.max_members}
-                </div>
-              </div>
-              <div>
-                <div className="wp-muted" style={{ marginBottom: '0.2rem', fontSize: '0.78rem' }}>Criado</div>
-                <div>{formatDt(selectedFamily.created_at)}</div>
-              </div>
+            <div className="wp-detail-item">
+              <p className="wp-detail-label">Membros</p>
+              <p className="wp-detail-value">
+                {selectedFamily.member_count} / {selectedFamily.max_members}
+              </p>
             </div>
-            <div style={{ marginTop: '0.9rem' }}>
-              <div className="wp-muted" style={{ marginBottom: '0.4rem', fontSize: '0.78rem' }}>
-                Membros
-              </div>
-              {selectedFamily.members.length > 0 ? (
-                <div className="wp-table-wrap">
-                  <table className="wp-table">
-                    <thead>
-                      <tr>
-                        <th>E-mail</th>
-                        <th>Nome</th>
-                        <th>Papel</th>
-                        <th>Ativo</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedFamily.members.map((m) => (
-                        <tr key={m.user_id}>
-                          <td>{m.email}</td>
-                          <td>{m.display_name || m.full_name || '—'}</td>
-                          <td>{m.role}</td>
-                          <td>{m.is_active ? 'Sim' : 'Não'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <p className="wp-muted" style={{ margin: 0 }}>
-                  Sem membros.
-                </p>
-              )}
-            </div>
-            <div style={{ marginTop: '0.9rem' }}>
-              <div className="wp-muted" style={{ marginBottom: '0.4rem', fontSize: '0.78rem' }}>
-                Convites (sem token — só metadados)
-              </div>
-              {selectedFamily.invites.length > 0 ? (
-                <div className="wp-table-wrap">
-                  <table className="wp-table">
-                    <thead>
-                      <tr>
-                        <th>Expira</th>
-                        <th>Estado</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedFamily.invites.map((inv) => {
-                        const expired =
-                          !inv.used && new Date(inv.expires_at).getTime() < Date.now()
-                        const stateLabel = inv.used ? 'Utilizado' : expired ? 'Expirado' : 'Pendente'
-                        return (
-                          <tr key={inv.id}>
-                            <td>{formatDt(inv.expires_at)}</td>
-                            <td>{stateLabel}</td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <p className="wp-muted" style={{ margin: 0 }}>
-                  Sem convites registados.
-                </p>
-              )}
+            <div className="wp-detail-item">
+              <p className="wp-detail-label">Criado</p>
+              <p className="wp-detail-value">{formatDt(selectedFamily.created_at)}</p>
             </div>
           </div>
-        </div>
+
+          <div className="wp-detail-section">
+            <p className="wp-detail-label">Membros</p>
+            {selectedFamily.members.length > 0 ? (
+              <div className="wp-table-wrap">
+                <table className="wp-table">
+                  <thead>
+                    <tr>
+                      <th>E-mail</th>
+                      <th>Nome</th>
+                      <th>Papel</th>
+                      <th>Ativo</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedFamily.members.map((m) => (
+                      <tr key={m.user_id}>
+                        <td>{m.email}</td>
+                        <td>{m.display_name || m.full_name || '—'}</td>
+                        <td>{m.role}</td>
+                        <td>{m.is_active ? 'Sim' : 'Não'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="wp-muted">Sem membros.</p>
+            )}
+          </div>
+
+          <div className="wp-detail-section">
+            <p className="wp-detail-label">Convites (sem token — só metadados)</p>
+            {selectedFamily.invites.length > 0 ? (
+              <div className="wp-table-wrap">
+                <table className="wp-table">
+                  <thead>
+                    <tr>
+                      <th>Expira</th>
+                      <th>Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedFamily.invites.map((inv) => {
+                      const expired = !inv.used && new Date(inv.expires_at).getTime() < Date.now()
+                      const stateLabel = inv.used ? 'Utilizado' : expired ? 'Expirado' : 'Pendente'
+                      return (
+                        <tr key={inv.id}>
+                          <td>{formatDt(inv.expires_at)}</td>
+                          <td>{stateLabel}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="wp-muted">Sem convites registados.</p>
+            )}
+          </div>
+        </Modal>
       ) : null}
-    </div>
+    </AdminShell>
   )
 }

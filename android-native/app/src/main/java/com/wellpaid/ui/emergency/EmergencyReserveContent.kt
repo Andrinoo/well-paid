@@ -53,6 +53,7 @@ import kotlin.math.roundToInt
 @Composable
 fun EmergencyReserveContent(
     modifier: Modifier = Modifier,
+    tabSwipe: Modifier = Modifier,
     viewModel: EmergencyReserveViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -87,6 +88,7 @@ fun EmergencyReserveContent(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .then(tabSwipe)
                 .verticalScroll(rememberScrollState()),
         ) {
             state.errorMessage?.let { msg ->

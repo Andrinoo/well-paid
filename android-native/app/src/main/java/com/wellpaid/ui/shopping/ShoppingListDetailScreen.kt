@@ -80,6 +80,7 @@ import com.wellpaid.R
 import com.wellpaid.core.model.shopping.ShoppingListDetailDto
 import com.wellpaid.core.model.shopping.ShoppingListItemDto
 import com.wellpaid.ui.components.WellPaidDatePickerField
+import com.wellpaid.ui.components.WellPaidMoneyDigitKeypadField
 import com.wellpaid.ui.theme.WellPaidCream
 import com.wellpaid.ui.theme.WellPaidCreamMuted
 import com.wellpaid.ui.theme.WellPaidGold
@@ -88,9 +89,7 @@ import com.wellpaid.ui.theme.WellPaidNavy
 import com.wellpaid.ui.theme.wellPaidMaxContentWidth
 import com.wellpaid.ui.theme.wellPaidScreenHorizontalPadding
 import com.wellpaid.ui.theme.wellPaidTopAppBarColors
-import com.wellpaid.util.BRL_CENT_DIGIT_CHAIN_MAX
-import com.wellpaid.util.brlDigitChainToCents
-import com.wellpaid.util.centsToBrlDigitChainDisplay
+import com.wellpaid.util.centsToBrlInput
 import com.wellpaid.util.formatBrlFromCents
 import com.wellpaid.util.formatIsoDateForList
 import com.wellpaid.util.localDateToIso
@@ -640,31 +639,20 @@ private fun ItemLineCostField(
     isSaving: Boolean,
     onCommitCost: (cents: Int?, clearLineAmount: Boolean) -> Unit,
 ) {
-    var focused by remember { mutableStateOf(false) }
-    var localDigits by remember(line.id) {
-        mutableStateOf(line.lineAmountCents?.takeIf { it > 0 }?.toString().orEmpty())
+    var keypadOpen by remember { mutableStateOf(false) }
+    var localAmountText by remember(line.id) {
+        mutableStateOf(line.lineAmountCents?.takeIf { it > 0 }?.let { centsToBrlInput(it) }.orEmpty())
     }
     LaunchedEffect(line.id, line.lineAmountCents) {
-        if (!focused) {
-            localDigits = line.lineAmountCents?.takeIf { it > 0 }?.toString().orEmpty()
+        if (!keypadOpen) {
+            localAmountText =
+                line.lineAmountCents?.takeIf { it > 0 }?.let { centsToBrlInput(it) }.orEmpty()
         }
     }
 
-    val displayFormatted = if (localDigits.isEmpty()) {
-        ""
-    } else {
-        centsToBrlDigitChainDisplay(brlDigitChainToCents(localDigits))
-    }
-
-    val amountContentDescription = stringResource(R.string.shopping_item_unit_label)
     val currencyPrefix = stringResource(R.string.shopping_currency_prefix)
 
-    fun computeNewCents(): Int? =
-        if (localDigits.isEmpty()) {
-            null
-        } else {
-            brlDigitChainToCents(localDigits).toInt().takeIf { it > 0 }
-        }
+    fun computeNewCents(): Int? = parseBrlToCents(localAmountText)?.takeIf { it > 0 }
 
     fun commitIfChanged() {
         val newC = computeNewCents()
@@ -696,28 +684,13 @@ private fun ItemLineCostField(
         return
     }
 
-    OutlinedTextField(
-        value = displayFormatted,
-        onValueChange = { value: String ->
-            if (isSaving) return@OutlinedTextField
-            localDigits = value.filter { it.isDigit() }.take(BRL_CENT_DIGIT_CHAIN_MAX)
+    WellPaidMoneyDigitKeypadField(
+        valueText = localAmountText,
+        onValueTextChange = { txt ->
+            if (isSaving) return@WellPaidMoneyDigitKeypadField
+            localAmountText = txt
         },
-        modifier = Modifier
-            // Largura para valores típicos de mercado (ex.: 125,50); prefixo R$/$
-            .widthIn(min = 76.dp, max = 88.dp)
-            .defaultMinSize(minHeight = 40.dp)
-            .onFocusChanged { st ->
-                val was = focused
-                focused = st.isFocused
-                if (was && !st.isFocused) {
-                    commitIfChanged()
-                }
-            }
-            .semantics {
-                contentDescription = amountContentDescription
-            },
         enabled = !isSaving,
-        singleLine = true,
         prefix = {
             Text(
                 text = currencyPrefix,
@@ -725,15 +698,12 @@ private fun ItemLineCostField(
                 color = WellPaidNavy.copy(alpha = 0.62f),
             )
         },
-        textStyle = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 14.sp),
-        placeholder = {
-            Text(
-                text = "0,00",
-                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
-                color = WellPaidNavy.copy(alpha = 0.38f),
-            )
-        },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        placeholder = "0,00",
+        modifier = Modifier
+            // Largura para valores típicos de mercado (ex.: 125,50); prefixo R$/$
+            .widthIn(min = 76.dp, max = 88.dp)
+            .defaultMinSize(minHeight = 40.dp),
+        shape = RoundedCornerShape(6.dp),
         colors = OutlinedTextFieldDefaults.colors(
             focusedTextColor = WellPaidNavy,
             unfocusedTextColor = WellPaidNavy,
@@ -745,6 +715,10 @@ private fun ItemLineCostField(
             unfocusedBorderColor = WellPaidNavy.copy(alpha = 0.22f),
             disabledBorderColor = WellPaidNavy.copy(alpha = 0.15f),
         ),
+        onKeypadOpenChange = { open -> keypadOpen = open },
+        onDone = {
+            commitIfChanged()
+        },
     )
 }
 

@@ -1,5 +1,13 @@
 package com.wellpaid.ui.main
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -48,6 +56,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -57,7 +66,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavBackStackEntry
+import com.wellpaid.navigation.MAIN_SHELL_SELECT_TAB
 import com.wellpaid.R
+import kotlinx.coroutines.flow.distinctUntilChanged
 import com.wellpaid.ui.emergency.EmergencyReserveContent
 import com.wellpaid.ui.emergency.EmergencyReserveViewModel
 import com.wellpaid.ui.expenses.ExpensesListContent
@@ -75,6 +86,10 @@ import com.wellpaid.ui.theme.WellPaidNavy
 import com.wellpaid.ui.theme.wellPaidScreenHorizontalPadding
 
 private data class MainTab(val labelRes: Int, val icon: ImageVector)
+
+/** Curva tipo Material / motion moderna (ease padrão). */
+private val TabContentEnterEasing = CubicBezierEasing(0.4f, 0f, 0.2f, 1f)
+private val TabContentExitEasing = CubicBezierEasing(0.4f, 0f, 1f, 1f)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -116,6 +131,26 @@ fun MainShellScreen(
     fun navigateToExpensesPending() {
         mainRouteEntry.savedStateHandle["pending_expense_status"] = "pending"
         selectedTab = 1
+    }
+
+    val tabSwipeModifier = rememberMainShellTabSwipeModifier(
+        enabled = selectedTab in 1..4,
+        currentTabIndex = selectedTab,
+        onNavigateHome = { selectedTab = 0 },
+        onNavigateNext = {
+            selectedTab = if (selectedTab == 4) 0 else selectedTab + 1
+        },
+    )
+
+    LaunchedEffect(mainRouteEntry) {
+        snapshotFlow {
+            mainRouteEntry.savedStateHandle.get<Int>(MAIN_SHELL_SELECT_TAB) ?: -1
+        }.distinctUntilChanged().collect { tab ->
+            if (tab in 0..4) {
+                selectedTab = tab
+                mainRouteEntry.savedStateHandle.remove<Int>(MAIN_SHELL_SELECT_TAB)
+            }
+        }
     }
 
     val tabs = listOf(
@@ -299,47 +334,76 @@ fun MainShellScreen(
                 ),
             contentAlignment = Alignment.TopStart,
         ) {
-            when (selectedTab) {
-                0 -> HomeDashboardContent(
-                    modifier = Modifier.fillMaxSize(),
-                    mainRouteEntry = mainRouteEntry,
-                    onOpenSettings = onOpenSettings,
-                    viewModel = homeViewModel,
-                )
-                1 -> ExpensesListContent(
-                    mainRouteEntry = mainRouteEntry,
-                    onExpenseClick = onOpenExpenseDetail,
-                    onOpenInstallmentPlan = onOpenInstallmentPlan,
-                    onNewExpense = onOpenExpenseNew,
-                    modifier = Modifier.fillMaxSize(),
-                    viewModel = expensesViewModel,
-                )
-                2 -> IncomesListContent(
-                    mainRouteEntry = mainRouteEntry,
-                    onIncomeClick = onOpenIncomeDetail,
-                    onNewIncome = onOpenIncomeNew,
-                    modifier = Modifier.fillMaxSize(),
-                    viewModel = incomesViewModel,
-                )
-                3 -> GoalsListContent(
-                    mainRouteEntry = mainRouteEntry,
-                    onGoalClick = onOpenGoalDetail,
-                    onNewGoal = onOpenGoalNew,
-                    modifier = Modifier.fillMaxSize(),
-                    viewModel = goalsViewModel,
-                )
-                4 -> EmergencyReserveContent(
-                    modifier = Modifier.fillMaxSize(),
-                    viewModel = emergencyViewModel,
-                )
-                else -> Text(
-                    text = stringResource(
-                        R.string.main_tab_placeholder,
-                        stringResource(tabs[selectedTab].labelRes),
-                    ),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
+            AnimatedContent(
+                targetState = selectedTab,
+                modifier = Modifier.fillMaxSize(),
+                transitionSpec = {
+                    val forward =
+                        targetState > initialState || (initialState == 4 && targetState == 0)
+                    val enterMs = 340
+                    val exitMs = 260
+                    (slideInHorizontally(
+                        animationSpec = tween(enterMs, easing = TabContentEnterEasing),
+                        initialOffsetX = { full -> if (forward) full else -full },
+                    ) + fadeIn(
+                        animationSpec = tween(enterMs, easing = TabContentEnterEasing),
+                    )) togetherWith (
+                        slideOutHorizontally(
+                            animationSpec = tween(exitMs, easing = TabContentExitEasing),
+                            targetOffsetX = { full -> if (forward) -full else full },
+                        ) + fadeOut(
+                            animationSpec = tween(exitMs, easing = TabContentExitEasing),
+                        )
+                    )
+                },
+                label = "main_shell_tabs",
+            ) { tab ->
+                when (tab) {
+                    0 -> HomeDashboardContent(
+                        modifier = Modifier.fillMaxSize(),
+                        mainRouteEntry = mainRouteEntry,
+                        onOpenSettings = onOpenSettings,
+                        viewModel = homeViewModel,
+                    )
+                    1 -> ExpensesListContent(
+                        mainRouteEntry = mainRouteEntry,
+                        onExpenseClick = onOpenExpenseDetail,
+                        onOpenInstallmentPlan = onOpenInstallmentPlan,
+                        onNewExpense = onOpenExpenseNew,
+                        modifier = Modifier.fillMaxSize(),
+                        tabSwipe = tabSwipeModifier,
+                        viewModel = expensesViewModel,
+                    )
+                    2 -> IncomesListContent(
+                        mainRouteEntry = mainRouteEntry,
+                        onIncomeClick = onOpenIncomeDetail,
+                        onNewIncome = onOpenIncomeNew,
+                        modifier = Modifier.fillMaxSize(),
+                        tabSwipe = tabSwipeModifier,
+                        viewModel = incomesViewModel,
+                    )
+                    3 -> GoalsListContent(
+                        mainRouteEntry = mainRouteEntry,
+                        onGoalClick = onOpenGoalDetail,
+                        onNewGoal = onOpenGoalNew,
+                        modifier = Modifier.fillMaxSize(),
+                        tabSwipe = tabSwipeModifier,
+                        viewModel = goalsViewModel,
+                    )
+                    4 -> EmergencyReserveContent(
+                        modifier = Modifier.fillMaxSize(),
+                        tabSwipe = tabSwipeModifier,
+                        viewModel = emergencyViewModel,
+                    )
+                    else -> Text(
+                        text = stringResource(
+                            R.string.main_tab_placeholder,
+                            stringResource(tabs[tab].labelRes),
+                        ),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
             }
         }
     }

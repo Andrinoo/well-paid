@@ -56,6 +56,7 @@ fun IncomesListContent(
     onIncomeClick: (String) -> Unit,
     onNewIncome: () -> Unit,
     modifier: Modifier = Modifier,
+    tabSwipe: Modifier = Modifier,
     viewModel: IncomesViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -151,7 +152,8 @@ fun IncomesListContent(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(24.dp),
+                    .padding(24.dp)
+                    .then(tabSwipe),
                 horizontalArrangement = Arrangement.Center,
             ) {
                 CircularProgressIndicator()
@@ -159,7 +161,9 @@ fun IncomesListContent(
         } else {
             val rows = state.filteredIncomes
             LazyColumn(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(tabSwipe),
                 contentPadding = PaddingValues(bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(0.dp),
             ) {

@@ -4,11 +4,13 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wellpaid.R
+import com.wellpaid.core.model.announcement.AnnouncementDto
 import com.wellpaid.core.model.auth.UserMeDto
 import com.wellpaid.core.model.dashboard.DashboardCashflowDto
 import com.wellpaid.core.model.dashboard.DashboardOverviewDto
 import com.wellpaid.core.model.auth.TokenStorage
 import com.wellpaid.core.network.DashboardApi
+import com.wellpaid.core.network.AnnouncementsApi
 import com.wellpaid.core.network.UserApi
 import com.wellpaid.util.FastApiErrorMapper
 import com.wellpaid.util.greetingFirstNameFromAccessToken
@@ -38,6 +40,8 @@ data class HomeUiState(
     val cashflowDynamic: Boolean = true,
     /** Meses de previsão incluídos na série (1–12) — query `forecast_months`. */
     val cashflowForecastMonths: Int = 3,
+    val announcements: List<AnnouncementDto> = emptyList(),
+    val announcementsError: String? = null,
 )
 
 /** Com `dynamic=false`, a API exige janela explícita: 6 meses civis terminando no mês do dashboard. */
@@ -59,6 +63,7 @@ private fun cashflowEndMonth(s: HomeUiState): Int? =
 class HomeViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context,
     private val dashboardApi: DashboardApi,
+    private val announcementsApi: AnnouncementsApi,
     private val userApi: UserApi,
     private val tokenStorage: TokenStorage,
 ) : ViewModel() {
@@ -78,9 +83,11 @@ class HomeViewModel @Inject constructor(
                     isLoading = false,
                     overview = null,
                     cashflow = null,
+                    announcements = emptyList(),
                     userFirstName = null,
                     errorMessage = appContext.getString(R.string.home_need_login),
                     cashflowError = null,
+                    announcementsError = null,
                 )
             }
             return
@@ -113,8 +120,12 @@ class HomeViewModel @Inject constructor(
                     )
                 }
             }
+            val announcementsDeferred = async {
+                runCatching { announcementsApi.listActive(placement = "home_banner", limit = 5) }
+            }
             val overviewResult = overviewDeferred.await()
             val cashflowResult = cashflowDeferred.await()
+            val announcementsResult = announcementsDeferred.await()
             val fromJwt =
                 if (fromApi.isNullOrBlank()) greetingFirstNameFromAccessToken(token) else null
             val firstName = fromApi?.takeIf { it.isNotBlank() }
@@ -130,6 +141,10 @@ class HomeViewModel @Inject constructor(
                         FastApiErrorMapper.message(appContext, e)
                     },
                     cashflowError = cashflowResult.exceptionOrNull()?.let { e ->
+                        FastApiErrorMapper.message(appContext, e)
+                    },
+                    announcements = announcementsResult.getOrNull()?.items.orEmpty(),
+                    announcementsError = announcementsResult.exceptionOrNull()?.let { e ->
                         FastApiErrorMapper.message(appContext, e)
                     },
                 )

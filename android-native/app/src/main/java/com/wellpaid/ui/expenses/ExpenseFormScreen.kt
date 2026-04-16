@@ -58,6 +58,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wellpaid.R
 import com.wellpaid.ui.components.WellPaidDatePickerField
+import com.wellpaid.ui.components.WellPaidMoneyDigitKeypadField
 import com.wellpaid.ui.theme.WellPaidCream
 import com.wellpaid.ui.theme.WellPaidCreamMuted
 import com.wellpaid.ui.theme.WellPaidGold
@@ -280,15 +281,13 @@ fun ExpenseFormScreen(
                 }
                 Spacer(Modifier.height(8.dp))
 
-                OutlinedTextField(
-                    value = state.amountText,
-                    onValueChange = { if (canEdit) viewModel.setAmountText(it) },
-                    label = { Text(stringResource(R.string.expense_field_amount)) },
-                    placeholder = { Text(stringResource(R.string.expense_field_amount_hint)) },
+                WellPaidMoneyDigitKeypadField(
+                    valueText = state.amountText,
+                    onValueTextChange = { if (canEdit) viewModel.setAmountText(it) },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = canEdit,
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    label = { Text(stringResource(R.string.expense_field_amount)) },
+                    placeholder = stringResource(R.string.expense_field_amount_hint),
                     shape = fieldShape,
                     colors = fieldColors,
                 )
@@ -514,15 +513,13 @@ fun ExpenseFormScreen(
                 )
                 Spacer(Modifier.height(8.dp))
 
-                OutlinedTextField(
-                    value = state.amountText,
-                    onValueChange = { if (canEdit) viewModel.setAmountText(it) },
-                    label = { Text(stringResource(R.string.expense_field_amount)) },
-                    placeholder = { Text(stringResource(R.string.expense_field_amount_hint)) },
+                WellPaidMoneyDigitKeypadField(
+                    valueText = state.amountText,
+                    onValueTextChange = { if (canEdit) viewModel.setAmountText(it) },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = canEdit,
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    label = { Text(stringResource(R.string.expense_field_amount)) },
+                    placeholder = stringResource(R.string.expense_field_amount_hint),
                     shape = fieldShape,
                     colors = fieldColors,
                 )
@@ -880,16 +877,15 @@ fun ExpenseFormScreen(
                         )
                     }
                     if (isRecurring) {
-                        OutlinedTextField(
-                            value = state.payAmountText,
-                            onValueChange = { viewModel.setPayAmountText(it) },
-                            label = { Text(stringResource(R.string.expense_pay_amount_optional)) },
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        WellPaidMoneyDigitKeypadField(
+                            valueText = state.payAmountText,
+                            onValueTextChange = { viewModel.setPayAmountText(it) },
+                            modifier = Modifier.fillMaxWidth(),
                             enabled = !state.isSaving,
+                            label = { Text(stringResource(R.string.expense_pay_amount_optional)) },
+                            placeholder = stringResource(R.string.expense_field_amount_hint),
                             shape = fieldShape,
                             colors = fieldColors,
-                            modifier = Modifier.fillMaxWidth(),
                         )
                     }
                 }

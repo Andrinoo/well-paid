@@ -274,6 +274,40 @@ fun HomeDashboardContent(
                                 color = MaterialTheme.colorScheme.error,
                             )
                         }
+                        if (state.announcements.isNotEmpty()) {
+                            val topAnnouncement = state.announcements.first()
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 6.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF8E1)),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Text(
+                                        text = topAnnouncement.title,
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = WellPaidNavyDeep,
+                                    )
+                                    Spacer(Modifier.height(4.dp))
+                                    Text(
+                                        text = topAnnouncement.body,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = WellPaidNavy,
+                                        maxLines = 3,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                            }
+                        } else if (state.announcementsError != null) {
+                            Text(
+                                text = state.announcementsError,
+                                modifier = Modifier.padding(bottom = 4.dp),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
 
                         val overview = state.overview
                         val cashflow = state.cashflow

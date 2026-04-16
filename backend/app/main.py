@@ -8,6 +8,7 @@ from slowapi.middleware import SlowAPIMiddleware
 
 from app.api.routes import (
     admin,
+    announcements,
     auth,
     categories,
     dashboard,
@@ -97,6 +98,7 @@ app.add_middleware(
 app.include_router(health.router)
 app.include_router(auth.router)
 app.include_router(admin.router)
+app.include_router(announcements.router)
 app.include_router(categories.router)
 app.include_router(income_categories.router)
 app.include_router(incomes.router)

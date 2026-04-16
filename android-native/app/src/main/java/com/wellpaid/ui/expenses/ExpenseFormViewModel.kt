@@ -16,7 +16,6 @@ import com.wellpaid.core.network.ExpensesApi
 import com.wellpaid.data.FamilyMeRepository
 import com.wellpaid.util.FastApiErrorMapper
 import com.wellpaid.util.centsToBrlInput
-import com.wellpaid.util.formatBrlAmountFromDigitInput
 import com.wellpaid.util.parseBrlToCents
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -191,7 +190,7 @@ class ExpenseFormViewModel @Inject constructor(
     fun peerMembersForShare(): List<FamilyMemberDto> = familyMeRepository.peerMembersExcludingSelf()
 
     fun setAmountText(value: String) {
-        _uiState.update { it.copy(amountText = formatBrlAmountFromDigitInput(value)) }
+        _uiState.update { it.copy(amountText = sanitizeBrlInput(value)) }
     }
 
     fun setExpenseDate(value: String) {
@@ -256,7 +255,7 @@ class ExpenseFormViewModel @Inject constructor(
     }
 
     fun setPayAmountText(value: String) {
-        _uiState.update { it.copy(payAmountText = formatBrlAmountFromDigitInput(value)) }
+        _uiState.update { it.copy(payAmountText = sanitizeBrlInput(value)) }
     }
 
     fun canDelete(): Boolean {
@@ -494,4 +493,29 @@ class ExpenseFormViewModel @Inject constructor(
         } catch (_: DateTimeParseException) {
             null
         }
+
+    /**
+     * Mantém o texto digitado num formato simples (apenas dígitos e separadores '.' / ','),
+     * para que `backspace`/caret do teclado não "remonte" o valor de forma inesperada.
+     *
+     * A conversão para centavos é feita somente no `save()` via `parseBrlToCents()`.
+     */
+    private fun sanitizeBrlInput(raw: String): String {
+        val filtered = raw.filter { it.isDigit() || it == ',' || it == '.' }
+        if (filtered.isEmpty()) return ""
+
+        val lastComma = filtered.lastIndexOf(',')
+        val lastDot = filtered.lastIndexOf('.')
+        val decSep = when {
+            lastComma >= 0 && lastDot >= 0 -> if (lastComma > lastDot) ',' else '.'
+            lastComma >= 0 -> ','
+            lastDot >= 0 -> '.'
+            else -> null
+        } ?: return filtered
+
+        val idx = filtered.lastIndexOf(decSep)
+        val intPart = filtered.substring(0, idx)
+        val decPart = filtered.substring(idx + 1).take(2)
+        return intPart + decSep + decPart
+    }
 }

@@ -45,6 +45,7 @@ fun GoalsListContent(
     onGoalClick: (String) -> Unit,
     onNewGoal: () -> Unit,
     modifier: Modifier = Modifier,
+    tabSwipe: Modifier = Modifier,
     viewModel: GoalsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -88,14 +89,17 @@ fun GoalsListContent(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(24.dp),
+                    .padding(24.dp)
+                    .then(tabSwipe),
                 horizontalArrangement = Arrangement.Center,
             ) {
                 CircularProgressIndicator()
             }
         } else {
             LazyColumn(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(tabSwipe),
                 contentPadding = PaddingValues(bottom = 16.dp),
             ) {
                 if (state.goals.isEmpty() && !state.isLoading) {

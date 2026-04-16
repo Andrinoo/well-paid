@@ -20,3 +20,15 @@ Com URL direta, se `CORS_ORIGINS` na API não for `*`, inclua **as duas** origen
 
 - Listagem com filtro, paginação, ativar/desativar conta, coluna **Última actividade** (`last_seen_at`).
 - **Exportar CSV** — exporta todas as linhas que correspondem ao filtro actual (vários pedidos à API se necessário).
+- Gestão de **avisos e dicas financeiras** para exibição na Home do app (`/admin/announcements` + `/announcements/active`).
+
+## Deixar sempre aberto no Windows
+
+1. Usa o script `start-admin-console.ps1` na pasta `admin-console` para iniciar rápido:
+   - `powershell -ExecutionPolicy Bypass -File .\start-admin-console.ps1`
+2. No **Task Scheduler**, cria uma tarefa:
+   - Trigger: `At log on`
+   - Action: `powershell.exe`
+   - Arguments: `-ExecutionPolicy Bypass -File "D:\Projects\Well Paid\admin-console\start-admin-console.ps1"`
+   - Start in: `D:\Projects\Well Paid\admin-console`
+3. Mantém o atalho desse comando no desktop para reiniciar manualmente quando quiser.

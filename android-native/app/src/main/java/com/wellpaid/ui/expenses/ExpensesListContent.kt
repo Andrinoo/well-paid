@@ -85,6 +85,7 @@ fun ExpensesListContent(
     onOpenInstallmentPlan: (String) -> Unit,
     onNewExpense: () -> Unit,
     modifier: Modifier = Modifier,
+    tabSwipe: Modifier = Modifier,
     viewModel: ExpensesViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -197,7 +198,8 @@ fun ExpensesListContent(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .padding(24.dp),
+                    .padding(24.dp)
+                    .then(tabSwipe),
                 horizontalArrangement = Arrangement.Center,
             ) {
                 CircularProgressIndicator(color = WellPaidNavy)
@@ -215,7 +217,9 @@ fun ExpensesListContent(
                     .pullRefresh(pullState),
             ) {
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .then(tabSwipe),
                     contentPadding = PaddingValues(bottom = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(0.dp),
                 ) {

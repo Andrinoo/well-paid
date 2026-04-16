@@ -59,17 +59,26 @@ import com.wellpaid.ui.theme.WellPaidNavy
 import com.wellpaid.ui.theme.wellPaidMaxContentWidth
 import com.wellpaid.ui.theme.wellPaidScreenHorizontalPadding
 import com.wellpaid.ui.theme.wellPaidTopAppBarColors
+import com.wellpaid.ui.main.rememberMainShellTabSwipeModifier
 import com.wellpaid.util.formatBrlFromCents
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
 fun ShoppingListsScreen(
     onNavigateBack: () -> Unit,
+    onSwipeNavigateToMainHome: () -> Unit,
     onOpenList: (String) -> Unit,
     onListCreated: (String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ShoppingListsViewModel = hiltViewModel(),
 ) {
+    val swipeToMainHome = rememberMainShellTabSwipeModifier(
+        enabled = true,
+        currentTabIndex = 0,
+        onNavigateHome = onSwipeNavigateToMainHome,
+        onNavigateNext = {},
+        includeForwardSwipe = false,
+    )
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val drafts = state.lists.filter { it.status.equals("draft", ignoreCase = true) }
     val completed = state.lists.filter { it.status.equals("completed", ignoreCase = true) }
@@ -210,7 +219,13 @@ fun ShoppingListsScreen(
 
             when {
                 state.isLoading && state.lists.isEmpty() -> {
-                    Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .then(swipeToMainHome),
+                        contentAlignment = Alignment.Center,
+                    ) {
                         CircularProgressIndicator(color = WellPaidNavy)
                     }
                 }
@@ -219,7 +234,8 @@ fun ShoppingListsScreen(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth()
-                            .padding(top = 24.dp),
+                            .padding(top = 24.dp)
+                            .then(swipeToMainHome),
                     ) {
                         Text(
                             text = state.errorMessage.orEmpty(),
@@ -229,7 +245,13 @@ fun ShoppingListsScreen(
                     }
                 }
                 state.lists.isEmpty() -> {
-                    Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .then(swipeToMainHome),
+                        contentAlignment = Alignment.Center,
+                    ) {
                         Text(
                             text = stringResource(R.string.shopping_empty),
                             style = MaterialTheme.typography.bodyLarge,
@@ -245,7 +267,9 @@ fun ShoppingListsScreen(
                             .pullRefresh(pullState),
                     ) {
                         LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .then(swipeToMainHome),
                         ) {
                             if (drafts.isNotEmpty()) {
                                 item {

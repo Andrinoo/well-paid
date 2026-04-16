@@ -362,6 +362,12 @@ fun WellPaidNavHost(
                     }
                     ShoppingListsScreen(
                         onNavigateBack = { navController.popBackStack() },
+                        onSwipeNavigateToMainHome = {
+                            runCatching {
+                                mainEntry.savedStateHandle[MAIN_SHELL_SELECT_TAB] = 0
+                            }
+                            navController.popBackStack()
+                        },
                         onOpenList = { id -> navController.navigate(NavRoutes.shoppingListDetail(id)) },
                         onListCreated = { id ->
                             navController.navigate(NavRoutes.shoppingListDetail(id))

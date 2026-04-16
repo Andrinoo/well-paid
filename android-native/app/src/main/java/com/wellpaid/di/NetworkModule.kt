@@ -6,6 +6,7 @@ import com.wellpaid.BuildConfig
 import com.wellpaid.core.model.auth.TokenStorage
 import com.wellpaid.core.network.CategoriesApi
 import com.wellpaid.core.network.DashboardApi
+import com.wellpaid.core.network.AnnouncementsApi
 import com.wellpaid.core.network.EmergencyReserveApi
 import com.wellpaid.core.network.FamiliesApi
 import com.wellpaid.core.network.ExpensesApi
@@ -88,6 +89,11 @@ object NetworkModule {
     @Singleton
     fun provideDashboardApi(retrofit: Retrofit): DashboardApi =
         retrofit.create(DashboardApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideAnnouncementsApi(retrofit: Retrofit): AnnouncementsApi =
+        retrofit.create(AnnouncementsApi::class.java)
 
     @Provides
     @Singleton
