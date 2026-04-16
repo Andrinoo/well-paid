@@ -122,6 +122,9 @@
     <string name="announcements_empty">Sem recados no momento.</string>
     <string name="announcements_need_login">Inicie sessão para ver os recados da equipa.</string>
     <string name="announcements_open_link">Abrir link</string>
+    <string name="announcements_mark_read">Marcar como lida</string>
+    <string name="announcements_read_label">Lida</string>
+    <string name="announcements_remove">Remover da lista</string>
     <string name="announcements_toggle_expand">Expandir ou fechar recado</string>
     <string name="home_shortcut_coming_soon">Em breve</string>
     <string name="home_shortcuts_expand">Mostrar mais atalhos</string>

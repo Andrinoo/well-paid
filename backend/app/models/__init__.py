@@ -1,6 +1,7 @@
 from app.models.base import Base
 from app.models.admin_audit_event import AdminAuditEvent
 from app.models.announcement import Announcement
+from app.models.announcement_user_state import AnnouncementUserState
 from app.models.app_usage_event import AppUsageEvent
 from app.models.category import Category
 from app.models.expense import Expense
@@ -21,6 +22,7 @@ __all__ = [
     "Base",
     "AdminAuditEvent",
     "Announcement",
+    "AnnouncementUserState",
     "AppUsageEvent",
     "User",
     "RefreshToken",

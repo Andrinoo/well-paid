@@ -235,6 +235,12 @@ fun WellPaidNavHost(
                 composable(NavRoutes.Announcements) {
                     AnnouncementsScreen(
                         onNavigateBack = { navController.popBackStack() },
+                        onEngagementChanged = {
+                            runCatching {
+                                navController.getBackStackEntry(NavRoutes.Main).savedStateHandle["announcements_dirty"] =
+                                    System.currentTimeMillis()
+                            }
+                        },
                     )
                 }
                 composable(NavRoutes.ExpenseNew) {

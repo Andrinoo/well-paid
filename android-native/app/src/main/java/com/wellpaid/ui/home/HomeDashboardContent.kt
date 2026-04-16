@@ -27,6 +27,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Settings
@@ -34,6 +35,8 @@ import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -95,6 +98,7 @@ fun HomeDashboardContent(
     viewModel: HomeViewModel,
     modifier: Modifier = Modifier,
     onOpenSettings: () -> Unit = {},
+    onOpenAnnouncements: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
@@ -116,9 +120,12 @@ fun HomeDashboardContent(
 
     LaunchedEffect(mainRouteEntry) {
         snapshotFlow {
-            mainRouteEntry.savedStateHandle.get<Long>("user_profile_dirty") ?: 0L
-        }.distinctUntilChanged().collect { t ->
-            if (t > 0L) viewModel.refresh()
+            listOf(
+                mainRouteEntry.savedStateHandle.get<Long>("user_profile_dirty") ?: 0L,
+                mainRouteEntry.savedStateHandle.get<Long>("announcements_dirty") ?: 0L,
+            )
+        }.distinctUntilChanged().collect { marks ->
+            if (marks.any { it > 0L }) viewModel.refresh()
         }
     }
 
@@ -195,6 +202,11 @@ fun HomeDashboardContent(
                     color = Color.White.copy(alpha = 0.98f),
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
+                )
+                HomeRecadosHeaderIcon(
+                    count = state.recadosBadgeCount,
+                    kind = state.recadosBadgeKind,
+                    onClick = onOpenAnnouncements,
                 )
                 IconButton(
                     onClick = onOpenSettings,
@@ -470,6 +482,53 @@ fun HomeDashboardContent(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun HomeRecadosHeaderIcon(
+    count: Int,
+    kind: String,
+    onClick: () -> Unit,
+) {
+    val (container, content) = recadosBadgeColors(kind)
+    BadgedBox(
+        badge = {
+            if (count > 0) {
+                Badge(
+                    containerColor = container,
+                    contentColor = content,
+                ) {
+                    Text(
+                        text = if (count > 99) "99+" else count.toString(),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontSize = 10.sp,
+                    )
+                }
+            }
+        },
+    ) {
+        IconButton(
+            onClick = onClick,
+            modifier = Modifier.size(40.dp),
+        ) {
+            Icon(
+                Icons.Filled.Campaign,
+                contentDescription = stringResource(R.string.home_shortcut_announcements),
+                tint = Color.White.copy(alpha = 0.95f),
+                modifier = Modifier.size(22.dp),
+            )
+        }
+    }
+}
+
+private fun recadosBadgeColors(kind: String): Pair<Color, Color> {
+    return when (kind.lowercase()) {
+        "warning" -> Color(0xFFDC2626) to Color.White
+        "info" -> Color(0xFFEAB308) to Color(0xFF422006)
+        "tip" -> Color(0xFF16A34A) to Color.White
+        "material" -> Color(0xFFEC4899) to Color.White
+        else -> Color(0xFFEAB308) to Color(0xFF422006)
     }
 }
 

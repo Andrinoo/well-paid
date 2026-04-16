@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wellpaid.R
 import com.wellpaid.core.model.announcement.AnnouncementDto
+import com.wellpaid.core.model.announcement.AnnouncementListDto
 import com.wellpaid.core.model.auth.UserMeDto
 import com.wellpaid.core.model.dashboard.DashboardCashflowDto
 import com.wellpaid.core.model.dashboard.DashboardOverviewDto
@@ -42,6 +43,10 @@ data class HomeUiState(
     val cashflowForecastMonths: Int = 3,
     val announcements: List<AnnouncementDto> = emptyList(),
     val announcementsError: String? = null,
+    /** Total de recados ativos (todos os placements agregados), para badge no header. */
+    val recadosBadgeCount: Int = 0,
+    /** `warning` | `info` | `tip` | `material` — cor do badge pela prioridade visual. */
+    val recadosBadgeKind: String = "info",
 )
 
 /** Com `dynamic=false`, a API exige janela explícita: 6 meses civis terminando no mês do dashboard. */
@@ -88,6 +93,8 @@ class HomeViewModel @Inject constructor(
                     errorMessage = appContext.getString(R.string.home_need_login),
                     cashflowError = null,
                     announcementsError = null,
+                    recadosBadgeCount = 0,
+                    recadosBadgeKind = "info",
                 )
             }
             return
@@ -120,12 +127,39 @@ class HomeViewModel @Inject constructor(
                     )
                 }
             }
-            val announcementsDeferred = async {
-                runCatching { announcementsApi.listActive(placement = "home_banner", limit = 5) }
+            val bannerPlacements = async {
+                runCatching { announcementsApi.listActive(placement = "home_banner", limit = 50) }
+            }
+            val feedPlacements = async {
+                runCatching { announcementsApi.listActive(placement = "home_feed", limit = 50) }
+            }
+            val financePlacements = async {
+                runCatching { announcementsApi.listActive(placement = "finance_tab", limit = 50) }
+            }
+            val announcementsTabPlacements = async {
+                runCatching { announcementsApi.listActive(placement = "announcements_tab", limit = 50) }
             }
             val overviewResult = overviewDeferred.await()
             val cashflowResult = cashflowDeferred.await()
-            val announcementsResult = announcementsDeferred.await()
+            val placementResults = listOf(
+                bannerPlacements.await(),
+                feedPlacements.await(),
+                financePlacements.await(),
+                announcementsTabPlacements.await(),
+            )
+            val mergedRecados = mergeAnnouncementLists(placementResults.mapNotNull { it.getOrNull() })
+            val bannerForHome = mergedRecados
+                .filter { it.placement == "home_banner" }
+                .sortedWith(
+                    compareByDescending<AnnouncementDto> { it.priority }
+                        .thenByDescending { it.createdAt.orEmpty() },
+                )
+                .take(5)
+            val unreadRecados = mergedRecados.filter { it.userReadAt.isNullOrBlank() }
+            val recadosBadgeCount = unreadRecados.size
+            val recadosBadgeKind = worstRecadosKindForBadge(
+                if (unreadRecados.isNotEmpty()) unreadRecados else mergedRecados,
+            )
             val fromJwt =
                 if (fromApi.isNullOrBlank()) greetingFirstNameFromAccessToken(token) else null
             val firstName = fromApi?.takeIf { it.isNotBlank() }
@@ -143,13 +177,43 @@ class HomeViewModel @Inject constructor(
                     cashflowError = cashflowResult.exceptionOrNull()?.let { e ->
                         FastApiErrorMapper.message(appContext, e)
                     },
-                    announcements = announcementsResult.getOrNull()?.items.orEmpty(),
-                    announcementsError = announcementsResult.exceptionOrNull()?.let { e ->
-                        FastApiErrorMapper.message(appContext, e)
-                    },
+                    announcements = bannerForHome,
+                    announcementsError = placementAnnouncementsError(placementResults),
+                    recadosBadgeCount = recadosBadgeCount,
+                    recadosBadgeKind = recadosBadgeKind,
                 )
             }
         }
+    }
+
+    private fun mergeAnnouncementLists(lists: List<AnnouncementListDto>): List<AnnouncementDto> {
+        val merged = LinkedHashMap<String, AnnouncementDto>()
+        lists.forEach { dto ->
+            dto.items.forEach { row -> merged[row.id] = row }
+        }
+        return merged.values.sortedWith(
+            compareByDescending<AnnouncementDto> { it.priority }
+                .thenByDescending { it.createdAt.orEmpty() },
+        )
+    }
+
+    private fun worstRecadosKindForBadge(items: List<AnnouncementDto>): String {
+        if (items.isEmpty()) return "info"
+        val kinds = items.map { it.kind.lowercase() }.toSet()
+        return when {
+            "warning" in kinds -> "warning"
+            "info" in kinds -> "info"
+            "tip" in kinds -> "tip"
+            "material" in kinds -> "material"
+            else -> items.first().kind.lowercase()
+        }
+    }
+
+    private fun placementAnnouncementsError(results: List<Result<AnnouncementListDto>>): String? {
+        val merged = mergeAnnouncementLists(results.mapNotNull { it.getOrNull() })
+        if (merged.isNotEmpty()) return null
+        val firstErr = results.mapNotNull { it.exceptionOrNull() }.firstOrNull() ?: return null
+        return FastApiErrorMapper.message(appContext, firstErr)
     }
 
     private fun greetingFirstName(dto: UserMeDto): String? {

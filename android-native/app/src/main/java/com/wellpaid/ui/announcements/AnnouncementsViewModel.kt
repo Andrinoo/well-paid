@@ -85,4 +85,20 @@ class AnnouncementsViewModel @Inject constructor(
             }
         }
     }
+
+    fun markAsRead(id: String, onFinished: () -> Unit = {}) {
+        viewModelScope.launch {
+            runCatching { announcementsApi.markRead(id) }
+            refresh()
+            onFinished()
+        }
+    }
+
+    fun hideFromList(id: String, onFinished: () -> Unit = {}) {
+        viewModelScope.launch {
+            runCatching { announcementsApi.hide(id) }
+            refresh()
+            onFinished()
+        }
+    }
 }

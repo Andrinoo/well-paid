@@ -325,6 +325,12 @@ export type AnnouncementRow = {
   target_user_email: string | null
   created_at: string
   updated_at: string
+  /** Só na API pública /active: leitura pelo utilizador atual. */
+  user_read_at?: string | null
+  /** Histórico no admin: quantos utilizadores marcaram como lido. */
+  engagement_read_count?: number
+  /** Histórico no admin: quantos removeram da lista. */
+  engagement_hidden_count?: number
 }
 
 export type AnnouncementListResponse = {

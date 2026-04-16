@@ -33,6 +33,20 @@ class AnnouncementRow(BaseModel):
     )
     created_at: datetime
     updated_at: datetime
+    user_read_at: datetime | None = Field(
+        default=None,
+        description="Só em /announcements/active: quando o utilizador marcou como lido.",
+    )
+    engagement_read_count: int = Field(
+        default=0,
+        ge=0,
+        description="Só no admin: quantos utilizadores marcaram como lido (histórico).",
+    )
+    engagement_hidden_count: int = Field(
+        default=0,
+        ge=0,
+        description="Só no admin: quantos utilizadores removeram da lista (histórico).",
+    )
 
     model_config = {"from_attributes": True}
 

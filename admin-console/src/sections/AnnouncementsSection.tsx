@@ -202,6 +202,8 @@ export function AnnouncementsSection(props: AnnouncementsSectionProps) {
               <th>Estado</th>
               <th>Janela</th>
               <th>Criado</th>
+              <th>Lidos</th>
+              <th>Ocultos</th>
               <th>Ações</th>
             </tr>
           </thead>
@@ -215,6 +217,8 @@ export function AnnouncementsSection(props: AnnouncementsSectionProps) {
                 <td>{row.is_active ? <span className="wp-badge wp-badge-ok">Ativo</span> : <span className="wp-badge wp-badge-no">Inativo</span>}</td>
                 <td>{props.formatDt(row.starts_at)} → {props.formatDt(row.ends_at)}</td>
                 <td>{props.formatDt(row.created_at)}</td>
+                <td>{row.engagement_read_count ?? 0}</td>
+                <td>{row.engagement_hidden_count ?? 0}</td>
                 <td>
                   <button type="button" className="wp-btn wp-btn-ghost wp-btn-sm" onClick={() => openEdit(row)} disabled={props.busy}>
                     Editar
@@ -224,7 +228,7 @@ export function AnnouncementsSection(props: AnnouncementsSectionProps) {
             ))}
             {props.items.length === 0 ? (
               <tr>
-                <td colSpan={8}>
+                <td colSpan={10}>
                   <div className="wp-empty-state">
                     {props.busy ? 'A carregar avisos...' : 'Sem conteúdos para os filtros aplicados.'}
                   </div>

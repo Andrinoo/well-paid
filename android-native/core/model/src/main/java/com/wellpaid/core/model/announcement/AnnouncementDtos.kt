@@ -17,6 +17,7 @@ data class AnnouncementDto(
     @SerialName("starts_at") val startsAt: String? = null,
     @SerialName("ends_at") val endsAt: String? = null,
     @SerialName("created_at") val createdAt: String? = null,
+    @SerialName("user_read_at") val userReadAt: String? = null,
 )
 
 @Serializable
@@ -26,3 +27,6 @@ data class AnnouncementListDto(
     val skip: Int,
     val limit: Int,
 )
+
+@Serializable
+data class ApiOkResponse(val ok: Boolean = true)

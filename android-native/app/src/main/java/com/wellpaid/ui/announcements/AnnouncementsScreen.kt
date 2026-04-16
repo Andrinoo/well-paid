@@ -12,12 +12,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Campaign
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
@@ -26,6 +29,7 @@ import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -62,6 +66,7 @@ import com.wellpaid.ui.theme.wellPaidTopAppBarColors
 @Composable
 fun AnnouncementsScreen(
     onNavigateBack: () -> Unit,
+    onEngagementChanged: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: AnnouncementsViewModel = hiltViewModel(),
 ) {
@@ -152,6 +157,12 @@ fun AnnouncementsScreen(
                                     AnnouncementCard(
                                         row = row,
                                         onOpenLink = { url -> runCatching { uriHandler.openUri(url) } },
+                                        onMarkRead = {
+                                            viewModel.markAsRead(row.id, onEngagementChanged)
+                                        },
+                                        onRemove = {
+                                            viewModel.hideFromList(row.id, onEngagementChanged)
+                                        },
                                     )
                                 }
                             }
@@ -174,6 +185,8 @@ private const val ANNOUNCEMENT_BODY_EXPAND_THRESHOLD = 100
 private fun AnnouncementCard(
     row: AnnouncementDto,
     onOpenLink: (String) -> Unit,
+    onMarkRead: () -> Unit,
+    onRemove: () -> Unit,
 ) {
     val accent = kindAccent(row.kind)
     val needsExpansion = row.body.length > ANNOUNCEMENT_BODY_EXPAND_THRESHOLD
@@ -254,6 +267,61 @@ private fun AnnouncementCard(
                         }
                     }
                 }
+                else -> {
+                    /* longo e recolhido: só o título até expandir */
+                }
+            }
+            HorizontalDivider(
+                modifier = Modifier.padding(top = 12.dp),
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (row.userReadAt.isNullOrBlank()) {
+                    TextButton(onClick = onMarkRead) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Filled.Check,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                                tint = accent,
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                text = stringResource(R.string.announcements_mark_read),
+                                color = accent,
+                                style = MaterialTheme.typography.labelLarge,
+                            )
+                        }
+                    }
+                } else {
+                    Text(
+                        text = stringResource(R.string.announcements_read_label),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                TextButton(onClick = onRemove) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Filled.Delete,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.error.copy(alpha = 0.85f),
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = stringResource(R.string.announcements_remove),
+                            color = MaterialTheme.colorScheme.error.copy(alpha = 0.85f),
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                    }
+                }
             }
         }
     }
@@ -262,6 +330,6 @@ private fun AnnouncementCard(
 private fun kindAccent(kind: String): Color = when (kind.lowercase()) {
     "warning" -> Color(0xFFB45309)
     "tip" -> Color(0xFF047857)
-    "material" -> Color(0xFF6D28D9)
+    "material" -> Color(0xFFEC4899)
     else -> WellPaidGold
 }

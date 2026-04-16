@@ -122,6 +122,9 @@
     <string name="announcements_empty">No announcements right now.</string>
     <string name="announcements_need_login">Sign in to see announcements from the team.</string>
     <string name="announcements_open_link">Open link</string>
+    <string name="announcements_mark_read">Mark as read</string>
+    <string name="announcements_read_label">Read</string>
+    <string name="announcements_remove">Remove from list</string>
     <string name="announcements_toggle_expand">Expand or collapse announcement</string>
     <string name="home_shortcut_coming_soon">Coming soon</string>
     <string name="home_shortcuts_expand">Show more shortcuts</string>
