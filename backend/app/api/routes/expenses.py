@@ -208,7 +208,7 @@ def _ensure_recurring_generated(db: Session, owner_user_id: uuid.UUID, until: da
             Expense.recurring_frequency.isnot(None),
             Expense.deleted_at.is_(None),
         )
-    ).all()
+    ).unique().all()
     changed = False
     for a in anchors:
         freq = a.recurring_frequency

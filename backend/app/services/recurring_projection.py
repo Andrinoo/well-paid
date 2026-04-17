@@ -63,7 +63,7 @@ def find_anchor_and_occurrence_for_projected_id(
             Expense.recurring_series_id.isnot(None),
             Expense.deleted_at.is_(None),
         )
-    ).all()
+    ).unique().all()
 
     horizon_end = date.today() + timedelta(days=800)
     for a in anchors:
@@ -148,17 +148,16 @@ def materialize_recurring_occurrence(
         anchor.recurring_generated_until = occ_date
     db.flush()
     db.refresh(row)
-    row = db.scalar(
+    row = db.scalars(
         select(Expense)
-            .options(
-                joinedload(Expense.category),
-                joinedload(Expense.shared_with_user),
-                joinedload(Expense.owner),
-                joinedload(Expense.expense_shares),
-            )
-            .where(Expense.id == row.id)
+        .options(
+            joinedload(Expense.category),
+            joinedload(Expense.shared_with_user),
+            joinedload(Expense.owner),
+            joinedload(Expense.expense_shares),
         )
-    assert row is not None
+        .where(Expense.id == row.id)
+    ).unique().one()
     return row
 
 
