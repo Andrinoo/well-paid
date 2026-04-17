@@ -40,6 +40,7 @@ class Expense(Base, TimestampMixin):
         UUID(as_uuid=True), nullable=True, index=True
     )
     recurring_generated_until: Mapped[date | None] = mapped_column(Date, nullable=True)
+    split_mode: Mapped[str | None] = mapped_column(String(16), nullable=True)
     is_shared: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     shared_with_user_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
@@ -69,4 +70,9 @@ class Expense(Base, TimestampMixin):
     )
     category: Mapped["Category"] = relationship(
         "Category", back_populates="expenses"
+    )
+    expense_shares: Mapped[list["ExpenseShare"]] = relationship(
+        "ExpenseShare",
+        back_populates="expense",
+        cascade="all, delete-orphan",
     )

@@ -68,4 +68,7 @@ object NavRoutes {
 
     /** Recados / avisos publicados pelo admin. */
     const val Announcements = "announcements"
+
+    /** Valores a receber / a pagar entre membros (despesas partilhadas). */
+    const val Receivables = "receivables"
 }

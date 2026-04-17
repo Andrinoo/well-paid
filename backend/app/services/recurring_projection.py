@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import date, timedelta
+from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
 from sqlalchemy import select
@@ -12,6 +13,11 @@ from sqlalchemy.orm import Session, joinedload
 from app.models.expense import Expense
 from app.schemas.dashboard import ExpenseStatus
 from app.schemas.expense import ExpenseResponse
+from app.services.expense_splits import (
+    clone_share_rows_from_expense,
+    compute_share_extras,
+    replace_expense_shares,
+)
 from app.services.recurrence import add_months, iter_occurrence_dates
 
 if TYPE_CHECKING:
@@ -44,7 +50,12 @@ def find_anchor_and_occurrence_for_projected_id(
     expense_id: uuid.UUID,
 ) -> tuple[Expense, date] | None:
     anchors = db.scalars(
-        select(Expense).where(
+        select(Expense)
+        .options(
+            joinedload(Expense.expense_shares),
+            joinedload(Expense.owner),
+        )
+        .where(
             Expense.owner_user_id == owner_user_id,
             Expense.installment_total == 1,
             Expense.installment_number == 1,
@@ -124,23 +135,29 @@ def materialize_recurring_occurrence(
         recurring_frequency=None,
         recurring_series_id=sid,
         recurring_generated_until=None,
+        split_mode=anchor.split_mode,
         is_shared=anchor.is_shared,
         shared_with_user_id=anchor.shared_with_user_id,
     )
     db.add(row)
     db.flush()
+    sr = clone_share_rows_from_expense(anchor)
+    if sr:
+        replace_expense_shares(db, pid, sr)
     if anchor.recurring_generated_until is None or occ_date > anchor.recurring_generated_until:
         anchor.recurring_generated_until = occ_date
     db.flush()
     db.refresh(row)
     row = db.scalar(
         select(Expense)
-        .options(
-            joinedload(Expense.category),
-            joinedload(Expense.shared_with_user),
+            .options(
+                joinedload(Expense.category),
+                joinedload(Expense.shared_with_user),
+                joinedload(Expense.owner),
+                joinedload(Expense.expense_shares),
+            )
+            .where(Expense.id == row.id)
         )
-        .where(Expense.id == row.id)
-    )
     assert row is not None
     return row
 
@@ -163,6 +180,31 @@ def build_projected_expense_response(
     sid = anchor.recurring_series_id
     assert sid is not None
     pid = projected_recurring_uuid(sid, occ_date)
+    shares = list(anchor.expense_shares) if getattr(anchor, "expense_shares", None) else []
+    faux = SimpleNamespace(
+        due_date=gen_due,
+        is_shared=anchor.is_shared,
+        shared_with_user_id=anchor.shared_with_user_id,
+        owner_user_id=anchor.owner_user_id,
+        split_mode=getattr(anchor, "split_mode", None),
+    )
+    sx = compute_share_extras(
+        viewer_id=viewer_id,
+        expense=faux,
+        shares=shares,
+        today=date.today(),
+    )
+    def _cp_label() -> str | None:
+        if not anchor.is_shared or anchor.shared_with_user_id is None:
+            return None
+        if viewer_id == anchor.owner_user_id:
+            return shared_with_label
+        ow = anchor.owner
+        if ow is None:
+            return None
+        name = (ow.full_name or "").strip()
+        return name if name else ow.email
+
     return ExpenseResponse(
         id=pid,
         owner_user_id=anchor.owner_user_id,
@@ -190,4 +232,14 @@ def build_projected_expense_response(
         paid_at=None,
         installment_plan_has_paid=None,
         is_projected=True,
+        is_advanced_payment=False,
+        split_mode=sx["split_mode"],
+        counterparty_label=_cp_label(),
+        my_share_cents=sx["my_share_cents"],
+        other_user_share_cents=sx["other_user_share_cents"],
+        my_share_paid=sx["my_share_paid"],
+        other_share_paid=sx["other_share_paid"],
+        shared_expense_payment_alert=sx["shared_expense_payment_alert"],
+        shared_expense_peer_declined_alert=sx["shared_expense_peer_declined_alert"],
+        my_share_declined=sx["my_share_declined"],
     )

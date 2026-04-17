@@ -24,6 +24,8 @@ type UsersSectionProps = {
   onOrderByChange: (v: 'created_at' | 'last_seen_at' | 'email') => void
   onOrderDirChange: (v: 'asc' | 'desc') => void
   onOpenUserDetail: (r: AdminUserRow) => void
+  /** Recado pessoal com e-mail já preenchido (atalho pelo nome na tabela). */
+  onQuickMessageToUser: (r: AdminUserRow) => void
   onToggleActive: (r: AdminUserRow) => void
   onToggleAdmin: (r: AdminUserRow) => void
   onRevokeSessions: (r: AdminUserRow) => void
@@ -133,7 +135,9 @@ export function UsersSection(props: UsersSectionProps) {
             {props.rows.map((r) => (
               <tr key={r.id}>
                 {props.visibleColumns.email ? <td>{r.email}</td> : null}
-                {props.visibleColumns.name ? <td>{r.display_name || r.full_name || '—'}</td> : null}
+                {props.visibleColumns.name ? (
+                  <td>{r.display_name?.trim() || r.full_name?.trim() || r.email}</td>
+                ) : null}
                 {props.visibleColumns.active ? (
                   <td>
                     {r.is_active ? <span className="wp-badge wp-badge-ok">Sim</span> : <span className="wp-badge wp-badge-no">Não</span>}
@@ -145,6 +149,15 @@ export function UsersSection(props: UsersSectionProps) {
                 {props.visibleColumns.created ? <td>{props.formatDt(r.created_at)}</td> : null}
                 <td>
                   <div className="wp-row-actions">
+                    <button
+                      type="button"
+                      className="wp-btn wp-btn-sm wp-btn-recado"
+                      onClick={() => props.onQuickMessageToUser(r)}
+                      disabled={props.busy}
+                      title="Enviar recado só para este utilizador (tipo + mensagem)"
+                    >
+                      Recado
+                    </button>
                     <button
                       type="button"
                       className="wp-btn wp-btn-ghost wp-btn-sm"

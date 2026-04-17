@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -65,6 +66,7 @@ import com.wellpaid.ui.theme.WellPaidGold
 import com.wellpaid.ui.theme.WellPaidNavy
 import com.wellpaid.ui.theme.wellPaidScreenHorizontalPadding
 import com.wellpaid.ui.theme.wellPaidTopAppBarColors
+import com.wellpaid.util.formatBrlFromCents
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -155,6 +157,58 @@ fun ExpenseFormScreen(
                             modifier = Modifier.padding(bottom = 8.dp),
                         )
                     }
+                }
+                if (e.sharedExpensePaymentAlert) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Icon(
+                            Icons.Filled.Warning,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                        Text(
+                            text = stringResource(
+                                R.string.expense_share_alert_detail,
+                                e.counterpartyLabel.orEmpty(),
+                                formatBrlFromCents(e.myShareCents ?: 0),
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                }
+                if (e.sharedExpensePeerDeclinedAlert && e.isMine) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Icon(
+                            Icons.Filled.Warning,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                        Text(
+                            text = stringResource(R.string.expense_share_peer_declined_owner),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                }
+                if (e.myShareDeclined && !e.isMine) {
+                    Text(
+                        text = stringResource(R.string.expense_share_you_declined_peer),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.tertiary,
+                        modifier = Modifier.padding(bottom = 8.dp),
+                    )
                 }
             }
 
@@ -629,13 +683,9 @@ fun ExpenseFormScreen(
                         Spacer(Modifier.height(6.dp))
                         var shareMenuExpanded by remember { mutableStateOf(false) }
                         val peers = viewModel.peerMembersForShare()
-                        val wholeLabel = stringResource(R.string.expense_share_whole_family)
-                        val selectedLabel = when (state.sharedWithUserId) {
-                            null -> wholeLabel
-                            else -> peers.find { it.userId == state.sharedWithUserId }
-                                ?.let { m -> m.fullName?.takeIf { fn -> fn.isNotBlank() } ?: m.email }
-                                ?: wholeLabel
-                        }
+                        val selectedLabel = peers.find { it.userId == state.sharedWithUserId }
+                            ?.let { m -> m.fullName?.takeIf { fn -> fn.isNotBlank() } ?: m.email }
+                            ?: stringResource(R.string.expense_share_pick_member)
                         ExposedDropdownMenuBox(
                             expanded = shareMenuExpanded,
                             onExpandedChange = { if (canEdit) shareMenuExpanded = it },
@@ -659,13 +709,6 @@ fun ExpenseFormScreen(
                                 expanded = shareMenuExpanded,
                                 onDismissRequest = { shareMenuExpanded = false },
                             ) {
-                                DropdownMenuItem(
-                                    text = { Text(wholeLabel) },
-                                    onClick = {
-                                        viewModel.setSharedWithUserId(null)
-                                        shareMenuExpanded = false
-                                    },
-                                )
                                 peers.forEach { m ->
                                     val label = m.fullName?.takeIf { it.isNotBlank() } ?: m.email
                                     DropdownMenuItem(
@@ -676,6 +719,40 @@ fun ExpenseFormScreen(
                                         },
                                     )
                                 }
+                            }
+                        }
+                        if (canEdit) {
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                text = stringResource(R.string.expense_split_mode_amount),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = WellPaidNavy,
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                OutlinedTextField(
+                                    value = state.ownerShareText,
+                                    onValueChange = { viewModel.setOwnerShareText(it) },
+                                    label = { Text(stringResource(R.string.expense_split_owner_part)) },
+                                    modifier = Modifier.weight(1f),
+                                    singleLine = true,
+                                    shape = fieldShape,
+                                    colors = fieldColors,
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                )
+                                OutlinedTextField(
+                                    value = state.peerShareText,
+                                    onValueChange = { viewModel.setPeerShareText(it) },
+                                    label = { Text(stringResource(R.string.expense_split_peer_part)) },
+                                    modifier = Modifier.weight(1f),
+                                    singleLine = true,
+                                    shape = fieldShape,
+                                    colors = fieldColors,
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                )
                             }
                         }
                     }
@@ -743,6 +820,44 @@ fun ExpenseFormScreen(
                     enabled = !state.isSaving,
                 ) {
                     Text(stringResource(R.string.expense_mark_paid))
+                }
+            }
+
+            if (viewModel.canRequestCover()) {
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = { viewModel.openCoverDialog() },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !state.isSaving,
+                ) {
+                    Text(stringResource(R.string.expense_cover_request))
+                }
+            }
+
+            if (viewModel.canDeclineShare()) {
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = { viewModel.declineShare(onFinishedNeedRefresh) },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !state.isSaving,
+                ) {
+                    Text(stringResource(R.string.expense_share_decline))
+                }
+            }
+
+            if (viewModel.canAssumeFull()) {
+                Spacer(Modifier.height(8.dp))
+                Button(
+                    onClick = { viewModel.assumeFullShare(onFinishedNeedRefresh) },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !state.isSaving,
+                    shape = RoundedCornerShape(24.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = WellPaidGold,
+                        contentColor = WellPaidNavy,
+                    ),
+                ) {
+                    Text(stringResource(R.string.expense_share_assume_full))
                 }
             }
 
@@ -900,6 +1015,37 @@ fun ExpenseFormScreen(
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.dismissPayConfirm() }) {
+                    Text(stringResource(R.string.common_cancel))
+                }
+            },
+        )
+    }
+
+    if (state.showCoverDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissCoverDialog() },
+            title = { Text(stringResource(R.string.expense_cover_request)) },
+            text = {
+                WellPaidDatePickerField(
+                    label = { Text(stringResource(R.string.expense_cover_settle_by)) },
+                    isoDate = state.coverSettleByIso,
+                    onIsoDateChange = { viewModel.setCoverSettleByIso(it) },
+                    enabled = !state.isSaving,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = fieldColors,
+                    shape = fieldShape,
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { viewModel.submitCover(onFinishedNeedRefresh) },
+                    enabled = !state.isSaving,
+                ) {
+                    Text(stringResource(R.string.expense_cover_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissCoverDialog() }) {
                     Text(stringResource(R.string.common_cancel))
                 }
             },

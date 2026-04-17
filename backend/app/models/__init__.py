@@ -5,6 +5,9 @@ from app.models.announcement_user_state import AnnouncementUserState
 from app.models.app_usage_event import AppUsageEvent
 from app.models.category import Category
 from app.models.expense import Expense
+from app.models.expense_share import ExpenseShare
+from app.models.family_receivable import FamilyReceivable
+from app.models.family_financial_event import FamilyFinancialEvent
 from app.models.family import Family, FamilyInvite, FamilyMember
 from app.models.income import Income
 from app.models.income_category import IncomeCategory
@@ -30,6 +33,9 @@ __all__ = [
     "EmailVerificationToken",
     "Category",
     "Expense",
+    "ExpenseShare",
+    "FamilyReceivable",
+    "FamilyFinancialEvent",
     "Goal",
     "GoalContribution",
     "Income",

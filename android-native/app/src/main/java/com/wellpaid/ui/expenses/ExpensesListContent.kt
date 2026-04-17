@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -20,6 +21,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
@@ -246,7 +248,7 @@ fun ExpensesListContent(
                                 }
                             },
                             onPayClick = {
-                                if (expense.isMine && expense.status != "paid") {
+                                if (expense.status != "paid" && (expense.isMine || expense.isShared)) {
                                     viewModel.payExpense(expense.id)
                                 }
                             },
@@ -604,6 +606,14 @@ private fun ExpenseListRow(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(3.dp),
                 ) {
+                    if (expense.sharedExpensePaymentAlert) {
+                        Icon(
+                            imageVector = Icons.Filled.Warning,
+                            contentDescription = stringResource(R.string.expense_share_alert_short),
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
                     if (showParTag(expense)) {
                         ExpenseTypeTagPar()
                     }
@@ -620,7 +630,7 @@ private fun ExpenseListRow(
                         color = WellPaidNavy,
                     )
                 }
-                if (!isPaid && expense.isMine) {
+                if (!isPaid && (expense.isMine || expense.isShared)) {
                     Text(
                         text = stringResource(R.string.expenses_pay),
                         style = MaterialTheme.typography.labelSmall,

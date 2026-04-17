@@ -15,10 +15,12 @@ from app.api.routes import (
     emergency_reserve,
     expenses,
     families,
+    family_financial,
     goals,
     health,
     income_categories,
     incomes,
+    receivables,
     shopping_lists,
     telemetry,
 )
@@ -104,8 +106,10 @@ app.include_router(income_categories.router)
 app.include_router(incomes.router)
 app.include_router(dashboard.router)
 app.include_router(expenses.router)
+app.include_router(receivables.router)
 app.include_router(goals.router)
 app.include_router(families.router)
+app.include_router(family_financial.router)
 app.include_router(emergency_reserve.router)
 app.include_router(shopping_lists.router)
 app.include_router(telemetry.router)

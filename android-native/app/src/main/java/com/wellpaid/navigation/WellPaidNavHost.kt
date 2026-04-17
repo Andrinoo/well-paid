@@ -39,6 +39,7 @@ import com.wellpaid.ui.session.SessionViewModel
 import com.wellpaid.ui.family.FamilyScreen
 import com.wellpaid.ui.categories.ManageCategoriesScreen
 import com.wellpaid.ui.settings.DisplayNameScreen
+import com.wellpaid.ui.receivables.ReceivablesScreen
 import com.wellpaid.ui.settings.SettingsScreen
 import com.wellpaid.ui.shopping.ShoppingListDetailScreen
 import com.wellpaid.ui.shopping.ShoppingListFormScreen
@@ -349,7 +350,11 @@ fun WellPaidNavHost(
                         onOpenFamily = { navController.navigate(NavRoutes.Family) },
                         onOpenSecurity = { navController.navigate(NavRoutes.Security) },
                         onOpenManageCategories = { navController.navigate(NavRoutes.ManageCategories) },
+                        onOpenReceivables = { navController.navigate(NavRoutes.Receivables) },
                     )
+                }
+                composable(NavRoutes.Receivables) {
+                    ReceivablesScreen(onNavigateBack = { navController.popBackStack() })
                 }
                 composable(NavRoutes.ManageCategories) {
                     ManageCategoriesScreen(onNavigateBack = { navController.popBackStack() })

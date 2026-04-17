@@ -32,4 +32,13 @@ data class ExpenseDto(
     @SerialName("installment_plan_has_paid") val installmentPlanHasPaid: Boolean? = null,
     @SerialName("is_projected") val isProjected: Boolean = false,
     @SerialName("is_advanced_payment") val isAdvancedPayment: Boolean = false,
+    @SerialName("split_mode") val splitMode: String? = null,
+    @SerialName("counterparty_label") val counterpartyLabel: String? = null,
+    @SerialName("my_share_cents") val myShareCents: Int? = null,
+    @SerialName("other_user_share_cents") val otherUserShareCents: Int? = null,
+    @SerialName("my_share_paid") val mySharePaid: Boolean = false,
+    @SerialName("other_share_paid") val otherSharePaid: Boolean = false,
+    @SerialName("shared_expense_payment_alert") val sharedExpensePaymentAlert: Boolean = false,
+    @SerialName("shared_expense_peer_declined_alert") val sharedExpensePeerDeclinedAlert: Boolean = false,
+    @SerialName("my_share_declined") val myShareDeclined: Boolean = false,
 )

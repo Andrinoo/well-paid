@@ -1,9 +1,11 @@
 package com.wellpaid.core.network
 
+import com.wellpaid.core.model.expense.ExpenseCoverRequestDto
 import com.wellpaid.core.model.expense.ExpenseCreateDto
 import com.wellpaid.core.model.expense.ExpenseCreateOutcomeDto
 import com.wellpaid.core.model.expense.ExpenseDto
 import com.wellpaid.core.model.expense.ExpensePayDto
+import com.wellpaid.core.model.expense.ExpenseShareDeclineDto
 import com.wellpaid.core.model.expense.ExpenseUpdateDto
 import retrofit2.Response
 import retrofit2.http.Body
@@ -49,4 +51,19 @@ interface ExpensesApi {
         @Path("id") id: String,
         @Body body: ExpensePayDto = ExpensePayDto(),
     ): ExpenseDto
+
+    @POST("expenses/{id}/share/cover-request")
+    suspend fun requestShareCover(
+        @Path("id") id: String,
+        @Body body: ExpenseCoverRequestDto,
+    ): ExpenseDto
+
+    @POST("expenses/{id}/share/decline")
+    suspend fun declineExpenseShare(
+        @Path("id") id: String,
+        @Body body: ExpenseShareDeclineDto = ExpenseShareDeclineDto(),
+    ): ExpenseDto
+
+    @POST("expenses/{id}/share/assume-full")
+    suspend fun assumeFullExpenseShare(@Path("id") id: String): ExpenseDto
 }

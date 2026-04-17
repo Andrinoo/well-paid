@@ -25,6 +25,7 @@ import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Category
 import androidx.compose.material.icons.outlined.Groups
+import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Person
@@ -91,6 +92,7 @@ fun SettingsScreen(
     onOpenFamily: () -> Unit = {},
     onOpenSecurity: () -> Unit = {},
     onOpenManageCategories: () -> Unit = {},
+    onOpenReceivables: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
@@ -326,6 +328,12 @@ fun SettingsScreen(
                         icon = Icons.Outlined.Groups,
                         title = stringResource(R.string.settings_tile_family),
                         onClick = onOpenFamily,
+                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+                    SettingsNavRow(
+                        icon = Icons.Outlined.AccountBalanceWallet,
+                        title = stringResource(R.string.settings_tile_receivables),
+                        onClick = onOpenReceivables,
                     )
                 }
             }

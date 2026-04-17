@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import uuid
 from datetime import date, datetime
-from typing import Self
+from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.schemas.dashboard import ExpenseStatus
+
+SplitMode = Literal["amount", "percent"]
 
 
 class ExpenseCreate(BaseModel):
@@ -21,6 +23,11 @@ class ExpenseCreate(BaseModel):
     recurring_frequency: str | None = Field(default=None, max_length=32)
     is_shared: bool = False
     shared_with_user_id: uuid.UUID | None = None
+    split_mode: SplitMode | None = None
+    owner_share_cents: int | None = Field(default=None, ge=0)
+    peer_share_cents: int | None = Field(default=None, ge=0)
+    owner_percent_bps: int | None = Field(default=None, ge=0, le=10000)
+    peer_percent_bps: int | None = Field(default=None, ge=0, le=10000)
 
     @field_validator("recurring_frequency")
     @classmethod
@@ -44,6 +51,9 @@ class ExpenseCreate(BaseModel):
             )
         if not self.is_shared and self.shared_with_user_id is not None:
             raise ValueError("shared_with_user_id exige is_shared true")
+        if self.is_shared and self.shared_with_user_id is not None:
+            if self.split_mode is None:
+                raise ValueError("Despesa partilhada: indica split_mode (amount ou percent)")
         return self
 
 
@@ -58,6 +68,11 @@ class ExpenseUpdate(BaseModel):
     recurring_frequency: str | None = Field(default=None, max_length=32)
     is_shared: bool | None = None
     shared_with_user_id: uuid.UUID | None = None
+    split_mode: SplitMode | None = None
+    owner_share_cents: int | None = Field(default=None, ge=0)
+    peer_share_cents: int | None = Field(default=None, ge=0)
+    owner_percent_bps: int | None = Field(default=None, ge=0, le=10000)
+    peer_percent_bps: int | None = Field(default=None, ge=0, le=10000)
 
     @field_validator("recurring_frequency")
     @classmethod
@@ -120,6 +135,30 @@ class ExpenseResponse(BaseModel):
         default=False,
         description="Pagamento adiantado em relação ao vencimento configurado.",
     )
+    split_mode: str | None = Field(
+        default=None,
+        description="amount ou percent quando partilhada",
+    )
+    counterparty_label: str | None = Field(
+        default=None,
+        description="Nome do outro membro na partilha (visto a partir do utilizador atual)",
+    )
+    my_share_cents: int | None = None
+    other_user_share_cents: int | None = None
+    my_share_paid: bool = False
+    other_share_paid: bool = False
+    shared_expense_payment_alert: bool = Field(
+        default=False,
+        description="Vencimento passou: o outro já pagou a parte dele e falta a tua",
+    )
+    shared_expense_peer_declined_alert: bool = Field(
+        default=False,
+        description="O parceiro recusou a parte dele; o criador deve assumir a despesa nesta linha.",
+    )
+    my_share_declined: bool = Field(
+        default=False,
+        description="Recusaste a tua parte nesta linha (aguarda ação do criador).",
+    )
 
 
 class ExpenseCreateOutcome(BaseModel):
@@ -136,3 +175,7 @@ class ExpenseCreateOutcome(BaseModel):
 class ExpensePayRequest(BaseModel):
     allow_advance: bool = False
     amount_cents: int | None = Field(default=None, gt=0)
+
+
+class ExpenseShareDeclineRequest(BaseModel):
+    reason: str | None = Field(default=None, max_length=500)

@@ -57,12 +57,14 @@ type ModalProps = {
   title: string
   onClose: () => void
   children: ReactNode
+  /** Classe extra no painel (ex.: wp-modal-compact). */
+  panelClassName?: string
 }
 
-export function Modal({ title, onClose, children }: ModalProps) {
+export function Modal({ title, onClose, children, panelClassName }: ModalProps) {
   return (
     <div className="wp-modal-backdrop" onClick={onClose}>
-      <div className="wp-modal" onClick={(e) => e.stopPropagation()}>
+      <div className={['wp-modal', panelClassName].filter(Boolean).join(' ')} onClick={(e) => e.stopPropagation()}>
         <div className="wp-modal-header">
           <h3 className="wp-h3">{title}</h3>
           <button type="button" className="wp-btn wp-btn-ghost" onClick={onClose}>

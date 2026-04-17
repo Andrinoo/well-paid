@@ -13,6 +13,7 @@ import com.wellpaid.core.network.ExpensesApi
 import com.wellpaid.core.network.GoalsApi
 import com.wellpaid.core.network.IncomeCategoriesApi
 import com.wellpaid.core.network.IncomesApi
+import com.wellpaid.core.network.ReceivablesApi
 import com.wellpaid.core.network.ShoppingListsApi
 import com.wellpaid.core.network.TelemetryApi
 import com.wellpaid.core.network.UserApi
@@ -114,6 +115,11 @@ object NetworkModule {
     @Singleton
     fun provideIncomeCategoriesApi(retrofit: Retrofit): IncomeCategoriesApi =
         retrofit.create(IncomeCategoriesApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideReceivablesApi(retrofit: Retrofit): ReceivablesApi =
+        retrofit.create(ReceivablesApi::class.java)
 
     @Provides
     @Singleton

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import {
   adminMe,
   clearTokens,
@@ -225,6 +225,9 @@ export default function App() {
   const [announcementSkip, setAnnouncementSkip] = useState(0)
   const [announcementStatusFilter, setAnnouncementStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
   const [announcementPlacementFilter, setAnnouncementPlacementFilter] = useState<'all' | AnnouncementPlacement>('all')
+  const [quickMessageUser, setQuickMessageUser] = useState<AdminUserRow | null>(null)
+  const [qmBody, setQmBody] = useState('')
+  const [qmKind, setQmKind] = useState<'info' | 'warning' | 'tip' | 'material'>('info')
   const [tableDensity, setTableDensity] = useState<'comfortable' | 'compact'>('comfortable')
   const [uiTheme, setUiTheme] = useState<UiTheme>('dark')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -928,6 +931,50 @@ export default function App() {
     }
   }
 
+  function openQuickMessageToUser(row: AdminUserRow) {
+    setError(null)
+    setQuickMessageUser(row)
+    setQmBody('')
+    setQmKind('info')
+  }
+
+  function quickMessageAutoTitle(user: AdminUserRow): string {
+    const stamp = new Date().toLocaleString('pt-PT', { dateStyle: 'short', timeStyle: 'short' })
+    const local = user.email.split('@')[0] || 'utilizador'
+    const base = `Recado · ${local} · ${stamp}`
+    return base.slice(0, 140)
+  }
+
+  async function submitQuickMessage(ev: FormEvent) {
+    ev.preventDefault()
+    if (!accessToken || !quickMessageUser) return
+    const body = qmBody.trim()
+    if (body.length < 3) {
+      setError('Escreve a mensagem (mínimo 3 caracteres).')
+      return
+    }
+    const title = quickMessageAutoTitle(quickMessageUser)
+    setError(null)
+    try {
+      await handleCreateAnnouncement({
+        title,
+        body,
+        kind: qmKind,
+        placement: 'announcements_tab',
+        priority: 5,
+        cta_label: '',
+        cta_url: '',
+        is_active: true,
+        starts_at: null,
+        ends_at: null,
+        target_user_email: quickMessageUser.email,
+      })
+      setQuickMessageUser(null)
+    } catch {
+      /* erro já definido em handleCreateAnnouncement */
+    }
+  }
+
   async function handleCreateAnnouncement(payload: {
     title: string
     body: string
@@ -1183,6 +1230,7 @@ export default function App() {
           onOrderByChange={setOrderBy}
           onOrderDirChange={setOrderDir}
           onOpenUserDetail={(r) => void openUserDetail(r)}
+          onQuickMessageToUser={(r) => openQuickMessageToUser(r)}
           onToggleActive={(r) => void toggleActive(r)}
           onToggleAdmin={(r) => void toggleAdmin(r)}
           onRevokeSessions={(r) => void revokeSessions(r)}
@@ -1419,6 +1467,62 @@ export default function App() {
               <p className="wp-muted">Sem convites registados.</p>
             )}
           </div>
+        </Modal>
+      ) : null}
+      {quickMessageUser ? (
+        <Modal
+          title="Recado rápido"
+          panelClassName="wp-modal-compact"
+          onClose={() => {
+            if (!busy) setQuickMessageUser(null)
+          }}
+        >
+          <form onSubmit={(e) => void submitQuickMessage(e)}>
+            <p className="wp-muted" style={{ marginTop: 0 }}>
+              Para <strong>{quickMessageUser.email}</strong> apenas. O título é gerado automaticamente na lista de avisos.
+            </p>
+            <div className="wp-field">
+              <label htmlFor="qm-kind">Tipo</label>
+              <select
+                id="qm-kind"
+                className="wp-search"
+                style={{ width: '100%', maxWidth: '100%' }}
+                value={qmKind}
+                onChange={(e) => setQmKind(e.target.value as 'info' | 'warning' | 'tip' | 'material')}
+              >
+                <option value="info">Info</option>
+                <option value="warning">Aviso</option>
+                <option value="tip">Dica</option>
+                <option value="material">Conteúdo</option>
+              </select>
+            </div>
+            <div className="wp-field">
+              <label htmlFor="qm-body">Mensagem</label>
+              <textarea
+                id="qm-body"
+                className="wp-quick-msg-body"
+                value={qmBody}
+                onChange={(e) => setQmBody(e.target.value)}
+                required
+                minLength={3}
+                maxLength={5000}
+                rows={10}
+                placeholder="Escreve o texto do recado…"
+                autoFocus
+              />
+            </div>
+            <p className="wp-muted" style={{ fontSize: '0.82rem', margin: '0 0 0.75rem' }}>
+              Local: <strong>Recados (lista)</strong> na app.
+            </p>
+            <div className="wp-toolbar" style={{ justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+              <button type="button" className="wp-btn wp-btn-ghost" onClick={() => setQuickMessageUser(null)} disabled={busy}>
+                Cancelar
+              </button>
+              <button type="submit" className="wp-btn" disabled={busy}>
+                {busy ? 'A enviar…' : 'Enviar recado'}
+              </button>
+            </div>
+          </form>
         </Modal>
       ) : null}
     </AdminShell>

@@ -6,9 +6,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wellpaid.R
 import com.wellpaid.core.model.expense.CategoryDto
+import com.wellpaid.core.model.expense.ExpenseCoverRequestDto
 import com.wellpaid.core.model.expense.ExpenseCreateDto
 import com.wellpaid.core.model.expense.ExpenseDto
 import com.wellpaid.core.model.expense.ExpensePayDto
+import com.wellpaid.core.model.expense.ExpenseShareDeclineDto
 import com.wellpaid.core.model.expense.ExpenseUpdateDto
 import com.wellpaid.core.model.family.FamilyMemberDto
 import com.wellpaid.core.network.CategoriesApi
@@ -58,6 +60,12 @@ data class ExpenseFormUiState(
     val isShared: Boolean = false,
     /** `null` = partilha com toda a família quando [isShared] é true. */
     val sharedWithUserId: String? = null,
+    /** Parte do criador da despesa em BRL (só edição pelo dono). */
+    val ownerShareText: String = "",
+    /** Parte do outro membro em BRL. */
+    val peerShareText: String = "",
+    val showCoverDialog: Boolean = false,
+    val coverSettleByIso: String = "",
     val showPayConfirm: Boolean = false,
     val payAllowAdvance: Boolean = false,
     val payAmountText: String = "",
@@ -104,6 +112,7 @@ class ExpenseFormViewModel @Inject constructor(
             } else {
                 runCatching { expensesApi.getExpense(id) }
                     .onSuccess { e ->
+                        val split = splitTextsForEdit(e)
                         _uiState.update {
                             it.copy(
                                 isLoading = false,
@@ -117,6 +126,10 @@ class ExpenseFormViewModel @Inject constructor(
                                 status = e.status,
                                 isShared = e.isShared,
                                 sharedWithUserId = e.sharedWithUserId,
+                                ownerShareText = split.first,
+                                peerShareText = split.second,
+                                coverSettleByIso = LocalDate.now().plusMonths(1)
+                                    .format(DateTimeFormatter.ISO_LOCAL_DATE),
                                 errorMessage = null,
                             )
                         }
@@ -173,12 +186,52 @@ class ExpenseFormViewModel @Inject constructor(
     }
 
     fun setShared(value: Boolean) {
-        _uiState.update {
-            it.copy(
+        _uiState.update { s ->
+            val peers = peerMembersForShare()
+            val peerId = when {
+                !value -> null
+                s.sharedWithUserId != null -> s.sharedWithUserId
+                peers.size == 1 -> peers.first().userId
+                else -> null
+            }
+            val totalCents = parseBrlToCents(s.amountText)
+            val half = totalCents?.let { (it + 1) / 2 } ?: 0
+            val other = totalCents?.let { it - half } ?: 0
+            s.copy(
                 isShared = value,
-                sharedWithUserId = if (value) it.sharedWithUserId else null,
+                sharedWithUserId = peerId,
+                ownerShareText = if (value && totalCents != null && totalCents > 0) {
+                    centsToBrlInput(half)
+                } else if (!value) {
+                    ""
+                } else {
+                    s.ownerShareText
+                },
+                peerShareText = if (value && totalCents != null && totalCents > 0) {
+                    centsToBrlInput(other)
+                } else if (!value) {
+                    ""
+                } else {
+                    s.peerShareText
+                },
             )
         }
+    }
+
+    fun setOwnerShareText(value: String) {
+        _uiState.update { it.copy(ownerShareText = sanitizeBrlInput(value)) }
+    }
+
+    fun setPeerShareText(value: String) {
+        _uiState.update { it.copy(peerShareText = sanitizeBrlInput(value)) }
+    }
+
+    private fun splitTextsForEdit(e: ExpenseDto): Pair<String, String> {
+        if (!e.isShared || !e.isMine) return "" to ""
+        val total = e.amountCents
+        val my = e.myShareCents ?: ((total + 1) / 2)
+        val other = e.otherUserShareCents ?: (total - my)
+        return centsToBrlInput(my) to centsToBrlInput(other)
     }
 
     fun setSharedWithUserId(userId: String?) {
@@ -231,7 +284,133 @@ class ExpenseFormViewModel @Inject constructor(
 
     fun canPay(): Boolean {
         val e = _uiState.value.loadedExpense ?: return false
-        return e.isMine && e.status == "pending"
+        if (e.status != "pending" || e.isProjected) return false
+        if (e.isShared && e.myShareDeclined) return false
+        if (e.isShared && e.isMine && e.sharedExpensePeerDeclinedAlert) return false
+        if (e.isShared) return true
+        return e.isMine
+    }
+
+    fun canRequestCover(): Boolean {
+        val e = _uiState.value.loadedExpense ?: return false
+        return e.isShared &&
+            e.status == "pending" &&
+            !e.mySharePaid &&
+            !e.myShareDeclined &&
+            !e.isProjected
+    }
+
+    fun canDeclineShare(): Boolean {
+        val e = _uiState.value.loadedExpense ?: return false
+        return e.isShared &&
+            !e.isMine &&
+            e.status == "pending" &&
+            !e.mySharePaid &&
+            !e.myShareDeclined &&
+            !e.isProjected
+    }
+
+    fun canAssumeFull(): Boolean {
+        val e = _uiState.value.loadedExpense ?: return false
+        return e.isMine &&
+            e.isShared &&
+            e.sharedExpensePeerDeclinedAlert &&
+            e.status == "pending" &&
+            !e.isProjected
+    }
+
+    fun openCoverDialog() {
+        _uiState.update {
+            it.copy(
+                showCoverDialog = true,
+                coverSettleByIso = it.coverSettleByIso.ifBlank {
+                    LocalDate.now().plusMonths(1).format(DateTimeFormatter.ISO_LOCAL_DATE)
+                },
+            )
+        }
+    }
+
+    fun dismissCoverDialog() {
+        _uiState.update { it.copy(showCoverDialog = false) }
+    }
+
+    fun setCoverSettleByIso(value: String) {
+        _uiState.update { it.copy(coverSettleByIso = value) }
+    }
+
+    fun declineShare(onSuccess: () -> Unit) {
+        val id = expenseId ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSaving = true, errorMessage = null) }
+            runCatching {
+                expensesApi.declineExpenseShare(id, ExpenseShareDeclineDto())
+            }
+                .onSuccess { e ->
+                    _uiState.update {
+                        it.copy(isSaving = false, loadedExpense = e, errorMessage = null)
+                    }
+                    onSuccess()
+                }
+                .onFailure { t ->
+                    _uiState.update {
+                        it.copy(
+                            isSaving = false,
+                            errorMessage = FastApiErrorMapper.message(appContext, t),
+                        )
+                    }
+                }
+        }
+    }
+
+    fun assumeFullShare(onSuccess: () -> Unit) {
+        val id = expenseId ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSaving = true, errorMessage = null) }
+            runCatching { expensesApi.assumeFullExpenseShare(id) }
+                .onSuccess { e ->
+                    _uiState.update {
+                        it.copy(isSaving = false, loadedExpense = e, errorMessage = null)
+                    }
+                    onSuccess()
+                }
+                .onFailure { t ->
+                    _uiState.update {
+                        it.copy(
+                            isSaving = false,
+                            errorMessage = FastApiErrorMapper.message(appContext, t),
+                        )
+                    }
+                }
+        }
+    }
+
+    fun submitCover(onSuccess: () -> Unit) {
+        val id = expenseId ?: return
+        val settle = _uiState.value.coverSettleByIso.trim()
+        if (settle.isEmpty()) {
+            _uiState.update { it.copy(errorMessage = appContext.getString(R.string.expense_error_due_date)) }
+            return
+        }
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSaving = true, errorMessage = null, showCoverDialog = false) }
+            runCatching {
+                expensesApi.requestShareCover(id, ExpenseCoverRequestDto(settleBy = settle))
+            }
+                .onSuccess { e ->
+                    _uiState.update {
+                        it.copy(isSaving = false, loadedExpense = e, errorMessage = null)
+                    }
+                    onSuccess()
+                }
+                .onFailure { t ->
+                    _uiState.update {
+                        it.copy(
+                            isSaving = false,
+                            errorMessage = FastApiErrorMapper.message(appContext, t),
+                        )
+                    }
+                }
+        }
     }
 
     fun requestPayConfirm() {
@@ -326,6 +505,23 @@ class ExpenseFormViewModel @Inject constructor(
             return
         }
 
+        var ownerSplitCents: Int? = null
+        var peerSplitCents: Int? = null
+        if (s.isShared) {
+            if (s.sharedWithUserId.isNullOrBlank()) {
+                _uiState.update { it.copy(errorMessage = appContext.getString(R.string.expense_share_pick_member)) }
+                return
+            }
+            val oc = parseBrlToCents(s.ownerShareText)
+            val pc = parseBrlToCents(s.peerShareText)
+            if (oc == null || pc == null || oc + pc != cents) {
+                _uiState.update { it.copy(errorMessage = appContext.getString(R.string.expense_split_sum_mismatch)) }
+                return
+            }
+            ownerSplitCents = oc
+            peerSplitCents = pc
+        }
+
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true, errorMessage = null) }
             val result = runCatching {
@@ -359,6 +555,11 @@ class ExpenseFormViewModel @Inject constructor(
                             recurringFrequency = recurringOut,
                             isShared = s.isShared,
                             sharedWithUserId = if (s.isShared) s.sharedWithUserId else null,
+                            splitMode = if (s.isShared) "amount" else null,
+                            ownerShareCents = ownerSplitCents,
+                            peerShareCents = peerSplitCents,
+                            ownerPercentBps = null,
+                            peerPercentBps = null,
                         ),
                     )
                 } else {
@@ -373,6 +574,11 @@ class ExpenseFormViewModel @Inject constructor(
                             status = s.status,
                             isShared = s.isShared,
                             sharedWithUserId = if (s.isShared) s.sharedWithUserId else null,
+                            splitMode = if (s.isShared) "amount" else null,
+                            ownerShareCents = ownerSplitCents,
+                            peerShareCents = peerSplitCents,
+                            ownerPercentBps = null,
+                            peerPercentBps = null,
                         ),
                     )
                 }

@@ -8,7 +8,7 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select, update
+from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
@@ -16,6 +16,8 @@ from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.models.category import Category
 from app.models.expense import Expense
+from app.models.expense_share import ExpenseShare
+from app.models.family_receivable import FamilyReceivable
 from app.models.user import User
 from app.schemas.dashboard import ExpenseStatus
 from app.schemas.expense import (
@@ -23,10 +25,29 @@ from app.schemas.expense import (
     ExpenseCreateOutcome,
     ExpensePayRequest,
     ExpenseResponse,
+    ExpenseShareDeclineRequest,
     ExpenseUpdate,
 )
+from app.schemas.receivable import ExpenseCoverRequest
 from app.services.expense_share import ExpenseShareValidationError, normalize_expense_share
+from app.services.expense_splits import (
+    ExpenseSplitValidationError,
+    build_two_party_shares,
+    clone_share_rows_from_expense,
+    compute_share_extras,
+    mark_all_shares_paid_for_expense,
+    replace_expense_shares,
+    scale_pending_share_amounts,
+    share_resolved,
+    sync_expense_row_from_shares,
+)
 from app.services.family_scope import family_peer_user_ids
+from app.services.family_financial_events import (
+    record_cover_requested,
+    record_owner_assumed_expense_line,
+    record_peer_declined_share,
+    record_receivable_cancelled,
+)
 from app.services.expense_delete import (
     ExpenseDeleteScope,
     ExpenseDeleteTarget,
@@ -46,6 +67,15 @@ from app.services.recurring_projection import (
 router = APIRouter(prefix="/expenses", tags=["expenses"])
 
 
+def _expense_detail_loads():
+    return (
+        joinedload(Expense.category),
+        joinedload(Expense.shared_with_user),
+        joinedload(Expense.owner),
+        joinedload(Expense.expense_shares),
+    )
+
+
 def _month_bounds(year: int, month: int) -> tuple[date, date]:
     last = calendar.monthrange(year, month)[1]
     return date(year, month, 1), date(year, month, last)
@@ -61,6 +91,18 @@ def _shared_with_label(e: Expense) -> str | None:
     return name if name else su.email
 
 
+def _counterparty_label(e: Expense, viewer_id: uuid.UUID) -> str | None:
+    if not e.is_shared or e.shared_with_user_id is None:
+        return None
+    if viewer_id == e.owner_user_id:
+        return _shared_with_label(e)
+    ow = e.owner
+    if ow is None:
+        return None
+    name = (ow.full_name or "").strip()
+    return name if name else ow.email
+
+
 def _to_response(
     e: Expense,
     viewer_id: uuid.UUID,
@@ -71,6 +113,13 @@ def _to_response(
     is_advanced_payment = False
     if e.status == ExpenseStatus.PAID.value and e.paid_at is not None and e.due_date is not None:
         is_advanced_payment = e.paid_at.date() < e.due_date
+    shares = list(e.expense_shares) if e.expense_shares else []
+    sx = compute_share_extras(
+        viewer_id=viewer_id,
+        expense=e,
+        shares=shares,
+        today=date.today(),
+    )
     return ExpenseResponse(
         id=e.id,
         owner_user_id=e.owner_user_id,
@@ -99,6 +148,15 @@ def _to_response(
         installment_plan_has_paid=installment_plan_has_paid,
         is_projected=is_projected,
         is_advanced_payment=is_advanced_payment,
+        split_mode=sx["split_mode"],
+        counterparty_label=_counterparty_label(e, viewer_id),
+        my_share_cents=sx["my_share_cents"],
+        other_user_share_cents=sx["other_user_share_cents"],
+        my_share_paid=sx["my_share_paid"],
+        other_share_paid=sx["other_share_paid"],
+        shared_expense_payment_alert=sx["shared_expense_payment_alert"],
+        shared_expense_peer_declined_alert=sx["shared_expense_peer_declined_alert"],
+        my_share_declined=sx["my_share_declined"],
     )
 
 
@@ -107,10 +165,7 @@ def _get_owned(
 ) -> Expense | None:
     return db.scalar(
         select(Expense)
-        .options(
-            joinedload(Expense.category),
-            joinedload(Expense.shared_with_user),
-        )
+        .options(*_expense_detail_loads())
         .where(
             Expense.id == expense_id,
             Expense.owner_user_id == owner_id,
@@ -125,10 +180,7 @@ def _get_visible_in_family(
     peer_ids = family_peer_user_ids(db, viewer_id)
     return db.scalar(
         select(Expense)
-        .options(
-            joinedload(Expense.category),
-            joinedload(Expense.shared_with_user),
-        )
+        .options(*_expense_detail_loads())
         .where(
             Expense.id == expense_id,
             Expense.owner_user_id.in_(peer_ids),
@@ -147,7 +199,9 @@ def _ensure_category(db: Session, category_id: uuid.UUID) -> None:
 
 def _ensure_recurring_generated(db: Session, owner_user_id: uuid.UUID, until: date) -> None:
     anchors = db.scalars(
-        select(Expense).where(
+        select(Expense)
+        .options(joinedload(Expense.expense_shares))
+        .where(
             Expense.owner_user_id == owner_user_id,
             Expense.installment_total == 1,
             Expense.installment_number == 1,
@@ -212,10 +266,15 @@ def _ensure_recurring_generated(db: Session, owner_user_id: uuid.UUID, until: da
                     recurring_frequency=None,
                     recurring_series_id=series_id,
                     recurring_generated_until=None,
+                    split_mode=a.split_mode,
                     is_shared=a.is_shared,
                     shared_with_user_id=a.shared_with_user_id,
                 )
             )
+            db.flush()
+            sr = clone_share_rows_from_expense(a)
+            if sr:
+                replace_expense_shares(db, row_id, sr)
             a.recurring_generated_until = next_day
             changed = True
     if changed:
@@ -240,10 +299,7 @@ def _merge_projected_recurring_month(
 
     anchors = db.scalars(
         select(Expense)
-        .options(
-            joinedload(Expense.category),
-            joinedload(Expense.shared_with_user),
-        )
+        .options(*_expense_detail_loads())
         .where(
             Expense.owner_user_id.in_(peer_ids),
             Expense.installment_total == 1,
@@ -316,10 +372,7 @@ def list_expenses(
         _ensure_recurring_generated(db, uid, until_h)
     stmt = (
         select(Expense)
-        .options(
-            joinedload(Expense.category),
-            joinedload(Expense.shared_with_user),
-        )
+        .options(*_expense_detail_loads())
         .where(
             Expense.owner_user_id.in_(peer_ids),
             Expense.deleted_at.is_(None),
@@ -398,6 +451,30 @@ def create_expense(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(err),
         ) from err
+    if is_s and sw is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Indica o membro da família com quem partilhas a despesa.",
+        )
+    share_rows: list[dict] | None = None
+    if is_s and sw is not None:
+        assert body.split_mode is not None
+        try:
+            share_rows = build_two_party_shares(
+                owner_id=user.id,
+                peer_id=sw,
+                amount_cents=body.amount_cents,
+                split_mode=body.split_mode,
+                owner_share_cents=body.owner_share_cents,
+                peer_share_cents=body.peer_share_cents,
+                owner_percent_bps=body.owner_percent_bps,
+                peer_percent_bps=body.peer_percent_bps,
+            )
+        except ExpenseSplitValidationError as err:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(err),
+            ) from err
     n = body.installment_total
     today = date.today()
     now_utc = datetime.now(UTC)
@@ -427,12 +504,25 @@ def create_expense(
             recurring_frequency=body.recurring_frequency,
             recurring_series_id=recurring_series_id,
             recurring_generated_until=first_occurrence_date if body.recurring_frequency else None,
+            split_mode=body.split_mode if is_s and sw else None,
             is_shared=is_s,
             shared_with_user_id=sw,
             paid_at=now_utc if row_status == ExpenseStatus.PAID.value else None,
         )
         db.add(e)
         try:
+            db.flush()
+            if share_rows is not None:
+                replace_expense_shares(db, e.id, share_rows)
+                if row_status == ExpenseStatus.PAID.value:
+                    shs = mark_all_shares_paid_for_expense(db, e.id, now=now_utc)
+                else:
+                    shs = list(
+                        db.scalars(
+                            select(ExpenseShare).where(ExpenseShare.expense_id == e.id)
+                        ).all()
+                    )
+                sync_expense_row_from_shares(e, shs, now=now_utc)
             db.commit()
         except IntegrityError:
             db.rollback()
@@ -474,6 +564,7 @@ def create_expense(
             recurring_frequency=None,
             recurring_series_id=None,
             recurring_generated_until=None,
+            split_mode=body.split_mode if is_s and sw else None,
             is_shared=is_s,
             shared_with_user_id=sw,
             paid_at=now_utc if row_status == ExpenseStatus.PAID.value else None,
@@ -483,6 +574,28 @@ def create_expense(
             db.flush()
             first_id = row.id
     try:
+        db.flush()
+        if share_rows is not None:
+            grp_rows = db.scalars(
+                select(Expense)
+                .where(
+                    Expense.owner_user_id == user.id,
+                    Expense.installment_group_id == group_id,
+                    Expense.deleted_at.is_(None),
+                )
+                .order_by(Expense.installment_number.asc())
+            ).all()
+            for row in grp_rows:
+                replace_expense_shares(db, row.id, share_rows)
+                if row.status == ExpenseStatus.PAID.value:
+                    shs = mark_all_shares_paid_for_expense(db, row.id, now=now_utc)
+                else:
+                    shs = list(
+                        db.scalars(
+                            select(ExpenseShare).where(ExpenseShare.expense_id == row.id)
+                        ).all()
+                    )
+                sync_expense_row_from_shares(row, shs, now=now_utc)
         db.commit()
     except IntegrityError:
         db.rollback()
@@ -493,10 +606,7 @@ def create_expense(
     assert first_id is not None
     siblings = db.scalars(
         select(Expense)
-        .options(
-            joinedload(Expense.category),
-            joinedload(Expense.shared_with_user),
-        )
+        .options(*_expense_detail_loads())
         .where(
             Expense.owner_user_id == user.id,
             Expense.installment_group_id == group_id,
@@ -549,9 +659,19 @@ def update_expense(
     if e is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Despesa não encontrada")
 
+    prior_shares = list(
+        db.scalars(select(ExpenseShare).where(ExpenseShare.expense_id == expense_id)).all()
+    )
+    has_declined_share = any(s.status == "declined" for s in prior_shares)
+
     data = body.model_dump(exclude_unset=True, mode="python")
     is_upd = data.pop("is_shared", None)
     sw_upd = data.pop("shared_with_user_id", None)
+    if has_declined_share and (is_upd is not None or sw_upd is not None):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Parte recusada: usa Assumir despesa para resolver antes de alterar a partilha.",
+        )
     if is_upd is not None or sw_upd is not None:
         new_is = is_upd if is_upd is not None else e.is_shared
         new_sw = sw_upd if sw_upd is not None else e.shared_with_user_id
@@ -566,6 +686,9 @@ def update_expense(
             ) from err
         e.is_shared = new_is
         e.shared_with_user_id = new_sw
+        if new_is is False:
+            e.split_mode = None
+            db.execute(delete(ExpenseShare).where(ExpenseShare.expense_id == expense_id))
     st = data.get("status")
     if st is not None:
         data["status"] = st.value if hasattr(st, "value") else st
@@ -576,6 +699,11 @@ def update_expense(
         _ensure_category(db, data["category_id"])
 
     old_amount = int(e.amount_cents)
+    split_mode_in = data.pop("split_mode", None)
+    owner_share_cents_in = data.pop("owner_share_cents", None)
+    peer_share_cents_in = data.pop("peer_share_cents", None)
+    owner_percent_bps_in = data.pop("owner_percent_bps", None)
+    peer_percent_bps_in = data.pop("peer_percent_bps", None)
     series_for_propagate: uuid.UUID | None = None
     if (
         e.recurring_frequency is not None
@@ -596,6 +724,59 @@ def update_expense(
                 amount_cents=int(e.amount_cents),
                 today=date.today(),
             )
+        new_total = int(e.amount_cents)
+        if e.is_shared and e.shared_with_user_id is not None:
+            if has_declined_share:
+                split_touch = (
+                    split_mode_in is not None
+                    or owner_share_cents_in is not None
+                    or peer_share_cents_in is not None
+                    or owner_percent_bps_in is not None
+                    or peer_percent_bps_in is not None
+                )
+                if split_touch or new_total != old_amount:
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail="Parte recusada: usa Assumir despesa para resolver antes de alterar valores ou divisão.",
+                    )
+            if split_mode_in is not None:
+                e.split_mode = split_mode_in
+            should_rebuild = False
+            if split_mode_in == "amount" and owner_share_cents_in is not None and peer_share_cents_in is not None:
+                should_rebuild = True
+            if split_mode_in == "percent" and owner_percent_bps_in is not None and peer_percent_bps_in is not None:
+                should_rebuild = True
+            if should_rebuild and split_mode_in is not None:
+                try:
+                    rows = build_two_party_shares(
+                        owner_id=e.owner_user_id,
+                        peer_id=e.shared_with_user_id,
+                        amount_cents=new_total,
+                        split_mode=split_mode_in,
+                        owner_share_cents=owner_share_cents_in,
+                        peer_share_cents=peer_share_cents_in,
+                        owner_percent_bps=owner_percent_bps_in,
+                        peer_percent_bps=peer_percent_bps_in,
+                    )
+                    replace_expense_shares(db, e.id, rows)
+                except ExpenseSplitValidationError as err:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=str(err),
+                    ) from err
+            elif new_total != old_amount:
+                try:
+                    scale_pending_share_amounts(
+                        db,
+                        e.id,
+                        new_total=new_total,
+                        old_total=old_amount,
+                    )
+                except ExpenseSplitValidationError as err:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=str(err),
+                    ) from err
         db.commit()
     except IntegrityError:
         db.rollback()
@@ -667,6 +848,31 @@ def delete_expense(
     db.commit()
 
 
+def _get_expense_for_family_action(
+    db: Session, expense_id: uuid.UUID, viewer_id: uuid.UUID
+) -> Expense | None:
+    e = _get_owned(db, expense_id, viewer_id)
+    if e is not None:
+        return e
+    return _get_visible_in_family(db, expense_id, viewer_id)
+
+
+def _cancel_open_receivables_for_share(db: Session, share_id: uuid.UUID) -> list[FamilyReceivable]:
+    open_rows = list(
+        db.scalars(
+            select(FamilyReceivable).where(
+                FamilyReceivable.source_expense_share_id == share_id,
+                FamilyReceivable.status == "open",
+            )
+        ).all()
+    )
+    now = datetime.now(UTC)
+    for r in open_rows:
+        r.status = "cancelled"
+        r.settled_at = now
+    return open_rows
+
+
 @router.post("/{expense_id}/pay", response_model=ExpenseResponse)
 def pay_expense(
     expense_id: uuid.UUID,
@@ -675,15 +881,79 @@ def pay_expense(
     body: ExpensePayRequest | None = None,
 ) -> ExpenseResponse:
     req = body or ExpensePayRequest()
+    peer_ids = family_peer_user_ids(db, user.id)
     e = _get_owned(db, expense_id, user.id)
     if e is None:
-        hit = find_anchor_and_occurrence_for_projected_id(db, user.id, expense_id)
-        if hit is not None:
-            e = materialize_recurring_occurrence(db, hit[0], hit[1])
-            db.commit()
-            e = _get_owned(db, expense_id, user.id)
+        e = _get_visible_in_family(db, expense_id, user.id)
+    if e is None:
+        for uid in peer_ids:
+            hit = find_anchor_and_occurrence_for_projected_id(db, uid, expense_id)
+            if hit is not None:
+                e = materialize_recurring_occurrence(db, hit[0], hit[1])
+                db.commit()
+                e = _get_visible_in_family(db, expense_id, user.id)
+                break
     if e is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Despesa não encontrada")
+
+    shs = list(db.scalars(select(ExpenseShare).where(ExpenseShare.expense_id == e.id)).all())
+    if e.is_shared and shs:
+        if e.status != ExpenseStatus.PENDING.value:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Só despesas pendentes podem ser quitadas",
+            )
+        mine = next((x for x in shs if x.user_id == user.id), None)
+        other = next((x for x in shs if x.user_id != user.id), None)
+        if mine is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Sem parte atribuída a ti nesta despesa partilhada",
+            )
+        if mine.status == "declined":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Recusaste a tua parte; só o criador pode assumir a despesa nesta linha.",
+            )
+        if (
+            other is not None
+            and other.status == "declined"
+            and user.id == e.owner_user_id
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="A outra parte recusou; usa Assumir despesa para continuar.",
+            )
+        if share_resolved(mine.status):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="A tua parte já está quitada",
+            )
+        today = date.today()
+        if (
+            e.due_date is not None
+            and e.due_date > today
+            and (e.due_date - today).days > 5
+            and not req.allow_advance
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Pagamento antecipado só é permitido a até 5 dias do vencimento ou com antecipação ativa.",
+            )
+        now = datetime.now(UTC)
+        mine.status = "paid"
+        mine.paid_at = now
+        sync_expense_row_from_shares(e, shs, now=now)
+        paid_date_tag = now.date().strftime("%d/%m/%Y")
+        if e.status == ExpenseStatus.PAID.value and f"[Pago em {paid_date_tag}]" not in e.description:
+            base_desc = e.description.strip()
+            tagged = f"{base_desc} [Pago em {paid_date_tag}]"
+            e.description = tagged[:500]
+        db.commit()
+        e2 = _get_expense_for_family_action(db, expense_id, user.id)
+        assert e2 is not None
+        return _to_response(e2, user.id)
+
     if e.status != ExpenseStatus.PENDING.value:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -715,6 +985,224 @@ def pay_expense(
     e = _get_owned(db, expense_id, user.id)
     assert e is not None
     return _to_response(e, user.id)
+
+
+@router.post("/{expense_id}/share/cover-request", response_model=ExpenseResponse)
+def request_share_cover(
+    expense_id: uuid.UUID,
+    body: ExpenseCoverRequest,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> ExpenseResponse:
+    e = _get_expense_for_family_action(db, expense_id, user.id)
+    if e is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Despesa não encontrada")
+    if not e.is_shared:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Só despesas partilhadas",
+        )
+    shs = list(db.scalars(select(ExpenseShare).where(ExpenseShare.expense_id == e.id)).all())
+    if len(shs) < 2:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Partes em falta; edita a despesa para definir a divisão",
+        )
+    mine = next((x for x in shs if x.user_id == user.id), None)
+    other = next((x for x in shs if x.user_id != user.id), None)
+    if mine is None or other is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Sem parte associada a ti nesta despesa",
+        )
+    if mine.status == "declined":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Recusaste a tua parte; não podes pedir cobertura para a mesma linha.",
+        )
+    if share_resolved(mine.status):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A tua parte já está tratada",
+        )
+    dup = db.scalar(
+        select(FamilyReceivable.id).where(
+            FamilyReceivable.source_expense_share_id == mine.id,
+            FamilyReceivable.status == "open",
+        )
+    )
+    if dup is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Já existe um pedido de cobertura pendente para esta parte",
+        )
+    now = datetime.now(UTC)
+    creditor_id = other.user_id
+    mine.status = "covered_by_peer"
+    mine.covered_by_user_id = creditor_id
+    mine.covered_at = now
+    sync_expense_row_from_shares(e, shs, now=now)
+    fr = FamilyReceivable(
+        creditor_user_id=creditor_id,
+        debtor_user_id=user.id,
+        amount_cents=int(mine.share_cents),
+        settle_by=body.settle_by,
+        source_expense_id=e.id,
+        source_expense_share_id=mine.id,
+        status="open",
+    )
+    db.add(fr)
+    db.flush()
+    record_cover_requested(
+        db,
+        debtor_user_id=user.id,
+        creditor_user_id=creditor_id,
+        expense_id=e.id,
+        expense_share_id=mine.id,
+        receivable_id=fr.id,
+        amount_cents=int(mine.share_cents),
+    )
+    db.commit()
+    e2 = _get_expense_for_family_action(db, expense_id, user.id)
+    assert e2 is not None
+    return _to_response(e2, user.id)
+
+
+@router.post("/{expense_id}/share/decline", response_model=ExpenseResponse)
+def decline_expense_share(
+    expense_id: uuid.UUID,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+    body: ExpenseShareDeclineRequest | None = None,
+) -> ExpenseResponse:
+    req = body or ExpenseShareDeclineRequest()
+    e = _get_visible_in_family(db, expense_id, user.id)
+    if e is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Despesa não encontrada")
+    if not e.is_shared or e.shared_with_user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Só despesas partilhadas",
+        )
+    if user.id != e.shared_with_user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Só o outro membro pode recusar a sua parte",
+        )
+    shs = list(db.scalars(select(ExpenseShare).where(ExpenseShare.expense_id == e.id)).all())
+    if len(shs) < 2:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Partes em falta; edita a despesa para definir a divisão",
+        )
+    mine = next((x for x in shs if x.user_id == user.id), None)
+    if mine is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Sem parte associada a ti nesta despesa",
+        )
+    if mine.status == "declined":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Já recusaste esta parte",
+        )
+    if mine.status != "pending":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A tua parte já não pode ser recusada neste estado",
+        )
+    reason = (req.reason or "").strip()
+    now = datetime.now(UTC)
+    mine.status = "declined"
+    mine.declined_at = now
+    mine.decline_reason = reason[:500] if reason else None
+    cancelled_receivables = _cancel_open_receivables_for_share(db, mine.id)
+    sync_expense_row_from_shares(e, shs, now=now)
+    record_peer_declined_share(
+        db,
+        peer_user_id=user.id,
+        owner_user_id=e.owner_user_id,
+        expense_id=e.id,
+        expense_share_id=mine.id,
+        share_amount_cents=int(mine.share_cents),
+        decline_reason=mine.decline_reason,
+    )
+    for r in cancelled_receivables:
+        record_receivable_cancelled(
+            db,
+            debtor_user_id=r.debtor_user_id,
+            creditor_user_id=r.creditor_user_id,
+            receivable_id=r.id,
+            source_expense_id=r.source_expense_id,
+            amount_cents=int(r.amount_cents),
+            reason="peer_declined_share",
+        )
+    db.commit()
+    e2 = _get_expense_for_family_action(db, expense_id, user.id)
+    assert e2 is not None
+    return _to_response(e2, user.id)
+
+
+@router.post("/{expense_id}/share/assume-full", response_model=ExpenseResponse)
+def assume_full_expense_share(
+    expense_id: uuid.UUID,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> ExpenseResponse:
+    e = _get_owned(db, expense_id, user.id)
+    if e is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Despesa não encontrada")
+    if not e.is_shared or e.shared_with_user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Só despesas partilhadas",
+        )
+    if user.id != e.owner_user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Só o criador pode assumir a despesa nesta linha",
+        )
+    shs = list(db.scalars(select(ExpenseShare).where(ExpenseShare.expense_id == e.id)).all())
+    peer = next((x for x in shs if x.user_id == e.shared_with_user_id), None)
+    if peer is None or peer.status != "declined":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A outra parte ainda não recusou ou a situação não exige assumir.",
+        )
+    peer_uid = e.shared_with_user_id
+    assert peer_uid is not None
+    snap_amount = int(e.amount_cents)
+    snap_installment_number = e.installment_number
+    snap_installment_group_id = e.installment_group_id
+    snap_expense_id = e.id
+    db.execute(delete(ExpenseShare).where(ExpenseShare.expense_id == e.id))
+    e.is_shared = False
+    e.shared_with_user_id = None
+    e.split_mode = None
+    record_owner_assumed_expense_line(
+        db,
+        owner_user_id=user.id,
+        peer_user_id=peer_uid,
+        expense_id=snap_expense_id,
+        amount_cents=snap_amount,
+        installment_number=snap_installment_number,
+        installment_group_id=snap_installment_group_id,
+    )
+    db.commit()
+    db.refresh(e)
+    e2 = _get_owned(db, expense_id, user.id)
+    assert e2 is not None
+    return _to_response(e2, user.id)
+
+
+@router.post("/{expense_id}/share/mark-paid", response_model=ExpenseResponse)
+def mark_share_paid_alias(
+    expense_id: uuid.UUID,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+    body: ExpensePayRequest | None = None,
+) -> ExpenseResponse:
+    return pay_expense(expense_id, user, db, body)
 
 
 @router.post("/{expense_id}/recurrence/stop", response_model=ExpenseResponse)

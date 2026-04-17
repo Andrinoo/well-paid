@@ -173,6 +173,10 @@
     <string name="expense_save">Salvar</string>
     <string name="expense_saving">A guardar…</string>
     <string name="expense_mark_paid">Marcar como paga</string>
+    <string name="expense_share_decline">Não aceito pagar a minha parte</string>
+    <string name="expense_share_assume_full">Assumir esta despesa (valor total desta linha)</string>
+    <string name="expense_share_peer_declined_owner">A outra parte recusou a parte dela. Assuma esta linha para continuar.</string>
+    <string name="expense_share_you_declined_peer">Recusou a sua parte; o criador deve assumir esta despesa.</string>
     <string name="expense_pay_title">Pagar despesa</string>
     <string name="expense_pay_message">Confirme os detalhes do pagamento.</string>
     <string name="expense_pay_allow_advance">Antecipar pagamento</string>
