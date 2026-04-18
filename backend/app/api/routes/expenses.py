@@ -149,6 +149,8 @@ def _to_response(
         is_projected=is_projected,
         is_advanced_payment=is_advanced_payment,
         split_mode=sx["split_mode"],
+        owner_percent_bps=sx.get("owner_percent_bps"),
+        peer_percent_bps=sx.get("peer_percent_bps"),
         counterparty_label=_counterparty_label(e, viewer_id),
         my_share_cents=sx["my_share_cents"],
         other_user_share_cents=sx["other_user_share_cents"],

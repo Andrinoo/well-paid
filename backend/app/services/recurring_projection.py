@@ -233,6 +233,8 @@ def build_projected_expense_response(
         is_projected=True,
         is_advanced_payment=False,
         split_mode=sx["split_mode"],
+        owner_percent_bps=sx.get("owner_percent_bps"),
+        peer_percent_bps=sx.get("peer_percent_bps"),
         counterparty_label=_cp_label(),
         my_share_cents=sx["my_share_cents"],
         other_user_share_cents=sx["other_user_share_cents"],

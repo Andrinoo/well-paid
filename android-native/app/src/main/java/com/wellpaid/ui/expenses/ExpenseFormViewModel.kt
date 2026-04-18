@@ -16,14 +16,19 @@ import com.wellpaid.core.model.family.FamilyMemberDto
 import com.wellpaid.core.network.CategoriesApi
 import com.wellpaid.core.network.ExpensesApi
 import com.wellpaid.data.FamilyMeRepository
+import com.wellpaid.util.ExpenseSplitFormMath
 import com.wellpaid.util.FastApiErrorMapper
 import com.wellpaid.util.centsToBrlInput
 import com.wellpaid.util.parseBrlToCents
+import com.wellpaid.util.splitTextsForExpenseEdit
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -58,12 +63,18 @@ data class ExpenseFormUiState(
     val alreadyPaid: Boolean = false,
     val hasDueDate: Boolean = false,
     val isShared: Boolean = false,
-    /** `null` = partilha com toda a família quando [isShared] é true. */
+    /** Membro da família com quem partilhar; obrigatório para guardar se [isShared] (API exige peer). */
     val sharedWithUserId: String? = null,
     /** Parte do criador da despesa em BRL (só edição pelo dono). */
     val ownerShareText: String = "",
-    /** Parte do outro membro em BRL. */
+    /** Parte do outro membro em BRL (sempre derivada do total − dono em modo valor). */
     val peerShareText: String = "",
+    /** Se true, partilha por percentagem (`split_mode` = percent); senão por montante. */
+    val usePercentSplit: Boolean = false,
+    /** Percentagem do dono (0–100), texto tipo `50` ou `50,00`. */
+    val ownerPercentText: String = "",
+    /** Parte do outro em % (calculada), só leitura na UI. */
+    val peerPercentDisplayText: String = "",
     val showCoverDialog: Boolean = false,
     val coverSettleByIso: String = "",
     val showPayConfirm: Boolean = false,
@@ -85,9 +96,23 @@ class ExpenseFormViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ExpenseFormUiState())
     val uiState: StateFlow<ExpenseFormUiState> = _uiState.asStateFlow()
 
+    /**
+     * Partilha exige família com 2+ membros. Observa [FamilyMeRepository.family] para o toggle
+     * aparecer quando o /families/me completar (antes a UI não recomputava).
+     */
+    val canShareExpenseState: StateFlow<Boolean> =
+        familyMeRepository.family
+            .map { f -> f != null && f.members.size >= 2 }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = false,
+            )
+
     val isEditMode: Boolean get() = expenseId != null
 
     init {
+        viewModelScope.launch { familyMeRepository.refresh() }
         viewModelScope.launch {
             runCatching { categoriesApi.listCategories() }
                 .onSuccess { list ->
@@ -112,7 +137,7 @@ class ExpenseFormViewModel @Inject constructor(
             } else {
                 runCatching { expensesApi.getExpense(id) }
                     .onSuccess { e ->
-                        val split = splitTextsForEdit(e)
+                        val split = splitTextsForExpenseEdit(e)
                         _uiState.update {
                             it.copy(
                                 isLoading = false,
@@ -126,8 +151,11 @@ class ExpenseFormViewModel @Inject constructor(
                                 status = e.status,
                                 isShared = e.isShared,
                                 sharedWithUserId = e.sharedWithUserId,
-                                ownerShareText = split.first,
-                                peerShareText = split.second,
+                                usePercentSplit = split.usePercentSplit,
+                                ownerPercentText = split.ownerPercentText,
+                                peerPercentDisplayText = split.peerPercentDisplayText,
+                                ownerShareText = split.ownerShareText,
+                                peerShareText = split.peerShareText,
                                 coverSettleByIso = LocalDate.now().plusMonths(1)
                                     .format(DateTimeFormatter.ISO_LOCAL_DATE),
                                 errorMessage = null,
@@ -187,9 +215,19 @@ class ExpenseFormViewModel @Inject constructor(
 
     fun setShared(value: Boolean) {
         _uiState.update { s ->
+            if (!value) {
+                return@update s.copy(
+                    isShared = false,
+                    sharedWithUserId = null,
+                    usePercentSplit = false,
+                    ownerPercentText = "",
+                    peerPercentDisplayText = "",
+                    ownerShareText = "",
+                    peerShareText = "",
+                )
+            }
             val peers = peerMembersForShare()
             val peerId = when {
-                !value -> null
                 s.sharedWithUserId != null -> s.sharedWithUserId
                 peers.size == 1 -> peers.first().userId
                 else -> null
@@ -198,19 +236,18 @@ class ExpenseFormViewModel @Inject constructor(
             val half = totalCents?.let { (it + 1) / 2 } ?: 0
             val other = totalCents?.let { it - half } ?: 0
             s.copy(
-                isShared = value,
+                isShared = true,
                 sharedWithUserId = peerId,
-                ownerShareText = if (value && totalCents != null && totalCents > 0) {
+                usePercentSplit = false,
+                ownerPercentText = "",
+                peerPercentDisplayText = "",
+                ownerShareText = if (totalCents != null && totalCents > 0) {
                     centsToBrlInput(half)
-                } else if (!value) {
-                    ""
                 } else {
                     s.ownerShareText
                 },
-                peerShareText = if (value && totalCents != null && totalCents > 0) {
+                peerShareText = if (totalCents != null && totalCents > 0) {
                     centsToBrlInput(other)
-                } else if (!value) {
-                    ""
                 } else {
                     s.peerShareText
                 },
@@ -218,32 +255,100 @@ class ExpenseFormViewModel @Inject constructor(
         }
     }
 
+    fun setUsePercentSplit(value: Boolean) {
+        _uiState.update { s ->
+            if (!s.isShared) return@update s
+            if (!value) {
+                val total = parseBrlToCents(s.amountText)
+                if (total != null && total > 0 && s.usePercentSplit) {
+                    val ob = ExpenseSplitFormMath.parsePercentStringToBps(s.ownerPercentText)
+                    val (oc, pc) = if (ob != null) {
+                        ExpenseSplitFormMath.allocateCentsFromOwnerBps(total, ob)
+                    } else {
+                        val half = (total + 1) / 2
+                        half to (total - half)
+                    }
+                    return@update s.copy(
+                        usePercentSplit = false,
+                        ownerPercentText = "",
+                        peerPercentDisplayText = "",
+                        ownerShareText = centsToBrlInput(oc),
+                        peerShareText = centsToBrlInput(pc),
+                    )
+                }
+                val half = total?.let { (it + 1) / 2 } ?: 0
+                val other = total?.let { it - half } ?: 0
+                return@update s.copy(
+                    usePercentSplit = false,
+                    ownerPercentText = "",
+                    peerPercentDisplayText = "",
+                    ownerShareText = if (total != null && total > 0) centsToBrlInput(half) else s.ownerShareText,
+                    peerShareText = if (total != null && total > 0) centsToBrlInput(other) else s.peerShareText,
+                )
+            }
+            val total = parseBrlToCents(s.amountText) ?: return@update s.copy(
+                usePercentSplit = true,
+                ownerPercentText = "50,00",
+                peerPercentDisplayText = "50,00",
+            )
+            val oc = parseBrlToCents(s.ownerShareText)
+            val ownerBps = when {
+                oc != null && total > 0 ->
+                    ((oc.toLong() * 10000L) / total).toInt().coerceIn(0, 10000)
+                else -> 5000
+            }
+            val ot = ExpenseSplitFormMath.bpsToBrPercentText(ownerBps)
+            val pt = ExpenseSplitFormMath.bpsToBrPercentText(10000 - ownerBps)
+            s.copy(
+                usePercentSplit = true,
+                ownerPercentText = ot,
+                peerPercentDisplayText = pt,
+            )
+        }
+    }
+
     fun setOwnerShareText(value: String) {
-        _uiState.update { it.copy(ownerShareText = sanitizeBrlInput(value)) }
+        _uiState.update { s ->
+            val next = s.copy(ownerShareText = ExpenseSplitFormMath.sanitizeBrlLikeInput(value))
+            if (!next.isShared || next.usePercentSplit) return@update next
+            syncPeerShareFromOwnerAndTotal(next)
+        }
     }
 
-    fun setPeerShareText(value: String) {
-        _uiState.update { it.copy(peerShareText = sanitizeBrlInput(value)) }
-    }
-
-    private fun splitTextsForEdit(e: ExpenseDto): Pair<String, String> {
-        if (!e.isShared || !e.isMine) return "" to ""
-        val total = e.amountCents
-        val my = e.myShareCents ?: ((total + 1) / 2)
-        val other = e.otherUserShareCents ?: (total - my)
-        return centsToBrlInput(my) to centsToBrlInput(other)
+    fun setOwnerPercentText(value: String) {
+        _uiState.update { s ->
+            val ot = ExpenseSplitFormMath.sanitizePercentInput(value)
+            val ob = ExpenseSplitFormMath.parsePercentStringToBps(ot)
+            val peerDisp = if (ob != null) ExpenseSplitFormMath.bpsToBrPercentText(10000 - ob) else ""
+            s.copy(ownerPercentText = ot, peerPercentDisplayText = peerDisp)
+        }
     }
 
     fun setSharedWithUserId(userId: String?) {
         _uiState.update { it.copy(sharedWithUserId = userId) }
     }
 
-    fun canShareExpense(): Boolean = familyMeRepository.canShareExpense()
-
     fun peerMembersForShare(): List<FamilyMemberDto> = familyMeRepository.peerMembersExcludingSelf()
 
+    /**
+     * Montantes em BRL alinhados ao backend (alocação por bps) para pré-visualização no modo %.
+     */
+    fun percentSplitDerivedBrlPreview(): Pair<String, String> {
+        val s = _uiState.value
+        if (!s.isShared || !s.usePercentSplit) return "" to ""
+        val total = parseBrlToCents(s.amountText) ?: return "" to ""
+        if (total <= 0) return "" to ""
+        val ob = ExpenseSplitFormMath.parsePercentStringToBps(s.ownerPercentText) ?: return "" to ""
+        val (oc, pc) = ExpenseSplitFormMath.allocateCentsFromOwnerBps(total, ob)
+        return centsToBrlInput(oc) to centsToBrlInput(pc)
+    }
+
     fun setAmountText(value: String) {
-        _uiState.update { it.copy(amountText = sanitizeBrlInput(value)) }
+        _uiState.update { s ->
+            val next = s.copy(amountText = ExpenseSplitFormMath.sanitizeBrlLikeInput(value))
+            if (!next.isShared || next.usePercentSplit) return@update next
+            syncPeerShareFromOwnerAndTotal(next)
+        }
     }
 
     fun setExpenseDate(value: String) {
@@ -434,7 +539,7 @@ class ExpenseFormViewModel @Inject constructor(
     }
 
     fun setPayAmountText(value: String) {
-        _uiState.update { it.copy(payAmountText = sanitizeBrlInput(value)) }
+        _uiState.update { it.copy(payAmountText = ExpenseSplitFormMath.sanitizeBrlLikeInput(value)) }
     }
 
     fun canDelete(): Boolean {
@@ -507,19 +612,33 @@ class ExpenseFormViewModel @Inject constructor(
 
         var ownerSplitCents: Int? = null
         var peerSplitCents: Int? = null
+        var ownerPercentBpsOut: Int? = null
+        var peerPercentBpsOut: Int? = null
         if (s.isShared) {
             if (s.sharedWithUserId.isNullOrBlank()) {
                 _uiState.update { it.copy(errorMessage = appContext.getString(R.string.expense_share_pick_member)) }
                 return
             }
-            val oc = parseBrlToCents(s.ownerShareText)
-            val pc = parseBrlToCents(s.peerShareText)
-            if (oc == null || pc == null || oc + pc != cents) {
-                _uiState.update { it.copy(errorMessage = appContext.getString(R.string.expense_split_sum_mismatch)) }
-                return
+            if (s.usePercentSplit) {
+                val ob = ExpenseSplitFormMath.parsePercentStringToBps(s.ownerPercentText)
+                if (ob == null) {
+                    _uiState.update {
+                        it.copy(errorMessage = appContext.getString(R.string.expense_split_percent_invalid))
+                    }
+                    return
+                }
+                ownerPercentBpsOut = ob
+                peerPercentBpsOut = 10000 - ob
+            } else {
+                val oc = parseBrlToCents(s.ownerShareText)
+                if (oc == null || oc < 0 || oc > cents) {
+                    _uiState.update { it.copy(errorMessage = appContext.getString(R.string.expense_split_sum_mismatch)) }
+                    return
+                }
+                val pc = cents - oc
+                ownerSplitCents = oc
+                peerSplitCents = pc
             }
-            ownerSplitCents = oc
-            peerSplitCents = pc
         }
 
         viewModelScope.launch {
@@ -555,11 +674,15 @@ class ExpenseFormViewModel @Inject constructor(
                             recurringFrequency = recurringOut,
                             isShared = s.isShared,
                             sharedWithUserId = if (s.isShared) s.sharedWithUserId else null,
-                            splitMode = if (s.isShared) "amount" else null,
+                            splitMode = when {
+                                !s.isShared -> null
+                                s.usePercentSplit -> "percent"
+                                else -> "amount"
+                            },
                             ownerShareCents = ownerSplitCents,
                             peerShareCents = peerSplitCents,
-                            ownerPercentBps = null,
-                            peerPercentBps = null,
+                            ownerPercentBps = ownerPercentBpsOut,
+                            peerPercentBps = peerPercentBpsOut,
                         ),
                     )
                 } else {
@@ -574,11 +697,15 @@ class ExpenseFormViewModel @Inject constructor(
                             status = s.status,
                             isShared = s.isShared,
                             sharedWithUserId = if (s.isShared) s.sharedWithUserId else null,
-                            splitMode = if (s.isShared) "amount" else null,
+                            splitMode = when {
+                                !s.isShared -> null
+                                s.usePercentSplit -> "percent"
+                                else -> "amount"
+                            },
                             ownerShareCents = ownerSplitCents,
                             peerShareCents = peerSplitCents,
-                            ownerPercentBps = null,
-                            peerPercentBps = null,
+                            ownerPercentBps = ownerPercentBpsOut,
+                            peerPercentBps = peerPercentBpsOut,
                         ),
                     )
                 }
@@ -700,28 +827,11 @@ class ExpenseFormViewModel @Inject constructor(
             null
         }
 
-    /**
-     * Mantém o texto digitado num formato simples (apenas dígitos e separadores '.' / ','),
-     * para que `backspace`/caret do teclado não "remonte" o valor de forma inesperada.
-     *
-     * A conversão para centavos é feita somente no `save()` via `parseBrlToCents()`.
-     */
-    private fun sanitizeBrlInput(raw: String): String {
-        val filtered = raw.filter { it.isDigit() || it == ',' || it == '.' }
-        if (filtered.isEmpty()) return ""
-
-        val lastComma = filtered.lastIndexOf(',')
-        val lastDot = filtered.lastIndexOf('.')
-        val decSep = when {
-            lastComma >= 0 && lastDot >= 0 -> if (lastComma > lastDot) ',' else '.'
-            lastComma >= 0 -> ','
-            lastDot >= 0 -> '.'
-            else -> null
-        } ?: return filtered
-
-        val idx = filtered.lastIndexOf(decSep)
-        val intPart = filtered.substring(0, idx)
-        val decPart = filtered.substring(idx + 1).take(2)
-        return intPart + decSep + decPart
+    private fun syncPeerShareFromOwnerAndTotal(s: ExpenseFormUiState): ExpenseFormUiState {
+        val total = parseBrlToCents(s.amountText)
+        val oc = parseBrlToCents(s.ownerShareText)
+        if (total == null || oc == null) return s.copy(peerShareText = "")
+        val pc = (total - oc).coerceAtLeast(0)
+        return s.copy(peerShareText = centsToBrlInput(pc))
     }
 }

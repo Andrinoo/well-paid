@@ -139,6 +139,14 @@ class ExpenseResponse(BaseModel):
         default=None,
         description="amount ou percent quando partilhada",
     )
+    owner_percent_bps: int | None = Field(
+        default=None,
+        description="Parte do dono em basis points (0–10000) quando split_mode == percent",
+    )
+    peer_percent_bps: int | None = Field(
+        default=None,
+        description="Parte do outro membro em basis points quando split_mode == percent",
+    )
     counterparty_label: str | None = Field(
         default=None,
         description="Nome do outro membro na partilha (visto a partir do utilizador atual)",

@@ -227,6 +227,15 @@ def compute_share_extras(
     )
     if mine is None or other is None:
         return out
+    out["owner_percent_bps"] = None
+    out["peer_percent_bps"] = None
+    if getattr(expense, "split_mode", None) == "percent" and expense.shared_with_user_id is not None:
+        os = next((s for s in shares if s.user_id == expense.owner_user_id), None)
+        ps = next((s for s in shares if s.user_id == expense.shared_with_user_id), None)
+        if os is not None and os.share_percent_bps is not None:
+            out["owner_percent_bps"] = int(os.share_percent_bps)
+        if ps is not None and ps.share_percent_bps is not None:
+            out["peer_percent_bps"] = int(ps.share_percent_bps)
     out["my_share_cents"] = int(mine.share_cents)
     out["other_user_share_cents"] = int(other.share_cents)
     out["my_share_paid"] = share_resolved(mine.status)

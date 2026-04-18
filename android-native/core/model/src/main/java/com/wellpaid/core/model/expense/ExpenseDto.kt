@@ -33,6 +33,10 @@ data class ExpenseDto(
     @SerialName("is_projected") val isProjected: Boolean = false,
     @SerialName("is_advanced_payment") val isAdvancedPayment: Boolean = false,
     @SerialName("split_mode") val splitMode: String? = null,
+    /** Basis points da parte do dono quando a partilha é em percentagem (0–10000). */
+    @SerialName("owner_percent_bps") val ownerPercentBps: Int? = null,
+    /** Basis points da parte do outro membro quando a partilha é em percentagem. */
+    @SerialName("peer_percent_bps") val peerPercentBps: Int? = null,
     @SerialName("counterparty_label") val counterpartyLabel: String? = null,
     @SerialName("my_share_cents") val myShareCents: Int? = null,
     @SerialName("other_user_share_cents") val otherUserShareCents: Int? = null,

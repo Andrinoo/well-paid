@@ -160,6 +160,7 @@
     <string name="expense_description_collapse_cd">Single line</string>
     <string name="expense_field_amount">Amount (BRL)</string>
     <string name="expense_field_amount_hint">e.g. 12,50 or 1234,56 (BRL)</string>
+    <string name="money_keypad_sheet_title">Enter amount</string>
     <string name="expense_field_expense_date">Expense date (accrual)</string>
     <string name="expense_field_plan_start">Plan start</string>
     <string name="expense_plan_start_footer">Same date sent as contract start (start_date).</string>
@@ -236,9 +237,15 @@
     <string name="expense_toggle_share">Share with family</string>
     <string name="expense_toggle_share_sub">Join a family (invite) to use sharing.</string>
     <string name="expense_split_mode_amount">Split by amount</string>
+    <string name="expense_split_use_percent">Use percentages</string>
+    <string name="expense_split_use_percent_sub">Default is amount; turn on to split by %.</string>
     <string name="expense_split_owner_part">Your part (BRL)</string>
-    <string name="expense_split_peer_part">Other person\'s part (BRL)</string>
-    <string name="expense_split_sum_mismatch">The two parts must add up to the total amount.</string>
+    <string name="expense_split_peer_part_calculated">Other person\'s part (calculated)</string>
+    <string name="expense_split_your_percent">Your share (%)</string>
+    <string name="expense_split_peer_percent_calculated">Other person\'s share (calculated)</string>
+    <string name="expense_split_sum_mismatch">Your part must match the total expense amount.</string>
+    <string name="expense_split_percent_invalid">Enter a percentage between 0 and 100 (exclusive).</string>
+    <string name="expense_split_brl_estimated_section">Estimated split (BRL)</string>
     <string name="expense_share_pick_member">Choose a family member to split with.</string>
     <string name="expense_share_alert_short">Pending your share</string>
     <string name="expense_share_alert_detail">%1$s already paid their share. You still owe %2$s.</string>

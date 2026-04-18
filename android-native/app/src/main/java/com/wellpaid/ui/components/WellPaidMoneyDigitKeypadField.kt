@@ -160,7 +160,7 @@ fun WellPaidMoneyDigitKeypadField(
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                 ) {
                     Text(
-                        text = "Digite o valor",
+                        text = stringResource(R.string.money_keypad_sheet_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontSize = 16.sp,
                         color = WellPaidNavy,

@@ -77,6 +77,7 @@ fun ExpenseFormScreen(
     viewModel: ExpenseFormViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val canShareExpense by viewModel.canShareExpenseState.collectAsStateWithLifecycle()
     val canEdit = viewModel.canEditFields()
     val canPay = viewModel.canPay()
     val canDelete = viewModel.canDelete()
@@ -653,7 +654,7 @@ fun ExpenseFormScreen(
 
             val showShareControls = !viewModel.isEditMode || canEdit
             if (showShareControls) {
-                if (viewModel.canShareExpense()) {
+                if (canShareExpense) {
                     Spacer(Modifier.height(8.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -723,36 +724,118 @@ fun ExpenseFormScreen(
                         }
                         if (canEdit) {
                             Spacer(Modifier.height(8.dp))
-                            Text(
-                                text = stringResource(R.string.expense_split_mode_amount),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = WellPaidNavy,
-                            )
-                            Spacer(Modifier.height(4.dp))
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.Top,
+                                horizontalArrangement = Arrangement.SpaceBetween,
                             ) {
-                                OutlinedTextField(
-                                    value = state.ownerShareText,
-                                    onValueChange = { viewModel.setOwnerShareText(it) },
-                                    label = { Text(stringResource(R.string.expense_split_owner_part)) },
-                                    modifier = Modifier.weight(1f),
-                                    singleLine = true,
-                                    shape = fieldShape,
-                                    colors = fieldColors,
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = stringResource(R.string.expense_split_use_percent),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = WellPaidNavy,
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.expense_split_use_percent_sub),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        lineHeight = 14.sp,
+                                        color = WellPaidNavy.copy(alpha = 0.58f),
+                                    )
+                                }
+                                Switch(
+                                    checked = state.usePercentSplit,
+                                    onCheckedChange = { viewModel.setUsePercentSplit(it) },
+                                    enabled = canEdit,
                                 )
-                                OutlinedTextField(
-                                    value = state.peerShareText,
-                                    onValueChange = { viewModel.setPeerShareText(it) },
-                                    label = { Text(stringResource(R.string.expense_split_peer_part)) },
-                                    modifier = Modifier.weight(1f),
-                                    singleLine = true,
-                                    shape = fieldShape,
-                                    colors = fieldColors,
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                )
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            if (!state.usePercentSplit) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    WellPaidMoneyDigitKeypadField(
+                                        valueText = state.ownerShareText,
+                                        onValueTextChange = { viewModel.setOwnerShareText(it) },
+                                        modifier = Modifier.weight(1f),
+                                        enabled = canEdit,
+                                        label = { Text(stringResource(R.string.expense_split_owner_part)) },
+                                        placeholder = stringResource(R.string.expense_field_amount_hint),
+                                        shape = fieldShape,
+                                        colors = fieldColors,
+                                    )
+                                    WellPaidMoneyDigitKeypadField(
+                                        valueText = state.peerShareText,
+                                        onValueTextChange = {},
+                                        modifier = Modifier.weight(1f),
+                                        enabled = false,
+                                        label = { Text(stringResource(R.string.expense_split_peer_part_calculated)) },
+                                        placeholder = stringResource(R.string.expense_field_amount_hint),
+                                        shape = fieldShape,
+                                        colors = fieldColors,
+                                    )
+                                }
+                            } else {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    OutlinedTextField(
+                                        value = state.ownerPercentText,
+                                        onValueChange = { viewModel.setOwnerPercentText(it) },
+                                        label = { Text(stringResource(R.string.expense_split_your_percent)) },
+                                        modifier = Modifier.weight(1f),
+                                        singleLine = true,
+                                        shape = fieldShape,
+                                        colors = fieldColors,
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                    )
+                                    OutlinedTextField(
+                                        value = state.peerPercentDisplayText,
+                                        onValueChange = {},
+                                        readOnly = true,
+                                        label = { Text(stringResource(R.string.expense_split_peer_percent_calculated)) },
+                                        modifier = Modifier.weight(1f),
+                                        singleLine = true,
+                                        shape = fieldShape,
+                                        colors = fieldColors,
+                                    )
+                                }
+                                val (brlEstOwner, brlEstPeer) = viewModel.percentSplitDerivedBrlPreview()
+                                if (brlEstOwner.isNotEmpty()) {
+                                    Spacer(Modifier.height(8.dp))
+                                    Text(
+                                        text = stringResource(R.string.expense_split_brl_estimated_section),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = WellPaidNavy,
+                                    )
+                                    Spacer(Modifier.height(4.dp))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    ) {
+                                        WellPaidMoneyDigitKeypadField(
+                                            valueText = brlEstOwner,
+                                            onValueTextChange = {},
+                                            modifier = Modifier.weight(1f),
+                                            enabled = false,
+                                            label = { Text(stringResource(R.string.expense_split_owner_part)) },
+                                            placeholder = stringResource(R.string.expense_field_amount_hint),
+                                            shape = fieldShape,
+                                            colors = fieldColors,
+                                        )
+                                        WellPaidMoneyDigitKeypadField(
+                                            valueText = brlEstPeer,
+                                            onValueTextChange = {},
+                                            modifier = Modifier.weight(1f),
+                                            enabled = false,
+                                            label = { Text(stringResource(R.string.expense_split_peer_part_calculated)) },
+                                            placeholder = stringResource(R.string.expense_field_amount_hint),
+                                            shape = fieldShape,
+                                            colors = fieldColors,
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
