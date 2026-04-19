@@ -347,6 +347,10 @@
     <string name="goal_error_title">Enter a title.</string>
     <string name="goal_error_target">Enter a valid target greater than zero.</string>
     <string name="goal_error_initial">Invalid initial amount.</string>
+    <string name="goal_search_auto_hint">Suggestions update automatically as you type the title (2+ characters). Tap a listing to fill the goal amount and link.</string>
+    <string name="goal_search_refresh_suggestions">Refresh suggestions</string>
+    <string name="goal_search_top_suggestions">Top matches</string>
+    <string name="goal_search_more_results">More results</string>
     <string name="goal_search_products_by_title">Search Mercado Livre by title</string>
     <string name="goal_searching_products">Searching…</string>
     <string name="goal_error_query_too_short">Enter at least 2 characters in the title.</string>
@@ -454,6 +458,7 @@
     <string name="shopping_field_qty">Quantity</string>
     <string name="shopping_field_unit_price">Cost per unit (optional)</string>
     <string name="shopping_grocery_price_hints_title">Reference prices (tap to fill unit cost)</string>
+    <string name="shopping_grocery_search_auto_hint">Prices search automatically as you type the item name (2+ characters).</string>
     <string name="shopping_close_purchase">Complete purchase</string>
     <string name="shopping_subtotal_lines">Subtotal (priced lines)</string>
     <string name="shopping_units_total">Units</string>

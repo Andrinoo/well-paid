@@ -227,11 +227,11 @@ def grocery_price_suggestions(
         q,
         site_id=site,
         serpapi_key=settings.serpapi_key,
-        ml_limit=8,
-        serp_limit=8,
+        ml_limit=10,
+        serp_limit=10,
         ml_timeout_s=6.0,
         serp_timeout_s=10.0,
-        max_total=20,
+        max_total=24,
     )
     return GoalProductSearchResponse(
         results=[GoalProductHit.model_validate(r) for r in rows],

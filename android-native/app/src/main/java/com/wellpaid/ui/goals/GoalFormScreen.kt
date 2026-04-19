@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -48,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wellpaid.R
+import com.wellpaid.core.model.goal.GoalProductHitDto
 import com.wellpaid.ui.theme.WellPaidGold
 import com.wellpaid.ui.theme.WellPaidNavy
 import com.wellpaid.ui.theme.wellPaidScreenHorizontalPadding
@@ -135,6 +137,31 @@ fun GoalFormScreen(
             Spacer(Modifier.height(12.dp))
 
             OutlinedTextField(
+                value = state.targetText,
+                onValueChange = { viewModel.setTargetText(it) },
+                label = { Text(stringResource(R.string.goal_field_target)) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                supportingText = { Text(stringResource(R.string.expense_field_amount_hint)) },
+                shape = RoundedCornerShape(14.dp),
+            )
+
+            if (!viewModel.isEditMode) {
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = state.initialText,
+                    onValueChange = { viewModel.setInitialText(it) },
+                    label = { Text(stringResource(R.string.goal_field_initial)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    supportingText = { Text(stringResource(R.string.goal_field_initial_hint)) },
+                    shape = RoundedCornerShape(14.dp),
+                )
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            OutlinedTextField(
                 value = state.targetUrl,
                 onValueChange = { viewModel.onTargetUrlChange(it) },
                 label = { Text(stringResource(R.string.goal_field_link)) },
@@ -153,26 +180,32 @@ fun GoalFormScreen(
                 },
                 shape = RoundedCornerShape(14.dp),
             )
-            Spacer(Modifier.height(12.dp))
-
-            OutlinedButton(
-                onClick = { viewModel.searchProductsByTitle() },
-                enabled = !state.isSaving && !state.isSearchingProducts,
-                modifier = Modifier.fillMaxWidth(),
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.goal_search_auto_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center,
-                ) {
-                    Icon(Icons.Filled.Search, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = if (state.isSearchingProducts) {
-                            stringResource(R.string.goal_searching_products)
-                        } else {
-                            stringResource(R.string.goal_search_products_by_title)
-                        },
+                if (state.isSearchingProducts) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(22.dp),
+                        strokeWidth = 2.dp,
                     )
+                }
+                TextButton(
+                    onClick = { viewModel.searchProductsByTitle() },
+                    enabled = !state.isSaving && !state.isSearchingProducts,
+                ) {
+                    Icon(Icons.Filled.Search, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(R.string.goal_search_refresh_suggestions))
                 }
             }
             if (state.lastProductSearchHadNoResults && !state.isSearchingProducts) {
@@ -245,7 +278,7 @@ fun GoalFormScreen(
             if (state.productSearchResults.isNotEmpty()) {
                 Spacer(Modifier.height(12.dp))
                 Text(
-                    text = stringResource(R.string.goal_search_results_header),
+                    text = stringResource(R.string.goal_search_top_suggestions),
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
@@ -255,39 +288,32 @@ fun GoalFormScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 4.dp, bottom = 8.dp),
                 )
-                state.productSearchResults.take(15).forEach { hit ->
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable(
-                                enabled = !state.isSaving,
-                                onClick = { viewModel.applyProductHit(hit) },
-                            ),
-                        shape = RoundedCornerShape(14.dp),
-                    ) {
-                        Column(Modifier.padding(12.dp)) {
-                            Text(
-                                text = hit.title,
-                                style = MaterialTheme.typography.bodyLarge,
-                                maxLines = 3,
-                            )
-                            Spacer(Modifier.height(4.dp))
-                            Text(
-                                text = formatMinorCurrencyFromCents(hit.priceCents, hit.currencyId),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = WellPaidNavy,
-                            )
-                            Spacer(Modifier.height(4.dp))
-                            Text(
-                                text = stringResource(R.string.goal_product_link_label) + ": " + hit.url,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        }
-                    }
+                val topHits = state.productSearchResults.take(3)
+                val moreHits = state.productSearchResults.drop(3).take(12)
+                topHits.forEach { hit ->
+                    GoalProductHitCard(
+                        hit = hit,
+                        enabled = !state.isSaving,
+                        onClick = { viewModel.applyProductHit(hit) },
+                    )
                     Spacer(Modifier.height(8.dp))
+                }
+                if (moreHits.isNotEmpty()) {
+                    Text(
+                        text = stringResource(R.string.goal_search_more_results),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = WellPaidNavy,
+                        modifier = Modifier.padding(top = 4.dp, bottom = 8.dp),
+                    )
+                    moreHits.forEach { hit ->
+                        GoalProductHitCard(
+                            hit = hit,
+                            enabled = !state.isSaving,
+                            onClick = { viewModel.applyProductHit(hit) },
+                        )
+                        Spacer(Modifier.height(8.dp))
+                    }
                 }
             }
 
@@ -320,31 +346,6 @@ fun GoalFormScreen(
                         },
                     )
                 }
-            }
-
-            Spacer(Modifier.height(12.dp))
-
-            OutlinedTextField(
-                value = state.targetText,
-                onValueChange = { viewModel.setTargetText(it) },
-                label = { Text(stringResource(R.string.goal_field_target)) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                supportingText = { Text(stringResource(R.string.expense_field_amount_hint)) },
-                shape = RoundedCornerShape(14.dp),
-            )
-
-            if (!viewModel.isEditMode) {
-                Spacer(Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = state.initialText,
-                    onValueChange = { viewModel.setInitialText(it) },
-                    label = { Text(stringResource(R.string.goal_field_initial)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    supportingText = { Text(stringResource(R.string.goal_field_initial_hint)) },
-                    shape = RoundedCornerShape(14.dp),
-                )
             }
 
             Spacer(Modifier.height(16.dp))
@@ -430,5 +431,41 @@ fun GoalFormScreen(
                 }
             },
         )
+    }
+}
+
+@Composable
+private fun GoalProductHitCard(
+    hit: GoalProductHitDto,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = enabled, onClick = onClick),
+        shape = RoundedCornerShape(14.dp),
+    ) {
+        Column(Modifier.padding(12.dp)) {
+            Text(
+                text = hit.title,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 3,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = formatMinorCurrencyFromCents(hit.priceCents, hit.currencyId),
+                style = MaterialTheme.typography.titleMedium,
+                color = WellPaidNavy,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = stringResource(R.string.goal_product_link_label) + ": " + hit.url,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }

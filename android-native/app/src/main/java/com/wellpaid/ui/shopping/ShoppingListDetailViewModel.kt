@@ -89,7 +89,7 @@ class ShoppingListDetailViewModel @Inject constructor(
             return
         }
         groceryPriceSearchJob = viewModelScope.launch {
-            delay(380)
+            delay(300)
             _uiState.update { it.copy(groceryPriceSearchLoading = true) }
             runCatching {
                 api.groceryPriceSuggestions(

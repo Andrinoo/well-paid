@@ -923,6 +923,12 @@ private fun AddEditItemDialog(
                     enabled = !isSaving,
                     modifier = Modifier.fillMaxWidth(),
                 )
+                Text(
+                    text = stringResource(R.string.shopping_grocery_search_auto_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = WellPaidNavy.copy(alpha = 0.65f),
+                    modifier = Modifier.padding(top = 6.dp),
+                )
                 Spacer(Modifier.padding(top = 8.dp))
                 OutlinedTextField(
                     value = qty,

@@ -64,6 +64,7 @@ class GoalFormViewModel @Inject constructor(
     private val goalId: String? = savedStateHandle.get<String>("goalId")
 
     private var urlSearchDebounceJob: Job? = null
+    private var titleSearchDebounceJob: Job? = null
 
     private val _uiState = MutableStateFlow(GoalFormUiState())
     val uiState: StateFlow<GoalFormUiState> = _uiState.asStateFlow()
@@ -107,6 +108,27 @@ class GoalFormViewModel @Inject constructor(
 
     fun setTitle(value: String) {
         _uiState.update { it.copy(title = value) }
+        scheduleProductSearchFromTitle(value)
+    }
+
+    /** Pesquisa automática (ML + SerpAPI no backend) ao escrever o título, sem botão extra. */
+    private fun scheduleProductSearchFromTitle(titleInput: String) {
+        titleSearchDebounceJob?.cancel()
+        val t = titleInput.trim()
+        if (t.length < 2) {
+            _uiState.update {
+                it.copy(
+                    productSearchResults = emptyList(),
+                    lastProductSearchHadNoResults = false,
+                )
+            }
+            return
+        }
+        titleSearchDebounceJob = viewModelScope.launch {
+            delay(420)
+            if (_uiState.value.title.trim() != t) return@launch
+            performProductSearch(query = t, syncTitleFromQuery = false)
+        }
     }
 
     fun setTargetText(value: String) {
@@ -294,13 +316,12 @@ class GoalFormViewModel @Inject constructor(
             s.copy(
                 title = hit.title.take(200),
                 targetUrl = hit.url,
-                targetText = if (isBrl) centsToBrlInput(hit.priceCents) else "",
+                targetText = if (isBrl) centsToBrlInput(hit.priceCents) else s.targetText,
                 referencePriceLabel = refLabel,
                 draftReferenceProductName = hit.title.take(200),
                 draftReferencePriceCents = if (isBrl) hit.priceCents else null,
                 draftReferenceCurrency = hit.currencyId,
                 draftPriceSource = hit.source,
-                productSearchResults = emptyList(),
                 lastProductSearchHadNoResults = false,
                 errorMessage = null,
                 loaded = nextLoaded ?: s.loaded,

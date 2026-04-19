@@ -347,6 +347,10 @@
     <string name="goal_error_title">Indique um título.</string>
     <string name="goal_error_target">Indique um objetivo válido maior que zero.</string>
     <string name="goal_error_initial">Valor inicial inválido.</string>
+    <string name="goal_search_auto_hint">As sugestões atualizam-se automaticamente ao escreveres o título (2+ letras). Toca num anúncio para preencher o valor da meta e o link.</string>
+    <string name="goal_search_refresh_suggestions">Atualizar sugestões</string>
+    <string name="goal_search_top_suggestions">Melhores correspondências</string>
+    <string name="goal_search_more_results">Mais resultados</string>
     <string name="goal_search_products_by_title">Pesquisar no Mercado Livre pelo título</string>
     <string name="goal_searching_products">A pesquisar…</string>
     <string name="goal_error_query_too_short">Escreva pelo menos 2 caracteres no título.</string>
@@ -454,6 +458,7 @@
     <string name="shopping_field_qty">Quantidade</string>
     <string name="shopping_field_unit_price">Custo por unidade (opcional)</string>
     <string name="shopping_grocery_price_hints_title">Preços de referência (toque para preencher o custo)</string>
+    <string name="shopping_grocery_search_auto_hint">A pesquisa de preços corre automaticamente ao escreveres o nome do item (2+ letras).</string>
     <string name="shopping_close_purchase">Fechar compra</string>
     <string name="shopping_subtotal_lines">Subtotal (linhas com preço)</string>
     <string name="shopping_units_total">Unidades</string>
