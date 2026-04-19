@@ -332,7 +332,7 @@
     <string name="goal_field_link">Link do produto ou da pesquisa (opcional)</string>
     <string name="goal_field_link_hint">Cole o URL da página do produto para obter preço de referência, ou um link de pesquisa do Mercado Livre Brasil — os anúncios aparecem abaixo como sugestões.</string>
     <string name="goal_field_link_autocomplete_hint">Links de pesquisa do Mercado Livre (Brasil) carregam sugestões automaticamente ao colar.</string>
-    <string name="goal_product_tap_to_apply">Toque num cartão para definir o valor da meta e o link do produto.</string>
+    <string name="goal_product_tap_to_apply">Toque noutro anúncio para substituir o valor e o link. Tudo fica na app.</string>
     <string name="goal_reference_price_label">Preço de referência</string>
     <string name="goal_refresh_price">Actualizar preço de referência</string>
     <string name="goal_refreshing_price">A obter preço…</string>
@@ -347,7 +347,7 @@
     <string name="goal_error_title">Indique um título.</string>
     <string name="goal_error_target">Indique um objetivo válido maior que zero.</string>
     <string name="goal_error_initial">Valor inicial inválido.</string>
-    <string name="goal_search_auto_hint">As sugestões atualizam-se automaticamente ao escreveres o título (2+ letras). Toca num anúncio para preencher o valor da meta e o link.</string>
+    <string name="goal_search_auto_hint">A pesquisa corre na app ao escreveres o título (2+ letras). O primeiro preço e link são preenchidos automaticamente se o valor da meta estiver vazio; toca noutro anúncio para substituir. Nada abre no navegador.</string>
     <string name="goal_search_refresh_suggestions">Atualizar sugestões</string>
     <string name="goal_search_top_suggestions">Melhores correspondências</string>
     <string name="goal_search_more_results">Mais resultados</string>
@@ -358,13 +358,8 @@
     <string name="goal_search_results_header">Anúncios</string>
     <string name="goal_product_use">Usar este anúncio</string>
     <string name="goal_product_link_label">Link</string>
-    <string name="goal_search_no_results">Nenhum anúncio no Mercado Livre (Brasil). Tente outras palavras ou abra outra loja abaixo.</string>
+    <string name="goal_search_no_results">Nenhum anúncio no Mercado Livre (Brasil). Tenta outras palavras no título.</string>
     <string name="goal_detail_refresh_target_from_link">Actualizar valor pelo link do produto</string>
-    <string name="goal_search_other_stores_title">Outras lojas (abre no navegador)</string>
-    <string name="goal_search_open_google">Google Shopping</string>
-    <string name="goal_search_open_amazon_br">Amazon BR</string>
-    <string name="goal_search_open_buscape">Buscapé</string>
-    <string name="goal_search_open_magalu">Magazine Luiza</string>
     <string name="emergency_need_login">Inicie sessão para ver a reserva de emergência.</string>
     <string name="emergency_balance_label">Saldo acumulado</string>
     <string name="emergency_tracking_start">A contar desde %1$s</string>

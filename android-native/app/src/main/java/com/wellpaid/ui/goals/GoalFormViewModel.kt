@@ -170,18 +170,6 @@ class GoalFormViewModel @Inject constructor(
         }
     }
 
-    /** Para abrir pesquisas externas no browser: devolve query ou define erro de título curto. */
-    fun resolveSearchQueryOrShowError(): String? {
-        val q = _uiState.value.title.trim()
-        if (q.length < 2) {
-            _uiState.update {
-                it.copy(errorMessage = appContext.getString(R.string.goal_error_query_too_short))
-            }
-            return null
-        }
-        return q
-    }
-
     fun loadPriceFromLink() {
         if (isEditMode) {
             refreshReferencePrice()
@@ -315,12 +303,17 @@ class GoalFormViewModel @Inject constructor(
                 }
             }
             coroutineContext.ensureActive()
-            _uiState.update {
-                it.copy(
+            _uiState.update { s ->
+                val base = s.copy(
                     isSearchingProducts = false,
                     productSearchResults = list,
                     lastProductSearchHadNoResults = list.isEmpty(),
                 )
+                if (list.isNotEmpty() && s.targetText.trim().isEmpty()) {
+                    applyHitToState(base, list.first(), preserveUserTitle = true)
+                } else {
+                    base
+                }
             }
         } catch (e: CancellationException) {
             _uiState.update { it.copy(isSearchingProducts = false) }
@@ -329,30 +322,37 @@ class GoalFormViewModel @Inject constructor(
     }
 
     fun applyProductHit(hit: GoalProductHitDto) {
-        _uiState.update { s ->
-            val isBrl = hit.currencyId.equals("BRL", ignoreCase = true)
-            val refLabel = formatMinorCurrencyFromCents(hit.priceCents, hit.currencyId)
-            val nextLoaded = s.loaded?.copy(
-                referenceProductName = hit.title.take(200),
-                referencePriceCents = if (isBrl) hit.priceCents else null,
-                referenceCurrency = hit.currencyId,
-                priceSource = hit.source,
-                targetUrl = hit.url,
-            )
-            s.copy(
-                title = hit.title.take(200),
-                targetUrl = hit.url,
-                targetText = if (isBrl) centsToBrlInput(hit.priceCents) else s.targetText,
-                referencePriceLabel = refLabel,
-                draftReferenceProductName = hit.title.take(200),
-                draftReferencePriceCents = if (isBrl) hit.priceCents else null,
-                draftReferenceCurrency = hit.currencyId,
-                draftPriceSource = hit.source,
-                lastProductSearchHadNoResults = false,
-                errorMessage = null,
-                loaded = nextLoaded ?: s.loaded,
-            )
-        }
+        _uiState.update { applyHitToState(it, hit, preserveUserTitle = false) }
+    }
+
+    /** Preenche valor, link e referência a partir de um anúncio (só na app, sem navegador). */
+    private fun applyHitToState(
+        s: GoalFormUiState,
+        hit: GoalProductHitDto,
+        preserveUserTitle: Boolean,
+    ): GoalFormUiState {
+        val isBrl = hit.currencyId.equals("BRL", ignoreCase = true)
+        val refLabel = formatMinorCurrencyFromCents(hit.priceCents, hit.currencyId)
+        val nextLoaded = s.loaded?.copy(
+            referenceProductName = hit.title.take(200),
+            referencePriceCents = if (isBrl) hit.priceCents else null,
+            referenceCurrency = hit.currencyId,
+            priceSource = hit.source,
+            targetUrl = hit.url,
+        )
+        return s.copy(
+            title = if (preserveUserTitle) s.title else hit.title.take(200),
+            targetUrl = hit.url,
+            targetText = if (isBrl) centsToBrlInput(hit.priceCents) else s.targetText,
+            referencePriceLabel = refLabel,
+            draftReferenceProductName = hit.title.take(200),
+            draftReferencePriceCents = if (isBrl) hit.priceCents else null,
+            draftReferenceCurrency = hit.currencyId,
+            draftPriceSource = hit.source,
+            lastProductSearchHadNoResults = false,
+            errorMessage = null,
+            loaded = nextLoaded ?: s.loaded,
+        )
     }
 
     fun dismissDeleteConfirm() {

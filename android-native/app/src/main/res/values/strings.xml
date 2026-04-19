@@ -332,7 +332,7 @@
     <string name="goal_field_link">Product or search link (optional)</string>
     <string name="goal_field_link_hint">Paste a product page URL to fetch a reference price, or a Mercado Livre Brasil search URL — matching listings appear below as suggestions.</string>
     <string name="goal_field_link_autocomplete_hint">Mercado Livre Brasil search links load suggestions here automatically after you paste them.</string>
-    <string name="goal_product_tap_to_apply">Tap a card to set the goal amount and product link.</string>
+    <string name="goal_product_tap_to_apply">Tap a listing to replace the amount and link. Everything stays in the app.</string>
     <string name="goal_reference_price_label">Reference price</string>
     <string name="goal_refresh_price">Update reference price</string>
     <string name="goal_refreshing_price">Fetching price…</string>
@@ -347,7 +347,7 @@
     <string name="goal_error_title">Enter a title.</string>
     <string name="goal_error_target">Enter a valid target greater than zero.</string>
     <string name="goal_error_initial">Invalid initial amount.</string>
-    <string name="goal_search_auto_hint">Suggestions update automatically as you type the title (2+ characters). Tap a listing to fill the goal amount and link.</string>
+    <string name="goal_search_auto_hint">Search runs in the app as you type the title (2+ characters). The first price and link are filled automatically when the goal amount is empty; tap another listing to replace them. Nothing opens in an external browser.</string>
     <string name="goal_search_refresh_suggestions">Refresh suggestions</string>
     <string name="goal_search_top_suggestions">Top matches</string>
     <string name="goal_search_more_results">More results</string>
@@ -358,13 +358,8 @@
     <string name="goal_search_results_header">Listings</string>
     <string name="goal_product_use">Use this listing</string>
     <string name="goal_product_link_label">Link</string>
-    <string name="goal_search_no_results">No Mercado Livre (Brazil) listings found. Try different keywords or open another store below.</string>
+    <string name="goal_search_no_results">No Mercado Livre (Brazil) listings found. Try different keywords in the title.</string>
     <string name="goal_detail_refresh_target_from_link">Update goal amount from product link</string>
-    <string name="goal_search_other_stores_title">Other stores (opens in browser)</string>
-    <string name="goal_search_open_google">Google Shopping</string>
-    <string name="goal_search_open_amazon_br">Amazon BR</string>
-    <string name="goal_search_open_buscape">Buscapé</string>
-    <string name="goal_search_open_magalu">Magazine Luiza</string>
     <string name="emergency_need_login">Sign in to see the emergency fund.</string>
     <string name="emergency_balance_label">Accumulated balance</string>
     <string name="emergency_tracking_start">Counting since %1$s</string>
