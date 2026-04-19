@@ -52,7 +52,7 @@ object MercadoLivrePublicSearch {
             ?: return@withContext emptyList()
         val url = base.newBuilder()
             .addQueryParameter("q", q)
-            .addQueryParameter("limit", "15")
+            .addQueryParameter("limit", "5")
             .build()
         val request = Request.Builder()
             .url(url)

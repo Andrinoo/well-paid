@@ -13,7 +13,6 @@ import com.wellpaid.core.model.goal.GoalProductSearchRequestDto
 import com.wellpaid.core.model.goal.GoalUpdateDto
 import com.wellpaid.core.network.GoalsApi
 import com.wellpaid.util.FastApiErrorMapper
-import com.wellpaid.util.MercadoLibreSearchUrlParser
 import com.wellpaid.util.MercadoLivrePublicSearch
 import com.wellpaid.util.centsToBrlInput
 import com.wellpaid.util.formatBrlFromCents
@@ -65,9 +64,13 @@ class GoalFormViewModel @Inject constructor(
     private val goalsApi: GoalsApi,
 ) : ViewModel() {
 
+    companion object {
+        /** Máximo de anúncios mostrados no seletor (nome da meta → ML/Serp). */
+        const val PRODUCT_SEARCH_MAX_RESULTS: Int = 5
+    }
+
     private val goalId: String? = savedStateHandle.get<String>("goalId")
 
-    private var urlSearchDebounceJob: Job? = null
     private var titleSearchDebounceJob: Job? = null
     private val titleSearchNonce = AtomicInteger(0)
 
@@ -152,22 +155,9 @@ class GoalFormViewModel @Inject constructor(
         _uiState.update { it.copy(isActive = value) }
     }
 
-    /**
-     * Actualiza o link e, se for um URL de pesquisa do Mercado Livre (ex.: …/search?q=…),
-     * carrega sugestões na app após um breve debounce.
-     */
+    /** Link opcional: preço de referência via botão «obter pelo link»; a pesquisa por anúncios usa só o título da meta. */
     fun onTargetUrlChange(value: String) {
         _uiState.update { it.copy(targetUrl = value) }
-        urlSearchDebounceJob?.cancel()
-        val q = MercadoLibreSearchUrlParser.extractSearchQuery(value) ?: return
-        if (q.length < 2) return
-        val snapshotUrl = value.trim()
-        urlSearchDebounceJob = viewModelScope.launch {
-            delay(550)
-            if (_uiState.value.targetUrl.trim() != snapshotUrl) return@launch
-            val syncTitle = _uiState.value.title.isBlank()
-            performProductSearch(query = q, syncTitleFromQuery = syncTitle)
-        }
     }
 
     fun loadPriceFromLink() {
@@ -266,7 +256,6 @@ class GoalFormViewModel @Inject constructor(
             }
             return
         }
-        urlSearchDebounceJob?.cancel()
         viewModelScope.launch {
             performProductSearch(query = q, syncTitleFromQuery = false)
         }
@@ -303,17 +292,13 @@ class GoalFormViewModel @Inject constructor(
                 }
             }
             coroutineContext.ensureActive()
+            val capped = list.take(PRODUCT_SEARCH_MAX_RESULTS)
             _uiState.update { s ->
-                val base = s.copy(
+                s.copy(
                     isSearchingProducts = false,
-                    productSearchResults = list,
-                    lastProductSearchHadNoResults = list.isEmpty(),
+                    productSearchResults = capped,
+                    lastProductSearchHadNoResults = capped.isEmpty(),
                 )
-                if (list.isNotEmpty() && s.targetText.trim().isEmpty()) {
-                    applyHitToState(base, list.first(), preserveUserTitle = true)
-                } else {
-                    base
-                }
             }
         } catch (e: CancellationException) {
             _uiState.update { it.copy(isSearchingProducts = false) }
@@ -321,8 +306,9 @@ class GoalFormViewModel @Inject constructor(
         }
     }
 
-    fun applyProductHit(hit: GoalProductHitDto) {
-        _uiState.update { applyHitToState(it, hit, preserveUserTitle = false) }
+    /** Aplica preço e link ao formulário mantendo o título da meta (nome que escreveste). */
+    fun applyProductListing(hit: GoalProductHitDto) {
+        _uiState.update { applyHitToState(it, hit, preserveUserTitle = true) }
     }
 
     /** Preenche valor, link e referência a partir de um anúncio (só na app, sem navegador). */
