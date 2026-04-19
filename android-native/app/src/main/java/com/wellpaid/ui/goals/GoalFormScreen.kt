@@ -9,18 +9,22 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ModalBottomSheet
@@ -287,7 +291,7 @@ fun GoalFormScreen(
                             )
                         }
                         Icon(
-                            imageVector = Icons.Filled.KeyboardArrowRight,
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                             contentDescription = stringResource(R.string.goal_search_results_title),
                             tint = WellPaidNavy.copy(alpha = 0.55f),
                         )
@@ -440,54 +444,68 @@ private fun GoalProductSearchResultsSheet(
         dragHandle = null,
         containerColor = WellPaidCream,
     ) {
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .navigationBarsPadding()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 24.dp),
+                .navigationBarsPadding(),
+            contentPadding = PaddingValues(bottom = 20.dp),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.Top,
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.goal_search_results_title),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = WellPaidNavy,
-                    )
-                    Text(
-                        text = stringResource(R.string.goal_search_results_sheet_subtitle),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = WellPaidNavy.copy(alpha = 0.72f),
-                        modifier = Modifier.padding(top = 6.dp),
-                    )
-                }
-                IconButton(
-                    onClick = onDismiss,
-                    enabled = !isSaving,
+            item {
+                Surface(
+                    color = WellPaidNavy,
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Icon(
-                        Icons.Filled.Close,
-                        contentDescription = stringResource(R.string.common_close),
-                        tint = WellPaidNavy,
-                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .statusBarsPadding()
+                            .padding(start = 16.dp, end = 12.dp, top = 10.dp, bottom = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.goal_search_results_title),
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                            )
+                            Text(
+                                text = stringResource(R.string.goal_search_results_sheet_subtitle),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White.copy(alpha = 0.88f),
+                                modifier = Modifier.padding(top = 6.dp),
+                            )
+                        }
+                        IconButton(
+                            onClick = onDismiss,
+                            enabled = !isSaving,
+                            modifier = Modifier.size(48.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Close,
+                                contentDescription = stringResource(R.string.common_close),
+                                tint = Color.White,
+                                modifier = Modifier.size(26.dp),
+                            )
+                        }
+                    }
                 }
+                Spacer(Modifier.height(12.dp))
             }
-            Spacer(Modifier.height(16.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                hits.forEach { hit ->
-                    ProductPriceHitCard(
-                        title = hit.title,
-                        priceLabel = formatMinorCurrencyFromCents(hit.priceCents, hit.currencyId),
-                        source = hit.source,
-                        enabled = !isSaving,
-                        onClick = { onSelect(hit) },
-                    )
-                }
+            items(
+                items = hits,
+                key = { h -> h.url + h.priceCents + h.title },
+            ) { hit ->
+                ProductPriceHitCard(
+                    title = hit.title,
+                    priceLabel = formatMinorCurrencyFromCents(hit.priceCents, hit.currencyId),
+                    source = hit.source,
+                    enabled = !isSaving,
+                    onClick = { onSelect(hit) },
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 5.dp),
+                    thumbnailUrl = hit.thumbnail,
+                    showLeadingThumbnailSlot = true,
+                )
             }
         }
     }
