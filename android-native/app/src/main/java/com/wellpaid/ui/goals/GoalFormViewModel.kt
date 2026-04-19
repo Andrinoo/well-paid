@@ -23,14 +23,11 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlin.coroutines.coroutineContext
-import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 
 data class GoalFormUiState(
@@ -66,14 +63,10 @@ class GoalFormViewModel @Inject constructor(
 
     companion object {
         /** Máximo de resultados no seletor (pesquisa Google Shopping via servidor). */
-        const val PRODUCT_SEARCH_MAX_RESULTS: Int = 5
+        const val PRODUCT_SEARCH_MAX_RESULTS: Int = 12
     }
 
     private val goalId: String? = savedStateHandle.get<String>("goalId")
-
-    private var titleSearchDebounceJob: Job? = null
-    private var urlSearchDebounceJob: Job? = null
-    private val titleSearchNonce = AtomicInteger(0)
 
     private val _uiState = MutableStateFlow(GoalFormUiState())
     val uiState: StateFlow<GoalFormUiState> = _uiState.asStateFlow()
@@ -117,31 +110,6 @@ class GoalFormViewModel @Inject constructor(
 
     fun setTitle(value: String) {
         _uiState.update { it.copy(title = value) }
-        scheduleProductSearchFromTitle(value)
-    }
-
-    /** Pesquisa automática (Google Shopping via SerpAPI no backend) ao escrever o título. */
-    private fun scheduleProductSearchFromTitle(titleInput: String) {
-        titleSearchDebounceJob?.cancel()
-        val t = titleInput.trim()
-        if (t.length < 2) {
-            titleSearchNonce.incrementAndGet()
-            _uiState.update {
-                it.copy(
-                    productSearchResults = emptyList(),
-                    lastProductSearchHadNoResults = false,
-                    isSearchingProducts = false,
-                )
-            }
-            return
-        }
-        val id = titleSearchNonce.incrementAndGet()
-        titleSearchDebounceJob = viewModelScope.launch {
-            delay(420)
-            coroutineContext.ensureActive()
-            if (id != titleSearchNonce.get()) return@launch
-            performProductSearch(query = t, syncTitleFromQuery = false)
-        }
     }
 
     fun setTargetText(value: String) {
@@ -156,42 +124,47 @@ class GoalFormViewModel @Inject constructor(
         _uiState.update { it.copy(isActive = value) }
     }
 
-    /**
-     * Guarda o URL. Se for link de pesquisa com `q=` (ou equivalente), dispara a mesma pesquisa (debounce).
-     * URLs só de produto não disparam pesquisa — servem para o botão de preview de preço.
-     */
     fun onTargetUrlChange(value: String) {
         _uiState.update { it.copy(targetUrl = value) }
-        urlSearchDebounceJob?.cancel()
-        val q = SearchQueryUrlParser.extractSearchQuery(value) ?: return
-        if (q.length < 2) return
-        val snapshotUrl = value.trim()
-        urlSearchDebounceJob = viewModelScope.launch {
-            delay(550)
-            if (_uiState.value.targetUrl.trim() != snapshotUrl) return@launch
-            val syncTitle = _uiState.value.title.isBlank()
-            performProductSearch(query = q, syncTitleFromQuery = syncTitle)
-        }
     }
 
-    fun loadPriceFromLink() {
-        if (isEditMode) {
-            refreshReferencePrice()
-        } else {
-            previewFromUrl()
+    /**
+     * Um único fluxo: link de pesquisa (q=), página de produto (http), título da meta, ou texto livre no campo opcional.
+     */
+    fun unifiedPriceSearch() {
+        val extra = _uiState.value.targetUrl.trim()
+        val titleQ = _uiState.value.title.trim()
+        when {
+            extra.startsWith("http://", ignoreCase = true) ||
+                extra.startsWith("https://", ignoreCase = true) -> {
+                val q = SearchQueryUrlParser.extractSearchQuery(extra)
+                if (q != null && q.length >= 2) {
+                    viewModelScope.launch { performProductSearch(q, syncTitleFromQuery = false) }
+                    return
+                }
+                if (isEditMode) {
+                    refreshReferencePrice()
+                } else {
+                    previewFromUrl()
+                }
+            }
+            titleQ.length >= 2 -> {
+                viewModelScope.launch { performProductSearch(titleQ, syncTitleFromQuery = false) }
+            }
+            extra.length >= 2 -> {
+                viewModelScope.launch { performProductSearch(extra, syncTitleFromQuery = false) }
+            }
+            else -> {
+                _uiState.update {
+                    it.copy(errorMessage = appContext.getString(R.string.goal_error_query_title_or_search_url))
+                }
+            }
         }
     }
 
     private fun previewFromUrl() {
         val url = _uiState.value.targetUrl.trim()
         if (url.isEmpty()) {
-            val titleQ = _uiState.value.title.trim()
-            if (titleQ.length >= 2) {
-                viewModelScope.launch {
-                    performProductSearch(query = titleQ, syncTitleFromQuery = false)
-                }
-                return
-            }
             _uiState.update {
                 it.copy(errorMessage = appContext.getString(R.string.goal_error_query_title_or_search_url))
             }
@@ -259,25 +232,6 @@ class GoalFormViewModel @Inject constructor(
                         )
                     }
                 }
-        }
-    }
-
-    /** Pesquisa manual: título da meta ou termo extraído de um URL de pesquisa no campo de link. */
-    fun refreshProductSearch() {
-        val titleQ = _uiState.value.title.trim()
-        val urlQ = SearchQueryUrlParser.extractSearchQuery(_uiState.value.targetUrl)?.trim()
-        val q = when {
-            titleQ.length >= 2 -> titleQ
-            urlQ != null && urlQ.length >= 2 -> urlQ
-            else -> {
-                _uiState.update {
-                    it.copy(errorMessage = appContext.getString(R.string.goal_error_query_title_or_search_url))
-                }
-                return
-            }
-        }
-        viewModelScope.launch {
-            performProductSearch(query = q, syncTitleFromQuery = false)
         }
     }
 
@@ -401,7 +355,7 @@ class GoalFormViewModel @Inject constructor(
             }
             val result = runCatching {
                 if (goalId == null) {
-                    val url = s.targetUrl.trim().takeIf { it.isNotEmpty() }
+                    val url = persistedHttpUrl(s.targetUrl)
                     goalsApi.createGoal(
                         GoalCreateDto(
                             title = title,
@@ -417,7 +371,7 @@ class GoalFormViewModel @Inject constructor(
                     )
                 } else {
                     val loaded = s.loaded ?: error("missing")
-                    val url = s.targetUrl.trim().takeIf { it.isNotEmpty() }
+                    val url = persistedHttpUrl(s.targetUrl)
                     goalsApi.updateGoal(
                         goalId,
                         GoalUpdateDto(
@@ -445,6 +399,15 @@ class GoalFormViewModel @Inject constructor(
                     )
                 }
             }
+        }
+    }
+
+    /** Só persiste URLs http(s); texto de pesquisa solto não vai para a base como "link". */
+    private fun persistedHttpUrl(raw: String): String? {
+        val t = raw.trim()
+        if (t.isEmpty()) return null
+        return t.takeIf {
+            it.startsWith("http://", ignoreCase = true) || it.startsWith("https://", ignoreCase = true)
         }
     }
 

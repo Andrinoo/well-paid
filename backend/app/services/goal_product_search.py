@@ -13,7 +13,7 @@ _USER_AGENT = "WellPaid/1.0 (+https://wellpaid.app) SerpAPI Google Shopping pric
 
 
 def _parse_brl_price_to_cents(price: Any) -> int | None:
-    """Aceita número ou string tipo 'R$ 1.234,56' (pt-BR)."""
+    """Aceita número ou string tipo 'R$ 1.234,56' (pt-BR). Ignora moeda estrangeira explícita."""
     if price is None:
         return None
     if isinstance(price, (int, float)) and not isinstance(price, bool):
@@ -21,6 +21,9 @@ def _parse_brl_price_to_cents(price: Any) -> int | None:
         return int(round(v * 100)) if v > 0 else None
     s = str(price).strip()
     if not s:
+        return None
+    s_low = s.lower()
+    if "us$" in s_low or "usd" in s_low or "u.s." in s_low:
         return None
     s = s.replace("R$", "").replace(" ", "").replace("\u00a0", "")
     if "," in s:
@@ -30,6 +33,31 @@ def _parse_brl_price_to_cents(price: Any) -> int | None:
     except ValueError:
         return None
     return int(round(v * 100)) if v > 0 else None
+
+
+def _iter_serpapi_shopping_items(data: dict[str, Any]) -> list[dict[str, Any]]:
+    """SerpAPI pode devolver resultados em shopping_results e/ou inline_shopping_results."""
+    seen: set[str] = set()
+    out: list[dict[str, Any]] = []
+    for key in ("shopping_results", "inline_shopping_results"):
+        block = data.get(key)
+        if not isinstance(block, list):
+            continue
+        for item in block:
+            if not isinstance(item, dict):
+                continue
+            link = str(
+                item.get("product_link")
+                or item.get("link")
+                or item.get("product_link_clean")
+                or ""
+            ).strip()
+            dedupe = link or str(item.get("title") or "")
+            if dedupe in seen:
+                continue
+            seen.add(dedupe)
+            out.append(item)
+    return out
 
 
 def build_grocery_search_query(
@@ -133,9 +161,7 @@ def search_serpapi_google_shopping(
         return []
 
     out: list[dict[str, Any]] = []
-    for item in data.get("shopping_results") or []:
-        if not isinstance(item, dict):
-            continue
+    for item in _iter_serpapi_shopping_items(data):
         title = str(item.get("title") or "").strip()[:500]
         link = str(
             item.get("product_link") or item.get("link") or item.get("product_link_clean") or ""
