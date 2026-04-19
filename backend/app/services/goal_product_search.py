@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 import httpx
@@ -26,8 +27,15 @@ def _parse_brl_price_to_cents(price: Any) -> int | None:
     if "us$" in s_low or "usd" in s_low or "u.s." in s_low:
         return None
     s = s.replace("R$", "").replace(" ", "").replace("\u00a0", "")
+    if "apartir" in s_low.replace(" ", "") or "a partir" in s_low:
+        s = re.sub(r"^.*?a\s*partir\s+de\s*", "", s, flags=re.IGNORECASE).strip()
     if "," in s:
         s = s.replace(".", "").replace(",", ".")
+    else:
+        # "3.299" como milhar (pt): um ponto e 3 dígitos decimais → milhares
+        parts = s.split(".")
+        if len(parts) == 2 and len(parts[1]) == 3 and parts[1].isdigit():
+            s = parts[0] + parts[1]
     try:
         v = float(s)
     except ValueError:
@@ -35,29 +43,68 @@ def _parse_brl_price_to_cents(price: Any) -> int | None:
     return int(round(v * 100)) if v > 0 else None
 
 
-def _iter_serpapi_shopping_items(data: dict[str, Any]) -> list[dict[str, Any]]:
-    """SerpAPI pode devolver resultados em shopping_results e/ou inline_shopping_results."""
+def _dedupe_shopping_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     seen: set[str] = set()
     out: list[dict[str, Any]] = []
-    for key in ("shopping_results", "inline_shopping_results"):
+    for item in items:
+        link = _product_url_from_item(item)
+        dedupe = link or str(item.get("title") or "")
+        if dedupe in seen:
+            continue
+        seen.add(dedupe)
+        out.append(item)
+    return out
+
+
+def _product_url_from_item(item: dict[str, Any]) -> str:
+    """SerpAPI usa nomes diferentes por bloco (shopping vs inline)."""
+    for k in (
+        "product_link",
+        "link",
+        "product_link_clean",
+        "tracking_link",
+        "direct_link",
+    ):
+        v = item.get(k)
+        if isinstance(v, str) and v.strip().startswith("http"):
+            return v.strip()
+    return ""
+
+
+def _collect_serpapi_shopping_blocks(data: dict[str, Any]) -> list[dict[str, Any]]:
+    """Agrega todos os blocos onde o Google Shopping devolve produtos."""
+    raw: list[dict[str, Any]] = []
+    for key in ("shopping_results", "inline_shopping_results", "immersive_products"):
         block = data.get(key)
         if not isinstance(block, list):
             continue
-        for item in block:
-            if not isinstance(item, dict):
+        raw.extend([x for x in block if isinstance(x, dict)])
+
+    cats = data.get("categorized_shopping_results")
+    if isinstance(cats, list):
+        for cat in cats:
+            if not isinstance(cat, dict):
                 continue
-            link = str(
-                item.get("product_link")
-                or item.get("link")
-                or item.get("product_link_clean")
-                or ""
-            ).strip()
-            dedupe = link or str(item.get("title") or "")
-            if dedupe in seen:
-                continue
-            seen.add(dedupe)
-            out.append(item)
-    return out
+            for nk in ("shopping_results", "products", "items"):
+                nested = cat.get(nk)
+                if isinstance(nested, list):
+                    raw.extend([x for x in nested if isinstance(x, dict)])
+
+    return _dedupe_shopping_items(raw)
+
+
+def _extract_price_raw(item: dict[str, Any]) -> Any:
+    for k in ("extracted_price", "price", "extracted_old_price", "old_price"):
+        v = item.get(k)
+        if v is not None and v != "":
+            return v
+    inst = item.get("installment")
+    if isinstance(inst, dict):
+        for k in ("extracted_price", "price"):
+            v = inst.get(k)
+            if v is not None and v != "":
+                return v
+    return None
 
 
 def build_grocery_search_query(
@@ -125,6 +172,8 @@ def search_serpapi_google_shopping(
         "gl": "br",
         "hl": "pt-br",
         "num": lim,
+        # Ajuda a obter blocos shopping/inline mais consistentes em pt-BR.
+        "device": "mobile",
     }
     try:
         with httpx.Client(
@@ -160,21 +209,18 @@ def search_serpapi_google_shopping(
         logger.warning("SerpAPI google_shopping error: %s", err_msg)
         return []
 
+    blocks = _collect_serpapi_shopping_blocks(data)
     out: list[dict[str, Any]] = []
-    for item in _iter_serpapi_shopping_items(data):
+    for item in blocks:
         title = str(item.get("title") or "").strip()[:500]
-        link = str(
-            item.get("product_link") or item.get("link") or item.get("product_link_clean") or ""
-        ).strip()
+        link = _product_url_from_item(item)
         if not title or not link:
             continue
-        raw_price = item.get("extracted_price")
-        if raw_price is None:
-            raw_price = item.get("price")
+        raw_price = _extract_price_raw(item)
         price_cents = _parse_brl_price_to_cents(raw_price)
         if price_cents is None or price_cents <= 0:
             continue
-        thumb = item.get("thumbnail")
+        thumb = item.get("thumbnail") or item.get("serpapi_thumbnail")
         thumb_s = str(thumb).strip() if thumb else None
         out.append(
             {
@@ -189,4 +235,13 @@ def search_serpapi_google_shopping(
         )
         if len(out) >= lim:
             break
+
+    if not out and blocks:
+        sample = next((b for b in blocks if isinstance(b, dict)), None)
+        keys = list(sample.keys())[:20] if sample else []
+        logger.warning(
+            "SerpAPI google_shopping: %d itens brutos mas 0 após parse preço/link; chaves exemplo: %s",
+            len(blocks),
+            keys,
+        )
     return out
