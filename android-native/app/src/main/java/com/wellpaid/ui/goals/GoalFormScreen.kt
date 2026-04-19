@@ -179,31 +179,17 @@ fun GoalFormScreen(
             }
 
             Spacer(Modifier.height(12.dp))
-
-            OutlinedTextField(
-                value = state.targetUrl,
-                onValueChange = { viewModel.onTargetUrlChange(it) },
-                label = { Text(stringResource(R.string.goal_field_link)) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = false,
-                minLines = 2,
-                supportingText = {
-                    Column {
-                        Text(stringResource(R.string.goal_field_link_hint))
-                        Text(
-                            text = stringResource(R.string.goal_field_link_autocomplete_hint),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                },
-                shape = RoundedCornerShape(14.dp),
+            Text(
+                text = stringResource(R.string.goal_search_section_title),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = WellPaidNavy,
             )
-            Spacer(Modifier.height(8.dp))
             Text(
                 text = stringResource(R.string.goal_search_auto_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp),
             )
             Row(
                 modifier = Modifier
@@ -219,7 +205,7 @@ fun GoalFormScreen(
                     )
                 }
                 TextButton(
-                    onClick = { viewModel.searchProductsByTitle() },
+                    onClick = { viewModel.refreshProductSearch() },
                     enabled = !state.isSaving && !state.isSearchingProducts,
                 ) {
                     Icon(Icons.Filled.Search, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -261,6 +247,34 @@ fun GoalFormScreen(
                 )
             }
 
+            Spacer(Modifier.height(16.dp))
+            Text(
+                text = stringResource(R.string.goal_field_link_section_title),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = WellPaidNavy,
+            )
+            OutlinedTextField(
+                value = state.targetUrl,
+                onValueChange = { viewModel.onTargetUrlChange(it) },
+                label = { Text(stringResource(R.string.goal_field_link)) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                singleLine = false,
+                minLines = 2,
+                supportingText = {
+                    Column {
+                        Text(stringResource(R.string.goal_field_link_hint))
+                        Text(
+                            text = stringResource(R.string.goal_field_link_autocomplete_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                },
+                shape = RoundedCornerShape(14.dp),
+            )
             Spacer(Modifier.height(8.dp))
             OutlinedButton(
                 onClick = { viewModel.loadPriceFromLink() },

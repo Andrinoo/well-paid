@@ -13,6 +13,7 @@ import com.wellpaid.core.model.goal.GoalProductSearchRequestDto
 import com.wellpaid.core.model.goal.GoalUpdateDto
 import com.wellpaid.core.network.GoalsApi
 import com.wellpaid.util.FastApiErrorMapper
+import com.wellpaid.util.MercadoLibreSearchUrlParser
 import com.wellpaid.util.MercadoLivrePublicSearch
 import com.wellpaid.util.centsToBrlInput
 import com.wellpaid.util.formatBrlFromCents
@@ -72,6 +73,7 @@ class GoalFormViewModel @Inject constructor(
     private val goalId: String? = savedStateHandle.get<String>("goalId")
 
     private var titleSearchDebounceJob: Job? = null
+    private var urlSearchDebounceJob: Job? = null
     private val titleSearchNonce = AtomicInteger(0)
 
     private val _uiState = MutableStateFlow(GoalFormUiState())
@@ -155,9 +157,22 @@ class GoalFormViewModel @Inject constructor(
         _uiState.update { it.copy(isActive = value) }
     }
 
-    /** Link opcional: preço de referência via botão «obter pelo link»; a pesquisa por anúncios usa só o título da meta. */
+    /**
+     * Guarda o URL. Se for link de pesquisa do Mercado Livre (`?q=` / lista), dispara a mesma pesquisa de anúncios
+     * (debounce). URLs só de produto não disparam pesquisa — servem para o botão de preview de preço.
+     */
     fun onTargetUrlChange(value: String) {
         _uiState.update { it.copy(targetUrl = value) }
+        urlSearchDebounceJob?.cancel()
+        val q = MercadoLibreSearchUrlParser.extractSearchQuery(value) ?: return
+        if (q.length < 2) return
+        val snapshotUrl = value.trim()
+        urlSearchDebounceJob = viewModelScope.launch {
+            delay(550)
+            if (_uiState.value.targetUrl.trim() != snapshotUrl) return@launch
+            val syncTitle = _uiState.value.title.isBlank()
+            performProductSearch(query = q, syncTitleFromQuery = syncTitle)
+        }
     }
 
     fun loadPriceFromLink() {
@@ -248,13 +263,19 @@ class GoalFormViewModel @Inject constructor(
         }
     }
 
-    fun searchProductsByTitle() {
-        val q = _uiState.value.title.trim()
-        if (q.length < 2) {
-            _uiState.update {
-                it.copy(errorMessage = appContext.getString(R.string.goal_error_query_too_short))
+    /** Pesquisa manual: usa o título da meta ou, se o título for curto, o termo extraído de um URL de pesquisa ML no link. */
+    fun refreshProductSearch() {
+        val titleQ = _uiState.value.title.trim()
+        val urlQ = MercadoLibreSearchUrlParser.extractSearchQuery(_uiState.value.targetUrl)?.trim()
+        val q = when {
+            titleQ.length >= 2 -> titleQ
+            urlQ != null && urlQ.length >= 2 -> urlQ
+            else -> {
+                _uiState.update {
+                    it.copy(errorMessage = appContext.getString(R.string.goal_error_query_title_or_search_url))
+                }
+                return
             }
-            return
         }
         viewModelScope.launch {
             performProductSearch(query = q, syncTitleFromQuery = false)
