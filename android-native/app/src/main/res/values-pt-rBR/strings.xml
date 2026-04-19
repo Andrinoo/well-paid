@@ -351,21 +351,21 @@
     <string name="goal_delete_message">Só é possível eliminar se o saldo registado for zero. Continuar?</string>
     <string name="goal_delete_confirm">Eliminar</string>
     <string name="goal_delete_cancel">Cancelar</string>
+    <string name="goal_exit_discard_title">Descartar alterações?</string>
+    <string name="goal_exit_discard_body">Há alterações não guardadas. Sair mesmo assim?</string>
+    <string name="goal_exit_discard_confirm">Sair</string>
+    <string name="goal_exit_discard_keep">Continuar a editar</string>
     <string name="goal_error_title">Indique um título.</string>
     <string name="goal_error_target">Indique um objetivo válido maior que zero.</string>
     <string name="goal_error_initial">Valor inicial inválido.</string>
-    <string name="goal_search_auto_hint">A pesquisa usa o título da meta (2+ letras) ou um URL de pesquisa (?q=…) no campo de link opcional. Até cinco resultados do Google Shopping—toca em Escolher preço e link e confirma. Sem navegador.</string>
+    <string name="goal_search_auto_hint">A pesquisa usa o título da meta (2+ letras) ou um URL de pesquisa (?q=…) no campo de link opcional. Até doze resultados aparecem abaixo; toca numa linha para usar preço e link. Sem navegador.</string>
     <string name="goal_search_refresh_suggestions">Pesquisar de novo</string>
-    <string name="goal_choose_listing_action">Escolher preço e link</string>
-    <string name="goal_product_picker_title">Escolher anúncio</string>
-    <string name="goal_product_picker_subtitle">Escolhe um resultado; o título da meta não muda.</string>
-    <string name="goal_product_picker_confirm">Usar este anúncio</string>
+    <string name="goal_search_results_title">Preços sugeridos (toca num resultado para usar)</string>
     <string name="goal_search_products_by_title">Pesquisar de novo pelo título</string>
     <string name="goal_searching_products">A pesquisar…</string>
     <string name="goal_error_query_too_short">Escreva pelo menos 2 caracteres no título.</string>
     <string name="goal_error_query_title_or_search_url">Indique pelo menos 2 letras no título ou no campo opcional, ou cole um link https.</string>
     <string name="goal_fetch_target_from_link">Obter o valor da meta deste link</string>
-    <string name="goal_search_results_header">Anúncios</string>
     <string name="goal_product_use">Usar este anúncio</string>
     <string name="goal_product_link_label">Link</string>
     <string name="goal_search_no_results">Nenhum resultado de compras. Tenta outras palavras no título ou outro URL. O servidor precisa de SERPAPI_KEY para a pesquisa de preços.</string>
@@ -463,7 +463,7 @@
     <string name="shopping_field_qty">Quantidade</string>
     <string name="shopping_field_unit_price">Custo por unidade (opcional)</string>
     <string name="shopping_grocery_price_hints_title">Preços de referência (toque para preencher o custo)</string>
-    <string name="shopping_grocery_search_auto_hint">A pesquisa de preços corre automaticamente ao escreveres o nome do item (2+ letras).</string>
+    <string name="shopping_grocery_search_auto_hint">A pesquisa de preços corre automaticamente ao escreveres o nome do item (2+ letras). Usa o botão fechar ou Cancelar; a lista faz scroll com o formulário para não fechar o painel ao deslizar.</string>
     <string name="shopping_close_purchase">Fechar compra</string>
     <string name="shopping_subtotal_lines">Subtotal (linhas com preço)</string>
     <string name="shopping_units_total">Unidades</string>

@@ -1,7 +1,7 @@
 package com.wellpaid.ui.goals
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,12 +9,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -24,30 +20,23 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -55,15 +44,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wellpaid.R
-import com.wellpaid.core.model.goal.GoalProductHitDto
-import com.wellpaid.ui.theme.WellPaidCream
-import com.wellpaid.ui.theme.WellPaidCreamMuted
+import com.wellpaid.ui.components.ProductPriceHitCard
 import com.wellpaid.ui.theme.WellPaidGold
 import com.wellpaid.ui.theme.WellPaidNavy
 import com.wellpaid.ui.theme.wellPaidScreenHorizontalPadding
@@ -80,10 +66,18 @@ fun GoalFormScreen(
     viewModel: GoalFormViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    var showProductPicker by remember { mutableStateOf(false) }
+    var showDiscardExitDialog by remember { mutableStateOf(false) }
 
-    LaunchedEffect(state.productSearchResults.isEmpty()) {
-        if (state.productSearchResults.isEmpty()) showProductPicker = false
+    fun tryLeave() {
+        if (viewModel.hasUnsavedChanges()) {
+            showDiscardExitDialog = true
+        } else {
+            onNavigateBack()
+        }
+    }
+
+    BackHandler(enabled = viewModel.hasUnsavedChanges()) {
+        showDiscardExitDialog = true
     }
 
     Scaffold(
@@ -101,7 +95,7 @@ fun GoalFormScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = { tryLeave() }) {
                         Icon(
                             Icons.Filled.Close,
                             contentDescription = stringResource(R.string.common_close),
@@ -234,13 +228,35 @@ fun GoalFormScreen(
 
             if (state.productSearchResults.isNotEmpty()) {
                 Spacer(Modifier.height(12.dp))
-                OutlinedButton(
-                    onClick = { showProductPicker = true },
-                    enabled = !state.isSaving,
+                Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(24.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, WellPaidNavy.copy(alpha = 0.12f)),
+                    color = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 1.dp,
                 ) {
-                    Text(stringResource(R.string.goal_choose_listing_action))
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.goal_search_results_title),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = WellPaidNavy,
+                            modifier = Modifier.padding(bottom = 10.dp),
+                        )
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            state.productSearchResults.take(12).forEach { hit ->
+                                ProductPriceHitCard(
+                                    title = hit.title,
+                                    priceLabel = formatMinorCurrencyFromCents(hit.priceCents, hit.currencyId),
+                                    source = hit.source,
+                                    enabled = !state.isSaving,
+                                    onClick = { viewModel.applyProductListing(hit) },
+                                )
+                            }
+                        }
+                    }
                 }
             }
 
@@ -307,17 +323,6 @@ fun GoalFormScreen(
         }
     }
 
-    if (showProductPicker && state.productSearchResults.isNotEmpty()) {
-        GoalProductPickerBottomSheet(
-            hits = state.productSearchResults,
-            onDismiss = { showProductPicker = false },
-            onConfirm = { hit ->
-                viewModel.applyProductListing(hit)
-                showProductPicker = false
-            },
-        )
-    }
-
     if (state.showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { viewModel.dismissDeleteConfirm() },
@@ -348,123 +353,27 @@ fun GoalFormScreen(
             },
         )
     }
-}
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun GoalProductPickerBottomSheet(
-    hits: List<GoalProductHitDto>,
-    onDismiss: () -> Unit,
-    onConfirm: (GoalProductHitDto) -> Unit,
-) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var selectedIndex by remember(hits) { mutableIntStateOf(0) }
-
-    LaunchedEffect(hits) {
-        if (hits.isNotEmpty()) {
-            selectedIndex = selectedIndex.coerceIn(0, hits.lastIndex)
-        }
-    }
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        dragHandle = { BottomSheetDefaults.DragHandle() },
-        containerColor = WellPaidCream,
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 24.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.goal_product_picker_title),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = WellPaidNavy,
-            )
-            Text(
-                text = stringResource(R.string.goal_product_picker_subtitle),
-                style = MaterialTheme.typography.bodySmall,
-                color = WellPaidNavy.copy(alpha = 0.7f),
-                modifier = Modifier.padding(top = 6.dp),
-            )
-            Spacer(Modifier.height(16.dp))
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 420.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                itemsIndexed(
-                    items = hits,
-                    key = { _, h -> h.url },
-                ) { index, hit ->
-                    val selected = index == selectedIndex
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { selectedIndex = index },
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = WellPaidCreamMuted),
-                        border = BorderStroke(
-                            width = if (selected) 2.dp else 1.dp,
-                            color = if (selected) WellPaidGold else WellPaidNavy.copy(alpha = 0.12f),
-                        ),
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            RadioButton(
-                                selected = selected,
-                                onClick = { selectedIndex = index },
-                            )
-                            Column(Modifier.weight(1f)) {
-                                Text(
-                                    text = hit.title,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    maxLines = 3,
-                                    overflow = TextOverflow.Ellipsis,
-                                    color = WellPaidNavy,
-                                )
-                                Spacer(Modifier.height(4.dp))
-                                Text(
-                                    text = formatMinorCurrencyFromCents(hit.priceCents, hit.currencyId),
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = WellPaidNavy,
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 20.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-            ) {
-                TextButton(onClick = onDismiss) {
-                    Text(stringResource(R.string.common_cancel))
-                }
-                Button(
+    if (showDiscardExitDialog) {
+        AlertDialog(
+            onDismissRequest = { showDiscardExitDialog = false },
+            title = { Text(stringResource(R.string.goal_exit_discard_title)) },
+            text = { Text(stringResource(R.string.goal_exit_discard_body)) },
+            confirmButton = {
+                TextButton(
                     onClick = {
-                        val hit = hits.getOrNull(selectedIndex) ?: return@Button
-                        onConfirm(hit)
+                        showDiscardExitDialog = false
+                        onNavigateBack()
                     },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = WellPaidGold,
-                        contentColor = WellPaidNavy,
-                    ),
-                    shape = RoundedCornerShape(24.dp),
                 ) {
-                    Text(stringResource(R.string.goal_product_picker_confirm))
+                    Text(stringResource(R.string.goal_exit_discard_confirm))
                 }
-            }
-        }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDiscardExitDialog = false }) {
+                    Text(stringResource(R.string.goal_exit_discard_keep))
+                }
+            },
+        )
     }
 }

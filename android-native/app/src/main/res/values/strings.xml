@@ -351,21 +351,21 @@
     <string name="goal_delete_message">You can only delete if the recorded balance is zero. Continue?</string>
     <string name="goal_delete_confirm">Delete</string>
     <string name="goal_delete_cancel">Cancel</string>
+    <string name="goal_exit_discard_title">Discard changes?</string>
+    <string name="goal_exit_discard_body">You have unsaved changes. Leave this screen anyway?</string>
+    <string name="goal_exit_discard_confirm">Leave</string>
+    <string name="goal_exit_discard_keep">Keep editing</string>
     <string name="goal_error_title">Enter a title.</string>
     <string name="goal_error_target">Enter a valid target greater than zero.</string>
     <string name="goal_error_initial">Invalid initial amount.</string>
-    <string name="goal_search_auto_hint">Search runs from the goal title (2+ characters), or from a search URL (?q=…) in the optional link field. Up to five Google Shopping results—tap Choose price and link, then confirm. No browser.</string>
+    <string name="goal_search_auto_hint">Search runs from the goal title (2+ characters), or from a search URL (?q=…) in the optional link field. Up to twelve Google Shopping results appear below; tap a row to apply price and link. No browser.</string>
     <string name="goal_search_refresh_suggestions">Search again</string>
-    <string name="goal_choose_listing_action">Choose price and link</string>
-    <string name="goal_product_picker_title">Pick a listing</string>
-    <string name="goal_product_picker_subtitle">Choose a result; your goal title is unchanged.</string>
-    <string name="goal_product_picker_confirm">Use this listing</string>
+    <string name="goal_search_results_title">Suggested prices (tap a row to apply)</string>
     <string name="goal_search_products_by_title">Search again by title</string>
     <string name="goal_searching_products">Searching…</string>
     <string name="goal_error_query_too_short">Enter at least 2 characters in the title.</string>
     <string name="goal_error_query_title_or_search_url">Enter at least 2 characters in the title or in the optional field, or paste an https link.</string>
     <string name="goal_fetch_target_from_link">Get goal amount from this link</string>
-    <string name="goal_search_results_header">Listings</string>
     <string name="goal_product_use">Use this listing</string>
     <string name="goal_product_link_label">Link</string>
     <string name="goal_search_no_results">No shopping results found. Try different words in the title or another search URL. The server needs SERPAPI_KEY for price search.</string>
@@ -463,7 +463,7 @@
     <string name="shopping_field_qty">Quantity</string>
     <string name="shopping_field_unit_price">Cost per unit (optional)</string>
     <string name="shopping_grocery_price_hints_title">Reference prices (tap to fill unit cost)</string>
-    <string name="shopping_grocery_search_auto_hint">Prices search automatically as you type the item name (2+ characters).</string>
+    <string name="shopping_grocery_search_auto_hint">Prices search automatically as you type the item name (2+ characters). Use the close button or Cancel to close; the list scrolls with the rest of the form so it does not pull the sheet closed.</string>
     <string name="shopping_close_purchase">Complete purchase</string>
     <string name="shopping_subtotal_lines">Subtotal (priced lines)</string>
     <string name="shopping_units_total">Units</string>

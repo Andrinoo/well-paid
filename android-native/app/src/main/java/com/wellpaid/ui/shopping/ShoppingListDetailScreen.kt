@@ -27,9 +27,9 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -44,6 +44,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -78,6 +79,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wellpaid.R
+import com.wellpaid.ui.components.ProductPriceHitCard
 import com.wellpaid.core.model.goal.GoalProductHitDto
 import com.wellpaid.core.model.shopping.ShoppingListDetailDto
 import com.wellpaid.core.model.shopping.ShoppingListItemDto
@@ -895,7 +897,10 @@ private fun AddEditItemBottomSheet(
     onSave: (String, Int, Int?) -> Unit,
     onClearPrice: (() -> Unit)? = null,
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true,
+        confirmValueChange = { new -> new != SheetValue.Hidden },
+    )
     var label by remember(initialLabel) { mutableStateOf(initialLabel) }
     var qty by remember(initialQty) { mutableStateOf(initialQty) }
     var amount by remember(initialAmount) { mutableStateOf(initialAmount) }
@@ -910,23 +915,40 @@ private fun AddEditItemBottomSheet(
     ModalBottomSheet(
         onDismissRequest = { if (!isSaving) onDismiss() },
         sheetState = sheetState,
-        dragHandle = { BottomSheetDefaults.DragHandle() },
+        dragHandle = null,
         containerColor = WellPaidCream,
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp)
+                .verticalScroll(rememberScrollState())
                 .navigationBarsPadding()
+                .padding(horizontal = 20.dp)
                 .padding(bottom = 24.dp),
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = WellPaidNavy,
-            )
-            Spacer(Modifier.padding(top = 16.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = WellPaidNavy,
+                    modifier = Modifier.weight(1f),
+                )
+                IconButton(
+                    onClick = onDismiss,
+                    enabled = !isSaving,
+                ) {
+                    Icon(
+                        Icons.Filled.Close,
+                        contentDescription = stringResource(R.string.common_close),
+                        tint = WellPaidNavy,
+                    )
+                }
+            }
+            Spacer(Modifier.padding(top = 12.dp))
             OutlinedTextField(
                 value = label,
                 onValueChange = {
@@ -985,53 +1007,15 @@ private fun AddEditItemBottomSheet(
                     color = WellPaidNavy.copy(alpha = 0.85f),
                     modifier = Modifier.padding(top = 12.dp, bottom = 8.dp),
                 )
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 360.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    items(
-                        items = groceryHits,
-                        key = { h -> h.url + h.priceCents + h.title },
-                    ) { hit ->
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable(enabled = !isSaving) {
-                                    amount = centsToBrlInput(hit.priceCents)
-                                },
-                            colors = CardDefaults.cardColors(
-                                containerColor = WellPaidCreamMuted,
-                            ),
-                            shape = RoundedCornerShape(10.dp),
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column(Modifier.weight(1f)) {
-                                    Text(
-                                        text = hit.title,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis,
-                                        color = WellPaidNavy,
-                                    )
-                                    Text(
-                                        text = formatBrlFromCents(hit.priceCents),
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = WellPaidNavy,
-                                    )
-                                }
-                                Text(
-                                    text = hit.source,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = WellPaidNavy.copy(alpha = 0.55f),
-                                )
-                            }
-                        }
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    groceryHits.forEach { hit ->
+                        ProductPriceHitCard(
+                            title = hit.title,
+                            priceLabel = formatBrlFromCents(hit.priceCents),
+                            source = hit.source,
+                            enabled = !isSaving,
+                            onClick = { amount = centsToBrlInput(hit.priceCents) },
+                        )
                     }
                 }
             }
@@ -1071,7 +1055,10 @@ private fun CompletePurchaseSheet(
     onDismiss: () -> Unit,
     onSubmit: (String, String, Int?, Int?) -> Unit,
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true,
+        confirmValueChange = { new -> new != SheetValue.Hidden },
+    )
     var categoryId by remember {
         mutableStateOf(categories.firstOrNull()?.id.orEmpty())
     }
@@ -1089,28 +1076,49 @@ private fun CompletePurchaseSheet(
     }
 
     ModalBottomSheet(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!isSaving) onDismiss() },
         sheetState = sheetState,
+        dragHandle = null,
+        containerColor = WellPaidCream,
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
+                .navigationBarsPadding()
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 32.dp),
         ) {
-            Text(
-                text = stringResource(R.string.shopping_complete_title),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = WellPaidNavy,
-            )
-            Text(
-                text = stringResource(R.string.shopping_complete_subtitle),
-                style = MaterialTheme.typography.bodySmall,
-                color = WellPaidNavy.copy(alpha = 0.65f),
-                modifier = Modifier.padding(top = 4.dp, bottom = 16.dp),
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.shopping_complete_title),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = WellPaidNavy,
+                    )
+                    Text(
+                        text = stringResource(R.string.shopping_complete_subtitle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = WellPaidNavy.copy(alpha = 0.65f),
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
+                IconButton(
+                    onClick = onDismiss,
+                    enabled = !isSaving,
+                ) {
+                    Icon(
+                        Icons.Filled.Close,
+                        contentDescription = stringResource(R.string.common_close),
+                        tint = WellPaidNavy,
+                    )
+                }
+            }
+            Spacer(Modifier.padding(bottom = 12.dp))
             if (categories.isEmpty()) {
                 Text(
                     text = stringResource(R.string.expense_no_categories),

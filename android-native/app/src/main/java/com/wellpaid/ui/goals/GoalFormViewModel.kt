@@ -73,10 +73,37 @@ class GoalFormViewModel @Inject constructor(
 
     val isEditMode: Boolean get() = goalId != null
 
+    private data class FormBaseline(
+        val title: String,
+        val targetText: String,
+        val initialText: String,
+        val targetUrl: String,
+        val isActive: Boolean,
+    )
+
+    /** Snapshot para detetar saída acidental com alterações não guardadas. */
+    private var formBaseline: FormBaseline? = null
+
+    private fun snapshotBaseline(s: GoalFormUiState): FormBaseline =
+        FormBaseline(
+            title = s.title.trim(),
+            targetText = s.targetText.trim(),
+            initialText = s.initialText.trim(),
+            targetUrl = s.targetUrl.trim(),
+            isActive = s.isActive,
+        )
+
+    fun hasUnsavedChanges(): Boolean {
+        val b = formBaseline ?: return false
+        if (_uiState.value.isLoading) return false
+        return snapshotBaseline(_uiState.value) != b
+    }
+
     init {
         val id = goalId
         if (id == null) {
             _uiState.update { it.copy(isLoading = false) }
+            formBaseline = snapshotBaseline(_uiState.value)
         } else {
             viewModelScope.launch {
                 runCatching { goalsApi.getGoal(id) }
@@ -95,6 +122,7 @@ class GoalFormViewModel @Inject constructor(
                                 errorMessage = null,
                             )
                         }
+                        formBaseline = snapshotBaseline(_uiState.value)
                     }
                     .onFailure { t ->
                         _uiState.update {
@@ -389,7 +417,11 @@ class GoalFormViewModel @Inject constructor(
                 }
             }
             result.onSuccess {
-                _uiState.update { it.copy(isSaving = false) }
+                _uiState.update { s ->
+                    val next = s.copy(isSaving = false)
+                    formBaseline = snapshotBaseline(next)
+                    next
+                }
                 onSuccess()
             }.onFailure { t ->
                 _uiState.update {

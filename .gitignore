@@ -33,6 +33,9 @@ Thumbs.db
 # Cópia solta na raiz; ícones Android oficiais em mobile/android/
 /android/
 
+# Contexto local de outro sistema (não faz parte deste repo)
+/app.py
+
 # Python / backend
 backend/.venv/
 **/__pycache__/
