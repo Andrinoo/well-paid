@@ -7,6 +7,9 @@ import androidx.lifecycle.viewModelScope
 import com.wellpaid.R
 import com.wellpaid.core.model.goal.GoalCreateDto
 import com.wellpaid.core.model.goal.GoalDto
+import com.wellpaid.core.model.goal.GoalPreviewFromUrlRequestDto
+import com.wellpaid.core.model.goal.GoalProductHitDto
+import com.wellpaid.core.model.goal.GoalProductSearchRequestDto
 import com.wellpaid.core.model.goal.GoalUpdateDto
 import com.wellpaid.core.network.GoalsApi
 import com.wellpaid.util.FastApiErrorMapper
@@ -26,6 +29,7 @@ data class GoalFormUiState(
     val isLoading: Boolean = true,
     val isSaving: Boolean = false,
     val isRefreshingPrice: Boolean = false,
+    val isSearchingProducts: Boolean = false,
     val loaded: GoalDto? = null,
     val title: String = "",
     val targetText: String = "",
@@ -33,6 +37,12 @@ data class GoalFormUiState(
     val targetUrl: String = "",
     val isActive: Boolean = true,
     val referencePriceLabel: String? = null,
+    /** Preenchido ao criar meta (sem `loaded`) a partir da pesquisa ou do preview por URL. */
+    val draftReferenceProductName: String? = null,
+    val draftReferencePriceCents: Int? = null,
+    val draftReferenceCurrency: String = "BRL",
+    val draftPriceSource: String? = null,
+    val productSearchResults: List<GoalProductHitDto> = emptyList(),
     val errorMessage: String? = null,
     val showDeleteConfirm: Boolean = false,
 )
@@ -106,6 +116,60 @@ class GoalFormViewModel @Inject constructor(
         _uiState.update { it.copy(targetUrl = value) }
     }
 
+    fun loadPriceFromLink() {
+        if (isEditMode) {
+            refreshReferencePrice()
+        } else {
+            previewFromUrl()
+        }
+    }
+
+    private fun previewFromUrl() {
+        val url = _uiState.value.targetUrl.trim()
+        if (url.isEmpty()) {
+            _uiState.update {
+                it.copy(errorMessage = appContext.getString(R.string.goal_error_url_required_for_refresh))
+            }
+            return
+        }
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRefreshingPrice = true, errorMessage = null) }
+            runCatching {
+                goalsApi.previewFromUrl(GoalPreviewFromUrlRequestDto(url = url))
+            }
+                .onSuccess { p ->
+                    val suggested = p.suggestedTargetCents
+                    val name = p.referenceProductName
+                    _uiState.update { s ->
+                        var nextTitle = s.title
+                        if (nextTitle.isBlank() && !name.isNullOrBlank()) {
+                            nextTitle = name.take(200)
+                        }
+                        s.copy(
+                            isRefreshingPrice = false,
+                            title = nextTitle,
+                            targetText = suggested?.let { centsToBrlInput(it) } ?: s.targetText,
+                            referencePriceLabel = p.referencePriceCents?.let { c -> formatBrlFromCents(c) }
+                                ?: s.referencePriceLabel,
+                            draftReferenceProductName = name?.take(200) ?: s.draftReferenceProductName,
+                            draftReferencePriceCents = p.referencePriceCents ?: s.draftReferencePriceCents,
+                            draftReferenceCurrency = p.referenceCurrency,
+                            draftPriceSource = p.priceSource ?: s.draftPriceSource,
+                            errorMessage = null,
+                        )
+                    }
+                }
+                .onFailure { t ->
+                    _uiState.update {
+                        it.copy(
+                            isRefreshingPrice = false,
+                            errorMessage = FastApiErrorMapper.message(appContext, t),
+                        )
+                    }
+                }
+        }
+    }
+
     fun refreshReferencePrice() {
         val id = goalId ?: return
         val url = _uiState.value.targetUrl.trim()
@@ -123,6 +187,8 @@ class GoalFormViewModel @Inject constructor(
                         it.copy(
                             isRefreshingPrice = false,
                             loaded = g,
+                            targetText = centsToBrlInput(g.targetCents),
+                            targetUrl = g.targetUrl.orEmpty(),
                             referencePriceLabel = g.referencePriceCents?.let { c -> formatBrlFromCents(c) },
                         )
                     }
@@ -135,6 +201,63 @@ class GoalFormViewModel @Inject constructor(
                         )
                     }
                 }
+        }
+    }
+
+    fun searchProductsByTitle() {
+        val q = _uiState.value.title.trim()
+        if (q.length < 2) {
+            _uiState.update {
+                it.copy(errorMessage = appContext.getString(R.string.goal_error_query_too_short))
+            }
+            return
+        }
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSearchingProducts = true, errorMessage = null) }
+            runCatching {
+                goalsApi.productSearch(GoalProductSearchRequestDto(query = q))
+            }
+                .onSuccess { resp ->
+                    _uiState.update {
+                        it.copy(
+                            isSearchingProducts = false,
+                            productSearchResults = resp.results,
+                        )
+                    }
+                }
+                .onFailure { t ->
+                    _uiState.update {
+                        it.copy(
+                            isSearchingProducts = false,
+                            errorMessage = FastApiErrorMapper.message(appContext, t),
+                        )
+                    }
+                }
+        }
+    }
+
+    fun applyProductHit(hit: GoalProductHitDto) {
+        _uiState.update { s ->
+            val nextLoaded = s.loaded?.copy(
+                referenceProductName = hit.title.take(200),
+                referencePriceCents = hit.priceCents,
+                referenceCurrency = hit.currencyId,
+                priceSource = hit.source,
+                targetUrl = hit.url,
+            )
+            s.copy(
+                title = hit.title.take(200),
+                targetUrl = hit.url,
+                targetText = centsToBrlInput(hit.priceCents),
+                referencePriceLabel = formatBrlFromCents(hit.priceCents),
+                draftReferenceProductName = hit.title.take(200),
+                draftReferencePriceCents = hit.priceCents,
+                draftReferenceCurrency = hit.currencyId,
+                draftPriceSource = hit.source,
+                productSearchResults = emptyList(),
+                errorMessage = null,
+                loaded = nextLoaded ?: s.loaded,
+            )
         }
     }
 
@@ -193,6 +316,10 @@ class GoalFormViewModel @Inject constructor(
                             currentCents = initialForCreate!!,
                             isActive = s.isActive,
                             targetUrl = url,
+                            referenceProductName = s.draftReferenceProductName,
+                            referencePriceCents = s.draftReferencePriceCents,
+                            referenceCurrency = s.draftReferenceCurrency,
+                            priceSource = s.draftPriceSource,
                         ),
                     )
                 } else {
@@ -251,11 +378,5 @@ class GoalFormViewModel @Inject constructor(
                     }
                 }
         }
-    }
-
-    private fun centsToTargetInput(cents: Int): String {
-        val reais = cents / 100
-        val c = cents % 100
-        return "$reais,${"%02d".format(c)}"
     }
 }

@@ -77,3 +77,34 @@ class GoalRefreshPriceResponse(BaseModel):
     price_checked_at: datetime | None = None
     price_source: str | None = None
     price_alternatives: list[GoalPriceAlternativeItem] = Field(default_factory=list)
+
+
+class GoalPreviewFromUrlBody(BaseModel):
+    url: str = Field(min_length=8, max_length=2048)
+
+
+class GoalPreviewFromUrlResponse(BaseModel):
+    reference_product_name: str | None = None
+    reference_price_cents: int | None = None
+    suggested_target_cents: int | None = None
+    reference_currency: str = "BRL"
+    price_source: str | None = None
+
+
+class GoalProductSearchBody(BaseModel):
+    query: str = Field(min_length=2, max_length=200)
+    site_id: str = Field(default="MLB", max_length=8)
+
+
+class GoalProductHit(BaseModel):
+    title: str
+    price_cents: int = Field(ge=0)
+    currency_id: str = "BRL"
+    url: str
+    thumbnail: str | None = None
+    source: str = "mercadolibre"
+    external_id: str | None = None
+
+
+class GoalProductSearchResponse(BaseModel):
+    results: list[GoalProductHit] = Field(default_factory=list)

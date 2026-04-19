@@ -16,11 +16,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import retrofit2.Response
 import javax.inject.Inject
 
 data class GoalDetailUiState(
     val isLoading: Boolean = true,
     val isSaving: Boolean = false,
+    val isDeleting: Boolean = false,
     val goal: GoalDto? = null,
     val errorMessage: String? = null,
 )
@@ -92,6 +94,36 @@ class GoalDetailViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isSaving = false,
+                            errorMessage = FastApiErrorMapper.message(appContext, t),
+                        )
+                    }
+                }
+        }
+    }
+
+    fun canDelete(): Boolean {
+        val g = _uiState.value.goal ?: return false
+        return g.isMine && g.currentCents == 0
+    }
+
+    fun deleteGoal(onSuccess: () -> Unit) {
+        if (!canDelete()) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isDeleting = true, errorMessage = null) }
+            runCatching {
+                val resp: Response<Void> = goalsApi.deleteGoal(goalId)
+                if (!resp.isSuccessful) {
+                    error("HTTP ${resp.code()}")
+                }
+            }
+                .onSuccess {
+                    _uiState.update { it.copy(isDeleting = false) }
+                    onSuccess()
+                }
+                .onFailure { t ->
+                    _uiState.update {
+                        it.copy(
+                            isDeleting = false,
                             errorMessage = FastApiErrorMapper.message(appContext, t),
                         )
                     }

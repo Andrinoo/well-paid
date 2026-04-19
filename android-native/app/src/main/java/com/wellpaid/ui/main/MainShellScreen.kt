@@ -113,6 +113,7 @@ fun MainShellScreen(
     onOpenIncomeDetail: (String) -> Unit,
     onOpenGoalNew: () -> Unit,
     onOpenGoalDetail: (String) -> Unit,
+    onOpenGoalEdit: (String) -> Unit,
     onOpenShoppingLists: () -> Unit,
     onOpenAnnouncements: () -> Unit,
     onOpenReceivables: () -> Unit,
@@ -453,6 +454,7 @@ fun MainShellScreen(
                     3 -> GoalsListContent(
                         mainRouteEntry = mainRouteEntry,
                         onGoalClick = onOpenGoalDetail,
+                        onEditGoal = onOpenGoalEdit,
                         onNewGoal = onOpenGoalNew,
                         modifier = Modifier.fillMaxSize(),
                         tabSwipe = tabSwipeModifier,

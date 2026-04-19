@@ -1,6 +1,7 @@
 package com.wellpaid.ui.goals
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -11,9 +12,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
@@ -43,6 +47,7 @@ import com.wellpaid.util.formatBrlFromCents
 fun GoalsListContent(
     mainRouteEntry: NavBackStackEntry,
     onGoalClick: (String) -> Unit,
+    onEditGoal: (String) -> Unit,
     onNewGoal: () -> Unit,
     modifier: Modifier = Modifier,
     tabSwipe: Modifier = Modifier,
@@ -115,7 +120,12 @@ fun GoalsListContent(
                 items(state.goals, key = { it.id }) { goal ->
                     GoalListRow(
                         goal = goal,
-                        modifier = Modifier.clickable { onGoalClick(goal.id) },
+                        onClick = { onGoalClick(goal.id) },
+                        onEditClick = if (goal.isMine) {
+                            { onEditGoal(goal.id) }
+                        } else {
+                            null
+                        },
                     )
                     HorizontalDivider()
                 }
@@ -127,6 +137,8 @@ fun GoalsListContent(
 @Composable
 private fun GoalListRow(
     goal: GoalDto,
+    onClick: () -> Unit,
+    onEditClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val progress = if (goal.targetCents > 0) {
@@ -152,7 +164,7 @@ private fun GoalListRow(
     }
 
     ListItem(
-        modifier = modifier,
+        modifier = modifier.clickable(onClick = onClick),
         headlineContent = {
             Text(
                 text = goal.title,
@@ -175,6 +187,20 @@ private fun GoalListRow(
                         .fillMaxWidth()
                         .padding(top = 6.dp),
                 )
+            }
+        },
+        trailingContent = {
+            if (onEditClick != null) {
+                IconButton(
+                    onClick = onEditClick,
+                    modifier = Modifier.size(48.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Edit,
+                        contentDescription = stringResource(R.string.goal_edit_action),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
             }
         },
         colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface),

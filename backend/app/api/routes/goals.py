@@ -15,10 +15,16 @@ from app.schemas.goal import (
     GoalContribute,
     GoalContributionResponse,
     GoalCreate,
+    GoalPreviewFromUrlBody,
+    GoalPreviewFromUrlResponse,
+    GoalProductHit,
+    GoalProductSearchBody,
+    GoalProductSearchResponse,
     GoalResponse,
     GoalUpdate,
 )
 from app.services.family_scope import family_peer_user_ids
+from app.services.goal_product_search import search_mercadolibre
 from app.services.goal_reference_price import fetch_product_hints
 
 router = APIRouter(prefix="/goals", tags=["goals"])
@@ -111,6 +117,39 @@ def create_goal(
     return _to_response(row, user.id)
 
 
+@router.post("/preview-from-url", response_model=GoalPreviewFromUrlResponse)
+def preview_goal_from_url(
+    body: GoalPreviewFromUrlBody,
+    user: Annotated[User, Depends(get_current_user)],
+) -> GoalPreviewFromUrlResponse:
+    """Pré-visualiza nome/preço a partir de um URL (sem gravar meta)."""
+    _ = user
+    hints = fetch_product_hints(body.url.strip())
+    pc = hints.get("reference_price_cents")
+    pc_i = int(pc) if pc is not None else None
+    return GoalPreviewFromUrlResponse(
+        reference_product_name=hints.get("reference_product_name"),
+        reference_price_cents=pc_i,
+        suggested_target_cents=pc_i,
+        reference_currency=str(hints.get("reference_currency") or "BRL")[:8],
+        price_source=str(hints.get("price_source") or "unavailable"),
+    )
+
+
+@router.post("/product-search", response_model=GoalProductSearchResponse)
+def search_goal_products(
+    body: GoalProductSearchBody,
+    user: Annotated[User, Depends(get_current_user)],
+) -> GoalProductSearchResponse:
+    """Pesquisa por nome (Mercado Livre API pública)."""
+    _ = user
+    site = (body.site_id or "MLB").strip() or "MLB"
+    rows = search_mercadolibre(body.query.strip(), site_id=site)
+    return GoalProductSearchResponse(
+        results=[GoalProductHit.model_validate(r) for r in rows],
+    )
+
+
 @router.get("/{goal_id}/contributions", response_model=list[GoalContributionResponse])
 def list_goal_contributions(
     goal_id: uuid.UUID,
@@ -184,7 +223,11 @@ def refresh_goal_reference_price(
     if hints.get("reference_product_name"):
         row.reference_product_name = hints["reference_product_name"]
     if hints.get("reference_price_cents") is not None:
-        row.reference_price_cents = int(hints["reference_price_cents"])
+        pc = int(hints["reference_price_cents"])
+        row.reference_price_cents = pc
+        row.target_cents = pc
+        if int(row.current_cents) > pc:
+            row.current_cents = pc
     if hints.get("reference_currency"):
         row.reference_currency = str(hints["reference_currency"])[:8]
     if hints.get("price_checked_at"):

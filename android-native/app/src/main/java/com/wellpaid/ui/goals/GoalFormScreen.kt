@@ -16,8 +16,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -36,6 +38,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -45,6 +48,7 @@ import com.wellpaid.ui.theme.WellPaidGold
 import com.wellpaid.ui.theme.WellPaidNavy
 import com.wellpaid.ui.theme.wellPaidScreenHorizontalPadding
 import com.wellpaid.ui.theme.wellPaidTopAppBarColors
+import com.wellpaid.util.formatBrlFromCents
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -124,6 +128,75 @@ fun GoalFormScreen(
             )
             Spacer(Modifier.height(12.dp))
 
+            OutlinedButton(
+                onClick = { viewModel.searchProductsByTitle() },
+                enabled = !state.isSaving && !state.isSearchingProducts,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    Icon(Icons.Filled.Search, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = if (state.isSearchingProducts) {
+                            stringResource(R.string.goal_searching_products)
+                        } else {
+                            stringResource(R.string.goal_search_products_by_title)
+                        },
+                    )
+                }
+            }
+
+            if (state.productSearchResults.isNotEmpty()) {
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = stringResource(R.string.goal_search_results_header),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Spacer(Modifier.height(8.dp))
+                state.productSearchResults.take(15).forEach { hit ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                    ) {
+                        Column(Modifier.padding(12.dp)) {
+                            Text(
+                                text = hit.title,
+                                style = MaterialTheme.typography.bodyLarge,
+                                maxLines = 3,
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                text = formatBrlFromCents(hit.priceCents),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = WellPaidNavy,
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                text = stringResource(R.string.goal_product_link_label) + ": " + hit.url,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            TextButton(
+                                onClick = { viewModel.applyProductHit(hit) },
+                                modifier = Modifier.align(Alignment.End),
+                            ) {
+                                Text(stringResource(R.string.goal_product_use))
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
             OutlinedTextField(
                 value = state.targetUrl,
                 onValueChange = { viewModel.setTargetUrl(it) },
@@ -135,35 +208,34 @@ fun GoalFormScreen(
                 shape = RoundedCornerShape(14.dp),
             )
 
-            if (viewModel.isEditMode) {
-                state.referencePriceLabel?.let { ref ->
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = stringResource(R.string.goal_reference_price_label) + ": " + ref,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+            state.referencePriceLabel?.let { ref ->
                 Spacer(Modifier.height(8.dp))
-                OutlinedButton(
-                    onClick = { viewModel.refreshReferencePrice() },
-                    enabled = !state.isSaving && !state.isRefreshingPrice,
-                    modifier = Modifier.fillMaxWidth(),
+                Text(
+                    text = stringResource(R.string.goal_reference_price_label) + ": " + ref,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = { viewModel.loadPriceFromLink() },
+                enabled = !state.isSaving && !state.isRefreshingPrice,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
-                    ) {
-                        Icon(Icons.Filled.Refresh, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = if (state.isRefreshingPrice) {
-                                stringResource(R.string.goal_refreshing_price)
-                            } else {
-                                stringResource(R.string.goal_refresh_price)
-                            },
-                        )
-                    }
+                    Icon(Icons.Filled.Refresh, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = if (state.isRefreshingPrice) {
+                            stringResource(R.string.goal_refreshing_price)
+                        } else {
+                            stringResource(R.string.goal_fetch_target_from_link)
+                        },
+                    )
                 }
             }
 

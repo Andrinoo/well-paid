@@ -305,6 +305,13 @@
     <string name="goal_fab_new">Nova meta</string>
     <string name="goal_detail_title">Meta</string>
     <string name="goal_edit_action">Editar meta</string>
+    <string name="goal_detail_edit_button">Editar meta</string>
+    <string name="goal_detail_delete_button">Eliminar meta</string>
+    <string name="goal_detail_section_link">Link do produto</string>
+    <string name="goal_detail_open_link">Abrir no navegador</string>
+    <string name="goal_detail_reference_price">Preço de referência: %1$s</string>
+    <string name="goal_detail_product_name">Nome detectado: %1$s</string>
+    <string name="goal_detail_alternatives_count">%1$d preços alternativos</string>
     <string name="goal_detail_progress_label">%1$s de %2$s</string>
     <string name="goal_readonly_family">Meta de outro membro da família — só consulta.</string>
     <string name="goal_contribute_button">Registar contribuição</string>
@@ -338,6 +345,13 @@
     <string name="goal_error_title">Indique um título.</string>
     <string name="goal_error_target">Indique um objetivo válido maior que zero.</string>
     <string name="goal_error_initial">Valor inicial inválido.</string>
+    <string name="goal_search_products_by_title">Pesquisar no Mercado Livre pelo título</string>
+    <string name="goal_searching_products">A pesquisar…</string>
+    <string name="goal_error_query_too_short">Escreva pelo menos 2 caracteres no título.</string>
+    <string name="goal_fetch_target_from_link">Obter o valor da meta deste link</string>
+    <string name="goal_search_results_header">Anúncios</string>
+    <string name="goal_product_use">Usar este anúncio</string>
+    <string name="goal_product_link_label">Link</string>
     <string name="emergency_need_login">Inicie sessão para ver a reserva de emergência.</string>
     <string name="emergency_balance_label">Saldo acumulado</string>
     <string name="emergency_tracking_start">A contar desde %1$s</string>

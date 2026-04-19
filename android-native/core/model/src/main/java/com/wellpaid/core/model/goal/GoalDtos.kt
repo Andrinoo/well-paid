@@ -61,3 +61,37 @@ data class GoalContributeDto(
     @SerialName("amount_cents") val amountCents: Int,
     val note: String? = null,
 )
+
+@Serializable
+data class GoalPreviewFromUrlRequestDto(val url: String)
+
+@Serializable
+data class GoalPreviewFromUrlDto(
+    @SerialName("reference_product_name") val referenceProductName: String? = null,
+    @SerialName("reference_price_cents") val referencePriceCents: Int? = null,
+    @SerialName("suggested_target_cents") val suggestedTargetCents: Int? = null,
+    @SerialName("reference_currency") val referenceCurrency: String = "BRL",
+    @SerialName("price_source") val priceSource: String? = null,
+)
+
+@Serializable
+data class GoalProductSearchRequestDto(
+    val query: String,
+    @SerialName("site_id") val siteId: String = "MLB",
+)
+
+@Serializable
+data class GoalProductHitDto(
+    val title: String,
+    @SerialName("price_cents") val priceCents: Int,
+    @SerialName("currency_id") val currencyId: String = "BRL",
+    val url: String,
+    val thumbnail: String? = null,
+    val source: String = "mercadolibre",
+    @SerialName("external_id") val externalId: String? = null,
+)
+
+@Serializable
+data class GoalProductSearchResponseDto(
+    val results: List<GoalProductHitDto> = emptyList(),
+)

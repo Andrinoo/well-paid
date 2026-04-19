@@ -3,6 +3,10 @@ package com.wellpaid.core.network
 import com.wellpaid.core.model.goal.GoalContributeDto
 import com.wellpaid.core.model.goal.GoalCreateDto
 import com.wellpaid.core.model.goal.GoalDto
+import com.wellpaid.core.model.goal.GoalPreviewFromUrlRequestDto
+import com.wellpaid.core.model.goal.GoalPreviewFromUrlDto
+import com.wellpaid.core.model.goal.GoalProductSearchRequestDto
+import com.wellpaid.core.model.goal.GoalProductSearchResponseDto
 import com.wellpaid.core.model.goal.GoalUpdateDto
 import retrofit2.Response
 import retrofit2.http.Body
@@ -39,4 +43,10 @@ interface GoalsApi {
 
     @POST("goals/{id}/refresh-reference-price")
     suspend fun refreshReferencePrice(@Path("id") id: String): GoalDto
+
+    @POST("goals/preview-from-url")
+    suspend fun previewFromUrl(@Body body: GoalPreviewFromUrlRequestDto): GoalPreviewFromUrlDto
+
+    @POST("goals/product-search")
+    suspend fun productSearch(@Body body: GoalProductSearchRequestDto): GoalProductSearchResponseDto
 }

@@ -225,6 +225,9 @@ fun WellPaidNavHost(
                         onOpenGoalDetail = { id ->
                             navController.navigate(NavRoutes.goalDetail(id))
                         },
+                        onOpenGoalEdit = { id ->
+                            navController.navigate(NavRoutes.goalEdit(id))
+                        },
                         onOpenShoppingLists = {
                             navController.navigate(NavRoutes.ShoppingLists)
                         },
@@ -323,6 +326,13 @@ fun WellPaidNavHost(
                         onNavigateBack = { navController.popBackStack() },
                         onEditGoal = { id ->
                             navController.navigate(NavRoutes.goalEdit(id))
+                        },
+                        onGoalDeleted = {
+                            runCatching {
+                                navController.getBackStackEntry(NavRoutes.Main).savedStateHandle["goal_list_dirty"] =
+                                    System.currentTimeMillis()
+                            }
+                            navController.popBackStack()
                         },
                     )
                 }

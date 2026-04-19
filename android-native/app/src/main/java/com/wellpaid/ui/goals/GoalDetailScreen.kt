@@ -34,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -50,11 +51,14 @@ import com.wellpaid.util.parseBrlToCents
 fun GoalDetailScreen(
     onNavigateBack: () -> Unit,
     onEditGoal: (String) -> Unit,
+    onGoalDeleted: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: GoalDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var showContribute by remember { mutableStateOf(false) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+    val uriHandler = LocalUriHandler.current
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -174,12 +178,88 @@ fun GoalDetailScreen(
                     .padding(top = 8.dp),
             )
 
-            if (goal.isMine && goal.isActive) {
+            // Novos campos: link e preço de referência
+            val url = goal.targetUrl?.trim().orEmpty()
+            if (url.isNotEmpty() || goal.referencePriceCents != null || goal.referenceProductName != null) {
+                Spacer(Modifier.height(20.dp))
+                Text(
+                    text = stringResource(R.string.goal_detail_section_link),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(Modifier.height(6.dp))
+                if (url.isNotEmpty()) {
+                    Text(
+                        text = url,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    TextButton(onClick = { runCatching { uriHandler.openUri(url) } }) {
+                        Text(stringResource(R.string.goal_detail_open_link))
+                    }
+                }
+                goal.referenceProductName?.takeIf { it.isNotBlank() }?.let { name ->
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = stringResource(R.string.goal_detail_product_name, name),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                goal.referencePriceCents?.let { cents ->
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = stringResource(
+                            R.string.goal_detail_reference_price,
+                            formatBrlFromCents(cents),
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+                if (goal.priceAlternatives.isNotEmpty()) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = stringResource(
+                            R.string.goal_detail_alternatives_count,
+                            goal.priceAlternatives.size,
+                        ),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.tertiary,
+                    )
+                }
+            }
+
+            if (goal.isMine) {
                 Spacer(Modifier.height(24.dp))
+                OutlinedButton(
+                    onClick = { onEditGoal(goal.id) },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !state.isSaving && !state.isDeleting,
+                ) {
+                    Text(stringResource(R.string.goal_detail_edit_button))
+                }
+                if (goal.currentCents == 0) {
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = { showDeleteConfirm = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !state.isSaving && !state.isDeleting,
+                    ) {
+                        Text(
+                            text = stringResource(R.string.goal_detail_delete_button),
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                }
+            }
+
+            if (goal.isMine && goal.isActive) {
+                Spacer(Modifier.height(16.dp))
                 OutlinedButton(
                     onClick = { showContribute = true },
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = !state.isSaving,
+                    enabled = !state.isSaving && !state.isDeleting,
                 ) {
                     Text(stringResource(R.string.goal_contribute_button))
                 }
@@ -200,6 +280,43 @@ fun GoalDetailScreen(
                 }
                 viewModel.contribute(cents, note) {
                     showContribute = false
+                }
+            },
+        )
+    }
+
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = {
+                if (!state.isDeleting) showDeleteConfirm = false
+            },
+            title = { Text(stringResource(R.string.goal_delete_title)) },
+            text = { Text(stringResource(R.string.goal_delete_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteGoal {
+                            showDeleteConfirm = false
+                            onGoalDeleted()
+                        }
+                    },
+                    enabled = !state.isDeleting,
+                ) {
+                    Text(
+                        text = if (state.isDeleting) {
+                            stringResource(R.string.goal_saving)
+                        } else {
+                            stringResource(R.string.goal_delete_confirm)
+                        },
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showDeleteConfirm = false },
+                    enabled = !state.isDeleting,
+                ) {
+                    Text(stringResource(R.string.goal_delete_cancel))
                 }
             },
         )
