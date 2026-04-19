@@ -74,3 +74,11 @@ data class ShoppingListCompleteDto(
     @SerialName("is_shared") val isShared: Boolean = false,
     @SerialName("shared_with_user_id") val sharedWithUserId: String? = null,
 )
+
+/** Corpo de POST /shopping-lists/price-suggestions (sugestões mercearia ao adicionar item). */
+@Serializable
+data class ShoppingListGroceryPriceRequestDto(
+    val query: String,
+    val unit: String? = null,
+    @SerialName("site_id") val siteId: String = "MLB",
+)

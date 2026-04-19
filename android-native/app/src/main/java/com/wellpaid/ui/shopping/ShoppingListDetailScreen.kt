@@ -77,6 +77,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wellpaid.R
+import com.wellpaid.core.model.goal.GoalProductHitDto
 import com.wellpaid.core.model.shopping.ShoppingListDetailDto
 import com.wellpaid.core.model.shopping.ShoppingListItemDto
 import com.wellpaid.ui.components.WellPaidDatePickerField
@@ -479,9 +480,18 @@ fun ShoppingListDetailScreen(
             initialQty = "1",
             initialAmount = "",
             isSaving = state.isSaving,
-            onDismiss = { showAddItem = false },
+            groceryHits = state.groceryPriceHits,
+            groceryLoading = state.groceryPriceSearchLoading,
+            onLabelChanged = { viewModel.onShoppingItemLabelForPriceHints(it) },
+            onDismiss = {
+                viewModel.clearGroceryPriceHints()
+                showAddItem = false
+            },
             onSave = { label, qty, amountCents ->
-                viewModel.addItem(label, qty, amountCents) { showAddItem = false }
+                viewModel.addItem(label, qty, amountCents) {
+                    viewModel.clearGroceryPriceHints()
+                    showAddItem = false
+                }
             },
         )
     }
@@ -494,7 +504,13 @@ fun ShoppingListDetailScreen(
             initialAmount = line.lineAmountCents?.let { com.wellpaid.util.centsToBrlInput(it) }.orEmpty(),
             isSaving = state.isSaving,
             showClearPrice = line.lineAmountCents != null,
-            onDismiss = { editItem = null },
+            groceryHits = state.groceryPriceHits,
+            groceryLoading = state.groceryPriceSearchLoading,
+            onLabelChanged = { viewModel.onShoppingItemLabelForPriceHints(it) },
+            onDismiss = {
+                viewModel.clearGroceryPriceHints()
+                editItem = null
+            },
             onSave = { label, qty, amountCents ->
                 val clear = line.lineAmountCents != null && amountCents == null
                 viewModel.patchItem(
@@ -504,10 +520,12 @@ fun ShoppingListDetailScreen(
                     lineAmountCents = amountCents,
                     clearLineAmount = clear,
                 )
+                viewModel.clearGroceryPriceHints()
                 editItem = null
             },
             onClearPrice = {
                 viewModel.patchItem(itemId = line.id, clearLineAmount = true)
+                viewModel.clearGroceryPriceHints()
                 editItem = null
             },
         )
@@ -868,6 +886,9 @@ private fun AddEditItemDialog(
     initialAmount: String,
     isSaving: Boolean,
     showClearPrice: Boolean = false,
+    groceryHits: List<GoalProductHitDto> = emptyList(),
+    groceryLoading: Boolean = false,
+    onLabelChanged: (String) -> Unit = {},
     onDismiss: () -> Unit,
     onSave: (String, Int, Int?) -> Unit,
     onClearPrice: (() -> Unit)? = null,
@@ -875,14 +896,29 @@ private fun AddEditItemDialog(
     var label by remember { mutableStateOf(initialLabel) }
     var qty by remember { mutableStateOf(initialQty) }
     var amount by remember { mutableStateOf(initialAmount) }
+
+    LaunchedEffect(initialLabel) {
+        val t = initialLabel.trim()
+        if (t.length >= 2) {
+            onLabelChanged(t)
+        }
+    }
+
     AlertDialog(
         onDismissRequest = { if (!isSaving) onDismiss() },
         title = { Text(title) },
         text = {
-            Column {
+            Column(
+                modifier = Modifier
+                    .heightIn(max = 480.dp)
+                    .verticalScroll(rememberScrollState()),
+            ) {
                 OutlinedTextField(
                     value = label,
-                    onValueChange = { label = it },
+                    onValueChange = {
+                        label = it
+                        onLabelChanged(it)
+                    },
                     label = { Text(stringResource(R.string.shopping_field_label_item)) },
                     enabled = !isSaving,
                     modifier = Modifier.fillMaxWidth(),
@@ -906,6 +942,68 @@ private fun AddEditItemDialog(
                 if (showClearPrice && onClearPrice != null) {
                     TextButton(onClick = onClearPrice, enabled = !isSaving) {
                         Text(stringResource(R.string.shopping_clear_unit_price))
+                    }
+                }
+                if (groceryLoading) {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                        horizontalArrangement = Arrangement.Center,
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = WellPaidNavy,
+                            strokeWidth = 2.dp,
+                        )
+                    }
+                }
+                if (groceryHits.isNotEmpty()) {
+                    Text(
+                        text = stringResource(R.string.shopping_grocery_price_hints_title),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = WellPaidNavy.copy(alpha = 0.85f),
+                        modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
+                    )
+                    groceryHits.forEach { hit ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                                .clickable(enabled = !isSaving) {
+                                    amount = centsToBrlInput(hit.priceCents)
+                                },
+                            colors = CardDefaults.cardColors(
+                                containerColor = WellPaidCreamMuted,
+                            ),
+                            shape = RoundedCornerShape(10.dp),
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(
+                                        text = hit.title,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                        color = WellPaidNavy,
+                                    )
+                                    Text(
+                                        text = formatBrlFromCents(hit.priceCents),
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = WellPaidNavy,
+                                    )
+                                }
+                                Text(
+                                    text = hit.source,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = WellPaidNavy.copy(alpha = 0.55f),
+                                )
+                            }
+                        }
                     }
                 }
             }

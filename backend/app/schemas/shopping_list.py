@@ -172,3 +172,11 @@ class ShoppingListComplete(BaseModel):
         if self.total_cents is not None and self.discount_cents is not None and self.discount_cents > 0:
             raise ValueError("total_cents e discount_cents não podem ser usados em conjunto")
         return self
+
+
+class ShoppingListGroceryPriceBody(BaseModel):
+    """Sugestões de preço para mercearia ao adicionar item (ML + SerpAPI em paralelo no backend)."""
+
+    query: str = Field(min_length=2, max_length=200)
+    unit: str | None = Field(default=None, max_length=64)
+    site_id: str = Field(default="MLB", max_length=8)

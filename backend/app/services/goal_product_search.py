@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 import httpx
@@ -42,6 +43,83 @@ def _parse_brl_price_to_cents(price: Any) -> int | None:
     except ValueError:
         return None
     return int(round(v * 100)) if v > 0 else None
+
+
+def merge_price_hits(
+    primary: list[dict[str, Any]],
+    extra: list[dict[str, Any]],
+    *,
+    max_total: int = 25,
+) -> list[dict[str, Any]]:
+    rows = list(primary)
+    seen = {r.get("url") for r in rows if r.get("url")}
+    for r in extra:
+        u = r.get("url")
+        if u and u not in seen:
+            seen.add(u)
+            rows.append(r)
+    return rows[:max_total]
+
+
+def build_grocery_search_query(
+    label: str,
+    unit: str | None,
+    location_hint: str | None,
+) -> str:
+    """Mercearia: supermercado + opcional cidade (alinhado ao legado app.py)."""
+    parts: list[str] = [label.strip()]
+    u = (unit or "").strip()
+    if u:
+        parts.append(u)
+    parts.append("supermercado")
+    loc = (location_hint or "").strip()
+    if loc:
+        parts.append(loc)
+    q = " ".join(parts).strip()
+    return q[:200]
+
+
+def search_products_mercadolibre_serp_parallel(
+    query: str,
+    *,
+    site_id: str = "MLB",
+    serpapi_key: str | None = None,
+    ml_limit: int = 10,
+    serp_limit: int = 10,
+    ml_timeout_s: float = 8.0,
+    serp_timeout_s: float = 12.0,
+    max_total: int = 25,
+) -> list[dict[str, Any]]:
+    """Mercado Livre + SerpAPI em paralelo (menos latência que sequencial)."""
+    q = query.strip()
+    if len(q) < 2:
+        return []
+    key = (serpapi_key or "").strip()
+
+    def run_ml() -> list[dict[str, Any]]:
+        return search_mercadolibre(
+            q,
+            site_id=site_id,
+            limit=ml_limit,
+            timeout_s=ml_timeout_s,
+        )
+
+    def run_serp() -> list[dict[str, Any]]:
+        if not key:
+            return []
+        return search_serpapi_google_shopping(
+            q,
+            api_key=key,
+            limit=serp_limit,
+            timeout_s=serp_timeout_s,
+        )
+
+    with ThreadPoolExecutor(max_workers=2) as ex:
+        f_ml = ex.submit(run_ml)
+        f_serp = ex.submit(run_serp) if key else None
+        ml_rows = f_ml.result()
+        serp_rows = f_serp.result() if f_serp is not None else []
+    return merge_price_hits(ml_rows, serp_rows, max_total=max_total)
 
 
 def search_serpapi_google_shopping(

@@ -133,6 +133,14 @@ class Settings(BaseSettings):
         default=None,
         validation_alias=AliasChoices("serpapi_key", "SERPAPI_KEY"),
     )
+    # Opcional: sufixo de local na query de mercearia (ex.: "Blumenau SC") para POST /shopping-lists/price-suggestions.
+    grocery_search_location_hint: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "grocery_search_location_hint",
+            "GROCERY_SEARCH_LOCATION_HINT",
+        ),
+    )
     # Link na mensagem de confirmação de e-mail (deep link ou URL HTTPS). Vazio = não incluir link no e-mail.
     email_verification_link_base: str | None = None
     # Só desenvolvimento: regista código e token de verificação nos logs se o e-mail não for enviado.
@@ -151,6 +159,7 @@ class Settings(BaseSettings):
             "mail_from",
             "email_verification_link_base",
             "serpapi_key",
+            "grocery_search_location_hint",
         ):
             v = data.get(key)
             if isinstance(v, str) and not v.strip():

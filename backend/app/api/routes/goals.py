@@ -25,7 +25,7 @@ from app.schemas.goal import (
     GoalUpdate,
 )
 from app.services.family_scope import family_peer_user_ids
-from app.services.goal_product_search import search_mercadolibre, search_serpapi_google_shopping
+from app.services.goal_product_search import search_products_mercadolibre_serp_parallel
 from app.services.goal_reference_price import fetch_product_hints
 
 router = APIRouter(prefix="/goals", tags=["goals"])
@@ -146,18 +146,17 @@ def search_goal_products(
     _ = user
     site = (body.site_id or "MLB").strip() or "MLB"
     q = body.query.strip()
-    rows: list[dict] = search_mercadolibre(q, site_id=site)
     settings = get_settings()
-    api_key = (settings.serpapi_key or "").strip()
-    if api_key:
-        extra = search_serpapi_google_shopping(q, api_key=api_key, limit=10)
-        seen = {r.get("url") for r in rows if r.get("url")}
-        for r in extra:
-            u = r.get("url")
-            if u and u not in seen:
-                seen.add(u)
-                rows.append(r)
-        rows = rows[:25]
+    rows = search_products_mercadolibre_serp_parallel(
+        q,
+        site_id=site,
+        serpapi_key=settings.serpapi_key,
+        ml_limit=15,
+        serp_limit=10,
+        ml_timeout_s=8.0,
+        serp_timeout_s=12.0,
+        max_total=25,
+    )
     return GoalProductSearchResponse(
         results=[GoalProductHit.model_validate(r) for r in rows],
     )

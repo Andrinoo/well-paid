@@ -6,8 +6,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wellpaid.R
 import com.wellpaid.core.model.expense.CategoryDto
+import com.wellpaid.core.model.goal.GoalProductHitDto
 import com.wellpaid.core.model.shopping.ShoppingListCompleteDto
 import com.wellpaid.core.model.shopping.ShoppingListDetailDto
+import com.wellpaid.core.model.shopping.ShoppingListGroceryPriceRequestDto
 import com.wellpaid.core.model.shopping.ShoppingListItemCreateDto
 import com.wellpaid.core.model.shopping.ShoppingListPatchDto
 import com.wellpaid.core.network.CategoriesApi
@@ -16,6 +18,8 @@ import com.wellpaid.core.network.shoppingListItemPatchJson
 import com.wellpaid.util.FastApiErrorMapper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -30,6 +34,8 @@ data class ShoppingListDetailUiState(
     val isSaving: Boolean = false,
     val errorMessage: String? = null,
     val infoMessage: String? = null,
+    val groceryPriceHits: List<GoalProductHitDto> = emptyList(),
+    val groceryPriceSearchLoading: Boolean = false,
 )
 
 @HiltViewModel
@@ -41,6 +47,8 @@ class ShoppingListDetailViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val listId: String = savedStateHandle["listId"] ?: ""
+
+    private var groceryPriceSearchJob: Job? = null
 
     private val _uiState = MutableStateFlow(ShoppingListDetailUiState())
     val uiState: StateFlow<ShoppingListDetailUiState> = _uiState.asStateFlow()
@@ -68,6 +76,47 @@ class ShoppingListDetailViewModel @Inject constructor(
 
     fun consumeInfoMessage() {
         _uiState.update { it.copy(infoMessage = null) }
+    }
+
+    /** Debounced: chamar ao escrever o nome do item (add/edit) para sugestões mercearia. */
+    fun onShoppingItemLabelForPriceHints(label: String) {
+        groceryPriceSearchJob?.cancel()
+        val t = label.trim()
+        if (t.length < 2) {
+            _uiState.update {
+                it.copy(groceryPriceHits = emptyList(), groceryPriceSearchLoading = false)
+            }
+            return
+        }
+        groceryPriceSearchJob = viewModelScope.launch {
+            delay(380)
+            _uiState.update { it.copy(groceryPriceSearchLoading = true) }
+            runCatching {
+                api.groceryPriceSuggestions(
+                    ShoppingListGroceryPriceRequestDto(query = t, unit = null, siteId = "MLB"),
+                )
+            }
+                .onSuccess { resp ->
+                    _uiState.update {
+                        it.copy(
+                            groceryPriceSearchLoading = false,
+                            groceryPriceHits = resp.results.take(12),
+                        )
+                    }
+                }
+                .onFailure {
+                    _uiState.update {
+                        it.copy(groceryPriceSearchLoading = false, groceryPriceHits = emptyList())
+                    }
+                }
+        }
+    }
+
+    fun clearGroceryPriceHints() {
+        groceryPriceSearchJob?.cancel()
+        _uiState.update {
+            it.copy(groceryPriceHits = emptyList(), groceryPriceSearchLoading = false)
+        }
     }
 
     fun refresh() {

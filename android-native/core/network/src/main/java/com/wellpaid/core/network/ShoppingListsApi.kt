@@ -1,8 +1,10 @@
 package com.wellpaid.core.network
 
+import com.wellpaid.core.model.goal.GoalProductSearchResponseDto
 import com.wellpaid.core.model.shopping.ShoppingListCompleteDto
 import com.wellpaid.core.model.shopping.ShoppingListCreateDto
 import com.wellpaid.core.model.shopping.ShoppingListDetailDto
+import com.wellpaid.core.model.shopping.ShoppingListGroceryPriceRequestDto
 import com.wellpaid.core.model.shopping.ShoppingListItemCreateDto
 import com.wellpaid.core.model.shopping.ShoppingListPatchDto
 import com.wellpaid.core.model.shopping.ShoppingListSummaryDto
@@ -18,6 +20,11 @@ import retrofit2.http.Path
 interface ShoppingListsApi {
     @GET("shopping-lists")
     suspend fun listShoppingLists(): List<ShoppingListSummaryDto>
+
+    @POST("shopping-lists/price-suggestions")
+    suspend fun groceryPriceSuggestions(
+        @Body body: ShoppingListGroceryPriceRequestDto,
+    ): GoalProductSearchResponseDto
 
     @POST("shopping-lists")
     suspend fun createShoppingList(@Body body: ShoppingListCreateDto): ShoppingListDetailDto

@@ -12,6 +12,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from app.api.deps import get_current_user
+from app.core.config import get_settings
 from app.core.database import get_db
 from app.models.category import Category
 from app.models.expense import Expense
@@ -19,10 +20,12 @@ from app.models.shopping_list import ShoppingList
 from app.models.shopping_list_item import ShoppingListItem
 from app.models.user import User
 from app.schemas.dashboard import ExpenseStatus
+from app.schemas.goal import GoalProductHit, GoalProductSearchResponse
 from app.schemas.shopping_list import (
     ShoppingListComplete,
     ShoppingListCreate,
     ShoppingListDetailResponse,
+    ShoppingListGroceryPriceBody,
     ShoppingListItemCreate,
     ShoppingListItemPatch,
     ShoppingListItemResponse,
@@ -31,6 +34,10 @@ from app.schemas.shopping_list import (
 )
 from app.services.expense_share import ExpenseShareValidationError, normalize_expense_share
 from app.services.family_scope import family_peer_user_ids
+from app.services.goal_product_search import (
+    build_grocery_search_query,
+    search_products_mercadolibre_serp_parallel,
+)
 from app.services.shopping_list_totals import resolve_checkout_total_cents
 
 router = APIRouter(prefix="/shopping-lists", tags=["shopping-lists"])
@@ -200,6 +207,35 @@ def list_shopping_lists(
     ).all()
     counts = _item_counts(db, [r.id for r in rows])
     return [_to_summary(r, user.id, counts.get(r.id, 0)) for r in rows]
+
+
+@router.post("/price-suggestions", response_model=GoalProductSearchResponse)
+def grocery_price_suggestions(
+    body: ShoppingListGroceryPriceBody,
+    user: Annotated[User, Depends(get_current_user)],
+) -> GoalProductSearchResponse:
+    """Sugestões de preço para mercearia (ML + SerpAPI em paralelo). Usado ao adicionar item à lista."""
+    _ = user
+    settings = get_settings()
+    site = (body.site_id or "MLB").strip() or "MLB"
+    q = build_grocery_search_query(
+        body.query.strip(),
+        body.unit,
+        settings.grocery_search_location_hint,
+    )
+    rows = search_products_mercadolibre_serp_parallel(
+        q,
+        site_id=site,
+        serpapi_key=settings.serpapi_key,
+        ml_limit=8,
+        serp_limit=8,
+        ml_timeout_s=6.0,
+        serp_timeout_s=10.0,
+        max_total=20,
+    )
+    return GoalProductSearchResponse(
+        results=[GoalProductHit.model_validate(r) for r in rows],
+    )
 
 
 @router.post("", response_model=ShoppingListDetailResponse, status_code=status.HTTP_201_CREATED)

@@ -453,6 +453,7 @@
     <string name="shopping_field_label_item">Item</string>
     <string name="shopping_field_qty">Quantity</string>
     <string name="shopping_field_unit_price">Cost per unit (optional)</string>
+    <string name="shopping_grocery_price_hints_title">Reference prices (tap to fill unit cost)</string>
     <string name="shopping_close_purchase">Complete purchase</string>
     <string name="shopping_subtotal_lines">Subtotal (priced lines)</string>
     <string name="shopping_units_total">Units</string>
