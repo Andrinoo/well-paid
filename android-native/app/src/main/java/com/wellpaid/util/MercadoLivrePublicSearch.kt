@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.math.roundToInt
 
 /**
- * Pesquisa pública no Mercado Livre (Brasil, site MLB), sem passar pelo backend.
+ * Pesquisa pública na API do Mercado Livre **Brasil (MLB)** sem passar pelo backend.
  * Garante resultados mesmo quando a API alojada não consegue contactar o ML.
  */
 object MercadoLivrePublicSearch {

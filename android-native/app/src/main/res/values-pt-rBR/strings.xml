@@ -352,8 +352,13 @@
     <string name="goal_search_results_header">Anúncios</string>
     <string name="goal_product_use">Usar este anúncio</string>
     <string name="goal_product_link_label">Link</string>
-    <string name="goal_search_no_results">Nenhum anúncio encontrado no Mercado Livre. Tente outras palavras.</string>
+    <string name="goal_search_no_results">Nenhum anúncio no Mercado Livre (Brasil). Tente outras palavras ou abra outra loja abaixo.</string>
     <string name="goal_detail_refresh_target_from_link">Actualizar valor pelo link do produto</string>
+    <string name="goal_search_other_stores_title">Outras lojas (abre no navegador)</string>
+    <string name="goal_search_open_google">Google Shopping</string>
+    <string name="goal_search_open_amazon_br">Amazon BR</string>
+    <string name="goal_search_open_buscape">Buscapé</string>
+    <string name="goal_search_open_magalu">Magazine Luiza</string>
     <string name="emergency_need_login">Inicie sessão para ver a reserva de emergência.</string>
     <string name="emergency_balance_label">Saldo acumulado</string>
     <string name="emergency_tracking_start">A contar desde %1$s</string>

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -38,6 +39,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -48,7 +51,8 @@ import com.wellpaid.ui.theme.WellPaidGold
 import com.wellpaid.ui.theme.WellPaidNavy
 import com.wellpaid.ui.theme.wellPaidScreenHorizontalPadding
 import com.wellpaid.ui.theme.wellPaidTopAppBarColors
-import com.wellpaid.util.formatBrlFromCents
+import com.wellpaid.util.GoalProductSearchExternalUrls
+import com.wellpaid.util.formatMinorCurrencyFromCents
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,6 +64,7 @@ fun GoalFormScreen(
     viewModel: GoalFormViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val uriHandler = LocalUriHandler.current
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -157,6 +162,64 @@ fun GoalFormScreen(
                 )
             }
 
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.goal_search_other_stores_title),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = WellPaidNavy,
+            )
+            Spacer(Modifier.height(6.dp))
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                item {
+                    TextButton(
+                        onClick = {
+                            val q = viewModel.resolveSearchQueryOrShowError() ?: return@TextButton
+                            runCatching { uriHandler.openUri(GoalProductSearchExternalUrls.googleShopping(q)) }
+                        },
+                        enabled = !state.isSaving,
+                    ) {
+                        Text(stringResource(R.string.goal_search_open_google))
+                    }
+                }
+                item {
+                    TextButton(
+                        onClick = {
+                            val q = viewModel.resolveSearchQueryOrShowError() ?: return@TextButton
+                            runCatching { uriHandler.openUri(GoalProductSearchExternalUrls.amazonBr(q)) }
+                        },
+                        enabled = !state.isSaving,
+                    ) {
+                        Text(stringResource(R.string.goal_search_open_amazon_br))
+                    }
+                }
+                item {
+                    TextButton(
+                        onClick = {
+                            val q = viewModel.resolveSearchQueryOrShowError() ?: return@TextButton
+                            runCatching { uriHandler.openUri(GoalProductSearchExternalUrls.buscape(q)) }
+                        },
+                        enabled = !state.isSaving,
+                    ) {
+                        Text(stringResource(R.string.goal_search_open_buscape))
+                    }
+                }
+                item {
+                    TextButton(
+                        onClick = {
+                            val q = viewModel.resolveSearchQueryOrShowError() ?: return@TextButton
+                            runCatching { uriHandler.openUri(GoalProductSearchExternalUrls.magazineLuiza(q)) }
+                        },
+                        enabled = !state.isSaving,
+                    ) {
+                        Text(stringResource(R.string.goal_search_open_magalu))
+                    }
+                }
+            }
+
             if (state.productSearchResults.isNotEmpty()) {
                 Spacer(Modifier.height(12.dp))
                 Text(
@@ -178,7 +241,7 @@ fun GoalFormScreen(
                             )
                             Spacer(Modifier.height(4.dp))
                             Text(
-                                text = formatBrlFromCents(hit.priceCents),
+                                text = formatMinorCurrencyFromCents(hit.priceCents, hit.currencyId),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = WellPaidNavy,
                             )

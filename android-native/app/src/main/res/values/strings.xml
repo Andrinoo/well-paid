@@ -352,8 +352,13 @@
     <string name="goal_search_results_header">Listings</string>
     <string name="goal_product_use">Use this listing</string>
     <string name="goal_product_link_label">Link</string>
-    <string name="goal_search_no_results">No Mercado Livre listings found. Try different keywords.</string>
+    <string name="goal_search_no_results">No Mercado Livre (Brazil) listings found. Try different keywords or open another store below.</string>
     <string name="goal_detail_refresh_target_from_link">Update goal amount from product link</string>
+    <string name="goal_search_other_stores_title">Other stores (opens in browser)</string>
+    <string name="goal_search_open_google">Google Shopping</string>
+    <string name="goal_search_open_amazon_br">Amazon BR</string>
+    <string name="goal_search_open_buscape">Buscapé</string>
+    <string name="goal_search_open_magalu">Magazine Luiza</string>
     <string name="emergency_need_login">Sign in to see the emergency fund.</string>
     <string name="emergency_balance_label">Accumulated balance</string>
     <string name="emergency_tracking_start">Counting since %1$s</string>

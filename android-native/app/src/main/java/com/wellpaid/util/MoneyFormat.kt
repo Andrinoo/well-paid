@@ -1,5 +1,9 @@
 package com.wellpaid.util
 
+import java.text.NumberFormat
+import java.util.Currency
+import java.util.Locale
+
 /**
  * Formatação BRL alinhada ao cliente Flutter: centavos inteiros, sem `Double` no valor final,
  * prefixo `R$ `, milhar `.`, decimal `,`.
@@ -15,6 +19,31 @@ fun formatBrlFromCents(cents: Int): String {
 
 /** Texto de campo sem prefixo (ex.: `1.234,56`), com milhares. */
 fun formatBrlInputFromCents(cents: Int): String = centsToBrlInput(cents)
+
+/**
+ * Exibe preço de anúncio (minor units = centavos da moeda) para pesquisas fora de BRL.
+ */
+fun formatMinorCurrencyFromCents(cents: Int, currencyCode: String): String {
+    val c = currencyCode.trim().uppercase().ifBlank { "BRL" }
+    if (c == "BRL") return formatBrlFromCents(cents)
+    return try {
+        val locale = when (c) {
+            "ARS" -> Locale("es", "AR")
+            "MXN" -> Locale("es", "MX")
+            "USD" -> Locale.US
+            "UYU" -> Locale("es", "UY")
+            "CLP" -> Locale("es", "CL")
+            "COP" -> Locale("es", "CO")
+            "PEN" -> Locale("es", "PE")
+            else -> Locale.getDefault()
+        }
+        val fmt = NumberFormat.getCurrencyInstance(locale)
+        fmt.currency = Currency.getInstance(c)
+        fmt.format(cents / 100.0)
+    } catch (_: Exception) {
+        "$c ${cents / 100.0}"
+    }
+}
 
 /** @see formatBrlInputFromCents */
 fun centsToBrlInput(cents: Int): String = centsToBrlInput(cents.toLong())

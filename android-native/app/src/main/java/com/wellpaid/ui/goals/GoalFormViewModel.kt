@@ -16,6 +16,7 @@ import com.wellpaid.util.FastApiErrorMapper
 import com.wellpaid.util.MercadoLivrePublicSearch
 import com.wellpaid.util.centsToBrlInput
 import com.wellpaid.util.formatBrlFromCents
+import com.wellpaid.util.formatMinorCurrencyFromCents
 import com.wellpaid.util.parseBrlToCents
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -117,6 +118,18 @@ class GoalFormViewModel @Inject constructor(
 
     fun setTargetUrl(value: String) {
         _uiState.update { it.copy(targetUrl = value) }
+    }
+
+    /** Para abrir pesquisas externas no browser: devolve query ou define erro de título curto. */
+    fun resolveSearchQueryOrShowError(): String? {
+        val q = _uiState.value.title.trim()
+        if (q.length < 2) {
+            _uiState.update {
+                it.copy(errorMessage = appContext.getString(R.string.goal_error_query_too_short))
+            }
+            return null
+        }
+        return q
     }
 
     fun loadPriceFromLink() {
@@ -224,7 +237,7 @@ class GoalFormViewModel @Inject constructor(
                 )
             }
             val fromBackend = runCatching {
-                goalsApi.productSearch(GoalProductSearchRequestDto(query = q))
+                goalsApi.productSearch(GoalProductSearchRequestDto(query = q, siteId = "MLB"))
             }.getOrNull()?.results
             val list = when {
                 !fromBackend.isNullOrEmpty() -> fromBackend
@@ -242,9 +255,11 @@ class GoalFormViewModel @Inject constructor(
 
     fun applyProductHit(hit: GoalProductHitDto) {
         _uiState.update { s ->
+            val isBrl = hit.currencyId.equals("BRL", ignoreCase = true)
+            val refLabel = formatMinorCurrencyFromCents(hit.priceCents, hit.currencyId)
             val nextLoaded = s.loaded?.copy(
                 referenceProductName = hit.title.take(200),
-                referencePriceCents = hit.priceCents,
+                referencePriceCents = if (isBrl) hit.priceCents else null,
                 referenceCurrency = hit.currencyId,
                 priceSource = hit.source,
                 targetUrl = hit.url,
@@ -252,10 +267,10 @@ class GoalFormViewModel @Inject constructor(
             s.copy(
                 title = hit.title.take(200),
                 targetUrl = hit.url,
-                targetText = centsToBrlInput(hit.priceCents),
-                referencePriceLabel = formatBrlFromCents(hit.priceCents),
+                targetText = if (isBrl) centsToBrlInput(hit.priceCents) else "",
+                referencePriceLabel = refLabel,
                 draftReferenceProductName = hit.title.take(200),
-                draftReferencePriceCents = hit.priceCents,
+                draftReferencePriceCents = if (isBrl) hit.priceCents else null,
                 draftReferenceCurrency = hit.currencyId,
                 draftPriceSource = hit.source,
                 productSearchResults = emptyList(),
