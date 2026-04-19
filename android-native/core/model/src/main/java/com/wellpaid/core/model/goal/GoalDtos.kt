@@ -77,7 +77,6 @@ data class GoalPreviewFromUrlDto(
 @Serializable
 data class GoalProductSearchRequestDto(
     val query: String,
-    @SerialName("site_id") val siteId: String = "MLB",
 )
 
 @Serializable
@@ -87,7 +86,7 @@ data class GoalProductHitDto(
     @SerialName("currency_id") val currencyId: String = "BRL",
     val url: String,
     val thumbnail: String? = null,
-    val source: String = "mercadolibre",
+    val source: String = "google_shopping",
     @SerialName("external_id") val externalId: String? = null,
 )
 

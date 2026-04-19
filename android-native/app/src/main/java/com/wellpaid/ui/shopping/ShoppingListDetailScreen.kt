@@ -719,7 +719,7 @@ private fun ItemLineCostField(
         },
         placeholder = "0,00",
         modifier = Modifier
-            // Largura para valores típicos de mercado (ex.: 125,50); prefixo R$/$
+            // Largura para valores típicos de varejo (ex.: 125,50); prefixo R$/$
             .widthIn(min = 76.dp, max = 88.dp)
             .defaultMinSize(minHeight = 40.dp),
         shape = RoundedCornerShape(6.dp),

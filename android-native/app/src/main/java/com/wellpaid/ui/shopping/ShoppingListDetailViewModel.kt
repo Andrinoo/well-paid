@@ -101,32 +101,28 @@ class ShoppingListDetailViewModel @Inject constructor(
             if (id != groceryPriceSearchNonce.get()) return@launch
             _uiState.update { it.copy(groceryPriceSearchLoading = true) }
             try {
-                val resp = try {
-                    api.groceryPriceSuggestions(
-                        ShoppingListGroceryPriceRequestDto(query = t, unit = null, siteId = "MLB"),
-                    )
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (_: Exception) {
-                    null
-                }
+                val resp = api.groceryPriceSuggestions(
+                    ShoppingListGroceryPriceRequestDto(query = t, unit = null),
+                )
                 coroutineContext.ensureActive()
                 if (id != groceryPriceSearchNonce.get()) return@launch
-                if (resp != null) {
-                    _uiState.update {
-                        it.copy(
-                            groceryPriceSearchLoading = false,
-                            groceryPriceHits = resp.results.take(12),
-                        )
-                    }
-                } else {
-                    _uiState.update {
-                        it.copy(groceryPriceSearchLoading = false, groceryPriceHits = emptyList())
-                    }
+                _uiState.update {
+                    it.copy(
+                        groceryPriceSearchLoading = false,
+                        groceryPriceHits = resp.results.take(12),
+                    )
                 }
             } catch (e: CancellationException) {
                 _uiState.update { it.copy(groceryPriceSearchLoading = false) }
                 throw e
+            } catch (_: Exception) {
+                if (id != groceryPriceSearchNonce.get()) return@launch
+                _uiState.update {
+                    it.copy(
+                        groceryPriceSearchLoading = false,
+                        groceryPriceHits = emptyList(),
+                    )
+                }
             }
         }
     }

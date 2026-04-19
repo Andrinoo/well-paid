@@ -36,7 +36,7 @@ from app.services.expense_share import ExpenseShareValidationError, normalize_ex
 from app.services.family_scope import family_peer_user_ids
 from app.services.goal_product_search import (
     build_grocery_search_query,
-    search_products_mercadolibre_serp_parallel,
+    search_products_google_shopping,
 )
 from app.services.shopping_list_totals import resolve_checkout_total_cents
 
@@ -214,22 +214,23 @@ def grocery_price_suggestions(
     body: ShoppingListGroceryPriceBody,
     user: Annotated[User, Depends(get_current_user)],
 ) -> GoalProductSearchResponse:
-    """Sugestões de preço para mercearia (ML + SerpAPI em paralelo). Usado ao adicionar item à lista."""
+    """Sugestões de preço para mercearia (Google Shopping via SerpAPI). Usado ao adicionar item à lista."""
     _ = user
     settings = get_settings()
-    site = (body.site_id or "MLB").strip() or "MLB"
+    if not (settings.serpapi_key or "").strip():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Sugestões de preço indisponíveis: configure SERPAPI_KEY no servidor.",
+        )
     q = build_grocery_search_query(
         body.query.strip(),
         body.unit,
         settings.grocery_search_location_hint,
     )
-    rows = search_products_mercadolibre_serp_parallel(
+    rows = search_products_google_shopping(
         q,
-        site_id=site,
         serpapi_key=settings.serpapi_key,
-        ml_limit=10,
-        serp_limit=10,
-        ml_timeout_s=6.0,
+        serp_limit=12,
         serp_timeout_s=10.0,
         max_total=24,
     )

@@ -93,7 +93,6 @@ class GoalPreviewFromUrlResponse(BaseModel):
 
 class GoalProductSearchBody(BaseModel):
     query: str = Field(min_length=2, max_length=200)
-    site_id: str = Field(default="MLB", max_length=8)
 
 
 class GoalProductHit(BaseModel):
@@ -102,7 +101,7 @@ class GoalProductHit(BaseModel):
     currency_id: str = "BRL"
     url: str
     thumbnail: str | None = None
-    source: str = "mercadolibre"
+    source: str = "google_shopping"
     external_id: str | None = None
 
 

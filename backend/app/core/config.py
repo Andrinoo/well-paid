@@ -128,7 +128,7 @@ class Settings(BaseSettings):
     mail_from: str | None = None
     # Quando true e SMTP não configurado, regista o token de reset nos logs (só para desenvolvimento).
     password_reset_log_token: bool = False
-    # Opcional: SerpAPI (Google Shopping) para enriquecer POST /goals/product-search além do Mercado Livre.
+    # SerpAPI (Google Shopping): necessária para POST /goals/product-search e /shopping-lists/price-suggestions.
     serpapi_key: str | None = Field(
         default=None,
         validation_alias=AliasChoices("serpapi_key", "SERPAPI_KEY"),

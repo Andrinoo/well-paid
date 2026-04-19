@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import uuid
-from typing import Annotated
+from datetime import UTC, datetime
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -25,7 +26,7 @@ from app.schemas.goal import (
     GoalUpdate,
 )
 from app.services.family_scope import family_peer_user_ids
-from app.services.goal_product_search import search_products_mercadolibre_serp_parallel
+from app.services.goal_product_search import search_products_google_shopping
 from app.services.goal_reference_price import fetch_product_hints
 
 router = APIRouter(prefix="/goals", tags=["goals"])
@@ -142,18 +143,19 @@ def search_goal_products(
     body: GoalProductSearchBody,
     user: Annotated[User, Depends(get_current_user)],
 ) -> GoalProductSearchResponse:
-    """Pesquisa por nome: Mercado Livre (público) + Google Shopping (SerpAPI) se SERPAPI_KEY estiver definida."""
+    """Pesquisa por nome: Google Shopping via SerpAPI (SERPAPI_KEY obrigatória no servidor)."""
     _ = user
-    site = (body.site_id or "MLB").strip() or "MLB"
     q = body.query.strip()
     settings = get_settings()
-    rows = search_products_mercadolibre_serp_parallel(
+    if not (settings.serpapi_key or "").strip():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Pesquisa de preços indisponível: o servidor não tem SERPAPI_KEY configurada.",
+        )
+    rows = search_products_google_shopping(
         q,
-        site_id=site,
         serpapi_key=settings.serpapi_key,
-        ml_limit=15,
-        serp_limit=10,
-        ml_timeout_s=8.0,
+        serp_limit=12,
         serp_timeout_s=12.0,
         max_total=25,
     )
@@ -217,6 +219,50 @@ def contribute_goal(
     return _to_response(row, user.id)
 
 
+def _hints_from_title_search(title: str, settings) -> dict[str, Any]:
+    """Quando não há URL: usa o título na pesquisa Google Shopping (SerpAPI)."""
+    q = (title or "").strip()
+    if len(q) < 2:
+        return {}
+    rows = search_products_google_shopping(
+        q,
+        serpapi_key=settings.serpapi_key,
+        serp_limit=12,
+        serp_timeout_s=12.0,
+        max_total=25,
+    )
+    if not rows:
+        return {}
+    first = rows[0]
+    pc = int(first.get("price_cents") or 0)
+    if pc <= 0:
+        return {}
+    alts: list[dict[str, Any]] = []
+    for r in rows[1:8]:
+        try:
+            ac = int(r.get("price_cents") or 0)
+        except (TypeError, ValueError):
+            ac = 0
+        if ac <= 0:
+            continue
+        alts.append(
+            {
+                "label": str(r.get("title") or "")[:500],
+                "price_cents": ac,
+                "url": r.get("url"),
+            }
+        )
+    return {
+        "reference_product_name": str(first.get("title") or "")[:500] or None,
+        "reference_price_cents": pc,
+        "reference_currency": str(first.get("currency_id") or "BRL")[:8],
+        "price_checked_at": datetime.now(UTC),
+        "price_source": str(first.get("source") or "google_shopping"),
+        "price_alternatives": alts,
+        "_listing_url": str(first.get("url") or "").strip() or None,
+    }
+
+
 @router.post("/{goal_id}/refresh-reference-price", response_model=GoalResponse)
 def refresh_goal_reference_price(
     goal_id: uuid.UUID,
@@ -226,12 +272,31 @@ def refresh_goal_reference_price(
     row = _owned_goal(db, goal_id, user.id)
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Meta não encontrada")
-    if not row.target_url:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Defina um link (URL) na meta para actualizar o preço de referência.",
-        )
-    hints = fetch_product_hints(row.target_url.strip())
+    settings = get_settings()
+    hints: dict[str, Any]
+    if row.target_url and str(row.target_url).strip():
+        hints = fetch_product_hints(row.target_url.strip())
+    else:
+        if not (settings.serpapi_key or "").strip():
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=(
+                    "Actualização por título indisponível: configure SERPAPI_KEY no servidor, "
+                    "ou defina um link de produto na meta."
+                ),
+            )
+        hints = _hints_from_title_search(row.title or "", settings)
+        if not hints:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "Defina um link de produto na meta ou use um título com pelo menos 2 caracteres "
+                    "para pesquisar o preço de referência (Google Shopping)."
+                ),
+            )
+        listing = hints.pop("_listing_url", None)
+        if listing:
+            row.target_url = listing
     if hints.get("reference_product_name"):
         row.reference_product_name = hints["reference_product_name"]
     if hints.get("reference_price_cents") is not None:

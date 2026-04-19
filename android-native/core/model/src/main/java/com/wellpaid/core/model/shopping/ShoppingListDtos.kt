@@ -80,5 +80,4 @@ data class ShoppingListCompleteDto(
 data class ShoppingListGroceryPriceRequestDto(
     val query: String,
     val unit: String? = null,
-    @SerialName("site_id") val siteId: String = "MLB",
 )

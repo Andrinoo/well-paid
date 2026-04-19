@@ -3,8 +3,8 @@ package com.wellpaid.util
 import android.net.Uri
 
 /**
- * Ligações para pesquisa de produtos fora da API do Mercado Livre (abrem no navegador).
- * O utilizador copia o preço / link e preenche a meta manualmente.
+ * Ligações para pesquisa de produtos noutros sites (abrem no navegador).
+ * Útil quando queres comparar à mão além das sugestões Google Shopping no servidor.
  */
 object GoalProductSearchExternalUrls {
 

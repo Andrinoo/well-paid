@@ -13,8 +13,7 @@ import com.wellpaid.core.model.goal.GoalProductSearchRequestDto
 import com.wellpaid.core.model.goal.GoalUpdateDto
 import com.wellpaid.core.network.GoalsApi
 import com.wellpaid.util.FastApiErrorMapper
-import com.wellpaid.util.MercadoLibreSearchUrlParser
-import com.wellpaid.util.MercadoLivrePublicSearch
+import com.wellpaid.util.SearchQueryUrlParser
 import com.wellpaid.util.centsToBrlInput
 import com.wellpaid.util.formatBrlFromCents
 import com.wellpaid.util.formatMinorCurrencyFromCents
@@ -52,7 +51,7 @@ data class GoalFormUiState(
     val draftReferenceCurrency: String = "BRL",
     val draftPriceSource: String? = null,
     val productSearchResults: List<GoalProductHitDto> = emptyList(),
-    /** True após uma pesquisa concluída sem anúncios (fonte ML directa ou API). */
+    /** True após uma pesquisa concluída sem resultados (SerpAPI / Google Shopping). */
     val lastProductSearchHadNoResults: Boolean = false,
     val errorMessage: String? = null,
     val showDeleteConfirm: Boolean = false,
@@ -66,7 +65,7 @@ class GoalFormViewModel @Inject constructor(
 ) : ViewModel() {
 
     companion object {
-        /** Máximo de anúncios mostrados no seletor (nome da meta → ML/Serp). */
+        /** Máximo de resultados no seletor (pesquisa Google Shopping via servidor). */
         const val PRODUCT_SEARCH_MAX_RESULTS: Int = 5
     }
 
@@ -121,7 +120,7 @@ class GoalFormViewModel @Inject constructor(
         scheduleProductSearchFromTitle(value)
     }
 
-    /** Pesquisa automática (ML + SerpAPI no backend) ao escrever o título, sem botão extra. */
+    /** Pesquisa automática (Google Shopping via SerpAPI no backend) ao escrever o título. */
     private fun scheduleProductSearchFromTitle(titleInput: String) {
         titleSearchDebounceJob?.cancel()
         val t = titleInput.trim()
@@ -158,13 +157,13 @@ class GoalFormViewModel @Inject constructor(
     }
 
     /**
-     * Guarda o URL. Se for link de pesquisa do Mercado Livre (`?q=` / lista), dispara a mesma pesquisa de anúncios
-     * (debounce). URLs só de produto não disparam pesquisa — servem para o botão de preview de preço.
+     * Guarda o URL. Se for link de pesquisa com `q=` (ou equivalente), dispara a mesma pesquisa (debounce).
+     * URLs só de produto não disparam pesquisa — servem para o botão de preview de preço.
      */
     fun onTargetUrlChange(value: String) {
         _uiState.update { it.copy(targetUrl = value) }
         urlSearchDebounceJob?.cancel()
-        val q = MercadoLibreSearchUrlParser.extractSearchQuery(value) ?: return
+        val q = SearchQueryUrlParser.extractSearchQuery(value) ?: return
         if (q.length < 2) return
         val snapshotUrl = value.trim()
         urlSearchDebounceJob = viewModelScope.launch {
@@ -186,8 +185,15 @@ class GoalFormViewModel @Inject constructor(
     private fun previewFromUrl() {
         val url = _uiState.value.targetUrl.trim()
         if (url.isEmpty()) {
+            val titleQ = _uiState.value.title.trim()
+            if (titleQ.length >= 2) {
+                viewModelScope.launch {
+                    performProductSearch(query = titleQ, syncTitleFromQuery = false)
+                }
+                return
+            }
             _uiState.update {
-                it.copy(errorMessage = appContext.getString(R.string.goal_error_url_required_for_refresh))
+                it.copy(errorMessage = appContext.getString(R.string.goal_error_query_title_or_search_url))
             }
             return
         }
@@ -231,13 +237,6 @@ class GoalFormViewModel @Inject constructor(
 
     fun refreshReferencePrice() {
         val id = goalId ?: return
-        val url = _uiState.value.targetUrl.trim()
-        if (url.isEmpty()) {
-            _uiState.update {
-                it.copy(errorMessage = appContext.getString(R.string.goal_error_url_required_for_refresh))
-            }
-            return
-        }
         viewModelScope.launch {
             _uiState.update { it.copy(isRefreshingPrice = true, errorMessage = null) }
             runCatching { goalsApi.refreshReferencePrice(id) }
@@ -263,10 +262,10 @@ class GoalFormViewModel @Inject constructor(
         }
     }
 
-    /** Pesquisa manual: usa o título da meta ou, se o título for curto, o termo extraído de um URL de pesquisa ML no link. */
+    /** Pesquisa manual: título da meta ou termo extraído de um URL de pesquisa no campo de link. */
     fun refreshProductSearch() {
         val titleQ = _uiState.value.title.trim()
-        val urlQ = MercadoLibreSearchUrlParser.extractSearchQuery(_uiState.value.targetUrl)?.trim()
+        val urlQ = SearchQueryUrlParser.extractSearchQuery(_uiState.value.targetUrl)?.trim()
         val q = when {
             titleQ.length >= 2 -> titleQ
             urlQ != null && urlQ.length >= 2 -> urlQ
@@ -294,36 +293,29 @@ class GoalFormViewModel @Inject constructor(
             )
         }
         try {
-            val fromBackend: List<GoalProductHitDto>? = try {
-                goalsApi.productSearch(GoalProductSearchRequestDto(query = q, siteId = "MLB")).results
-            } catch (e: CancellationException) {
-                throw e
-            } catch (_: Exception) {
-                null
-            }
+            val results = goalsApi.productSearch(GoalProductSearchRequestDto(query = q)).results
             coroutineContext.ensureActive()
-            val list = when {
-                !fromBackend.isNullOrEmpty() -> fromBackend
-                else -> try {
-                    MercadoLivrePublicSearch.searchBr(q)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (_: Exception) {
-                    emptyList()
-                }
-            }
-            coroutineContext.ensureActive()
-            val capped = list.take(PRODUCT_SEARCH_MAX_RESULTS)
+            val capped = results.take(PRODUCT_SEARCH_MAX_RESULTS)
             _uiState.update { s ->
                 s.copy(
                     isSearchingProducts = false,
                     productSearchResults = capped,
                     lastProductSearchHadNoResults = capped.isEmpty(),
+                    errorMessage = null,
                 )
             }
         } catch (e: CancellationException) {
             _uiState.update { it.copy(isSearchingProducts = false) }
             throw e
+        } catch (t: Exception) {
+            _uiState.update {
+                it.copy(
+                    isSearchingProducts = false,
+                    productSearchResults = emptyList(),
+                    lastProductSearchHadNoResults = true,
+                    errorMessage = FastApiErrorMapper.message(appContext, t),
+                )
+            }
         }
     }
 

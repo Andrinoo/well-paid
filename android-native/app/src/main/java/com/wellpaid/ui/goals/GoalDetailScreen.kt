@@ -183,7 +183,10 @@ fun GoalDetailScreen(
 
             // Novos campos: link e preço de referência
             val url = goal.targetUrl?.trim().orEmpty()
-            if (url.isNotEmpty() || goal.referencePriceCents != null || goal.referenceProductName != null) {
+            val canRefreshPriceByTitle = goal.title.trim().length >= 2
+            if (url.isNotEmpty() || goal.referencePriceCents != null || goal.referenceProductName != null ||
+                goal.priceAlternatives.isNotEmpty() || (goal.isMine && canRefreshPriceByTitle)
+            ) {
                 Spacer(Modifier.height(20.dp))
                 Text(
                     text = stringResource(R.string.goal_detail_section_link),
@@ -231,7 +234,7 @@ fun GoalDetailScreen(
                         color = MaterialTheme.colorScheme.tertiary,
                     )
                 }
-                if (goal.isMine && url.isNotEmpty()) {
+                if (goal.isMine && (url.isNotEmpty() || canRefreshPriceByTitle)) {
                     Spacer(Modifier.height(12.dp))
                     OutlinedButton(
                         onClick = { viewModel.refreshTargetFromLink() },

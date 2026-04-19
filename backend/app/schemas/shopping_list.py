@@ -175,8 +175,7 @@ class ShoppingListComplete(BaseModel):
 
 
 class ShoppingListGroceryPriceBody(BaseModel):
-    """Sugestões de preço para mercearia ao adicionar item (ML + SerpAPI em paralelo no backend)."""
+    """Sugestões de preço para mercearia (Google Shopping via SerpAPI no backend)."""
 
     query: str = Field(min_length=2, max_length=200)
     unit: str | None = Field(default=None, max_length=64)
-    site_id: str = Field(default="MLB", max_length=8)
