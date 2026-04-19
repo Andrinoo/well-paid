@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Backspace
+import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -255,7 +255,7 @@ fun WellPaidMoneyDigitKeypadField(
                                 enabled = enabled,
                             ) {
                                 androidx.compose.material3.Icon(
-                                    imageVector = Icons.Filled.Backspace,
+                                    imageVector = Icons.AutoMirrored.Filled.Backspace,
                                     contentDescription = stringResource(R.string.money_keypad_backspace_cd),
                                     tint = WellPaidNavy,
                                 )
