@@ -27,7 +27,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
+import kotlin.coroutines.coroutineContext
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 
 data class GoalFormUiState(
@@ -65,6 +69,7 @@ class GoalFormViewModel @Inject constructor(
 
     private var urlSearchDebounceJob: Job? = null
     private var titleSearchDebounceJob: Job? = null
+    private val titleSearchNonce = AtomicInteger(0)
 
     private val _uiState = MutableStateFlow(GoalFormUiState())
     val uiState: StateFlow<GoalFormUiState> = _uiState.asStateFlow()
@@ -116,17 +121,21 @@ class GoalFormViewModel @Inject constructor(
         titleSearchDebounceJob?.cancel()
         val t = titleInput.trim()
         if (t.length < 2) {
+            titleSearchNonce.incrementAndGet()
             _uiState.update {
                 it.copy(
                     productSearchResults = emptyList(),
                     lastProductSearchHadNoResults = false,
+                    isSearchingProducts = false,
                 )
             }
             return
         }
+        val id = titleSearchNonce.incrementAndGet()
         titleSearchDebounceJob = viewModelScope.launch {
             delay(420)
-            if (_uiState.value.title.trim() != t) return@launch
+            coroutineContext.ensureActive()
+            if (id != titleSearchNonce.get()) return@launch
             performProductSearch(query = t, syncTitleFromQuery = false)
         }
     }
@@ -286,19 +295,36 @@ class GoalFormViewModel @Inject constructor(
                 lastProductSearchHadNoResults = false,
             )
         }
-        val fromBackend = runCatching {
-            goalsApi.productSearch(GoalProductSearchRequestDto(query = q, siteId = "MLB"))
-        }.getOrNull()?.results
-        val list = when {
-            !fromBackend.isNullOrEmpty() -> fromBackend
-            else -> MercadoLivrePublicSearch.searchBr(q)
-        }
-        _uiState.update {
-            it.copy(
-                isSearchingProducts = false,
-                productSearchResults = list,
-                lastProductSearchHadNoResults = list.isEmpty(),
-            )
+        try {
+            val fromBackend: List<GoalProductHitDto>? = try {
+                goalsApi.productSearch(GoalProductSearchRequestDto(query = q, siteId = "MLB")).results
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                null
+            }
+            coroutineContext.ensureActive()
+            val list = when {
+                !fromBackend.isNullOrEmpty() -> fromBackend
+                else -> try {
+                    MercadoLivrePublicSearch.searchBr(q)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    emptyList()
+                }
+            }
+            coroutineContext.ensureActive()
+            _uiState.update {
+                it.copy(
+                    isSearchingProducts = false,
+                    productSearchResults = list,
+                    lastProductSearchHadNoResults = list.isEmpty(),
+                )
+            }
+        } catch (e: CancellationException) {
+            _uiState.update { it.copy(isSearchingProducts = false) }
+            throw e
         }
     }
 

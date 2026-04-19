@@ -24,7 +24,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
+import kotlin.coroutines.coroutineContext
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 
 data class ShoppingListDetailUiState(
@@ -49,6 +53,7 @@ class ShoppingListDetailViewModel @Inject constructor(
     private val listId: String = savedStateHandle["listId"] ?: ""
 
     private var groceryPriceSearchJob: Job? = null
+    private val groceryPriceSearchNonce = AtomicInteger(0)
 
     private val _uiState = MutableStateFlow(ShoppingListDetailUiState())
     val uiState: StateFlow<ShoppingListDetailUiState> = _uiState.asStateFlow()
@@ -83,37 +88,52 @@ class ShoppingListDetailViewModel @Inject constructor(
         groceryPriceSearchJob?.cancel()
         val t = label.trim()
         if (t.length < 2) {
+            groceryPriceSearchNonce.incrementAndGet()
             _uiState.update {
                 it.copy(groceryPriceHits = emptyList(), groceryPriceSearchLoading = false)
             }
             return
         }
+        val id = groceryPriceSearchNonce.incrementAndGet()
         groceryPriceSearchJob = viewModelScope.launch {
-            delay(300)
+            delay(280)
+            coroutineContext.ensureActive()
+            if (id != groceryPriceSearchNonce.get()) return@launch
             _uiState.update { it.copy(groceryPriceSearchLoading = true) }
-            runCatching {
-                api.groceryPriceSuggestions(
-                    ShoppingListGroceryPriceRequestDto(query = t, unit = null, siteId = "MLB"),
-                )
-            }
-                .onSuccess { resp ->
+            try {
+                val resp = try {
+                    api.groceryPriceSuggestions(
+                        ShoppingListGroceryPriceRequestDto(query = t, unit = null, siteId = "MLB"),
+                    )
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    null
+                }
+                coroutineContext.ensureActive()
+                if (id != groceryPriceSearchNonce.get()) return@launch
+                if (resp != null) {
                     _uiState.update {
                         it.copy(
                             groceryPriceSearchLoading = false,
                             groceryPriceHits = resp.results.take(12),
                         )
                     }
-                }
-                .onFailure {
+                } else {
                     _uiState.update {
                         it.copy(groceryPriceSearchLoading = false, groceryPriceHits = emptyList())
                     }
                 }
+            } catch (e: CancellationException) {
+                _uiState.update { it.copy(groceryPriceSearchLoading = false) }
+                throw e
+            }
         }
     }
 
     fun clearGroceryPriceHints() {
         groceryPriceSearchJob?.cancel()
+        groceryPriceSearchNonce.incrementAndGet()
         _uiState.update {
             it.copy(groceryPriceHits = emptyList(), groceryPriceSearchLoading = false)
         }
