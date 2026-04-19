@@ -104,10 +104,32 @@ def search_serpapi_google_shopping(
             headers={"User-Agent": _USER_AGENT},
         ) as client:
             r = client.get("https://serpapi.com/search", params=params)
-            r.raise_for_status()
-            data = r.json()
-    except Exception as e:
-        logger.warning("SerpAPI google_shopping failed: %s", e)
+    except httpx.RequestError as e:
+        # Não logar `e` completo: pode incluir URL com api_key na query.
+        logger.warning("SerpAPI google_shopping request failed: %s", type(e).__name__)
+        return []
+
+    if r.status_code != 200:
+        snippet = (r.text or "")[:500]
+        logger.warning(
+            "SerpAPI google_shopping HTTP %s (body prefix): %s",
+            r.status_code,
+            snippet,
+        )
+        return []
+
+    try:
+        data = r.json()
+    except ValueError:
+        logger.warning("SerpAPI google_shopping: resposta não é JSON")
+        return []
+
+    if not isinstance(data, dict):
+        return []
+
+    err_msg = data.get("error")
+    if err_msg:
+        logger.warning("SerpAPI google_shopping error: %s", err_msg)
         return []
 
     out: list[dict[str, Any]] = []
