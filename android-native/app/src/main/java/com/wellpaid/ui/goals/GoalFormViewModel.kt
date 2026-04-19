@@ -301,9 +301,16 @@ class GoalFormViewModel @Inject constructor(
         }
     }
 
-    /** Aplica preço e link ao formulário mantendo o título da meta (nome que escreveste). */
+    /**
+     * Aplica preço e link ao formulário e define o **título da meta** com o nome exacto do anúncio
+     * (para guardar a meta com o mesmo texto da pesquisa seleccionada).
+     */
     fun applyProductListing(hit: GoalProductHitDto) {
-        _uiState.update { applyHitToState(it, hit, preserveUserTitle = true) }
+        _uiState.update { s ->
+            applyHitToState(s, hit, preserveUserTitle = false).copy(
+                productSearchResults = emptyList(),
+            )
+        }
     }
 
     /** Preenche valor, link e referência a partir de um anúncio (só na app, sem navegador). */

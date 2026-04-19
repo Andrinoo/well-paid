@@ -2,6 +2,7 @@ package com.wellpaid.ui.goals
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -18,8 +20,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -35,7 +40,9 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,7 +56,10 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wellpaid.R
+import com.wellpaid.core.model.goal.GoalProductHitDto
 import com.wellpaid.ui.components.ProductPriceHitCard
+import com.wellpaid.ui.theme.WellPaidCream
+import com.wellpaid.ui.theme.WellPaidCreamMuted
 import com.wellpaid.ui.theme.WellPaidGold
 import com.wellpaid.ui.theme.WellPaidNavy
 import com.wellpaid.ui.theme.wellPaidScreenHorizontalPadding
@@ -67,6 +77,21 @@ fun GoalFormScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var showDiscardExitDialog by remember { mutableStateOf(false) }
+    var showSearchResultsSheet by remember { mutableStateOf(false) }
+    var wasSearchingProducts by remember { mutableStateOf(false) }
+
+    LaunchedEffect(state.isSearchingProducts, state.productSearchResults) {
+        if (wasSearchingProducts && !state.isSearchingProducts && state.productSearchResults.isNotEmpty()) {
+            showSearchResultsSheet = true
+        }
+        wasSearchingProducts = state.isSearchingProducts
+    }
+
+    LaunchedEffect(state.productSearchResults) {
+        if (state.productSearchResults.isEmpty()) {
+            showSearchResultsSheet = false
+        }
+    }
 
     fun tryLeave() {
         if (viewModel.hasUnsavedChanges()) {
@@ -76,7 +101,10 @@ fun GoalFormScreen(
         }
     }
 
-    BackHandler(enabled = viewModel.hasUnsavedChanges()) {
+    BackHandler(enabled = showSearchResultsSheet) {
+        showSearchResultsSheet = false
+    }
+    BackHandler(enabled = !showSearchResultsSheet && viewModel.hasUnsavedChanges()) {
         showDiscardExitDialog = true
     }
 
@@ -226,36 +254,43 @@ fun GoalFormScreen(
                 )
             }
 
-            if (state.productSearchResults.isNotEmpty()) {
+            if (state.productSearchResults.isNotEmpty() && !state.isSearchingProducts) {
                 Spacer(Modifier.height(12.dp))
                 Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, WellPaidNavy.copy(alpha = 0.12f)),
-                    color = MaterialTheme.colorScheme.surface,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(enabled = !state.isSaving) { showSearchResultsSheet = true },
+                    shape = RoundedCornerShape(14.dp),
+                    border = BorderStroke(1.dp, WellPaidNavy.copy(alpha = 0.14f)),
+                    color = WellPaidCreamMuted,
                     tonalElevation = 1.dp,
                 ) {
-                    Column(
-                        modifier = Modifier.padding(12.dp),
+                    Row(
+                        modifier = Modifier.padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(
-                            text = stringResource(R.string.goal_search_results_title),
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = WellPaidNavy,
-                            modifier = Modifier.padding(bottom = 10.dp),
-                        )
-                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            state.productSearchResults.take(12).forEach { hit ->
-                                ProductPriceHitCard(
-                                    title = hit.title,
-                                    priceLabel = formatMinorCurrencyFromCents(hit.priceCents, hit.currencyId),
-                                    source = hit.source,
-                                    enabled = !state.isSaving,
-                                    onClick = { viewModel.applyProductListing(hit) },
-                                )
-                            }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(
+                                    R.string.goal_search_results_banner_title,
+                                    state.productSearchResults.size,
+                                ),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = WellPaidNavy,
+                            )
+                            Text(
+                                text = stringResource(R.string.goal_search_results_banner_subtitle),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = WellPaidNavy.copy(alpha = 0.72f),
+                                modifier = Modifier.padding(top = 4.dp),
+                            )
                         }
+                        Icon(
+                            imageVector = Icons.Filled.KeyboardArrowRight,
+                            contentDescription = stringResource(R.string.goal_search_results_title),
+                            tint = WellPaidNavy.copy(alpha = 0.55f),
+                        )
                     }
                 }
             }
@@ -323,6 +358,15 @@ fun GoalFormScreen(
         }
     }
 
+    if (showSearchResultsSheet && state.productSearchResults.isNotEmpty()) {
+        GoalProductSearchResultsSheet(
+            hits = state.productSearchResults,
+            isSaving = state.isSaving,
+            onDismiss = { showSearchResultsSheet = false },
+            onSelect = { hit -> viewModel.applyProductListing(hit) },
+        )
+    }
+
     if (state.showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { viewModel.dismissDeleteConfirm() },
@@ -375,5 +419,76 @@ fun GoalFormScreen(
                 }
             },
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun GoalProductSearchResultsSheet(
+    hits: List<GoalProductHitDto>,
+    isSaving: Boolean,
+    onDismiss: () -> Unit,
+    onSelect: (GoalProductHitDto) -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true,
+        confirmValueChange = { new -> new != SheetValue.Hidden },
+    )
+    ModalBottomSheet(
+        onDismissRequest = { if (!isSaving) onDismiss() },
+        sheetState = sheetState,
+        dragHandle = null,
+        containerColor = WellPaidCream,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .navigationBarsPadding()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 24.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.goal_search_results_title),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = WellPaidNavy,
+                    )
+                    Text(
+                        text = stringResource(R.string.goal_search_results_sheet_subtitle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = WellPaidNavy.copy(alpha = 0.72f),
+                        modifier = Modifier.padding(top = 6.dp),
+                    )
+                }
+                IconButton(
+                    onClick = onDismiss,
+                    enabled = !isSaving,
+                ) {
+                    Icon(
+                        Icons.Filled.Close,
+                        contentDescription = stringResource(R.string.common_close),
+                        tint = WellPaidNavy,
+                    )
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                hits.forEach { hit ->
+                    ProductPriceHitCard(
+                        title = hit.title,
+                        priceLabel = formatMinorCurrencyFromCents(hit.priceCents, hit.currencyId),
+                        source = hit.source,
+                        enabled = !isSaving,
+                        onClick = { onSelect(hit) },
+                    )
+                }
+            }
+        }
     }
 }

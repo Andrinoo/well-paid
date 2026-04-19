@@ -358,9 +358,12 @@
     <string name="goal_error_title">Indique um título.</string>
     <string name="goal_error_target">Indique um objetivo válido maior que zero.</string>
     <string name="goal_error_initial">Valor inicial inválido.</string>
-    <string name="goal_search_auto_hint">A pesquisa usa o título da meta (2+ letras) ou um URL de pesquisa (?q=…) no campo de link opcional. Até doze resultados aparecem abaixo; toca numa linha para usar preço e link. Sem navegador.</string>
+    <string name="goal_search_auto_hint">A pesquisa usa o título da meta (2+ letras) ou um URL (?q=…) no campo opcional. Até doze resultados abrem numa lista — escolhe um para definir o nome da meta, o valor e o link. Sem navegador.</string>
     <string name="goal_search_refresh_suggestions">Pesquisar de novo</string>
-    <string name="goal_search_results_title">Preços sugeridos (toca num resultado para usar)</string>
+    <string name="goal_search_results_title">Preços sugeridos</string>
+    <string name="goal_search_results_sheet_subtitle">Escolhe um anúncio. O título da meta passa a ser o nome do produto e preenchemos valor e link.</string>
+    <string name="goal_search_results_banner_title">%1$d preços sugeridos</string>
+    <string name="goal_search_results_banner_subtitle">Abre a lista para escolher — a meta guardada usará esse nome exacto.</string>
     <string name="goal_search_products_by_title">Pesquisar de novo pelo título</string>
     <string name="goal_searching_products">A pesquisar…</string>
     <string name="goal_error_query_too_short">Escreva pelo menos 2 caracteres no título.</string>

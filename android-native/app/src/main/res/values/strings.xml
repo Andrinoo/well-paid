@@ -358,9 +358,12 @@
     <string name="goal_error_title">Enter a title.</string>
     <string name="goal_error_target">Enter a valid target greater than zero.</string>
     <string name="goal_error_initial">Invalid initial amount.</string>
-    <string name="goal_search_auto_hint">Search runs from the goal title (2+ characters), or from a search URL (?q=…) in the optional link field. Up to twelve Google Shopping results appear below; tap a row to apply price and link. No browser.</string>
+    <string name="goal_search_auto_hint">Search uses the goal title (2+ characters), or a search URL (?q=…) in the optional field. Up to twelve Google Shopping matches open in a list — pick one to set the goal name, amount and link. No browser.</string>
     <string name="goal_search_refresh_suggestions">Search again</string>
-    <string name="goal_search_results_title">Suggested prices (tap a row to apply)</string>
+    <string name="goal_search_results_title">Suggested prices</string>
+    <string name="goal_search_results_sheet_subtitle">Pick a listing. The goal title will match the product name, and the target amount and link will be filled in.</string>
+    <string name="goal_search_results_banner_title">%1$d suggested prices</string>
+    <string name="goal_search_results_banner_subtitle">Open the list to choose — the saved goal will use that exact name.</string>
     <string name="goal_search_products_by_title">Search again by title</string>
     <string name="goal_searching_products">Searching…</string>
     <string name="goal_error_query_too_short">Enter at least 2 characters in the title.</string>
