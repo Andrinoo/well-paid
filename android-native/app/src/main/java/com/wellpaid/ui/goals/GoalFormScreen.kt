@@ -1,5 +1,6 @@
 package com.wellpaid.ui.goals
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -133,6 +134,27 @@ fun GoalFormScreen(
             )
             Spacer(Modifier.height(12.dp))
 
+            OutlinedTextField(
+                value = state.targetUrl,
+                onValueChange = { viewModel.onTargetUrlChange(it) },
+                label = { Text(stringResource(R.string.goal_field_link)) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = false,
+                minLines = 2,
+                supportingText = {
+                    Column {
+                        Text(stringResource(R.string.goal_field_link_hint))
+                        Text(
+                            text = stringResource(R.string.goal_field_link_autocomplete_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                },
+                shape = RoundedCornerShape(14.dp),
+            )
+            Spacer(Modifier.height(12.dp))
+
             OutlinedButton(
                 onClick = { viewModel.searchProductsByTitle() },
                 enabled = !state.isSaving && !state.isSearchingProducts,
@@ -227,10 +249,20 @@ fun GoalFormScreen(
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
-                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = stringResource(R.string.goal_product_tap_to_apply),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp, bottom = 8.dp),
+                )
                 state.productSearchResults.take(15).forEach { hit ->
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(
+                                enabled = !state.isSaving,
+                                onClick = { viewModel.applyProductHit(hit) },
+                            ),
                         shape = RoundedCornerShape(14.dp),
                     ) {
                         Column(Modifier.padding(12.dp)) {
@@ -253,31 +285,11 @@ fun GoalFormScreen(
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis,
                             )
-                            Spacer(Modifier.height(8.dp))
-                            TextButton(
-                                onClick = { viewModel.applyProductHit(hit) },
-                                modifier = Modifier.align(Alignment.End),
-                            ) {
-                                Text(stringResource(R.string.goal_product_use))
-                            }
                         }
                     }
                     Spacer(Modifier.height(8.dp))
                 }
             }
-
-            Spacer(Modifier.height(12.dp))
-
-            OutlinedTextField(
-                value = state.targetUrl,
-                onValueChange = { viewModel.setTargetUrl(it) },
-                label = { Text(stringResource(R.string.goal_field_link)) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = false,
-                minLines = 2,
-                supportingText = { Text(stringResource(R.string.goal_field_link_hint)) },
-                shape = RoundedCornerShape(14.dp),
-            )
 
             state.referencePriceLabel?.let { ref ->
                 Spacer(Modifier.height(8.dp))

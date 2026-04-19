@@ -329,8 +329,10 @@
     <string name="goal_field_initial">Valor já poupado (opcional)</string>
     <string name="goal_field_initial_hint">Opcional no registo. Use 0 ou deixe vazio.</string>
     <string name="goal_field_active">Meta ativa</string>
-    <string name="goal_field_link">Link do produto (opcional)</string>
-    <string name="goal_field_link_hint">Cole o URL da página da loja para obter um preço de referência.</string>
+    <string name="goal_field_link">Link do produto ou da pesquisa (opcional)</string>
+    <string name="goal_field_link_hint">Cole o URL da página do produto para obter preço de referência, ou um link de pesquisa do Mercado Livre Brasil — os anúncios aparecem abaixo como sugestões.</string>
+    <string name="goal_field_link_autocomplete_hint">Links de pesquisa do Mercado Livre (Brasil) carregam sugestões automaticamente ao colar.</string>
+    <string name="goal_product_tap_to_apply">Toque num cartão para definir o valor da meta e o link do produto.</string>
     <string name="goal_reference_price_label">Preço de referência</string>
     <string name="goal_refresh_price">Actualizar preço de referência</string>
     <string name="goal_refreshing_price">A obter preço…</string>

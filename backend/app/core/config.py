@@ -4,7 +4,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 from dotenv import load_dotenv
-from pydantic import ValidationError, field_validator, model_validator
+from pydantic import AliasChoices, Field, ValidationError, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _ENV_ENCODING = "utf-8-sig"
@@ -128,6 +128,11 @@ class Settings(BaseSettings):
     mail_from: str | None = None
     # Quando true e SMTP não configurado, regista o token de reset nos logs (só para desenvolvimento).
     password_reset_log_token: bool = False
+    # Opcional: SerpAPI (Google Shopping) para enriquecer POST /goals/product-search além do Mercado Livre.
+    serpapi_key: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("serpapi_key", "SERPAPI_KEY"),
+    )
     # Link na mensagem de confirmação de e-mail (deep link ou URL HTTPS). Vazio = não incluir link no e-mail.
     email_verification_link_base: str | None = None
     # Só desenvolvimento: regista código e token de verificação nos logs se o e-mail não for enviado.
@@ -145,6 +150,7 @@ class Settings(BaseSettings):
             "smtp_password",
             "mail_from",
             "email_verification_link_base",
+            "serpapi_key",
         ):
             v = data.get(key)
             if isinstance(v, str) and not v.strip():

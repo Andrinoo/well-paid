@@ -13,6 +13,7 @@ import com.wellpaid.core.model.goal.GoalProductSearchRequestDto
 import com.wellpaid.core.model.goal.GoalUpdateDto
 import com.wellpaid.core.network.GoalsApi
 import com.wellpaid.util.FastApiErrorMapper
+import com.wellpaid.util.MercadoLibreSearchUrlParser
 import com.wellpaid.util.MercadoLivrePublicSearch
 import com.wellpaid.util.centsToBrlInput
 import com.wellpaid.util.formatBrlFromCents
@@ -23,6 +24,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -59,6 +62,8 @@ class GoalFormViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val goalId: String? = savedStateHandle.get<String>("goalId")
+
+    private var urlSearchDebounceJob: Job? = null
 
     private val _uiState = MutableStateFlow(GoalFormUiState())
     val uiState: StateFlow<GoalFormUiState> = _uiState.asStateFlow()
@@ -116,8 +121,22 @@ class GoalFormViewModel @Inject constructor(
         _uiState.update { it.copy(isActive = value) }
     }
 
-    fun setTargetUrl(value: String) {
+    /**
+     * Actualiza o link e, se for um URL de pesquisa do Mercado Livre (ex.: …/search?q=…),
+     * carrega sugestões na app após um breve debounce.
+     */
+    fun onTargetUrlChange(value: String) {
         _uiState.update { it.copy(targetUrl = value) }
+        urlSearchDebounceJob?.cancel()
+        val q = MercadoLibreSearchUrlParser.extractSearchQuery(value) ?: return
+        if (q.length < 2) return
+        val snapshotUrl = value.trim()
+        urlSearchDebounceJob = viewModelScope.launch {
+            delay(550)
+            if (_uiState.value.targetUrl.trim() != snapshotUrl) return@launch
+            val syncTitle = _uiState.value.title.isBlank()
+            performProductSearch(query = q, syncTitleFromQuery = syncTitle)
+        }
     }
 
     /** Para abrir pesquisas externas no browser: devolve query ou define erro de título curto. */
@@ -228,28 +247,36 @@ class GoalFormViewModel @Inject constructor(
             }
             return
         }
+        urlSearchDebounceJob?.cancel()
         viewModelScope.launch {
-            _uiState.update {
-                it.copy(
-                    isSearchingProducts = true,
-                    errorMessage = null,
-                    lastProductSearchHadNoResults = false,
-                )
-            }
-            val fromBackend = runCatching {
-                goalsApi.productSearch(GoalProductSearchRequestDto(query = q, siteId = "MLB"))
-            }.getOrNull()?.results
-            val list = when {
-                !fromBackend.isNullOrEmpty() -> fromBackend
-                else -> MercadoLivrePublicSearch.searchBr(q)
-            }
-            _uiState.update {
-                it.copy(
-                    isSearchingProducts = false,
-                    productSearchResults = list,
-                    lastProductSearchHadNoResults = list.isEmpty(),
-                )
-            }
+            performProductSearch(query = q, syncTitleFromQuery = false)
+        }
+    }
+
+    private suspend fun performProductSearch(query: String, syncTitleFromQuery: Boolean) {
+        val q = query.trim()
+        if (q.length < 2) return
+        _uiState.update { s ->
+            s.copy(
+                title = if (syncTitleFromQuery) q.take(200) else s.title,
+                isSearchingProducts = true,
+                errorMessage = null,
+                lastProductSearchHadNoResults = false,
+            )
+        }
+        val fromBackend = runCatching {
+            goalsApi.productSearch(GoalProductSearchRequestDto(query = q, siteId = "MLB"))
+        }.getOrNull()?.results
+        val list = when {
+            !fromBackend.isNullOrEmpty() -> fromBackend
+            else -> MercadoLivrePublicSearch.searchBr(q)
+        }
+        _uiState.update {
+            it.copy(
+                isSearchingProducts = false,
+                productSearchResults = list,
+                lastProductSearchHadNoResults = list.isEmpty(),
+            )
         }
     }
 

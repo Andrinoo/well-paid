@@ -329,8 +329,10 @@
     <string name="goal_field_initial">Amount already saved (optional)</string>
     <string name="goal_field_initial_hint">Optional when creating. Use 0 or leave empty.</string>
     <string name="goal_field_active">Active goal</string>
-    <string name="goal_field_link">Product link (optional)</string>
-    <string name="goal_field_link_hint">Paste a store page URL to fetch a reference price.</string>
+    <string name="goal_field_link">Product or search link (optional)</string>
+    <string name="goal_field_link_hint">Paste a product page URL to fetch a reference price, or a Mercado Livre Brasil search URL — matching listings appear below as suggestions.</string>
+    <string name="goal_field_link_autocomplete_hint">Mercado Livre Brasil search links load suggestions here automatically after you paste them.</string>
+    <string name="goal_product_tap_to_apply">Tap a card to set the goal amount and product link.</string>
     <string name="goal_reference_price_label">Reference price</string>
     <string name="goal_refresh_price">Update reference price</string>
     <string name="goal_refreshing_price">Fetching price…</string>

@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
+from app.core.config import get_settings
 from app.core.database import get_db
 from app.models.goal import Goal
 from app.models.goal_contribution import GoalContribution
@@ -24,7 +25,7 @@ from app.schemas.goal import (
     GoalUpdate,
 )
 from app.services.family_scope import family_peer_user_ids
-from app.services.goal_product_search import search_mercadolibre
+from app.services.goal_product_search import search_mercadolibre, search_serpapi_google_shopping
 from app.services.goal_reference_price import fetch_product_hints
 
 router = APIRouter(prefix="/goals", tags=["goals"])
@@ -141,10 +142,22 @@ def search_goal_products(
     body: GoalProductSearchBody,
     user: Annotated[User, Depends(get_current_user)],
 ) -> GoalProductSearchResponse:
-    """Pesquisa por nome (Mercado Livre API pública)."""
+    """Pesquisa por nome: Mercado Livre (público) + Google Shopping (SerpAPI) se SERPAPI_KEY estiver definida."""
     _ = user
     site = (body.site_id or "MLB").strip() or "MLB"
-    rows = search_mercadolibre(body.query.strip(), site_id=site)
+    q = body.query.strip()
+    rows: list[dict] = search_mercadolibre(q, site_id=site)
+    settings = get_settings()
+    api_key = (settings.serpapi_key or "").strip()
+    if api_key:
+        extra = search_serpapi_google_shopping(q, api_key=api_key, limit=10)
+        seen = {r.get("url") for r in rows if r.get("url")}
+        for r in extra:
+            u = r.get("url")
+            if u and u not in seen:
+                seen.add(u)
+                rows.append(r)
+        rows = rows[:25]
     return GoalProductSearchResponse(
         results=[GoalProductHit.model_validate(r) for r in rows],
     )
