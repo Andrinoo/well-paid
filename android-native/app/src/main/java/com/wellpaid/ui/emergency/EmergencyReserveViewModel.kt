@@ -7,6 +7,7 @@ import com.wellpaid.R
 import com.wellpaid.core.model.auth.TokenStorage
 import com.wellpaid.core.model.emergency.EmergencyReserveAccrualDto
 import com.wellpaid.core.model.emergency.EmergencyReserveDto
+import com.wellpaid.core.model.emergency.EmergencyReservePlanCreateDto
 import com.wellpaid.core.model.emergency.EmergencyReservePlanDto
 import com.wellpaid.core.model.emergency.EmergencyReserveUpdateDto
 import com.wellpaid.core.network.EmergencyReserveApi
@@ -33,10 +34,13 @@ import javax.inject.Inject
 data class EmergencyReserveUiState(
     val isLoading: Boolean = true,
     val isSaving: Boolean = false,
+    val isCreatingPlan: Boolean = false,
     val reserve: EmergencyReserveDto? = null,
     val plans: List<EmergencyReservePlanDto> = emptyList(),
     val accruals: List<EmergencyReserveAccrualDto> = emptyList(),
     val monthlyTargetText: String = "",
+    val newPlanTitleText: String = "",
+    val newPlanMonthlyText: String = "",
     val errorMessage: String? = null,
     /** Só o titular da família altera a meta quando existe agregado. */
     val canEditReserve: Boolean = true,
@@ -105,6 +109,70 @@ class EmergencyReserveViewModel @Inject constructor(
 
     fun setMonthlyTargetText(value: String) {
         _uiState.update { it.copy(monthlyTargetText = value) }
+    }
+
+    fun setNewPlanTitleText(value: String) {
+        _uiState.update { it.copy(newPlanTitleText = value) }
+    }
+
+    fun setNewPlanMonthlyText(value: String) {
+        _uiState.update { it.copy(newPlanMonthlyText = value) }
+    }
+
+    fun createNamedPlan() {
+        val s = _uiState.value
+        if (!s.canEditReserve) {
+            _uiState.update {
+                it.copy(errorMessage = appContext.getString(R.string.emergency_readonly_not_owner))
+            }
+            return
+        }
+        val title = s.newPlanTitleText.trim()
+        if (title.isEmpty()) {
+            _uiState.update {
+                it.copy(errorMessage = appContext.getString(R.string.emergency_error_plan_name))
+            }
+            return
+        }
+        val cents = parseBrlToCents(s.newPlanMonthlyText)?.takeIf { it > 0 }
+            ?: parseBrlToCents(s.monthlyTargetText)?.takeIf { it > 0 }
+        if (cents == null) {
+            _uiState.update {
+                it.copy(errorMessage = appContext.getString(R.string.emergency_error_target))
+            }
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isCreatingPlan = true, errorMessage = null) }
+            runCatching {
+                api.createPlan(
+                    EmergencyReservePlanCreateDto(
+                        title = title,
+                        monthlyTargetCents = cents,
+                    ),
+                )
+            }
+                .onSuccess {
+                    _uiState.update {
+                        it.copy(
+                            isCreatingPlan = false,
+                            newPlanTitleText = "",
+                            newPlanMonthlyText = "",
+                            errorMessage = null,
+                        )
+                    }
+                    refresh()
+                }
+                .onFailure { t ->
+                    _uiState.update {
+                        it.copy(
+                            isCreatingPlan = false,
+                            errorMessage = FastApiErrorMapper.message(appContext, t),
+                        )
+                    }
+                }
+        }
     }
 
     fun saveMonthlyTarget() {

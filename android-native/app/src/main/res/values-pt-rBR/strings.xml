@@ -352,6 +352,8 @@
     <string name="goal_search_results_header">Anúncios</string>
     <string name="goal_product_use">Usar este anúncio</string>
     <string name="goal_product_link_label">Link</string>
+    <string name="goal_search_no_results">Nenhum anúncio encontrado no Mercado Livre. Tente outras palavras.</string>
+    <string name="goal_detail_refresh_target_from_link">Actualizar valor pelo link do produto</string>
     <string name="emergency_need_login">Inicie sessão para ver a reserva de emergência.</string>
     <string name="emergency_balance_label">Saldo acumulado</string>
     <string name="emergency_tracking_start">A contar desde %1$s</string>
@@ -558,4 +560,11 @@
     <string name="expense_share_with_label">Partilhar com</string>
     <string name="expense_share_need_family">Adicione mais membros ao agregado para partilhar a despesa com alguém em concreto.</string>
     <string name="emergency_readonly_not_owner">Só o titular da família pode alterar a reserva de emergência.</string>
+    <string name="emergency_new_plan_section">Adicionar reserva nomeada</string>
+    <string name="emergency_new_plan_name_label">Nome do plano</string>
+    <string name="emergency_new_plan_monthly_label">Valor mensal deste plano (R$)</string>
+    <string name="emergency_create_plan">Criar plano</string>
+    <string name="emergency_plan_creating">A criar…</string>
+    <string name="emergency_error_plan_name">Indique um nome para o plano.</string>
+    <string name="emergency_new_plan_monthly_footnote">Deixe vazio para usar o valor mensal acima.</string>
 </resources>

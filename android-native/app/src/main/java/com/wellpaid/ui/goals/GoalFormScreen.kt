@@ -148,6 +148,14 @@ fun GoalFormScreen(
                     )
                 }
             }
+            if (state.lastProductSearchHadNoResults && !state.isSearchingProducts) {
+                Text(
+                    text = stringResource(R.string.goal_search_no_results),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+            }
 
             if (state.productSearchResults.isNotEmpty()) {
                 Spacer(Modifier.height(12.dp))

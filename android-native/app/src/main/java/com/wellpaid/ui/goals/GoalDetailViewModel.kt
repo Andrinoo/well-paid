@@ -23,6 +23,7 @@ data class GoalDetailUiState(
     val isLoading: Boolean = true,
     val isSaving: Boolean = false,
     val isDeleting: Boolean = false,
+    val isRefreshingFromLink: Boolean = false,
     val goal: GoalDto? = null,
     val errorMessage: String? = null,
 )
@@ -94,6 +95,40 @@ class GoalDetailViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isSaving = false,
+                            errorMessage = FastApiErrorMapper.message(appContext, t),
+                        )
+                    }
+                }
+        }
+    }
+
+    fun refreshTargetFromLink(onDone: () -> Unit = {}) {
+        val g = _uiState.value.goal ?: return
+        if (!g.isMine) return
+        val url = g.targetUrl?.trim().orEmpty()
+        if (url.isEmpty()) {
+            _uiState.update {
+                it.copy(errorMessage = appContext.getString(R.string.goal_error_url_required_for_refresh))
+            }
+            return
+        }
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRefreshingFromLink = true, errorMessage = null) }
+            runCatching { goalsApi.refreshReferencePrice(goalId) }
+                .onSuccess { updated ->
+                    _uiState.update {
+                        it.copy(
+                            isRefreshingFromLink = false,
+                            goal = updated,
+                            errorMessage = null,
+                        )
+                    }
+                    onDone()
+                }
+                .onFailure { t ->
+                    _uiState.update {
+                        it.copy(
+                            isRefreshingFromLink = false,
                             errorMessage = FastApiErrorMapper.message(appContext, t),
                         )
                     }

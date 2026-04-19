@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 import httpx
+
+logger = logging.getLogger(__name__)
 
 _USER_AGENT = (
     "WellPaid/1.0 (+https://wellpaid.app) product search via Mercado Libre public API"
@@ -45,7 +48,8 @@ def search_mercadolibre(
             r = client.get(url, params={"q": q, "limit": lim})
             r.raise_for_status()
             data = r.json()
-    except Exception:
+    except Exception as e:
+        logger.warning("Mercado Libre search failed: %s", e)
         return []
 
     out: list[dict[str, Any]] = []

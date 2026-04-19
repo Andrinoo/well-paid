@@ -2,17 +2,20 @@ package com.wellpaid.ui.goals
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -227,6 +230,29 @@ fun GoalDetailScreen(
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.tertiary,
                     )
+                }
+                if (goal.isMine && url.isNotEmpty()) {
+                    Spacer(Modifier.height(12.dp))
+                    OutlinedButton(
+                        onClick = { viewModel.refreshTargetFromLink() },
+                        enabled = !state.isSaving && !state.isDeleting && !state.isRefreshingFromLink,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
+                            Icon(Icons.Filled.Refresh, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = if (state.isRefreshingFromLink) {
+                                    stringResource(R.string.goal_refreshing_price)
+                                } else {
+                                    stringResource(R.string.goal_detail_refresh_target_from_link)
+                                },
+                            )
+                        }
+                    }
                 }
             }
 

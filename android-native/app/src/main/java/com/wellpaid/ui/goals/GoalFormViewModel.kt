@@ -13,6 +13,7 @@ import com.wellpaid.core.model.goal.GoalProductSearchRequestDto
 import com.wellpaid.core.model.goal.GoalUpdateDto
 import com.wellpaid.core.network.GoalsApi
 import com.wellpaid.util.FastApiErrorMapper
+import com.wellpaid.util.MercadoLivrePublicSearch
 import com.wellpaid.util.centsToBrlInput
 import com.wellpaid.util.formatBrlFromCents
 import com.wellpaid.util.parseBrlToCents
@@ -43,6 +44,8 @@ data class GoalFormUiState(
     val draftReferenceCurrency: String = "BRL",
     val draftPriceSource: String? = null,
     val productSearchResults: List<GoalProductHitDto> = emptyList(),
+    /** True após uma pesquisa concluída sem anúncios (fonte ML directa ou API). */
+    val lastProductSearchHadNoResults: Boolean = false,
     val errorMessage: String? = null,
     val showDeleteConfirm: Boolean = false,
 )
@@ -213,26 +216,27 @@ class GoalFormViewModel @Inject constructor(
             return
         }
         viewModelScope.launch {
-            _uiState.update { it.copy(isSearchingProducts = true, errorMessage = null) }
-            runCatching {
-                goalsApi.productSearch(GoalProductSearchRequestDto(query = q))
+            _uiState.update {
+                it.copy(
+                    isSearchingProducts = true,
+                    errorMessage = null,
+                    lastProductSearchHadNoResults = false,
+                )
             }
-                .onSuccess { resp ->
-                    _uiState.update {
-                        it.copy(
-                            isSearchingProducts = false,
-                            productSearchResults = resp.results,
-                        )
-                    }
-                }
-                .onFailure { t ->
-                    _uiState.update {
-                        it.copy(
-                            isSearchingProducts = false,
-                            errorMessage = FastApiErrorMapper.message(appContext, t),
-                        )
-                    }
-                }
+            val fromBackend = runCatching {
+                goalsApi.productSearch(GoalProductSearchRequestDto(query = q))
+            }.getOrNull()?.results
+            val list = when {
+                !fromBackend.isNullOrEmpty() -> fromBackend
+                else -> MercadoLivrePublicSearch.searchBr(q)
+            }
+            _uiState.update {
+                it.copy(
+                    isSearchingProducts = false,
+                    productSearchResults = list,
+                    lastProductSearchHadNoResults = list.isEmpty(),
+                )
+            }
         }
     }
 
@@ -255,6 +259,7 @@ class GoalFormViewModel @Inject constructor(
                 draftReferenceCurrency = hit.currencyId,
                 draftPriceSource = hit.source,
                 productSearchResults = emptyList(),
+                lastProductSearchHadNoResults = false,
                 errorMessage = null,
                 loaded = nextLoaded ?: s.loaded,
             )

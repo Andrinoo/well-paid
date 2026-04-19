@@ -352,6 +352,8 @@
     <string name="goal_search_results_header">Listings</string>
     <string name="goal_product_use">Use this listing</string>
     <string name="goal_product_link_label">Link</string>
+    <string name="goal_search_no_results">No Mercado Livre listings found. Try different keywords.</string>
+    <string name="goal_detail_refresh_target_from_link">Update goal amount from product link</string>
     <string name="emergency_need_login">Sign in to see the emergency fund.</string>
     <string name="emergency_balance_label">Accumulated balance</string>
     <string name="emergency_tracking_start">Counting since %1$s</string>
@@ -558,4 +560,11 @@
     <string name="expense_share_with_label">Share with</string>
     <string name="expense_share_need_family">Add more members to your household to share expenses with someone specific.</string>
     <string name="emergency_readonly_not_owner">Only the household owner can change the emergency reserve settings.</string>
+    <string name="emergency_new_plan_section">Add a named reserve</string>
+    <string name="emergency_new_plan_name_label">Plan name</string>
+    <string name="emergency_new_plan_monthly_label">Monthly amount for this plan (BRL)</string>
+    <string name="emergency_create_plan">Create plan</string>
+    <string name="emergency_plan_creating">Creating…</string>
+    <string name="emergency_error_plan_name">Enter a name for the plan.</string>
+    <string name="emergency_new_plan_monthly_footnote">Leave empty to use the monthly amount above.</string>
 </resources>

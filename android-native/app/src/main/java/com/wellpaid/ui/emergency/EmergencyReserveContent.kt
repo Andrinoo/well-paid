@@ -293,6 +293,59 @@ fun EmergencyReserveContent(
                     )
                 }
 
+                if (state.canEditReserve) {
+                    Spacer(Modifier.height(20.dp))
+                    Text(
+                        text = stringResource(R.string.emergency_new_plan_section),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = WellPaidNavy,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = state.newPlanTitleText,
+                        onValueChange = { viewModel.setNewPlanTitleText(it) },
+                        label = { Text(stringResource(R.string.emergency_new_plan_name_label)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        enabled = !state.isCreatingPlan && !state.isSaving,
+                        shape = RoundedCornerShape(16.dp),
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = state.newPlanMonthlyText,
+                        onValueChange = { viewModel.setNewPlanMonthlyText(it) },
+                        label = { Text(stringResource(R.string.emergency_new_plan_monthly_label)) },
+                        supportingText = {
+                            Text(stringResource(R.string.emergency_new_plan_monthly_footnote))
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        enabled = !state.isCreatingPlan && !state.isSaving,
+                        shape = RoundedCornerShape(16.dp),
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Button(
+                        onClick = { viewModel.createNamedPlan() },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !state.isCreatingPlan && !state.isSaving,
+                        shape = RoundedCornerShape(24.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = WellPaidNavy,
+                            contentColor = Color.White,
+                        ),
+                    ) {
+                        Text(
+                            text = if (state.isCreatingPlan) {
+                                stringResource(R.string.emergency_plan_creating)
+                            } else {
+                                stringResource(R.string.emergency_create_plan)
+                            },
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                }
+
                 if (!r.configured) {
                     Spacer(Modifier.height(8.dp))
                     Text(
