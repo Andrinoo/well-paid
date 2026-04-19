@@ -47,6 +47,8 @@ data class GoalFormUiState(
     val draftReferencePriceCents: Int? = null,
     val draftReferenceCurrency: String = "BRL",
     val draftPriceSource: String? = null,
+    /** URL de miniatura (só texto na API; imagem carregada da rede no cliente). */
+    val draftReferenceThumbnailUrl: String? = null,
     val productSearchResults: List<GoalProductHitDto> = emptyList(),
     /** True após uma pesquisa concluída sem resultados (SerpAPI / Google Shopping). */
     val lastProductSearchHadNoResults: Boolean = false,
@@ -119,6 +121,7 @@ class GoalFormViewModel @Inject constructor(
                                 referencePriceLabel = g.referencePriceCents?.let { c ->
                                     formatBrlFromCents(c)
                                 },
+                                draftReferenceThumbnailUrl = g.referenceThumbnailUrl,
                                 errorMessage = null,
                             )
                         }
@@ -321,12 +324,14 @@ class GoalFormViewModel @Inject constructor(
     ): GoalFormUiState {
         val isBrl = hit.currencyId.equals("BRL", ignoreCase = true)
         val refLabel = formatMinorCurrencyFromCents(hit.priceCents, hit.currencyId)
+        val thumb = hit.thumbnail?.trim()?.takeIf { it.isNotEmpty() }?.take(2048)
         val nextLoaded = s.loaded?.copy(
             referenceProductName = hit.title.take(200),
             referencePriceCents = if (isBrl) hit.priceCents else null,
             referenceCurrency = hit.currencyId,
             priceSource = hit.source,
             targetUrl = hit.url,
+            referenceThumbnailUrl = thumb,
         )
         return s.copy(
             title = if (preserveUserTitle) s.title else hit.title.take(200),
@@ -337,6 +342,7 @@ class GoalFormViewModel @Inject constructor(
             draftReferencePriceCents = if (isBrl) hit.priceCents else null,
             draftReferenceCurrency = hit.currencyId,
             draftPriceSource = hit.source,
+            draftReferenceThumbnailUrl = thumb,
             lastProductSearchHadNoResults = false,
             errorMessage = null,
             loaded = nextLoaded ?: s.loaded,
@@ -402,6 +408,7 @@ class GoalFormViewModel @Inject constructor(
                             referencePriceCents = s.draftReferencePriceCents,
                             referenceCurrency = s.draftReferenceCurrency,
                             priceSource = s.draftPriceSource,
+                            referenceThumbnailUrl = s.draftReferenceThumbnailUrl,
                         ),
                     )
                 } else {
@@ -419,6 +426,7 @@ class GoalFormViewModel @Inject constructor(
                             referencePriceCents = loaded.referencePriceCents,
                             referenceCurrency = loaded.referenceCurrency,
                             priceSource = loaded.priceSource,
+                            referenceThumbnailUrl = loaded.referenceThumbnailUrl,
                         ),
                     )
                 }

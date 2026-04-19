@@ -27,6 +27,7 @@ data class GoalDto(
     @SerialName("reference_currency") val referenceCurrency: String = "BRL",
     @SerialName("price_checked_at") val priceCheckedAt: String? = null,
     @SerialName("price_source") val priceSource: String? = null,
+    @SerialName("reference_thumbnail_url") val referenceThumbnailUrl: String? = null,
     @SerialName("price_alternatives") val priceAlternatives: List<GoalPriceAlternativeDto> = emptyList(),
 )
 
@@ -41,6 +42,7 @@ data class GoalCreateDto(
     @SerialName("reference_price_cents") val referencePriceCents: Int? = null,
     @SerialName("reference_currency") val referenceCurrency: String = "BRL",
     @SerialName("price_source") val priceSource: String? = null,
+    @SerialName("reference_thumbnail_url") val referenceThumbnailUrl: String? = null,
 )
 
 @Serializable
@@ -54,6 +56,7 @@ data class GoalUpdateDto(
     @SerialName("reference_price_cents") val referencePriceCents: Int? = null,
     @SerialName("reference_currency") val referenceCurrency: String? = null,
     @SerialName("price_source") val priceSource: String? = null,
+    @SerialName("reference_thumbnail_url") val referenceThumbnailUrl: String? = null,
 )
 
 @Serializable

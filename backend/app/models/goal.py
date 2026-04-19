@@ -31,6 +31,9 @@ class Goal(Base, TimestampMixin):
     reference_currency: Mapped[str] = mapped_column(String(8), nullable=False, default="BRL")
     price_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     price_source: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    reference_thumbnail_url: Mapped[str | None] = mapped_column(
+        String(2048), nullable=True
+    )
     price_alternatives: Mapped[list] = mapped_column(
         JSONB,
         nullable=False,

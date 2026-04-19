@@ -20,6 +20,7 @@ class GoalCreate(BaseModel):
     reference_price_cents: int | None = Field(default=None, gt=0)
     reference_currency: str = Field(default="BRL", max_length=8)
     price_source: str | None = Field(default=None, max_length=32)
+    reference_thumbnail_url: str | None = Field(default=None, max_length=2048)
 
 
 class GoalUpdate(BaseModel):
@@ -32,6 +33,7 @@ class GoalUpdate(BaseModel):
     reference_price_cents: int | None = Field(default=None, gt=0)
     reference_currency: str | None = Field(default=None, max_length=8)
     price_source: str | None = Field(default=None, max_length=32)
+    reference_thumbnail_url: str | None = Field(default=None, max_length=2048)
 
 
 class GoalContribute(BaseModel):
@@ -67,6 +69,7 @@ class GoalResponse(BaseModel):
     reference_currency: str = "BRL"
     price_checked_at: datetime | None = None
     price_source: str | None = None
+    reference_thumbnail_url: str | None = None
     price_alternatives: list[dict] = Field(default_factory=list)
 
 

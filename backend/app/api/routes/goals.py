@@ -67,6 +67,7 @@ def _to_response(row: Goal, viewer_id: uuid.UUID) -> GoalResponse:
         reference_currency=row.reference_currency or "BRL",
         price_checked_at=row.price_checked_at,
         price_source=row.price_source,
+        reference_thumbnail_url=row.reference_thumbnail_url,
         price_alternatives=alts,
     )
 
@@ -103,6 +104,11 @@ def create_goal(
         reference_price_cents=body.reference_price_cents,
         reference_currency=body.reference_currency or "BRL",
         price_source=body.price_source,
+        reference_thumbnail_url=(
+            body.reference_thumbnail_url.strip()
+            if body.reference_thumbnail_url
+            else None
+        ),
     )
     db.add(row)
     db.flush()
@@ -252,6 +258,8 @@ def _hints_from_title_search(title: str, settings) -> dict[str, Any]:
                 "url": r.get("url"),
             }
         )
+    thumb = first.get("thumbnail")
+    thumb_s = str(thumb).strip()[:2048] if thumb else None
     return {
         "reference_product_name": str(first.get("title") or "")[:500] or None,
         "reference_price_cents": pc,
@@ -260,6 +268,7 @@ def _hints_from_title_search(title: str, settings) -> dict[str, Any]:
         "price_source": str(first.get("source") or "google_shopping"),
         "price_alternatives": alts,
         "_listing_url": str(first.get("url") or "").strip() or None,
+        "reference_thumbnail_url": thumb_s or None,
     }
 
 
@@ -312,6 +321,8 @@ def refresh_goal_reference_price(
     src = hints.get("price_source")
     row.price_source = str(src) if src else "unavailable"
     row.price_alternatives = list(hints.get("price_alternatives") or [])
+    if hints.get("reference_thumbnail_url"):
+        row.reference_thumbnail_url = str(hints["reference_thumbnail_url"])[:2048]
     db.commit()
     db.refresh(row)
     return _to_response(row, user.id)
