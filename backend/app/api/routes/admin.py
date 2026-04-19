@@ -12,7 +12,7 @@ from app.core.limiter import limiter
 from app.models.admin_audit_event import AdminAuditEvent
 from app.models.app_usage_event import AppUsageEvent
 from app.models.category import Category
-from app.models.emergency_reserve import EmergencyReserve, EmergencyReserveAccrual
+from app.models.emergency_reserve import EmergencyReserveAccrual, EmergencyReservePlan
 from app.models.expense import Expense
 from app.models.family import Family, FamilyMember
 from app.models.goal import Goal
@@ -163,7 +163,7 @@ def finance_summary(
         db.scalar(select(func.count()).select_from(ShoppingListItem)) or 0
     )
     emergency_reserves_total = int(
-        db.scalar(select(func.count()).select_from(EmergencyReserve)) or 0
+        db.scalar(select(func.count()).select_from(EmergencyReservePlan)) or 0
     )
     emergency_reserve_accruals_total = int(
         db.scalar(select(func.count()).select_from(EmergencyReserveAccrual)) or 0

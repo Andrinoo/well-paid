@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.padding
@@ -14,6 +15,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -120,6 +122,51 @@ fun GoalFormScreen(
                 minLines = 2,
                 shape = RoundedCornerShape(14.dp),
             )
+            Spacer(Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value = state.targetUrl,
+                onValueChange = { viewModel.setTargetUrl(it) },
+                label = { Text(stringResource(R.string.goal_field_link)) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = false,
+                minLines = 2,
+                supportingText = { Text(stringResource(R.string.goal_field_link_hint)) },
+                shape = RoundedCornerShape(14.dp),
+            )
+
+            if (viewModel.isEditMode) {
+                state.referencePriceLabel?.let { ref ->
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(R.string.goal_reference_price_label) + ": " + ref,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = { viewModel.refreshReferencePrice() },
+                    enabled = !state.isSaving && !state.isRefreshingPrice,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                    ) {
+                        Icon(Icons.Filled.Refresh, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = if (state.isRefreshingPrice) {
+                                stringResource(R.string.goal_refreshing_price)
+                            } else {
+                                stringResource(R.string.goal_refresh_price)
+                            },
+                        )
+                    }
+                }
+            }
+
             Spacer(Modifier.height(12.dp))
 
             OutlinedTextField(

@@ -11,6 +11,7 @@ import com.wellpaid.core.model.goal.GoalUpdateDto
 import com.wellpaid.core.network.GoalsApi
 import com.wellpaid.util.FastApiErrorMapper
 import com.wellpaid.util.centsToBrlInput
+import com.wellpaid.util.formatBrlFromCents
 import com.wellpaid.util.parseBrlToCents
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -24,11 +25,14 @@ import javax.inject.Inject
 data class GoalFormUiState(
     val isLoading: Boolean = true,
     val isSaving: Boolean = false,
+    val isRefreshingPrice: Boolean = false,
     val loaded: GoalDto? = null,
     val title: String = "",
     val targetText: String = "",
     val initialText: String = "",
+    val targetUrl: String = "",
     val isActive: Boolean = true,
+    val referencePriceLabel: String? = null,
     val errorMessage: String? = null,
     val showDeleteConfirm: Boolean = false,
 )
@@ -61,7 +65,11 @@ class GoalFormViewModel @Inject constructor(
                                 loaded = g,
                                 title = g.title,
                                 targetText = centsToBrlInput(g.targetCents),
+                                targetUrl = g.targetUrl.orEmpty(),
                                 isActive = g.isActive,
+                                referencePriceLabel = g.referencePriceCents?.let { c ->
+                                    formatBrlFromCents(c)
+                                },
                                 errorMessage = null,
                             )
                         }
@@ -92,6 +100,42 @@ class GoalFormViewModel @Inject constructor(
 
     fun setActive(value: Boolean) {
         _uiState.update { it.copy(isActive = value) }
+    }
+
+    fun setTargetUrl(value: String) {
+        _uiState.update { it.copy(targetUrl = value) }
+    }
+
+    fun refreshReferencePrice() {
+        val id = goalId ?: return
+        val url = _uiState.value.targetUrl.trim()
+        if (url.isEmpty()) {
+            _uiState.update {
+                it.copy(errorMessage = appContext.getString(R.string.goal_error_url_required_for_refresh))
+            }
+            return
+        }
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRefreshingPrice = true, errorMessage = null) }
+            runCatching { goalsApi.refreshReferencePrice(id) }
+                .onSuccess { g ->
+                    _uiState.update {
+                        it.copy(
+                            isRefreshingPrice = false,
+                            loaded = g,
+                            referencePriceLabel = g.referencePriceCents?.let { c -> formatBrlFromCents(c) },
+                        )
+                    }
+                }
+                .onFailure { t ->
+                    _uiState.update {
+                        it.copy(
+                            isRefreshingPrice = false,
+                            errorMessage = FastApiErrorMapper.message(appContext, t),
+                        )
+                    }
+                }
+        }
     }
 
     fun dismissDeleteConfirm() {
@@ -141,16 +185,19 @@ class GoalFormViewModel @Inject constructor(
             }
             val result = runCatching {
                 if (goalId == null) {
+                    val url = s.targetUrl.trim().takeIf { it.isNotEmpty() }
                     goalsApi.createGoal(
                         GoalCreateDto(
                             title = title,
                             targetCents = target,
                             currentCents = initialForCreate!!,
                             isActive = s.isActive,
+                            targetUrl = url,
                         ),
                     )
                 } else {
                     val loaded = s.loaded ?: error("missing")
+                    val url = s.targetUrl.trim().takeIf { it.isNotEmpty() }
                     goalsApi.updateGoal(
                         goalId,
                         GoalUpdateDto(
@@ -158,6 +205,11 @@ class GoalFormViewModel @Inject constructor(
                             targetCents = target,
                             currentCents = loaded.currentCents,
                             isActive = s.isActive,
+                            targetUrl = url,
+                            referenceProductName = loaded.referenceProductName,
+                            referencePriceCents = loaded.referencePriceCents,
+                            referenceCurrency = loaded.referenceCurrency,
+                            priceSource = loaded.priceSource,
                         ),
                     )
                 }

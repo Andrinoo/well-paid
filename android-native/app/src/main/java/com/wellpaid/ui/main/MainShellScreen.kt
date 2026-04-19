@@ -35,6 +35,9 @@ import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.outlined.AccountBalanceWallet
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -49,6 +52,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -64,7 +68,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
 import com.wellpaid.navigation.MAIN_SHELL_SELECT_TAB
 import com.wellpaid.R
@@ -73,6 +81,7 @@ import com.wellpaid.ui.emergency.EmergencyReserveContent
 import com.wellpaid.ui.emergency.EmergencyReserveViewModel
 import com.wellpaid.ui.expenses.ExpensesListContent
 import com.wellpaid.ui.expenses.ExpensesViewModel
+import com.wellpaid.ui.expenses.dueUrgencyColorOnLight
 import com.wellpaid.ui.goals.GoalsListContent
 import com.wellpaid.ui.goals.GoalsViewModel
 import com.wellpaid.ui.home.HomeDashboardContent
@@ -106,6 +115,7 @@ fun MainShellScreen(
     onOpenGoalDetail: (String) -> Unit,
     onOpenShoppingLists: () -> Unit,
     onOpenAnnouncements: () -> Unit,
+    onOpenReceivables: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: MainShellViewModel = hiltViewModel(),
 ) {
@@ -125,6 +135,19 @@ fun MainShellScreen(
     val emergencyViewModel = hiltViewModel<EmergencyReserveViewModel>(mainRouteEntry)
     @Suppress("UNUSED_VARIABLE")
     val shoppingListsPrefetch = hiltViewModel<ShoppingListsViewModel>(mainRouteEntry)
+    val receivablesBadgeVm = hiltViewModel<MainReceivablesBadgeViewModel>(mainRouteEntry)
+    val receivablesBadge by receivablesBadgeVm.state.collectAsStateWithLifecycle()
+
+    DisposableEffect(mainRouteEntry) {
+        val owner = mainRouteEntry.lifecycle
+        val obs = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                receivablesBadgeVm.refresh()
+            }
+        }
+        owner.addObserver(obs)
+        onDispose { owner.removeObserver(obs) }
+    }
 
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     var shortcutsExpanded by rememberSaveable { mutableStateOf(false) }
@@ -284,6 +307,49 @@ fun MainShellScreen(
                                 modifier = Modifier.size(20.dp),
                                 tint = MaterialTheme.colorScheme.primary,
                             )
+                        }
+                    }
+                    if (receivablesBadge.showInBottomBar) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 4.dp, vertical = 0.dp),
+                            horizontalArrangement = Arrangement.End,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            IconButton(onClick = onOpenReceivables) {
+                                BadgedBox(
+                                    badge = {
+                                        val u = receivablesBadge.worstUrgency
+                                        val bg = if (u != null) {
+                                            dueUrgencyColorOnLight(u)
+                                        } else {
+                                            MaterialTheme.colorScheme.error
+                                        }
+                                        Badge(
+                                            containerColor = bg,
+                                            contentColor = Color.White,
+                                        ) {
+                                            Text(
+                                                text = if (receivablesBadge.openCount > 99) {
+                                                    "99+"
+                                                } else {
+                                                    receivablesBadge.openCount.toString()
+                                                },
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontSize = 10.sp,
+                                            )
+                                        }
+                                    },
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.AccountBalanceWallet,
+                                        contentDescription = stringResource(R.string.main_nav_receivables_cd),
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(26.dp),
+                                    )
+                                }
+                            }
                         }
                     }
                     NavigationBar(

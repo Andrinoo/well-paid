@@ -231,6 +231,9 @@ fun WellPaidNavHost(
                         onOpenAnnouncements = {
                             navController.navigate(NavRoutes.Announcements)
                         },
+                        onOpenReceivables = {
+                            navController.navigate(NavRoutes.Receivables)
+                        },
                     )
                 }
                 composable(NavRoutes.Announcements) {
@@ -350,7 +353,6 @@ fun WellPaidNavHost(
                         onOpenFamily = { navController.navigate(NavRoutes.Family) },
                         onOpenSecurity = { navController.navigate(NavRoutes.Security) },
                         onOpenManageCategories = { navController.navigate(NavRoutes.ManageCategories) },
-                        onOpenReceivables = { navController.navigate(NavRoutes.Receivables) },
                     )
                 }
                 composable(NavRoutes.Receivables) {

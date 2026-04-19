@@ -53,6 +53,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -752,14 +753,18 @@ fun ExpenseFormScreen(
                             if (!state.usePercentSplit) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                                 ) {
                                     WellPaidMoneyDigitKeypadField(
                                         valueText = state.ownerShareText,
                                         onValueTextChange = { viewModel.setOwnerShareText(it) },
                                         modifier = Modifier.weight(1f),
                                         enabled = canEdit,
-                                        label = { Text(stringResource(R.string.expense_split_owner_part)) },
+                                        label = {
+                                            ExpenseSplitFieldLabel(
+                                                stringResource(R.string.expense_split_owner_part),
+                                            )
+                                        },
                                         placeholder = stringResource(R.string.expense_field_amount_hint),
                                         shape = fieldShape,
                                         colors = fieldColors,
@@ -769,7 +774,11 @@ fun ExpenseFormScreen(
                                         onValueTextChange = {},
                                         modifier = Modifier.weight(1f),
                                         enabled = false,
-                                        label = { Text(stringResource(R.string.expense_split_peer_part_calculated)) },
+                                        label = {
+                                            ExpenseSplitFieldLabel(
+                                                stringResource(R.string.expense_split_peer_part_calculated),
+                                            )
+                                        },
                                         placeholder = stringResource(R.string.expense_field_amount_hint),
                                         shape = fieldShape,
                                         colors = fieldColors,
@@ -778,12 +787,16 @@ fun ExpenseFormScreen(
                             } else {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                                 ) {
                                     OutlinedTextField(
                                         value = state.ownerPercentText,
                                         onValueChange = { viewModel.setOwnerPercentText(it) },
-                                        label = { Text(stringResource(R.string.expense_split_your_percent)) },
+                                        label = {
+                                            ExpenseSplitFieldLabel(
+                                                stringResource(R.string.expense_split_your_percent),
+                                            )
+                                        },
                                         modifier = Modifier.weight(1f),
                                         singleLine = true,
                                         shape = fieldShape,
@@ -794,7 +807,11 @@ fun ExpenseFormScreen(
                                         value = state.peerPercentDisplayText,
                                         onValueChange = {},
                                         readOnly = true,
-                                        label = { Text(stringResource(R.string.expense_split_peer_percent_calculated)) },
+                                        label = {
+                                            ExpenseSplitFieldLabel(
+                                                stringResource(R.string.expense_split_peer_percent_calculated),
+                                            )
+                                        },
                                         modifier = Modifier.weight(1f),
                                         singleLine = true,
                                         shape = fieldShape,
@@ -812,14 +829,18 @@ fun ExpenseFormScreen(
                                     Spacer(Modifier.height(4.dp))
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
                                     ) {
                                         WellPaidMoneyDigitKeypadField(
                                             valueText = brlEstOwner,
                                             onValueTextChange = {},
                                             modifier = Modifier.weight(1f),
                                             enabled = false,
-                                            label = { Text(stringResource(R.string.expense_split_owner_part)) },
+                                            label = {
+                                                ExpenseSplitFieldLabel(
+                                                    stringResource(R.string.expense_split_owner_part),
+                                                )
+                                            },
                                             placeholder = stringResource(R.string.expense_field_amount_hint),
                                             shape = fieldShape,
                                             colors = fieldColors,
@@ -829,7 +850,11 @@ fun ExpenseFormScreen(
                                             onValueTextChange = {},
                                             modifier = Modifier.weight(1f),
                                             enabled = false,
-                                            label = { Text(stringResource(R.string.expense_split_peer_part_calculated)) },
+                                            label = {
+                                                ExpenseSplitFieldLabel(
+                                                    stringResource(R.string.expense_split_peer_part_calculated),
+                                                )
+                                            },
                                             placeholder = stringResource(R.string.expense_field_amount_hint),
                                             shape = fieldShape,
                                             colors = fieldColors,
@@ -1134,4 +1159,15 @@ fun ExpenseFormScreen(
             },
         )
     }
+}
+
+@Composable
+private fun ExpenseSplitFieldLabel(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelSmall,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        lineHeight = 14.sp,
+    )
 }

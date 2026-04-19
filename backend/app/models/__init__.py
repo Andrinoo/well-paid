@@ -11,7 +11,7 @@ from app.models.family_financial_event import FamilyFinancialEvent
 from app.models.family import Family, FamilyInvite, FamilyMember
 from app.models.income import Income
 from app.models.income_category import IncomeCategory
-from app.models.emergency_reserve import EmergencyReserve, EmergencyReserveAccrual
+from app.models.emergency_reserve import EmergencyReserveAccrual, EmergencyReservePlan
 from app.models.goal import Goal
 from app.models.goal_contribution import GoalContribution
 from app.models.email_verification_token import EmailVerificationToken
@@ -43,7 +43,7 @@ __all__ = [
     "Family",
     "FamilyMember",
     "FamilyInvite",
-    "EmergencyReserve",
+    "EmergencyReservePlan",
     "EmergencyReserveAccrual",
     "ShoppingList",
     "ShoppingListItem",

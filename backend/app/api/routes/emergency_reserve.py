@@ -2,6 +2,7 @@
 
 from datetime import date
 from typing import Annotated
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response, status
 from sqlalchemy import select
@@ -15,15 +16,24 @@ from app.models.user import User
 from app.schemas.emergency_reserve import (
     EmergencyReserveAccrualItem,
     EmergencyReserveAccrualPatch,
+    EmergencyReserveCompleteBody,
+    EmergencyReserveMonthRow,
+    EmergencyReservePlanCreate,
+    EmergencyReservePlanItem,
     EmergencyReserveResponse,
     EmergencyReserveUpdate,
 )
 from app.services.emergency_reserve import (
+    complete_plan_transfer,
+    create_plan,
     delete_accrual_for_user,
     delete_reserve_for_user,
     ensure_accruals,
-    get_reserve_for_user,
+    get_plan_for_user,
+    legacy_aggregate_read,
     list_accruals_for_user,
+    list_plans_for_user,
+    month_breakdown_for_plan,
     patch_accrual_for_user,
     upsert_monthly_target,
 )
@@ -32,15 +42,13 @@ router = APIRouter(prefix="/emergency-reserve", tags=["emergency-reserve"])
 
 
 def _tables_ready(db: Session) -> bool:
-    return session_has_table(db, "emergency_reserves") and session_has_table(
+    return session_has_table(db, "emergency_reserve_plans") and session_has_table(
         db, "emergency_reserve_accruals"
     )
 
 
 def _require_owner_if_family_scope(db: Session, user_id) -> None:
-    role = db.scalar(
-        select(FamilyMember.role).where(FamilyMember.user_id == user_id)
-    )
+    role = db.scalar(select(FamilyMember.role).where(FamilyMember.user_id == user_id))
     if role is not None and role != "owner":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -50,13 +58,121 @@ def _require_owner_if_family_scope(db: Session, user_id) -> None:
         )
 
 
+@router.get("/plans", response_model=list[EmergencyReservePlanItem])
+def list_reserve_plans(
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> list[EmergencyReservePlanItem]:
+    if not _tables_ready(db):
+        return []
+    rows = list_plans_for_user(db, user.id, active_only=False)
+    return [
+        EmergencyReservePlanItem(
+            id=r.id,
+            title=r.title or "",
+            monthly_target_cents=int(r.monthly_target_cents),
+            balance_cents=int(r.balance_cents),
+            tracking_start=r.tracking_start,
+            plan_duration_months=r.plan_duration_months,
+            status=r.status,
+            completed_at=r.completed_at.date() if r.completed_at else None,
+        )
+        for r in rows
+    ]
+
+
+@router.post("/plans", response_model=EmergencyReservePlanItem, status_code=status.HTTP_201_CREATED)
+def create_reserve_plan(
+    body: EmergencyReservePlanCreate,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> EmergencyReservePlanItem:
+    if not _tables_ready(db):
+        raise _reserve_unavailable()
+    _require_owner_if_family_scope(db, user.id)
+    p = create_plan(
+        db,
+        user.id,
+        title=body.title,
+        monthly_target_cents=body.monthly_target_cents,
+        tracking_start=body.tracking_start,
+        plan_duration_months=body.plan_duration_months,
+    )
+    return EmergencyReservePlanItem(
+        id=p.id,
+        title=p.title or "",
+        monthly_target_cents=int(p.monthly_target_cents),
+        balance_cents=int(p.balance_cents),
+        tracking_start=p.tracking_start,
+        plan_duration_months=p.plan_duration_months,
+        status=p.status,
+        completed_at=p.completed_at.date() if p.completed_at else None,
+    )
+
+
+@router.get("/plans/{plan_id}/months", response_model=list[EmergencyReserveMonthRow])
+def list_plan_month_breakdown(
+    plan_id: UUID,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> list[EmergencyReserveMonthRow]:
+    if not _tables_ready(db):
+        return []
+    plan = get_plan_for_user(db, user.id, plan_id)
+    if plan is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Plano não encontrado")
+    ensure_accruals(db, plan, date.today())
+    db.refresh(plan)
+    rows = month_breakdown_for_plan(db, plan, today=date.today())
+    return [EmergencyReserveMonthRow(**r) for r in rows]
+
+
+@router.post("/plans/{plan_id}/complete", response_model=EmergencyReservePlanItem)
+def complete_reserve_plan(
+    plan_id: UUID,
+    body: EmergencyReserveCompleteBody,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> EmergencyReservePlanItem:
+    if not _tables_ready(db):
+        raise _reserve_unavailable()
+    _require_owner_if_family_scope(db, user.id)
+    if body.goal_id is not None and body.to_plan_id is not None:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            detail="Indique apenas um destino: goal_id ou to_plan_id",
+        )
+    try:
+        if body.goal_id is not None:
+            p = complete_plan_transfer(db, user.id, plan_id, goal_id=body.goal_id)
+        elif body.to_plan_id is not None:
+            p = complete_plan_transfer(db, user.id, plan_id, to_plan_id=body.to_plan_id)
+        else:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                detail="Indique goal_id ou to_plan_id",
+            )
+    except ValueError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+    return EmergencyReservePlanItem(
+        id=p.id,
+        title=p.title or "",
+        monthly_target_cents=int(p.monthly_target_cents),
+        balance_cents=int(p.balance_cents),
+        tracking_start=p.tracking_start,
+        plan_duration_months=p.plan_duration_months,
+        status=p.status,
+        completed_at=p.completed_at.date() if p.completed_at else None,
+    )
+
+
 @router.get("", response_model=EmergencyReserveResponse)
 def read_emergency_reserve(
     user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> EmergencyReserveResponse:
+    anchor = date.today().replace(day=1)
     if not _tables_ready(db):
-        anchor = date.today().replace(day=1)
         return EmergencyReserveResponse(
             monthly_target_cents=0,
             balance_cents=0,
@@ -64,21 +180,18 @@ def read_emergency_reserve(
             configured=False,
         )
 
-    r = get_reserve_for_user(db, user.id)
-    if r is None:
-        anchor = date.today().replace(day=1)
+    bal, tgt, tr, cfg = legacy_aggregate_read(db, user.id, date.today())
+    if not cfg:
         return EmergencyReserveResponse(
             monthly_target_cents=0,
             balance_cents=0,
             tracking_start=anchor,
             configured=False,
         )
-    ensure_accruals(db, r, date.today())
-    db.refresh(r)
     return EmergencyReserveResponse(
-        monthly_target_cents=int(r.monthly_target_cents),
-        balance_cents=int(r.balance_cents),
-        tracking_start=r.tracking_start,
+        monthly_target_cents=tgt,
+        balance_cents=bal,
+        tracking_start=tr,
         configured=True,
     )
 
@@ -96,7 +209,16 @@ def update_emergency_reserve(
     r = upsert_monthly_target(db, user.id, body.monthly_target_cents)
     ensure_accruals(db, r, date.today())
     db.refresh(r)
-    return _to_response(r)
+    return _to_response_single_plan(r)
+
+
+def _to_response_single_plan(r) -> EmergencyReserveResponse:
+    return EmergencyReserveResponse(
+        monthly_target_cents=int(r.monthly_target_cents),
+        balance_cents=int(r.balance_cents),
+        tracking_start=r.tracking_start,
+        configured=True,
+    )
 
 
 @router.get("/accruals", response_model=list[EmergencyReserveAccrualItem])
@@ -129,15 +251,6 @@ def _reserve_unavailable() -> HTTPException:
     )
 
 
-def _to_response(r) -> EmergencyReserveResponse:
-    return EmergencyReserveResponse(
-        monthly_target_cents=int(r.monthly_target_cents),
-        balance_cents=int(r.balance_cents),
-        tracking_start=r.tracking_start,
-        configured=True,
-    )
-
-
 @router.patch("/accruals/{year}/{month}", response_model=EmergencyReserveResponse)
 def patch_emergency_reserve_accrual(
     year: Annotated[int, Path(ge=2000, le=2100)],
@@ -160,7 +273,7 @@ def patch_emergency_reserve_accrual(
         )
     ensure_accruals(db, r, date.today())
     db.refresh(r)
-    return _to_response(r)
+    return _to_response_single_plan(r)
 
 
 @router.delete("/accruals/{year}/{month}", response_model=EmergencyReserveResponse)
@@ -186,7 +299,7 @@ def delete_emergency_reserve_accrual(
         )
     ensure_accruals(db, reserve, date.today())
     db.refresh(reserve)
-    return _to_response(reserve)
+    return _to_response_single_plan(reserve)
 
 
 @router.delete("", status_code=status.HTTP_204_NO_CONTENT)
@@ -194,7 +307,7 @@ def delete_emergency_reserve(
     user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> Response:
-    """Remove a reserva, o histórico de créditos e a meta (recomeçar do zero)."""
+    """Remove todos os planos de reserva e o histórico (recomeçar do zero)."""
     if not _tables_ready(db):
         raise _reserve_unavailable()
     _require_owner_if_family_scope(db, user.id)

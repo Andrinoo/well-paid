@@ -175,6 +175,59 @@ fun EmergencyReserveContent(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
 
+                if (state.plans.isNotEmpty()) {
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        text = stringResource(R.string.emergency_plans_section_title),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = WellPaidNavy,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    state.plans.forEach { plan ->
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+                                .padding(12.dp),
+                        ) {
+                            Text(
+                                text = plan.title.ifBlank {
+                                    stringResource(R.string.emergency_plan_untitled)
+                                },
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium,
+                            )
+                            Text(
+                                text = "${formatBrlFromCents(plan.balanceCents)} · ${
+                                    formatBrlFromCents(plan.monthlyTargetCents)
+                                }",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            plan.planDurationMonths?.let { months ->
+                                Text(
+                                    text = stringResource(R.string.emergency_plan_duration_months, months),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.tertiary,
+                                )
+                            }
+                            val statusLabel = when (plan.status) {
+                                "active" -> stringResource(R.string.emergency_plan_status_active)
+                                "completed" -> stringResource(R.string.emergency_plan_status_completed)
+                                else -> plan.status
+                            }
+                            Text(
+                                text = statusLabel,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                        Spacer(Modifier.height(8.dp))
+                    }
+                }
+
                 if (!state.canEditReserve) {
                     Spacer(Modifier.height(10.dp))
                     Text(

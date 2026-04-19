@@ -36,4 +36,7 @@ interface GoalsApi {
         @Path("id") id: String,
         @Body body: GoalContributeDto,
     ): GoalDto
+
+    @POST("goals/{id}/refresh-reference-price")
+    suspend fun refreshReferencePrice(@Path("id") id: String): GoalDto
 }

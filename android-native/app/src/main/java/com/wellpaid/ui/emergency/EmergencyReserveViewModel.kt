@@ -7,6 +7,7 @@ import com.wellpaid.R
 import com.wellpaid.core.model.auth.TokenStorage
 import com.wellpaid.core.model.emergency.EmergencyReserveAccrualDto
 import com.wellpaid.core.model.emergency.EmergencyReserveDto
+import com.wellpaid.core.model.emergency.EmergencyReservePlanDto
 import com.wellpaid.core.model.emergency.EmergencyReserveUpdateDto
 import com.wellpaid.core.network.EmergencyReserveApi
 import com.wellpaid.data.FamilyMeRepository
@@ -33,6 +34,7 @@ data class EmergencyReserveUiState(
     val isLoading: Boolean = true,
     val isSaving: Boolean = false,
     val reserve: EmergencyReserveDto? = null,
+    val plans: List<EmergencyReservePlanDto> = emptyList(),
     val accruals: List<EmergencyReserveAccrualDto> = emptyList(),
     val monthlyTargetText: String = "",
     val errorMessage: String? = null,
@@ -71,6 +73,7 @@ class EmergencyReserveViewModel @Inject constructor(
                 it.copy(
                     isLoading = false,
                     reserve = null,
+                    plans = emptyList(),
                     accruals = emptyList(),
                     errorMessage = appContext.getString(R.string.emergency_need_login),
                 )
@@ -82,11 +85,13 @@ class EmergencyReserveViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             val reserveResult = runCatching { api.getReserve() }
             val accrualsResult = runCatching { api.listAccruals(limit = 12) }
+            val plansResult = runCatching { api.listPlans() }
             val reserve = reserveResult.getOrNull()
             _uiState.update {
                 it.copy(
                     isLoading = false,
                     reserve = reserve,
+                    plans = plansResult.getOrElse { emptyList() },
                     accruals = accrualsResult.getOrElse { emptyList() },
                     monthlyTargetText = reserve?.let { r -> centsToBrlInput(r.monthlyTargetCents) }
                         ?: it.monthlyTargetText,

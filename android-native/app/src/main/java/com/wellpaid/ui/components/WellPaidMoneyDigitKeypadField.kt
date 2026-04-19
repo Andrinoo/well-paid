@@ -256,7 +256,7 @@ fun WellPaidMoneyDigitKeypadField(
                             ) {
                                 androidx.compose.material3.Icon(
                                     imageVector = Icons.Filled.Backspace,
-                                    contentDescription = "Apagar",
+                                    contentDescription = stringResource(R.string.money_keypad_backspace_cd),
                                     tint = WellPaidNavy,
                                 )
                             }
@@ -323,7 +323,7 @@ fun WellPaidMoneyDigitKeypadField(
                             enabled = enabled,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
-                            Text(text = "Limpar", color = WellPaidNavy)
+                            Text(text = stringResource(R.string.money_keypad_clear), color = WellPaidNavy)
                         }
                     }
                 }

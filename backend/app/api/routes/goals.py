@@ -19,6 +19,7 @@ from app.schemas.goal import (
     GoalUpdate,
 )
 from app.services.family_scope import family_peer_user_ids
+from app.services.goal_reference_price import fetch_product_hints
 
 router = APIRouter(prefix="/goals", tags=["goals"])
 
@@ -39,6 +40,7 @@ def _visible_goal(
 
 
 def _to_response(row: Goal, viewer_id: uuid.UUID) -> GoalResponse:
+    alts = row.price_alternatives if isinstance(row.price_alternatives, list) else []
     return GoalResponse(
         id=row.id,
         owner_user_id=row.owner_user_id,
@@ -49,6 +51,15 @@ def _to_response(row: Goal, viewer_id: uuid.UUID) -> GoalResponse:
         is_active=row.is_active,
         created_at=row.created_at,
         updated_at=row.updated_at,
+        target_url=row.target_url,
+        reference_product_name=row.reference_product_name,
+        reference_price_cents=int(row.reference_price_cents)
+        if row.reference_price_cents is not None
+        else None,
+        reference_currency=row.reference_currency or "BRL",
+        price_checked_at=row.price_checked_at,
+        price_source=row.price_source,
+        price_alternatives=alts,
     )
 
 
@@ -79,6 +90,11 @@ def create_goal(
         target_cents=body.target_cents,
         current_cents=body.current_cents,
         is_active=body.is_active,
+        target_url=(body.target_url.strip() if body.target_url else None),
+        reference_product_name=body.reference_product_name,
+        reference_price_cents=body.reference_price_cents,
+        reference_currency=body.reference_currency or "BRL",
+        price_source=body.price_source,
     )
     db.add(row)
     db.flush()
@@ -145,6 +161,37 @@ def contribute_goal(
         )
     )
     row.current_cents = int(row.current_cents) + int(body.amount_cents)
+    db.commit()
+    db.refresh(row)
+    return _to_response(row, user.id)
+
+
+@router.post("/{goal_id}/refresh-reference-price", response_model=GoalResponse)
+def refresh_goal_reference_price(
+    goal_id: uuid.UUID,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> GoalResponse:
+    row = _owned_goal(db, goal_id, user.id)
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Meta não encontrada")
+    if not row.target_url:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Defina um link (URL) na meta para actualizar o preço de referência.",
+        )
+    hints = fetch_product_hints(row.target_url.strip())
+    if hints.get("reference_product_name"):
+        row.reference_product_name = hints["reference_product_name"]
+    if hints.get("reference_price_cents") is not None:
+        row.reference_price_cents = int(hints["reference_price_cents"])
+    if hints.get("reference_currency"):
+        row.reference_currency = str(hints["reference_currency"])[:8]
+    if hints.get("price_checked_at"):
+        row.price_checked_at = hints["price_checked_at"]
+    src = hints.get("price_source")
+    row.price_source = str(src) if src else "unavailable"
+    row.price_alternatives = list(hints.get("price_alternatives") or [])
     db.commit()
     db.refresh(row)
     return _to_response(row, user.id)
