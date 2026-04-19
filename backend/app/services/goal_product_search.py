@@ -56,6 +56,20 @@ def _dedupe_shopping_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return out
 
 
+def _normalize_shopping_url(raw: str) -> str:
+    """Google/SerpAPI muitas vezes devolvem URLs protocol-relative (//...) ou só www."""
+    t = raw.strip()
+    if not t:
+        return ""
+    if t.startswith("//"):
+        return "https:" + t
+    if t.startswith("www."):
+        return "https://" + t
+    if t.startswith("http://") or t.startswith("https://"):
+        return t
+    return ""
+
+
 def _product_url_from_item(item: dict[str, Any]) -> str:
     """SerpAPI usa nomes diferentes por bloco (shopping vs inline)."""
     for k in (
@@ -64,10 +78,14 @@ def _product_url_from_item(item: dict[str, Any]) -> str:
         "product_link_clean",
         "tracking_link",
         "direct_link",
+        "serpapi_link",
     ):
         v = item.get(k)
-        if isinstance(v, str) and v.strip().startswith("http"):
-            return v.strip()
+        if not isinstance(v, str):
+            continue
+        norm = _normalize_shopping_url(v)
+        if norm:
+            return norm
     return ""
 
 
@@ -150,66 +168,10 @@ def search_products_google_shopping(
     )[:max_total]
 
 
-def search_serpapi_google_shopping(
-    query: str,
-    *,
-    api_key: str,
-    limit: int = 10,
-    timeout_s: float = 20.0,
+def _shopping_blocks_to_rows(
+    blocks: list[dict[str, Any]],
+    lim: int,
 ) -> list[dict[str, Any]]:
-    """Resultados Google Shopping via SerpAPI."""
-    key = (api_key or "").strip()
-    if not key:
-        return []
-    q = query.strip()
-    if len(q) < 2:
-        return []
-    lim = max(1, min(int(limit), 15))
-    params = {
-        "engine": "google_shopping",
-        "q": q,
-        "api_key": key,
-        "gl": "br",
-        "hl": "pt-br",
-        "num": lim,
-        # Ajuda a obter blocos shopping/inline mais consistentes em pt-BR.
-        "device": "mobile",
-    }
-    try:
-        with httpx.Client(
-            timeout=timeout_s,
-            headers={"User-Agent": _USER_AGENT},
-        ) as client:
-            r = client.get("https://serpapi.com/search", params=params)
-    except httpx.RequestError as e:
-        # Não logar `e` completo: pode incluir URL com api_key na query.
-        logger.warning("SerpAPI google_shopping request failed: %s", type(e).__name__)
-        return []
-
-    if r.status_code != 200:
-        snippet = (r.text or "")[:500]
-        logger.warning(
-            "SerpAPI google_shopping HTTP %s (body prefix): %s",
-            r.status_code,
-            snippet,
-        )
-        return []
-
-    try:
-        data = r.json()
-    except ValueError:
-        logger.warning("SerpAPI google_shopping: resposta não é JSON")
-        return []
-
-    if not isinstance(data, dict):
-        return []
-
-    err_msg = data.get("error")
-    if err_msg:
-        logger.warning("SerpAPI google_shopping error: %s", err_msg)
-        return []
-
-    blocks = _collect_serpapi_shopping_blocks(data)
     out: list[dict[str, Any]] = []
     for item in blocks:
         title = str(item.get("title") or "").strip()[:500]
@@ -235,13 +197,91 @@ def search_serpapi_google_shopping(
         )
         if len(out) >= lim:
             break
+    return out
 
-    if not out and blocks:
-        sample = next((b for b in blocks if isinstance(b, dict)), None)
-        keys = list(sample.keys())[:20] if sample else []
+
+def search_serpapi_google_shopping(
+    query: str,
+    *,
+    api_key: str,
+    limit: int = 10,
+    timeout_s: float = 20.0,
+) -> list[dict[str, Any]]:
+    """Resultados Google Shopping via SerpAPI."""
+    key = (api_key or "").strip()
+    if not key:
+        return []
+    q = query.strip()
+    if len(q) < 2:
+        return []
+    lim = max(1, min(int(limit), 15))
+    base = {
+        "engine": "google_shopping",
+        "q": q,
+        "api_key": key,
+        "gl": "br",
+        "hl": "pt-br",
+        "num": lim,
+    }
+    # mobile costuma trazer inline; desktop traz shopping_results — tentamos os dois.
+    attempts: list[dict[str, str]] = [
+        {"device": "mobile"},
+        {"device": "desktop"},
+        {},
+    ]
+    last_data: dict[str, Any] | None = None
+    last_blocks: list[dict[str, Any]] = []
+
+    try:
+        with httpx.Client(
+            timeout=timeout_s,
+            headers={"User-Agent": _USER_AGENT},
+        ) as client:
+            for extra in attempts:
+                params = {**base, **extra}
+                try:
+                    r = client.get("https://serpapi.com/search", params=params)
+                except httpx.RequestError as e:
+                    logger.warning("SerpAPI google_shopping request failed: %s", type(e).__name__)
+                    continue
+                if r.status_code != 200:
+                    snippet = (r.text or "")[:400]
+                    logger.warning(
+                        "SerpAPI google_shopping HTTP %s: %s",
+                        r.status_code,
+                        snippet,
+                    )
+                    continue
+                try:
+                    data = r.json()
+                except ValueError:
+                    continue
+                if not isinstance(data, dict):
+                    continue
+                if data.get("error"):
+                    logger.warning("SerpAPI google_shopping error: %s", data.get("error"))
+                    continue
+                last_data = data
+                blocks = _collect_serpapi_shopping_blocks(data)
+                last_blocks = blocks
+                out = _shopping_blocks_to_rows(blocks, lim)
+                if out:
+                    return out
+    except Exception:
+        logger.exception("SerpAPI google_shopping unexpected error")
+        return []
+
+    if last_blocks:
+        sample = next((b for b in last_blocks if isinstance(b, dict)), None)
+        keys = list(sample.keys())[:24] if sample else []
         logger.warning(
-            "SerpAPI google_shopping: %d itens brutos mas 0 após parse preço/link; chaves exemplo: %s",
-            len(blocks),
+            "SerpAPI google_shopping: %d itens brutos mas 0 após parse; chaves exemplo: %s",
+            len(last_blocks),
             keys,
         )
-    return out
+    elif last_data is not None:
+        logger.warning(
+            "SerpAPI google_shopping: 0 blocos de produto; chaves JSON: %s",
+            list(last_data.keys())[:40],
+        )
+    return []
