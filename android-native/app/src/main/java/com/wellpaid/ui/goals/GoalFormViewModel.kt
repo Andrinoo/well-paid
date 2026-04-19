@@ -5,6 +5,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wellpaid.R
+import com.wellpaid.data.UiPreferencesRepository
 import com.wellpaid.core.model.goal.GoalCreateDto
 import com.wellpaid.core.model.goal.GoalDto
 import com.wellpaid.core.model.goal.GoalPreviewFromUrlRequestDto
@@ -54,6 +55,8 @@ data class GoalFormUiState(
     val lastProductSearchHadNoResults: Boolean = false,
     val errorMessage: String? = null,
     val showDeleteConfirm: Boolean = false,
+    /** Pesquisa Google Shopping no formulário (DataStore). */
+    val autoProductPriceSearchEnabled: Boolean = true,
 )
 
 @HiltViewModel
@@ -61,6 +64,7 @@ class GoalFormViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context,
     savedStateHandle: SavedStateHandle,
     private val goalsApi: GoalsApi,
+    private val uiPreferences: UiPreferencesRepository,
 ) : ViewModel() {
 
     companion object {
@@ -102,6 +106,11 @@ class GoalFormViewModel @Inject constructor(
     }
 
     init {
+        viewModelScope.launch {
+            uiPreferences.goalAutoProductSearchFlow.collect { enabled ->
+                _uiState.update { it.copy(autoProductPriceSearchEnabled = enabled) }
+            }
+        }
         val id = goalId
         if (id == null) {
             _uiState.update { it.copy(isLoading = false) }
@@ -157,6 +166,10 @@ class GoalFormViewModel @Inject constructor(
 
     fun onTargetUrlChange(value: String) {
         _uiState.update { it.copy(targetUrl = value) }
+    }
+
+    fun setAutoProductPriceSearchEnabled(value: Boolean) {
+        viewModelScope.launch { uiPreferences.setGoalAutoProductSearch(value) }
     }
 
     /**
@@ -269,6 +282,15 @@ class GoalFormViewModel @Inject constructor(
     private suspend fun performProductSearch(query: String, syncTitleFromQuery: Boolean) {
         val q = query.trim()
         if (q.length < 2) return
+        if (!_uiState.value.autoProductPriceSearchEnabled) {
+            _uiState.update {
+                it.copy(
+                    isSearchingProducts = false,
+                    errorMessage = appContext.getString(R.string.goal_price_search_disabled),
+                )
+            }
+            return
+        }
         _uiState.update { s ->
             s.copy(
                 title = if (syncTitleFromQuery) q.take(200) else s.title,

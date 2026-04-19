@@ -30,6 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import coil.size.Size
 import com.wellpaid.ui.theme.WellPaidCreamMuted
 import com.wellpaid.ui.theme.WellPaidNavy
 
@@ -72,7 +73,8 @@ fun ProductPriceHitCard(
                     AsyncImage(
                         model = ImageRequest.Builder(context)
                             .data(thumbnailUrl)
-                            .crossfade(true)
+                            .size(Size(104, 104))
+                            .crossfade(180)
                             .build(),
                         contentDescription = null,
                         modifier = Modifier

@@ -5,6 +5,7 @@
     <string name="common_ok">OK</string>
     <string name="common_cancel">Cancelar</string>
     <string name="common_continue">Continuar</string>
+    <string name="common_retry">Tentar de novo</string>
     <string name="datepicker_sheet_title">Escolher data</string>
     <string name="datepicker_wheel_day">Dia</string>
     <string name="datepicker_wheel_month">Mês</string>
@@ -324,6 +325,7 @@
     <string name="goal_error_contribute_amount">Indique um valor válido.</string>
     <string name="goal_form_new_title">Nova meta</string>
     <string name="goal_form_edit_title">Editar meta</string>
+    <string name="goal_form_loading">A carregar a meta…</string>
     <string name="goal_field_title">Título</string>
     <string name="goal_field_title_hint_short">Nome da meta (ex.: Ar condicionado 12000 BTUs).</string>
     <string name="goal_field_title_search_hint">Pesquisamos no Google Shopping (via SerpAPI no servidor) com este texto. Ex.: ar condicionado 12000 BTUs.</string>
@@ -331,6 +333,9 @@
     <string name="goal_optional_search_or_link_label">Termo extra ou link (opcional)</string>
     <string name="goal_optional_search_or_link_hint">Vazio = usa o título. Ou escreve outro termo, ou cola link com ?q=… / página de produto (https).</string>
     <string name="goal_unified_search_prices">Pesquisar preços</string>
+    <string name="goal_auto_product_search">Pesquisa de preços (Google Shopping)</string>
+    <string name="goal_auto_product_search_hint">Desligue para só pesquisar quando precisar (poupa dados).</string>
+    <string name="goal_price_search_disabled">Ligue “Pesquisa de preços (Google Shopping)” acima para pesquisar produtos.</string>
     <string name="goal_field_target">Objetivo (valor total)</string>
     <string name="goal_field_initial">Valor já poupado (opcional)</string>
     <string name="goal_field_initial_hint">Opcional no registo. Use 0 ou deixe vazio.</string>
@@ -455,18 +460,23 @@
     <string name="shopping_error_load">Não foi possível carregar as listas.</string>
     <string name="shopping_error_invalid_list">Identificador de lista inválido.</string>
     <string name="shopping_error_detail">Não foi possível carregar a lista.</string>
+    <string name="shopping_detail_unexpected_empty">Não foi possível mostrar esta lista. Tente de novo ou volte.</string>
     <string name="shopping_total_label">Total</string>
     <string name="shopping_completed_on">Concluída em %1$s</string>
     <string name="shopping_edit_list">Editar lista</string>
     <string name="shopping_delete_list">Eliminar lista</string>
     <string name="shopping_delete_confirm_title">Eliminar esta lista?</string>
     <string name="shopping_delete_confirm_body">O rascunho será removido. Não é possível anular.</string>
-    <string name="shopping_add_item">Adicionar item</string>
+    <string name="shopping_add_item">Adicionar produto</string>
     <string name="shopping_field_label_item">Artigo</string>
+    <string name="shopping_product_name_placeholder">O que vai comprar?</string>
+    <string name="shopping_product_saved">Produto adicionado</string>
+    <string name="shopping_auto_price_search">Sugerir preços ao escrever</string>
+    <string name="shopping_auto_price_search_hint">Usa o servidor com 2+ caracteres no nome. Desligue para poupar dados ou evitar sugestões.</string>
     <string name="shopping_field_qty">Quantidade</string>
     <string name="shopping_field_unit_price">Custo por unidade (opcional)</string>
     <string name="shopping_grocery_price_hints_title">Preços de referência (toque para preencher o custo)</string>
-    <string name="shopping_grocery_search_auto_hint">A pesquisa de preços corre automaticamente ao escreveres o nome do item (2+ letras). Usa o botão fechar ou Cancelar; a lista faz scroll com o formulário para não fechar o painel ao deslizar.</string>
+    <string name="shopping_grocery_search_auto_hint">As sugestões aparecem ao escrever (2+ caracteres) quando a opção acima está ligada.</string>
     <string name="shopping_close_purchase">Fechar compra</string>
     <string name="shopping_subtotal_lines">Subtotal (linhas com preço)</string>
     <string name="shopping_units_total">Unidades</string>

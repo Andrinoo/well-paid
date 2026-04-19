@@ -10,6 +10,7 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.dagger.hilt.android")
     id("com.google.devtools.ksp")
+    id("androidx.baselineprofile")
 }
 
 val localProperties = Properties().apply {
@@ -86,7 +87,8 @@ android {
             buildConfigField("String", "API_BASE_URL", "\"${escapeBuildConfigString(url)}\"")
         }
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
@@ -122,6 +124,7 @@ android {
 }
 
 dependencies {
+    baselineProfile(project(":baselineprofile"))
     implementation(project(":core:model"))
     implementation(project(":core:datastore"))
     implementation(project(":core:network"))
@@ -149,6 +152,7 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.biometric:biometric:1.1.0")
     implementation("androidx.lifecycle:lifecycle-process:2.8.7")
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
 
     implementation("com.google.dagger:hilt-android:2.52")
     ksp("com.google.dagger:hilt-android-compiler:2.52")

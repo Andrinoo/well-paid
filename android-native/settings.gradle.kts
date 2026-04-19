@@ -20,6 +20,7 @@ dependencyResolutionManagement {
 rootProject.name = "WellPaid"
 
 include(":app")
+include(":baselineprofile")
 include(":core:model")
 include(":core:datastore")
 include(":core:network")

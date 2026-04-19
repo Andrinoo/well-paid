@@ -114,6 +114,7 @@ fun GoalFormScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
+        containerColor = WellPaidCream,
         topBar = {
             CenterAlignedTopAppBar(
                 colors = wellPaidTopAppBarColors(),
@@ -146,7 +147,13 @@ fun GoalFormScreen(
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                CircularProgressIndicator()
+                CircularProgressIndicator(color = WellPaidNavy)
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    text = stringResource(R.string.goal_form_loading),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = WellPaidNavy.copy(alpha = 0.78f),
+                )
             }
             return@Scaffold
         }
@@ -210,6 +217,32 @@ fun GoalFormScreen(
                 fontWeight = FontWeight.SemiBold,
                 color = WellPaidNavy,
             )
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                    Text(
+                        text = stringResource(R.string.goal_auto_product_search),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = WellPaidNavy,
+                    )
+                    Text(
+                        text = stringResource(R.string.goal_auto_product_search_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = WellPaidNavy.copy(alpha = 0.72f),
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
+                Switch(
+                    checked = state.autoProductPriceSearchEnabled,
+                    onCheckedChange = { viewModel.setAutoProductPriceSearchEnabled(it) },
+                    enabled = !state.isSaving,
+                )
+            }
             OutlinedTextField(
                 value = state.targetUrl,
                 onValueChange = { viewModel.onTargetUrlChange(it) },
@@ -436,7 +469,7 @@ private fun GoalProductSearchResultsSheet(
 ) {
     val sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true,
-        confirmValueChange = { new -> new != SheetValue.Hidden },
+        confirmValueChange = { new -> !(isSaving && new == SheetValue.Hidden) },
     )
     ModalBottomSheet(
         onDismissRequest = { if (!isSaving) onDismiss() },

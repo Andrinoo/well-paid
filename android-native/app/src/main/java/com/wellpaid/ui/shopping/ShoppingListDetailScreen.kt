@@ -53,6 +53,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.Switch
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -236,6 +237,7 @@ fun ShoppingListDetailScreen(
     var showEditMeta by remember { mutableStateOf(false) }
     var showDelete by remember { mutableStateOf(false) }
     var showAddItem by remember { mutableStateOf(false) }
+    var addProductFormReset by remember { mutableStateOf(0) }
     var editItem by remember { mutableStateOf<ShoppingListItemDto?>(null) }
     var showRemoveItem by remember { mutableStateOf<ShoppingListItemDto?>(null) }
     var showCompleteSheet by remember { mutableStateOf(false) }
@@ -363,7 +365,24 @@ fun ShoppingListDetailScreen(
                         color = MaterialTheme.colorScheme.error,
                     )
                 }
-                detail == null -> { }
+                detail == null -> {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .wellPaidScreenHorizontalPadding()
+                            .padding(top = 24.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.shopping_detail_unexpected_empty),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = WellPaidNavy,
+                        )
+                        TextButton(onClick = { viewModel.refresh() }) {
+                            Text(stringResource(R.string.common_retry))
+                        }
+                    }
+                }
                 else -> {
                     LazyColumn(
                         modifier = Modifier
@@ -483,6 +502,10 @@ fun ShoppingListDetailScreen(
             initialQty = "1",
             initialAmount = "",
             isSaving = state.isSaving,
+            isAddProductFlow = true,
+            addFormResetVersion = addProductFormReset,
+            autoGroceryPriceHintsEnabled = state.autoGroceryPriceHints,
+            onAutoGroceryPriceHintsChange = { viewModel.setAutoGroceryPriceHints(it) },
             groceryHits = state.groceryPriceHits,
             groceryLoading = state.groceryPriceSearchLoading,
             onLabelChanged = { viewModel.onShoppingItemLabelForPriceHints(it) },
@@ -493,7 +516,7 @@ fun ShoppingListDetailScreen(
             onSave = { label, qty, amountCents ->
                 viewModel.addItem(label, qty, amountCents) {
                     viewModel.clearGroceryPriceHints()
-                    showAddItem = false
+                    addProductFormReset++
                 }
             },
         )
@@ -506,6 +529,8 @@ fun ShoppingListDetailScreen(
             initialQty = line.quantity.toString(),
             initialAmount = line.lineAmountCents?.let { com.wellpaid.util.centsToBrlInput(it) }.orEmpty(),
             isSaving = state.isSaving,
+            autoGroceryPriceHintsEnabled = state.autoGroceryPriceHints,
+            onAutoGroceryPriceHintsChange = { viewModel.setAutoGroceryPriceHints(it) },
             showClearPrice = line.lineAmountCents != null,
             groceryHits = state.groceryPriceHits,
             groceryLoading = state.groceryPriceSearchLoading,
@@ -889,6 +914,10 @@ private fun AddEditItemBottomSheet(
     initialQty: String,
     initialAmount: String,
     isSaving: Boolean,
+    isAddProductFlow: Boolean = false,
+    addFormResetVersion: Int = 0,
+    autoGroceryPriceHintsEnabled: Boolean = true,
+    onAutoGroceryPriceHintsChange: (Boolean) -> Unit = {},
     showClearPrice: Boolean = false,
     groceryHits: List<GoalProductHitDto> = emptyList(),
     groceryLoading: Boolean = false,
@@ -899,7 +928,7 @@ private fun AddEditItemBottomSheet(
 ) {
     val sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true,
-        confirmValueChange = { new -> new != SheetValue.Hidden },
+        confirmValueChange = { new -> !(isSaving && new == SheetValue.Hidden) },
     )
     var label by remember(initialLabel) { mutableStateOf(initialLabel) }
     var qty by remember(initialQty) { mutableStateOf(initialQty) }
@@ -912,135 +941,194 @@ private fun AddEditItemBottomSheet(
         }
     }
 
+    LaunchedEffect(addFormResetVersion) {
+        if (isAddProductFlow && addFormResetVersion > 0) {
+            label = ""
+            qty = "1"
+            amount = ""
+        }
+    }
+
     ModalBottomSheet(
         onDismissRequest = { if (!isSaving) onDismiss() },
         sheetState = sheetState,
         dragHandle = null,
         containerColor = WellPaidCream,
     ) {
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
                 .navigationBarsPadding()
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 24.dp),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = WellPaidNavy,
-                    modifier = Modifier.weight(1f),
-                )
-                IconButton(
-                    onClick = onDismiss,
-                    enabled = !isSaving,
-                ) {
-                    Icon(
-                        Icons.Filled.Close,
-                        contentDescription = stringResource(R.string.common_close),
-                        tint = WellPaidNavy,
-                    )
-                }
-            }
-            Spacer(Modifier.padding(top = 12.dp))
-            OutlinedTextField(
-                value = label,
-                onValueChange = {
-                    label = it
-                    onLabelChanged(it)
-                },
-                label = { Text(stringResource(R.string.shopping_field_label_item)) },
-                enabled = !isSaving,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Text(
-                text = stringResource(R.string.shopping_grocery_search_auto_hint),
-                style = MaterialTheme.typography.bodySmall,
-                color = WellPaidNavy.copy(alpha = 0.65f),
-                modifier = Modifier.padding(top = 6.dp),
-            )
-            Spacer(Modifier.padding(top = 8.dp))
-            OutlinedTextField(
-                value = qty,
-                onValueChange = { qty = it.filter { ch -> ch.isDigit() }.take(4) },
-                label = { Text(stringResource(R.string.shopping_field_qty)) },
-                enabled = !isSaving,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(Modifier.padding(top = 8.dp))
-            OutlinedTextField(
-                value = amount,
-                onValueChange = { amount = it },
-                label = { Text(stringResource(R.string.shopping_field_unit_price)) },
-                enabled = !isSaving,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            if (showClearPrice && onClearPrice != null) {
-                TextButton(onClick = onClearPrice, enabled = !isSaving) {
-                    Text(stringResource(R.string.shopping_clear_unit_price))
-                }
-            }
-            if (groceryLoading) {
+            item {
                 Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(top = 12.dp),
-                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(28.dp),
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
                         color = WellPaidNavy,
-                        strokeWidth = 2.dp,
+                        modifier = Modifier.weight(1f),
                     )
-                }
-            }
-            if (groceryHits.isNotEmpty()) {
-                Text(
-                    text = stringResource(R.string.shopping_grocery_price_hints_title),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = WellPaidNavy.copy(alpha = 0.85f),
-                    modifier = Modifier.padding(top = 12.dp, bottom = 8.dp),
-                )
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    groceryHits.forEach { hit ->
-                        ProductPriceHitCard(
-                            title = hit.title,
-                            priceLabel = formatBrlFromCents(hit.priceCents),
-                            source = hit.source,
-                            enabled = !isSaving,
-                            onClick = { amount = centsToBrlInput(hit.priceCents) },
+                    IconButton(
+                        onClick = onDismiss,
+                        enabled = !isSaving,
+                    ) {
+                        Icon(
+                            Icons.Filled.Close,
+                            contentDescription = stringResource(R.string.common_close),
+                            tint = WellPaidNavy,
                         )
                     }
                 }
             }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 20.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-            ) {
-                TextButton(onClick = onDismiss, enabled = !isSaving) {
-                    Text(stringResource(R.string.common_cancel))
-                }
-                Button(
-                    onClick = {
-                        val q = qty.toIntOrNull()?.coerceIn(1, 9999) ?: 1
-                        val cents = amount.trim().ifEmpty { null }?.let { parseBrlToCents(it) }
-                        onSave(label.trim(), q, cents)
-                    },
-                    enabled = !isSaving && label.isNotBlank(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = WellPaidGold,
-                        contentColor = Color.Black,
-                    ),
+            item { Spacer(Modifier.padding(top = 12.dp)) }
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Text(stringResource(R.string.shopping_save))
+                    Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                        Text(
+                            text = stringResource(R.string.shopping_auto_price_search),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = WellPaidNavy,
+                        )
+                        Text(
+                            text = stringResource(R.string.shopping_auto_price_search_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = WellPaidNavy.copy(alpha = 0.65f),
+                            modifier = Modifier.padding(top = 4.dp),
+                        )
+                    }
+                    Switch(
+                        checked = autoGroceryPriceHintsEnabled,
+                        onCheckedChange = onAutoGroceryPriceHintsChange,
+                        enabled = !isSaving,
+                    )
+                }
+            }
+            item { Spacer(Modifier.padding(top = 12.dp)) }
+            item {
+                OutlinedTextField(
+                    value = label,
+                    onValueChange = {
+                        label = it
+                        onLabelChanged(it)
+                    },
+                    label = null,
+                    placeholder = { Text(stringResource(R.string.shopping_product_name_placeholder)) },
+                    enabled = !isSaving,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            item {
+                Text(
+                    text = stringResource(R.string.shopping_grocery_search_auto_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = WellPaidNavy.copy(alpha = 0.65f),
+                    modifier = Modifier.padding(top = 6.dp),
+                )
+            }
+            item { Spacer(Modifier.padding(top = 8.dp)) }
+            item {
+                OutlinedTextField(
+                    value = qty,
+                    onValueChange = { qty = it.filter { ch -> ch.isDigit() }.take(4) },
+                    label = { Text(stringResource(R.string.shopping_field_qty)) },
+                    enabled = !isSaving,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            item { Spacer(Modifier.padding(top = 8.dp)) }
+            item {
+                OutlinedTextField(
+                    value = amount,
+                    onValueChange = { amount = it },
+                    label = { Text(stringResource(R.string.shopping_field_unit_price)) },
+                    enabled = !isSaving,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            if (showClearPrice && onClearPrice != null) {
+                item {
+                    TextButton(onClick = onClearPrice, enabled = !isSaving) {
+                        Text(stringResource(R.string.shopping_clear_unit_price))
+                    }
+                }
+            }
+            if (groceryLoading) {
+                item {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(top = 12.dp),
+                        horizontalArrangement = Arrangement.Center,
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(28.dp),
+                            color = WellPaidNavy,
+                            strokeWidth = 2.dp,
+                        )
+                    }
+                }
+            }
+            if (groceryHits.isNotEmpty()) {
+                item {
+                    Text(
+                        text = stringResource(R.string.shopping_grocery_price_hints_title),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = WellPaidNavy.copy(alpha = 0.85f),
+                        modifier = Modifier.padding(top = 12.dp, bottom = 8.dp),
+                    )
+                }
+                items(
+                    items = groceryHits,
+                    key = { hit -> hit.title + "\u0000" + hit.priceCents + "\u0000" + hit.source },
+                ) { hit ->
+                    ProductPriceHitCard(
+                        title = hit.title,
+                        priceLabel = formatBrlFromCents(hit.priceCents),
+                        source = hit.source,
+                        enabled = !isSaving,
+                        onClick = {
+                            label = hit.title.trim().take(200)
+                            amount = centsToBrlInput(hit.priceCents)
+                        },
+                        modifier = Modifier.padding(vertical = 5.dp),
+                    )
+                }
+            }
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 20.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                ) {
+                    TextButton(onClick = onDismiss, enabled = !isSaving) {
+                        Text(stringResource(R.string.common_cancel))
+                    }
+                    Button(
+                        onClick = {
+                            val q = qty.toIntOrNull()?.coerceIn(1, 9999) ?: 1
+                            val cents = amount.trim().ifEmpty { null }?.let { parseBrlToCents(it) }
+                            onSave(label.trim(), q, cents)
+                        },
+                        enabled = !isSaving && label.isNotBlank(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = WellPaidGold,
+                            contentColor = Color.Black,
+                        ),
+                    ) {
+                        Text(stringResource(R.string.shopping_save))
+                    }
                 }
             }
         }
@@ -1057,7 +1145,7 @@ private fun CompletePurchaseSheet(
 ) {
     val sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true,
-        confirmValueChange = { new -> new != SheetValue.Hidden },
+        confirmValueChange = { new -> !(isSaving && new == SheetValue.Hidden) },
     )
     var categoryId by remember {
         mutableStateOf(categories.firstOrNull()?.id.orEmpty())

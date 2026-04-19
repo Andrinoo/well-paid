@@ -15,6 +15,7 @@ import com.wellpaid.core.model.shopping.ShoppingListPatchDto
 import com.wellpaid.core.network.CategoriesApi
 import com.wellpaid.core.network.ShoppingListsApi
 import com.wellpaid.core.network.shoppingListItemPatchJson
+import com.wellpaid.data.UiPreferencesRepository
 import com.wellpaid.util.FastApiErrorMapper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -38,6 +39,8 @@ data class ShoppingListDetailUiState(
     val isSaving: Boolean = false,
     val errorMessage: String? = null,
     val infoMessage: String? = null,
+    /** Sugestões de preço enquanto escreve (DataStore; pode desligar-se no formulário). */
+    val autoGroceryPriceHints: Boolean = true,
     val groceryPriceHits: List<GoalProductHitDto> = emptyList(),
     val groceryPriceSearchLoading: Boolean = false,
 )
@@ -48,6 +51,7 @@ class ShoppingListDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val api: ShoppingListsApi,
     private val categoriesApi: CategoriesApi,
+    private val uiPreferences: UiPreferencesRepository,
 ) : ViewModel() {
 
     private val listId: String = savedStateHandle["listId"] ?: ""
@@ -59,6 +63,11 @@ class ShoppingListDetailViewModel @Inject constructor(
     val uiState: StateFlow<ShoppingListDetailUiState> = _uiState.asStateFlow()
 
     init {
+        viewModelScope.launch {
+            uiPreferences.shoppingAutoGroceryHintsFlow.collect { enabled ->
+                _uiState.update { it.copy(autoGroceryPriceHints = enabled) }
+            }
+        }
         if (listId.isNotBlank()) {
             viewModelScope.launch {
                 runCatching { categoriesApi.listCategories() }
@@ -83,8 +92,22 @@ class ShoppingListDetailViewModel @Inject constructor(
         _uiState.update { it.copy(infoMessage = null) }
     }
 
+    fun setAutoGroceryPriceHints(enabled: Boolean) {
+        viewModelScope.launch {
+            uiPreferences.setShoppingAutoGroceryHints(enabled)
+            if (!enabled) clearGroceryPriceHints()
+        }
+    }
+
     /** Debounced: chamar ao escrever o nome do item (add/edit) para sugestões mercearia. */
     fun onShoppingItemLabelForPriceHints(label: String) {
+        if (!_uiState.value.autoGroceryPriceHints) {
+            groceryPriceSearchJob?.cancel()
+            _uiState.update {
+                it.copy(groceryPriceHits = emptyList(), groceryPriceSearchLoading = false)
+            }
+            return
+        }
         groceryPriceSearchJob?.cancel()
         val t = label.trim()
         if (t.length < 2) {
@@ -219,7 +242,13 @@ class ShoppingListDetailViewModel @Inject constructor(
             )
             runCatching { api.addShoppingListItem(listId, body) }
                 .onSuccess { d ->
-                    _uiState.update { it.copy(isSaving = false, detail = d) }
+                    _uiState.update {
+                        it.copy(
+                            isSaving = false,
+                            detail = d,
+                            infoMessage = appContext.getString(R.string.shopping_product_saved),
+                        )
+                    }
                     onSuccess?.invoke()
                 }
                 .onFailure { t ->
