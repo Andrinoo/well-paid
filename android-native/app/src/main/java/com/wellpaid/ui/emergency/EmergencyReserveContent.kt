@@ -86,6 +86,7 @@ fun EmergencyReserveContent(
     viewModel: EmergencyReserveViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val hideEmergencyTargetEnd by viewModel.hideEmergencyPlanTargetEnd.collectAsStateWithLifecycle()
     val dirtyFlow = remember(mainRouteEntry) {
         mainRouteEntry.savedStateHandle.getStateFlow("emergency_reserve_dirty", 0L)
     }
@@ -457,14 +458,32 @@ fun EmergencyReserveContent(
                         enabled = !state.isUpdatingPlan,
                         shape = RoundedCornerShape(14.dp),
                     )
-                    WellPaidDatePickerField(
-                        label = { Text(stringResource(R.string.emergency_target_end_date_label)) },
-                        isoDate = state.editingPlanTargetEndText,
-                        onIsoDateChange = { viewModel.setEditingPlanTargetEndText(it) },
+                    OutlinedTextField(
+                        value = state.editingPlanDurationMonthsText,
+                        onValueChange = { viewModel.setEditingPlanDurationMonthsText(it) },
+                        label = { Text(stringResource(R.string.emergency_new_plan_duration_label)) },
+                        supportingText = { Text(stringResource(R.string.emergency_new_plan_duration_footnote)) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
                         enabled = !state.isUpdatingPlan,
                         shape = RoundedCornerShape(14.dp),
                     )
+                    Text(
+                        text = stringResource(R.string.emergency_plan_duration_target_sync_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    if (!hideEmergencyTargetEnd) {
+                        WellPaidDatePickerField(
+                            label = { Text(stringResource(R.string.emergency_target_end_date_label)) },
+                            isoDate = state.editingPlanTargetEndText,
+                            onIsoDateChange = { viewModel.setEditingPlanTargetEndText(it) },
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !state.isUpdatingPlan,
+                            shape = RoundedCornerShape(14.dp),
+                        )
+                    }
                     WellPaidMoneyDigitKeypadField(
                         valueText = state.editingPlanOpeningBalanceText,
                         onValueTextChange = { viewModel.setEditingPlanOpeningBalanceText(it) },
@@ -546,17 +565,6 @@ fun EmergencyReserveContent(
                             }
                         }
                     }
-                    OutlinedTextField(
-                        value = state.editingPlanDurationMonthsText,
-                        onValueChange = { viewModel.setEditingPlanDurationMonthsText(it) },
-                        label = { Text(stringResource(R.string.emergency_new_plan_duration_label)) },
-                        supportingText = { Text(stringResource(R.string.emergency_new_plan_duration_footnote)) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        enabled = !state.isUpdatingPlan,
-                        shape = RoundedCornerShape(14.dp),
-                    )
                 }
             },
             confirmButton = {

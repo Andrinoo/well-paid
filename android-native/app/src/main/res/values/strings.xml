@@ -462,6 +462,8 @@
     <string name="settings_tile_language">Language</string>
     <string name="settings_tile_keypad_haptics">Keypad haptics</string>
     <string name="settings_tile_keypad_haptics_hint">Enable vibration feedback in numeric keypads.</string>
+    <string name="settings_tile_emergency_hide_target_end">Emergency plan: months only</string>
+    <string name="settings_tile_emergency_hide_target_end_hint">Hide target end date in the reserve plan form; it is still derived from the start date and validity months.</string>
     <string name="settings_tile_security">Security</string>
     <string name="settings_tile_family">Family</string>
     <string name="settings_tile_version">Version</string>
@@ -634,6 +636,7 @@
     <string name="emergency_new_plan_monthly_footnote">Leave empty to use the monthly amount above.</string>
     <string name="emergency_new_plan_duration_label">Validity period (months)</string>
     <string name="emergency_new_plan_duration_footnote">Optional. Leave empty for an open-ended plan.</string>
+    <string name="emergency_plan_duration_target_sync_hint">Start date, months, and target end stay in sync when you edit them. If both months and end are set, the server uses one timeline (end date wins) so nothing is counted twice.</string>
     <string name="emergency_error_plan_duration">Enter a valid duration in months.</string>
     <string name="emergency_plan_edit">Edit</string>
     <string name="emergency_plan_delete">Delete</string>

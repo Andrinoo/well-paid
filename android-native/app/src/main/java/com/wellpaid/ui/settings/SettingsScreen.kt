@@ -154,9 +154,15 @@ fun SettingsScreen(
             mutableStateOf(AppLocalePreferences.isEnglishInterface(context.applicationContext))
         }
         var keypadHapticsEnabled by remember { mutableStateOf(true) }
+        var hideEmergencyTargetEnd by remember { mutableStateOf(false) }
         LaunchedEffect(uiPreferencesRepository) {
             uiPreferencesRepository.keypadHapticsEnabledFlow.collect { enabled ->
                 keypadHapticsEnabled = enabled
+            }
+        }
+        LaunchedEffect(uiPreferencesRepository) {
+            uiPreferencesRepository.emergencyPlanHideTargetEndFlow.collect { v ->
+                hideEmergencyTargetEnd = v
             }
         }
         Column(
@@ -322,6 +328,34 @@ fun SettingsScreen(
                                     keypadHapticsEnabled = enabled
                                     scope.launch {
                                         uiPreferencesRepository.setKeypadHapticsEnabled(enabled)
+                                    }
+                                },
+                            )
+                        },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    )
+                    ListItem(
+                        headlineContent = {
+                            Text(
+                                stringResource(R.string.settings_tile_emergency_hide_target_end),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Medium,
+                            )
+                        },
+                        supportingContent = {
+                            Text(
+                                stringResource(R.string.settings_tile_emergency_hide_target_end_hint),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        },
+                        trailingContent = {
+                            Switch(
+                                checked = hideEmergencyTargetEnd,
+                                onCheckedChange = { v ->
+                                    hideEmergencyTargetEnd = v
+                                    scope.launch {
+                                        uiPreferencesRepository.setEmergencyPlanHideTargetEndDate(v)
                                     }
                                 },
                             )

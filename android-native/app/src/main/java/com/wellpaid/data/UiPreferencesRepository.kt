@@ -25,6 +25,8 @@ class UiPreferencesRepository @Inject constructor(
         val shoppingAutoGroceryHints = booleanPreferencesKey("shopping_auto_grocery_hints")
         val goalAutoProductSearch = booleanPreferencesKey("goal_auto_product_search")
         val keypadHapticsEnabled = booleanPreferencesKey("keypad_haptics_enabled")
+        /** Só pede período em meses no plano de reserva; data-alvo fim é derivada e o campo fica oculto. */
+        val emergencyPlanHideTargetEndDate = booleanPreferencesKey("emergency_plan_hide_target_end")
     }
 
     val shoppingAutoGroceryHintsFlow: Flow<Boolean> =
@@ -36,6 +38,9 @@ class UiPreferencesRepository @Inject constructor(
     val keypadHapticsEnabledFlow: Flow<Boolean> =
         dataStore.data.map { it[Keys.keypadHapticsEnabled] ?: true }
 
+    val emergencyPlanHideTargetEndFlow: Flow<Boolean> =
+        dataStore.data.map { it[Keys.emergencyPlanHideTargetEndDate] ?: false }
+
     suspend fun setShoppingAutoGroceryHints(value: Boolean) {
         dataStore.edit { it[Keys.shoppingAutoGroceryHints] = value }
     }
@@ -46,5 +51,9 @@ class UiPreferencesRepository @Inject constructor(
 
     suspend fun setKeypadHapticsEnabled(value: Boolean) {
         dataStore.edit { it[Keys.keypadHapticsEnabled] = value }
+    }
+
+    suspend fun setEmergencyPlanHideTargetEndDate(value: Boolean) {
+        dataStore.edit { it[Keys.emergencyPlanHideTargetEndDate] = value }
     }
 }

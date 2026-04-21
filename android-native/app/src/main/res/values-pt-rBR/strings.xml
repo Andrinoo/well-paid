@@ -462,6 +462,8 @@
     <string name="settings_tile_language">Idioma</string>
     <string name="settings_tile_keypad_haptics">Háptico dos teclados numéricos</string>
     <string name="settings_tile_keypad_haptics_hint">Ativa vibração ao tocar nos teclados numéricos do app.</string>
+    <string name="settings_tile_emergency_hide_target_end">Reserva de emergência: só meses</string>
+    <string name="settings_tile_emergency_hide_target_end_hint">Oculta a data-alvo fim ao criar ou editar o plano; o app continua a enviá-la a partir do início e do período em meses.</string>
     <string name="settings_tile_security">Segurança</string>
     <string name="settings_tile_family">Família</string>
     <string name="settings_tile_version">Versão</string>
@@ -634,6 +636,7 @@
     <string name="emergency_new_plan_monthly_footnote">Deixe vazio para usar o valor mensal acima.</string>
     <string name="emergency_new_plan_duration_label">Período de validade (meses)</string>
     <string name="emergency_new_plan_duration_footnote">Opcional. Deixe vazio para plano sem prazo fixo.</string>
+    <string name="emergency_plan_duration_target_sync_hint">Data de início, meses e data-alvo fim sincronizam quando altera um deles. Se enviar meses e data fim, o servidor usa uma única linha temporal (a data fim prevalece), sem duplicar o período.</string>
     <string name="emergency_error_plan_duration">Indique uma duração válida em meses.</string>
     <string name="emergency_plan_edit">Editar</string>
     <string name="emergency_plan_delete">Excluir</string>

@@ -67,6 +67,34 @@ def last_included_month_first(tracking_start: date, plan_duration_months: int | 
     return add_months(start, plan_duration_months - 1)
 
 
+def effective_plan_end_first_of_month(plan: EmergencyReservePlan) -> date | None:
+    """Fim do plano para cronograma e ritmo: data-alvo fim tem prioridade; senão duração em meses."""
+    if plan.target_end_date is not None:
+        return first_of_month(plan.target_end_date)
+    return last_included_month_first(plan.tracking_start, plan.plan_duration_months)
+
+
+def normalize_plan_end_fields(plan: EmergencyReservePlan) -> None:
+    """Evita conflito entre data fim e duração: se ambos vierem, a data fim prevalece e a duração é recalculada."""
+    start = first_of_month(plan.tracking_start)
+    te = first_of_month(plan.target_end_date) if plan.target_end_date is not None else None
+    dur = (
+        int(plan.plan_duration_months)
+        if plan.plan_duration_months is not None and int(plan.plan_duration_months) > 0
+        else None
+    )
+    if te is not None:
+        plan.target_end_date = te
+        plan.plan_duration_months = months_between_inclusive(start, te)
+    elif dur is not None:
+        end_cap = last_included_month_first(plan.tracking_start, dur)
+        plan.target_end_date = end_cap
+        plan.plan_duration_months = dur
+    else:
+        plan.target_end_date = None
+        plan.plan_duration_months = None
+
+
 def months_between_inclusive(start: date, end: date) -> int:
     if end < start:
         return 0
@@ -88,7 +116,7 @@ def plan_timeline_metrics(
 ) -> dict:
     d = today or date.today()
     start = first_of_month(plan.tracking_start)
-    end_target = first_of_month(plan.target_end_date) if plan.target_end_date else None
+    end_target = effective_plan_end_first_of_month(plan)
 
     if end_target is not None:
         months_total = months_between_inclusive(start, end_target)
@@ -285,7 +313,7 @@ def ensure_accruals(db: Session, plan: EmergencyReservePlan, today: date) -> boo
 
     start = first_of_month(plan.tracking_start)
     end = first_of_month(today)
-    cap = last_included_month_first(plan.tracking_start, plan.plan_duration_months)
+    cap = effective_plan_end_first_of_month(plan)
     if cap is not None and end > cap:
         end = cap
     if start > end:
@@ -529,6 +557,7 @@ def create_plan(
         plan_duration_months=plan_duration_months,
         status="active",
     )
+    normalize_plan_end_fields(p)
     db.add(p)
     db.commit()
     db.refresh(p)
@@ -568,6 +597,7 @@ def update_plan_for_user(
     plan.plan_duration_months = plan_duration_months
     if opening_balance_cents is not None:
         plan.opening_balance_cents = int(opening_balance_cents)
+    normalize_plan_end_fields(plan)
     db.commit()
     db.refresh(plan)
     ensure_accruals(db, plan, date.today())
@@ -655,7 +685,7 @@ def month_breakdown_for_plan(
     d = today or date.today()
     start = first_of_month(plan.tracking_start)
     end = first_of_month(d)
-    cap = last_included_month_first(plan.tracking_start, plan.plan_duration_months)
+    cap = effective_plan_end_first_of_month(plan)
     if cap is not None and end > cap:
         end = cap
     if start > end:

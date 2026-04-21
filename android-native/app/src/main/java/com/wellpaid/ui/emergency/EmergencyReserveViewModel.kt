@@ -16,14 +16,17 @@ import com.wellpaid.core.model.emergency.EmergencyReserveUpdateDto
 import com.wellpaid.core.network.EmergencyReserveApi
 import com.wellpaid.data.FamilyMeRepository
 import com.wellpaid.data.MainPrefetchTiming
+import com.wellpaid.data.UiPreferencesRepository
 import com.wellpaid.util.FastApiErrorMapper
 import com.wellpaid.util.centsToBrlInput
 import com.wellpaid.util.parseBrlToCents
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
@@ -99,10 +102,22 @@ class EmergencyReserveViewModel @Inject constructor(
     private val tokenStorage: TokenStorage,
     familyMeRepository: FamilyMeRepository,
     private val prefetchTiming: MainPrefetchTiming,
+    uiPreferencesRepository: UiPreferencesRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(EmergencyReserveUiState())
     val uiState: StateFlow<EmergencyReserveUiState> = _uiState.asStateFlow()
+
+    /** Em Definições: ocultar data-alvo fim e usar só o período (meses); a data é derivada ao gravar. */
+    val hideEmergencyPlanTargetEnd: StateFlow<Boolean> =
+        uiPreferencesRepository.emergencyPlanHideTargetEndFlow
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = false,
+            )
+
+    private var syncingPlanSchedule = false
 
     init {
         familyMeRepository.family
@@ -178,7 +193,18 @@ class EmergencyReserveViewModel @Inject constructor(
     }
 
     fun setNewPlanDurationMonthsText(value: String) {
-        _uiState.update { it.copy(newPlanDurationMonthsText = value.filter { c -> c.isDigit() }.take(3)) }
+        val filtered = value.filter { c -> c.isDigit() }.take(3)
+        _uiState.update { it.copy(newPlanDurationMonthsText = filtered) }
+        if (filtered.isBlank()) {
+            syncingPlanSchedule = true
+            try {
+                _uiState.update { it.copy(newPlanTargetEndText = "") }
+            } finally {
+                syncingPlanSchedule = false
+            }
+        } else {
+            syncNewPlanEndFromDuration()
+        }
         recalcNewPlanRecommendation()
     }
 
@@ -277,27 +303,72 @@ class EmergencyReserveViewModel @Inject constructor(
     }
 
     fun setEditingPlanDurationMonthsText(value: String) {
-        _uiState.update { it.copy(editingPlanDurationMonthsText = value.filter { c -> c.isDigit() }.take(3)) }
+        val filtered = value.filter { c -> c.isDigit() }.take(3)
+        _uiState.update { it.copy(editingPlanDurationMonthsText = filtered) }
+        if (filtered.isBlank()) {
+            syncingPlanSchedule = true
+            try {
+                _uiState.update { it.copy(editingPlanTargetEndText = "") }
+            } finally {
+                syncingPlanSchedule = false
+            }
+        } else {
+            syncEditingPlanEndFromDuration()
+        }
         recalcEditingPlanRecommendation()
     }
 
     fun setNewPlanTrackingStartText(value: String) {
         _uiState.update { it.copy(newPlanTrackingStartText = value) }
+        val s = _uiState.value
+        when {
+            s.newPlanDurationMonthsText.toIntOrNull()?.takeIf { it > 0 } != null ->
+                syncNewPlanEndFromDuration()
+            parseIsoDateOrNull(s.newPlanTargetEndText) != null ->
+                syncNewPlanDurationFromEnd()
+        }
         recalcNewPlanRecommendation()
     }
 
     fun setNewPlanTargetEndText(value: String) {
         _uiState.update { it.copy(newPlanTargetEndText = value) }
+        if (value.isBlank()) {
+            syncingPlanSchedule = true
+            try {
+                _uiState.update { it.copy(newPlanDurationMonthsText = "") }
+            } finally {
+                syncingPlanSchedule = false
+            }
+        } else {
+            syncNewPlanDurationFromEnd()
+        }
         recalcNewPlanRecommendation()
     }
 
     fun setEditingPlanTrackingStartText(value: String) {
         _uiState.update { it.copy(editingPlanTrackingStartText = value) }
+        val s = _uiState.value
+        when {
+            s.editingPlanDurationMonthsText.toIntOrNull()?.takeIf { it > 0 } != null ->
+                syncEditingPlanEndFromDuration()
+            parseIsoDateOrNull(s.editingPlanTargetEndText) != null ->
+                syncEditingPlanDurationFromEnd()
+        }
         recalcEditingPlanRecommendation()
     }
 
     fun setEditingPlanTargetEndText(value: String) {
         _uiState.update { it.copy(editingPlanTargetEndText = value) }
+        if (value.isBlank()) {
+            syncingPlanSchedule = true
+            try {
+                _uiState.update { it.copy(editingPlanDurationMonthsText = "") }
+            } finally {
+                syncingPlanSchedule = false
+            }
+        } else {
+            syncEditingPlanDurationFromEnd()
+        }
         recalcEditingPlanRecommendation()
     }
 
@@ -598,6 +669,72 @@ class EmergencyReserveViewModel @Inject constructor(
     fun formatAccrualMonth(year: Int, month: Int): String {
         val m = Month.of(month).getDisplayName(TextStyle.SHORT, Locale("pt", "PT"))
         return "${m.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("pt", "PT")) else it.toString() }} $year"
+    }
+
+    private fun syncNewPlanEndFromDuration() {
+        if (syncingPlanSchedule) return
+        val s = _uiState.value
+        val start = parseIsoDateOrNull(s.newPlanTrackingStartText)?.let { firstOfMonth(it) } ?: return
+        val dur = s.newPlanDurationMonthsText.toIntOrNull()?.takeIf { it > 0 } ?: return
+        val end = start.plusMonths((dur - 1).toLong())
+        val endStr = end.toString()
+        if (s.newPlanTargetEndText == endStr) return
+        syncingPlanSchedule = true
+        try {
+            _uiState.update { it.copy(newPlanTargetEndText = endStr) }
+        } finally {
+            syncingPlanSchedule = false
+        }
+    }
+
+    private fun syncNewPlanDurationFromEnd() {
+        if (syncingPlanSchedule) return
+        val s = _uiState.value
+        val start = parseIsoDateOrNull(s.newPlanTrackingStartText)?.let { firstOfMonth(it) } ?: return
+        val end = parseIsoDateOrNull(s.newPlanTargetEndText)?.let { firstOfMonth(it) } ?: return
+        if (end < start) return
+        val months = monthsBetweenInclusive(start, end)
+        val md = months.toString()
+        if (s.newPlanDurationMonthsText == md) return
+        syncingPlanSchedule = true
+        try {
+            _uiState.update { it.copy(newPlanDurationMonthsText = md) }
+        } finally {
+            syncingPlanSchedule = false
+        }
+    }
+
+    private fun syncEditingPlanEndFromDuration() {
+        if (syncingPlanSchedule) return
+        val s = _uiState.value
+        val start = parseIsoDateOrNull(s.editingPlanTrackingStartText)?.let { firstOfMonth(it) } ?: return
+        val dur = s.editingPlanDurationMonthsText.toIntOrNull()?.takeIf { it > 0 } ?: return
+        val end = start.plusMonths((dur - 1).toLong())
+        val endStr = end.toString()
+        if (s.editingPlanTargetEndText == endStr) return
+        syncingPlanSchedule = true
+        try {
+            _uiState.update { it.copy(editingPlanTargetEndText = endStr) }
+        } finally {
+            syncingPlanSchedule = false
+        }
+    }
+
+    private fun syncEditingPlanDurationFromEnd() {
+        if (syncingPlanSchedule) return
+        val s = _uiState.value
+        val start = parseIsoDateOrNull(s.editingPlanTrackingStartText)?.let { firstOfMonth(it) } ?: return
+        val end = parseIsoDateOrNull(s.editingPlanTargetEndText)?.let { firstOfMonth(it) } ?: return
+        if (end < start) return
+        val months = monthsBetweenInclusive(start, end)
+        val md = months.toString()
+        if (s.editingPlanDurationMonthsText == md) return
+        syncingPlanSchedule = true
+        try {
+            _uiState.update { it.copy(editingPlanDurationMonthsText = md) }
+        } finally {
+            syncingPlanSchedule = false
+        }
     }
 
     private fun parseIsoDateOrNull(value: String): LocalDate? {

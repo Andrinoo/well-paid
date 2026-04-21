@@ -56,6 +56,7 @@ fun EmergencyReservePlanFormScreen(
     viewModel: EmergencyReserveViewModel,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val hideTargetEnd by viewModel.hideEmergencyPlanTargetEnd.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         viewModel.resetNewPlanFormFields()
@@ -139,14 +140,34 @@ fun EmergencyReservePlanFormScreen(
                 shape = RoundedCornerShape(16.dp),
             )
             Spacer(Modifier.height(8.dp))
-            WellPaidDatePickerField(
-                label = { Text(stringResource(R.string.emergency_target_end_date_label)) },
-                isoDate = state.newPlanTargetEndText,
-                onIsoDateChange = { viewModel.setNewPlanTargetEndText(it) },
+            OutlinedTextField(
+                value = state.newPlanDurationMonthsText,
+                onValueChange = { viewModel.setNewPlanDurationMonthsText(it) },
+                label = { Text(stringResource(R.string.emergency_new_plan_duration_label)) },
+                supportingText = { Text(stringResource(R.string.emergency_new_plan_duration_footnote)) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
                 enabled = !state.isCreatingPlan && !state.isSaving,
                 shape = RoundedCornerShape(16.dp),
             )
+            Text(
+                text = stringResource(R.string.emergency_plan_duration_target_sync_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+            if (!hideTargetEnd) {
+                Spacer(Modifier.height(8.dp))
+                WellPaidDatePickerField(
+                    label = { Text(stringResource(R.string.emergency_target_end_date_label)) },
+                    isoDate = state.newPlanTargetEndText,
+                    onIsoDateChange = { viewModel.setNewPlanTargetEndText(it) },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !state.isCreatingPlan && !state.isSaving,
+                    shape = RoundedCornerShape(16.dp),
+                )
+            }
             Spacer(Modifier.height(8.dp))
             WellPaidMoneyDigitKeypadField(
                 valueText = state.newPlanOpeningBalanceText,
@@ -239,18 +260,6 @@ fun EmergencyReservePlanFormScreen(
                     }
                 }
             }
-            Spacer(Modifier.height(8.dp))
-            OutlinedTextField(
-                value = state.newPlanDurationMonthsText,
-                onValueChange = { viewModel.setNewPlanDurationMonthsText(it) },
-                label = { Text(stringResource(R.string.emergency_new_plan_duration_label)) },
-                supportingText = { Text(stringResource(R.string.emergency_new_plan_duration_footnote)) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                enabled = !state.isCreatingPlan && !state.isSaving,
-                shape = RoundedCornerShape(16.dp),
-            )
             Spacer(Modifier.height(20.dp))
             Button(
                 onClick = { viewModel.createNamedPlan(onSuccess = onCreatedNeedRefresh) },
