@@ -37,6 +37,7 @@ Derivado do plano mestre (secções 3–7): navegação, shell principal, defini
 - [ ] **Listas de compras** — lista, nova, detalhe (`shopping_lists`, `shopping_list_new`, `shopping_list/{listId}`).
 - [ ] **Anúncios** (`announcements`).
 - [ ] **Receivables** (`receivables`) e badge no shell se existir valor pendente.
+- [ ] **Investimentos** (`investments`) pelo atalho no menu expandido da barra inferior.
 - [ ] **Definições** (`settings`) e sub-rotas: nome a apresentar, família, segurança, categorias.
 
 ### Dirty flags (refrescar listas no Main)
@@ -101,6 +102,17 @@ Derivado do plano mestre (secções 3–7): navegação, shell principal, defini
 ### Reserva de emergência
 
 - [ ] Tab carrega plano/saldo; actualizar meta ou plano sem erro.
+
+### Investimentos (novo)
+
+- [ ] Acesso via atalho **Investimentos** no shell abre ecrã sem crash.
+- [ ] Cartão de resumo mostra saldo aplicado e rendimento acumulado com valores do backend.
+- [ ] Buckets (CDI/CDB/Renda fixa) mostram linha de alocado/rendimento/% ao mês.
+- [ ] Botão **Atualizar dados** recarrega sem duplicar layout/erros visuais.
+- [ ] Com backend sem acesso à fonte externa (simulação offline), aparece badge de fallback:
+  - [ ] PT-BR: `Taxa estimada (fallback temporário)`
+  - [ ] EN-US: `Estimated rate (temporary fallback)`
+- [ ] Com backend online e fonte disponível, badge de fallback deixa de aparecer.
 
 ### Telemetria
 

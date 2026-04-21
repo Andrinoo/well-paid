@@ -3,6 +3,7 @@ package com.wellpaid.ui.goals
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
@@ -15,20 +16,23 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Flag
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -111,11 +115,14 @@ fun GoalsListContent(
                 CircularProgressIndicator()
             }
         } else {
-            LazyColumn(
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
                 modifier = Modifier
                     .fillMaxSize()
                     .then(tabSwipe),
-                contentPadding = PaddingValues(bottom = 16.dp),
+                contentPadding = PaddingValues(bottom = 16.dp, top = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 if (state.goals.isEmpty() && !state.isLoading) {
                     item {
@@ -128,8 +135,10 @@ fun GoalsListContent(
                     }
                 }
                 items(state.goals, key = { it.id }) { goal ->
-                    GoalListRow(
+                    GoalCompactCard(
                         goal = goal,
+                        expanded = state.expandedGoalId == goal.id,
+                        onToggleExpand = { viewModel.toggleGoalExpanded(goal.id) },
                         onClick = { onGoalClick(goal.id) },
                         onEditClick = if (goal.isMine) {
                             { onEditGoal(goal.id) }
@@ -137,7 +146,6 @@ fun GoalsListContent(
                             null
                         },
                     )
-                    HorizontalDivider()
                 }
             }
         }
@@ -145,8 +153,10 @@ fun GoalsListContent(
 }
 
 @Composable
-private fun GoalListRow(
+private fun GoalCompactCard(
     goal: GoalDto,
+    expanded: Boolean,
+    onToggleExpand: () -> Unit,
     onClick: () -> Unit,
     onEditClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
@@ -176,12 +186,22 @@ private fun GoalListRow(
     val context = LocalContext.current
     val thumbUrl = goal.referenceThumbnailUrl?.trim()?.takeIf { it.isNotEmpty() }
 
-    ListItem(
-        modifier = modifier.clickable(onClick = onClick),
-        leadingContent = {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
             Box(
                 modifier = Modifier
-                    .size(48.dp)
+                        .size(42.dp)
                     .clip(RoundedCornerShape(10.dp))
                     .background(WellPaidNavy.copy(alpha = 0.06f)),
                 contentAlignment = Alignment.Center,
@@ -195,7 +215,7 @@ private fun GoalListRow(
                             .build(),
                         contentDescription = null,
                         modifier = Modifier
-                            .size(48.dp)
+                                .size(42.dp)
                             .clip(RoundedCornerShape(10.dp)),
                         contentScale = ContentScale.Crop,
                     )
@@ -208,45 +228,80 @@ private fun GoalListRow(
                     )
                 }
             }
-        },
-        headlineContent = {
-            Text(
-                text = goal.title,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = goal.title,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                    )
+                    Text(
+                        text = formatBrlFromCents(goal.currentCents),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.size(8.dp))
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 2.dp),
             )
-        },
-        supportingContent = {
-            Column(modifier = Modifier.padding(top = 4.dp)) {
+            Spacer(modifier = Modifier.size(6.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "${(progress * 100).toInt()}%",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                TextButton(onClick = onToggleExpand) {
+                    Text(if (expanded) stringResource(R.string.goal_card_less) else stringResource(R.string.goal_card_more))
+                    Icon(
+                        imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                        contentDescription = null,
+                    )
+                }
+            }
+
+            if (expanded) {
+                Spacer(modifier = Modifier.size(6.dp))
                 Text(
                     text = sub,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                LinearProgressIndicator(
-                    progress = { progress },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 6.dp),
+                Spacer(modifier = Modifier.size(6.dp))
+                Text(
+                    text = stringResource(
+                        R.string.goal_detail_progress_label,
+                        formatBrlFromCents(goal.currentCents),
+                        formatBrlFromCents(goal.targetCents),
+                    ),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-            }
-        },
-        trailingContent = {
-            if (onEditClick != null) {
-                IconButton(
-                    onClick = onEditClick,
-                    modifier = Modifier.size(48.dp),
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Edit,
-                        contentDescription = stringResource(R.string.goal_edit_action),
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
+                if (onEditClick != null) {
+                    Spacer(modifier = Modifier.size(6.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        IconButton(onClick = onEditClick) {
+                            Icon(
+                                imageVector = Icons.Filled.Edit,
+                                contentDescription = stringResource(R.string.goal_edit_action),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
                 }
             }
-        },
-        colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface),
-    )
+        }
+    }
 }

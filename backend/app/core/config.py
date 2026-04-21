@@ -145,6 +145,11 @@ class Settings(BaseSettings):
     email_verification_link_base: str | None = None
     # Só desenvolvimento: regista código e token de verificação nos logs se o e-mail não for enviado.
     email_verification_log_token: bool = False
+    # Investimentos: fonte pública para CDI (BACEN SGS) e fator default para CDB.
+    investments_cdi_sgs_series: int = 12
+    investments_rates_cache_ttl_seconds: int = 900
+    investments_cdb_pct_of_cdi: float = 1.02
+    investments_fallback_stable_window_months: int = 2
 
     @model_validator(mode="before")
     @classmethod

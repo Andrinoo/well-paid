@@ -71,4 +71,7 @@ object NavRoutes {
 
     /** Valores a receber / a pagar entre membros (despesas partilhadas). */
     const val Receivables = "receivables"
+
+    /** Tela MVP de investimentos. */
+    const val Investments = "investments"
 }

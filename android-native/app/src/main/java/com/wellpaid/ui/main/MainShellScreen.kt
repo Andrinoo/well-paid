@@ -29,6 +29,7 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Payments
@@ -117,6 +118,7 @@ fun MainShellScreen(
     onOpenShoppingLists: () -> Unit,
     onOpenAnnouncements: () -> Unit,
     onOpenReceivables: () -> Unit,
+    onOpenInvestments: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: MainShellViewModel = hiltViewModel(),
 ) {
@@ -276,6 +278,23 @@ fun MainShellScreen(
                                     Spacer(Modifier.height(2.dp))
                                     Text(
                                         stringResource(R.string.home_shortcut_shopping_lists),
+                                        style = MaterialTheme.typography.labelSmall,
+                                    )
+                                }
+                            }
+                            TextButton(onClick = {
+                                shortcutsExpanded = false
+                                onOpenInvestments()
+                            }) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(
+                                        Icons.Filled.Savings,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                    )
+                                    Spacer(Modifier.height(2.dp))
+                                    Text(
+                                        stringResource(R.string.home_shortcut_investments),
                                         style = MaterialTheme.typography.labelSmall,
                                     )
                                 }

@@ -74,6 +74,7 @@ flowchart TB
   shopId["shopping_list/{listId}"]
   ann["announcements"]
   rec["receivables"]
+  inv["investments"]
   main --> settings
   main --> expNew
   main --> expId
@@ -88,6 +89,7 @@ flowchart TB
   main --> shopId
   main --> ann
   main --> rec
+  main --> inv
   settings --> display["display_name"]
   settings --> family["family"]
   settings --> security["security"]
@@ -118,6 +120,7 @@ flowchart TB
   bar --> a2[Listas de compras]
   bar --> a3[Anúncios]
   bar --> a4[Receivables + badge]
+  bar --> a5[Investimentos]
   shell --> setIcon[Ícone Definições]
   setIcon --> settingsRoute[settings]
 ```
@@ -215,8 +218,10 @@ flowchart LR
   main["main"]
   ann["announcements"]
   rec["receivables"]
+  inv["investments"]
   main --> ann
   main --> rec
+  main --> inv
   ann -->|ler/ocultar| dirty[announcements_dirty no Main]
 ```
 

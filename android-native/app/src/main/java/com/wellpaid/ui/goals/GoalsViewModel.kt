@@ -67,10 +67,17 @@ class GoalsViewModel @Inject constructor(
                 }
         }
     }
+
+    fun toggleGoalExpanded(goalId: String) {
+        _uiState.update {
+            it.copy(expandedGoalId = if (it.expandedGoalId == goalId) null else goalId)
+        }
+    }
 }
 
 data class GoalsUiState(
     val goals: List<GoalDto> = emptyList(),
     val isLoading: Boolean = true,
     val errorMessage: String? = null,
+    val expandedGoalId: String? = null,
 )

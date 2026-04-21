@@ -43,6 +43,8 @@ data class EmergencyReserveUiState(
     val newPlanTitleText: String = "",
     val newPlanMonthlyText: String = "",
     val newPlanDurationMonthsText: String = "",
+    val showCreatePlanForm: Boolean = false,
+    val expandedPlanId: String? = null,
     val editingPlanId: String? = null,
     val editingPlanTitleText: String = "",
     val editingPlanMonthlyText: String = "",
@@ -139,6 +141,27 @@ class EmergencyReserveViewModel @Inject constructor(
         _uiState.update { it.copy(newPlanDurationMonthsText = value.filter { c -> c.isDigit() }.take(3)) }
     }
 
+    fun openCreatePlanForm() {
+        _uiState.update { it.copy(showCreatePlanForm = true, errorMessage = null) }
+    }
+
+    fun closeCreatePlanForm() {
+        _uiState.update {
+            it.copy(
+                showCreatePlanForm = false,
+                newPlanTitleText = "",
+                newPlanMonthlyText = "",
+                newPlanDurationMonthsText = "",
+            )
+        }
+    }
+
+    fun togglePlanExpanded(planId: String) {
+        _uiState.update {
+            it.copy(expandedPlanId = if (it.expandedPlanId == planId) null else planId)
+        }
+    }
+
     fun startEditingPlan(plan: EmergencyReservePlanDto) {
         _uiState.update {
             it.copy(
@@ -227,6 +250,8 @@ class EmergencyReserveViewModel @Inject constructor(
                             newPlanTitleText = "",
                             newPlanMonthlyText = "",
                             newPlanDurationMonthsText = "",
+                            showCreatePlanForm = false,
+                            expandedPlanId = null,
                             errorMessage = null,
                         )
                     }

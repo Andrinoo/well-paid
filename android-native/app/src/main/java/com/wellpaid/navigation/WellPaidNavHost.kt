@@ -31,6 +31,7 @@ import com.wellpaid.ui.expenses.InstallmentPlanScreen
 import com.wellpaid.ui.goals.GoalDetailScreen
 import com.wellpaid.ui.goals.GoalFormScreen
 import com.wellpaid.ui.incomes.IncomeFormScreen
+import com.wellpaid.ui.investments.InvestmentsScreen
 import com.wellpaid.ui.login.LoginScreen
 import com.wellpaid.ui.main.MainShellScreen
 import com.wellpaid.ui.register.RegisterScreen
@@ -241,6 +242,9 @@ fun WellPaidNavHost(
                         onOpenReceivables = {
                             navController.navigate(NavRoutes.Receivables)
                         },
+                        onOpenInvestments = {
+                            navController.navigate(NavRoutes.Investments)
+                        },
                     )
                 }
                 composable(NavRoutes.Announcements) {
@@ -371,6 +375,9 @@ fun WellPaidNavHost(
                 }
                 composable(NavRoutes.Receivables) {
                     ReceivablesScreen(onNavigateBack = { navController.popBackStack() })
+                }
+                composable(NavRoutes.Investments) {
+                    InvestmentsScreen(onNavigateBack = { navController.popBackStack() })
                 }
                 composable(NavRoutes.ManageCategories) {
                     ManageCategoriesScreen(onNavigateBack = { navController.popBackStack() })
