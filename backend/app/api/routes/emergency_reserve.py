@@ -44,6 +44,11 @@ from app.services.emergency_reserve import (
 router = APIRouter(prefix="/emergency-reserve", tags=["emergency-reserve"])
 
 
+def _is_owner_role(role: str | None) -> bool:
+    normalized = (role or "").strip().lower()
+    return normalized in {"owner", "titular", "admin"}
+
+
 def _tables_ready(db: Session) -> bool:
     return session_has_table(db, "emergency_reserve_plans") and session_has_table(
         db, "emergency_reserve_accruals"
@@ -61,7 +66,7 @@ def _require_owner_if_family_scope(db: Session, user_id) -> None:
     has_shared_scope = db.scalar(
         select(FamilyMember.id).where(FamilyMember.family_id == family_id).offset(1).limit(1)
     ) is not None
-    if has_shared_scope and role != "owner":
+    if has_shared_scope and not _is_owner_role(role):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=(
