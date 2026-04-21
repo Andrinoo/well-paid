@@ -39,6 +39,7 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -69,6 +70,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wellpaid.BuildConfig
 import com.wellpaid.R
+import com.wellpaid.data.UiPreferencesRepository
 import com.wellpaid.locale.AppLocalePreferences
 import com.wellpaid.ui.theme.wellPaidCenterTopAppBarColors
 import com.wellpaid.ui.theme.wellPaidScreenHorizontalPadding
@@ -145,8 +147,17 @@ fun SettingsScreen(
         },
     ) { innerPadding ->
         val context = LocalContext.current
+        val uiPreferencesRepository = remember(context.applicationContext) {
+            UiPreferencesRepository(context.applicationContext)
+        }
         var isEnglish by remember {
             mutableStateOf(AppLocalePreferences.isEnglishInterface(context.applicationContext))
+        }
+        var keypadHapticsEnabled by remember { mutableStateOf(true) }
+        LaunchedEffect(uiPreferencesRepository) {
+            uiPreferencesRepository.keypadHapticsEnabledFlow.collect { enabled ->
+                keypadHapticsEnabled = enabled
+            }
         }
         Column(
             modifier = Modifier
@@ -287,6 +298,35 @@ fun SettingsScreen(
                                 isEnglish = true
                             }
                         },
+                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+                    ListItem(
+                        headlineContent = {
+                            Text(
+                                stringResource(R.string.settings_tile_keypad_haptics),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Medium,
+                            )
+                        },
+                        supportingContent = {
+                            Text(
+                                stringResource(R.string.settings_tile_keypad_haptics_hint),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        },
+                        trailingContent = {
+                            Switch(
+                                checked = keypadHapticsEnabled,
+                                onCheckedChange = { enabled ->
+                                    keypadHapticsEnabled = enabled
+                                    scope.launch {
+                                        uiPreferencesRepository.setKeypadHapticsEnabled(enabled)
+                                    }
+                                },
+                            )
+                        },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     )
                     Spacer(Modifier.height(4.dp))
                 }

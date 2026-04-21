@@ -459,6 +459,8 @@
     <string name="manage_categories_existing_empty">None yet — add one above</string>
     <string name="settings_tile_display_name">Greeting name</string>
     <string name="settings_tile_language">Language</string>
+    <string name="settings_tile_keypad_haptics">Keypad haptics</string>
+    <string name="settings_tile_keypad_haptics_hint">Enable vibration feedback in numeric keypads.</string>
     <string name="settings_tile_security">Security</string>
     <string name="settings_tile_family">Family</string>
     <string name="settings_tile_version">Version</string>

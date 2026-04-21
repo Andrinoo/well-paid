@@ -29,6 +29,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.activity.compose.BackHandler
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
@@ -36,6 +38,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -48,6 +51,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.focus.onFocusChanged
 import com.wellpaid.R
+import com.wellpaid.data.UiPreferencesRepository
 import com.wellpaid.util.BRL_CENT_DIGIT_CHAIN_MAX
 import com.wellpaid.util.brlDigitChainToCents
 import com.wellpaid.util.centsToBrlInput
@@ -90,6 +94,11 @@ fun WellPaidMoneyDigitKeypadField(
     var keypadOpen by remember { mutableStateOf(false) }
     var digits by remember(valueText) { mutableStateOf(digitsFromValueText(valueText)) }
     val haptic = LocalHapticFeedback.current
+    val context = LocalContext.current
+    val uiPreferencesRepository = remember(context.applicationContext) {
+        UiPreferencesRepository(context.applicationContext)
+    }
+    val keypadHapticsEnabled by uiPreferencesRepository.keypadHapticsEnabledFlow.collectAsState(initial = true)
     val keyShape = RoundedCornerShape(12.dp)
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
@@ -139,13 +148,20 @@ fun WellPaidMoneyDigitKeypadField(
                 .fillMaxWidth()
                 .onFocusChanged { st ->
                     if (st.isFocused && enabled && !keypadOpen) {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        if (keypadHapticsEnabled) {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        }
                         keypadOpen = true
                     }
                 },
         )
 
         if (keypadOpen) {
+            BackHandler(enabled = true) {
+                keypadOpen = false
+                focusManager.clearFocus(force = true)
+                onDone()
+            }
             ModalBottomSheet(
                 onDismissRequest = {
                     keypadOpen = false
@@ -166,6 +182,14 @@ fun WellPaidMoneyDigitKeypadField(
                         color = WellPaidNavy,
                     )
                     Spacer(Modifier.size(6.dp))
+                    Text(
+                        text = formattedValueFromDigits(digits).ifBlank { placeholder },
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = WellPaidNavy,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Spacer(Modifier.size(8.dp))
 
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         @Composable
@@ -199,43 +223,88 @@ fun WellPaidMoneyDigitKeypadField(
                             KeyButton(
                                 text = "1",
                                 modifier = Modifier.weight(1f).height(52.dp),
-                            ) { setDigits(digits + "1") }
+                            ) {
+                                if (keypadHapticsEnabled) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                }
+                                setDigits(digits + "1")
+                            }
                             KeyButton(
                                 text = "2",
                                 modifier = Modifier.weight(1f).height(52.dp),
-                            ) { setDigits(digits + "2") }
+                            ) {
+                                if (keypadHapticsEnabled) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                }
+                                setDigits(digits + "2")
+                            }
                             KeyButton(
                                 text = "3",
                                 modifier = Modifier.weight(1f).height(52.dp),
-                            ) { setDigits(digits + "3") }
+                            ) {
+                                if (keypadHapticsEnabled) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                }
+                                setDigits(digits + "3")
+                            }
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                             KeyButton(
                                 text = "4",
                                 modifier = Modifier.weight(1f).height(52.dp),
-                            ) { setDigits(digits + "4") }
+                            ) {
+                                if (keypadHapticsEnabled) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                }
+                                setDigits(digits + "4")
+                            }
                             KeyButton(
                                 text = "5",
                                 modifier = Modifier.weight(1f).height(52.dp),
-                            ) { setDigits(digits + "5") }
+                            ) {
+                                if (keypadHapticsEnabled) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                }
+                                setDigits(digits + "5")
+                            }
                             KeyButton(
                                 text = "6",
                                 modifier = Modifier.weight(1f).height(52.dp),
-                            ) { setDigits(digits + "6") }
+                            ) {
+                                if (keypadHapticsEnabled) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                }
+                                setDigits(digits + "6")
+                            }
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                             KeyButton(
                                 text = "7",
                                 modifier = Modifier.weight(1f).height(52.dp),
-                            ) { setDigits(digits + "7") }
+                            ) {
+                                if (keypadHapticsEnabled) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                }
+                                setDigits(digits + "7")
+                            }
                             KeyButton(
                                 text = "8",
                                 modifier = Modifier.weight(1f).height(52.dp),
-                            ) { setDigits(digits + "8") }
+                            ) {
+                                if (keypadHapticsEnabled) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                }
+                                setDigits(digits + "8")
+                            }
                             KeyButton(
                                 text = "9",
                                 modifier = Modifier.weight(1f).height(52.dp),
-                            ) { setDigits(digits + "9") }
+                            ) {
+                                if (keypadHapticsEnabled) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                }
+                                setDigits(digits + "9")
+                            }
                         }
 
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -243,6 +312,9 @@ fun WellPaidMoneyDigitKeypadField(
                                 onClick = {
                                     if (!enabled) return@Button
                                     if (digits.isNotEmpty()) {
+                                        if (keypadHapticsEnabled) {
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        }
                                         setDigits(digits.dropLast(1))
                                     }
                                 },
@@ -265,6 +337,9 @@ fun WellPaidMoneyDigitKeypadField(
                                 onClick = {
                                     if (!enabled) return@Button
                                     if (digits.length >= maxDigits) return@Button
+                                    if (keypadHapticsEnabled) {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    }
                                     setDigits(digits + "0")
                                 },
                                 modifier = Modifier.weight(1f).height(52.dp),
@@ -284,6 +359,9 @@ fun WellPaidMoneyDigitKeypadField(
 
                             Button(
                                 onClick = {
+                                    if (keypadHapticsEnabled) {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    }
                                     keypadOpen = false
                                     focusManager.clearFocus(force = true)
                                     onDone()
@@ -318,6 +396,9 @@ fun WellPaidMoneyDigitKeypadField(
 
                         TextButton(
                             onClick = {
+                                if (keypadHapticsEnabled) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                }
                                 setDigits("")
                             },
                             enabled = enabled,

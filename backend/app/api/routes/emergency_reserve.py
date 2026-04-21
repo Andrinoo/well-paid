@@ -51,8 +51,17 @@ def _tables_ready(db: Session) -> bool:
 
 
 def _require_owner_if_family_scope(db: Session, user_id) -> None:
-    role = db.scalar(select(FamilyMember.role).where(FamilyMember.user_id == user_id))
-    if role is not None and role != "owner":
+    member = db.execute(
+        select(FamilyMember.family_id, FamilyMember.role).where(FamilyMember.user_id == user_id)
+    ).one_or_none()
+    if member is None:
+        return
+    family_id, role = member
+    # Regra de edição restrita só quando há agregado familiar de facto (2+ membros).
+    has_shared_scope = db.scalar(
+        select(FamilyMember.id).where(FamilyMember.family_id == family_id).offset(1).limit(1)
+    ) is not None
+    if has_shared_scope and role != "owner":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=(

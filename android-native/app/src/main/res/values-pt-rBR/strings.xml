@@ -459,6 +459,8 @@
     <string name="manage_categories_existing_empty">Ainda não há — adicione acima</string>
     <string name="settings_tile_display_name">Nome na saudação</string>
     <string name="settings_tile_language">Idioma</string>
+    <string name="settings_tile_keypad_haptics">Háptico dos teclados numéricos</string>
+    <string name="settings_tile_keypad_haptics_hint">Ativa vibração ao tocar nos teclados numéricos do app.</string>
     <string name="settings_tile_security">Segurança</string>
     <string name="settings_tile_family">Família</string>
     <string name="settings_tile_version">Versão</string>

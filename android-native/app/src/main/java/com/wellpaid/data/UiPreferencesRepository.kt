@@ -24,6 +24,7 @@ class UiPreferencesRepository @Inject constructor(
     private object Keys {
         val shoppingAutoGroceryHints = booleanPreferencesKey("shopping_auto_grocery_hints")
         val goalAutoProductSearch = booleanPreferencesKey("goal_auto_product_search")
+        val keypadHapticsEnabled = booleanPreferencesKey("keypad_haptics_enabled")
     }
 
     val shoppingAutoGroceryHintsFlow: Flow<Boolean> =
@@ -32,11 +33,18 @@ class UiPreferencesRepository @Inject constructor(
     val goalAutoProductSearchFlow: Flow<Boolean> =
         dataStore.data.map { it[Keys.goalAutoProductSearch] ?: true }
 
+    val keypadHapticsEnabledFlow: Flow<Boolean> =
+        dataStore.data.map { it[Keys.keypadHapticsEnabled] ?: true }
+
     suspend fun setShoppingAutoGroceryHints(value: Boolean) {
         dataStore.edit { it[Keys.shoppingAutoGroceryHints] = value }
     }
 
     suspend fun setGoalAutoProductSearch(value: Boolean) {
         dataStore.edit { it[Keys.goalAutoProductSearch] = value }
+    }
+
+    suspend fun setKeypadHapticsEnabled(value: Boolean) {
+        dataStore.edit { it[Keys.keypadHapticsEnabled] = value }
     }
 }
