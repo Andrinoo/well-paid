@@ -169,6 +169,8 @@ fun WellPaidMoneyDigitKeypadField(
                     onDone()
                 },
                 sheetState = sheetState,
+                sheetGesturesEnabled = false,
+                dragHandle = null,
             ) {
                 Column(
                     modifier = Modifier

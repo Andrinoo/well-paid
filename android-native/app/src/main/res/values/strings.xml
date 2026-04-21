@@ -10,6 +10,7 @@
     <string name="datepicker_wheel_day">Day</string>
     <string name="datepicker_wheel_month">Month</string>
     <string name="datepicker_wheel_year">Year</string>
+    <string name="datepicker_icon_content_description">Open date picker</string>
     <string name="incomes_primary_add">Add income</string>
     <string name="incomes_list_caption">Amounts in Brazilian reais with exact cents; accrual by income date.</string>
     <string name="goals_primary_add">Add goal</string>

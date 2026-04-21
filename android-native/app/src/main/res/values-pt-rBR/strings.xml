@@ -10,6 +10,7 @@
     <string name="datepicker_wheel_day">Dia</string>
     <string name="datepicker_wheel_month">Mês</string>
     <string name="datepicker_wheel_year">Ano</string>
+    <string name="datepicker_icon_content_description">Abrir seletor de data</string>
     <string name="incomes_primary_add">Adicionar provento</string>
     <string name="incomes_list_caption">Valores em reais com centavos exactos; competência pelo dia do provento.</string>
     <string name="goals_primary_add">Adicionar meta</string>

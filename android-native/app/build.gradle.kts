@@ -153,7 +153,11 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation("androidx.navigation:navigation-compose:2.8.5")
 
-    implementation(platform("androidx.compose:compose-bom:2024.12.01"))
+    // `compose-bom:2024.12.01` (e até `2025.02.00`) ainda puxam material3 1.3.x, onde
+    // `ModalBottomSheet` não expõe `sheetGesturesEnabled`. A partir de material3 1.4.0
+    // (BOM `2025.10.01` no nosso resolve) dá para desligar o swipe-to-dismiss sem
+    // interferir com o scrim (toque fora).
+    implementation(platform("androidx.compose:compose-bom:2025.10.01"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")

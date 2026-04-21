@@ -122,7 +122,10 @@ fun WellPaidDatePickerField(
                 onClick = { open = true },
                 enabled = enabled,
             ) {
-                Icon(Icons.Default.DateRange, contentDescription = null)
+                Icon(
+                    Icons.Default.DateRange,
+                    contentDescription = stringResource(R.string.datepicker_icon_content_description),
+                )
             }
         },
         shape = shape,
@@ -134,25 +137,9 @@ fun WellPaidDatePickerField(
         ModalBottomSheet(
             onDismissRequest = { open = false },
             sheetState = sheetState,
+            sheetGesturesEnabled = false,
             containerColor = MaterialTheme.colorScheme.surface,
-            dragHandle = {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .widthIn(max = 48.dp)
-                            .height(4.dp)
-                            .background(
-                                WellPaidNavy.copy(alpha = 0.25f),
-                                RoundedCornerShape(2.dp),
-                            ),
-                    )
-                }
-            },
+            dragHandle = null,
         ) {
             WellPaidDateWheelContent(
                 locale = locale,
