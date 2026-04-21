@@ -84,3 +84,5 @@ docs/        # Documentação do produto (contratos API, fluxos UI, plano mestre
 - **`docs/FLUXOGRAMAS_UI_E_NAVEGACAO.md`** — fluxogramas (login → Main → domínios, definições, app lock).
 - **`docs/WELL_PAID_DOCUMENTACAO_UNIFICADA.md`** — leitura única: plano mestre, planos Cursor exportados, contrato API, checklist QA, índice da raiz.
 - **`docs/ANDROID_API_BACKEND_CONTRACT.md`** — mapeamento DTO Android ↔ API FastAPI.
+- **`docs/E2E_QA_CHECKLIST.md`** — QA manual E2E, rollout, NFR e notas de segurança/ API.
+- **`docs/INCOME_YIELD_HYBRID_ARCHITECTURE.md`** — esboço de ingestão híbrida e histórico (roadmap, não requisito de implementação imediata).

@@ -75,6 +75,7 @@ flowchart TB
   ann["announcements"]
   rec["receivables"]
   inv["investments"]
+  emNew["emergency_reserve_new"]
   main --> settings
   main --> expNew
   main --> expId
@@ -90,6 +91,7 @@ flowchart TB
   main --> ann
   main --> rec
   main --> inv
+  main --> emNew
   settings --> display["display_name"]
   settings --> family["family"]
   settings --> security["security"]
@@ -190,6 +192,19 @@ flowchart TD
 
 A eliminação no **editar** usa `popBackStack(Main, inclusive=false)` para evitar ecrã branco quando a pilha é curta.
 
+### 7.1 Reserva: novo plano (ecrã dedicado)
+
+A partir do tab **Reserva** (`EmergencyReserveContent`), o botão **Adicionar reserva** navega para `emergency_reserve_new` com o mesmo `EmergencyReserveViewModel` ancorado no back stack do **Main** (partilhado com o tab). O formulário está em `EmergencyReservePlanFormScreen`. Após **criar plano** com sucesso, marca-se `emergency_reserve_dirty` no `Main` e faz-se `popBackStack` para voltar ao shell; a lista de planos actualiza no tab.
+
+```mermaid
+flowchart TD
+  main["main / tab 4"]
+  new["emergency_reserve_new"]
+  main -->|Adicionar reserva| new
+  new -->|plano criado| dirty[emergency_reserve_dirty + pop]
+  dirty --> main
+```
+
 ---
 
 ## 8. Listas de compras
@@ -277,6 +292,7 @@ Rotas públicas: `login`, `register`, `forgot_password`, prefixos `verify_email`
 | `goal_list_dirty` | Metas: criar, eliminar no detalhe, eliminar no editar (após pop até Main) |
 | `goal_detail_refresh` | Após guardar no editar meta |
 | `announcements_dirty` | Interacção em anúncios |
+| `emergency_reserve_dirty` | Após criar plano de reserva no ecrã `emergency_reserve_new` |
 | `user_profile_dirty` | Nome a apresentar (e similares) |
 | `MAIN_SHELL_SELECT_TAB` | Ex.: voltar das listas de compras para o tab Início |
 

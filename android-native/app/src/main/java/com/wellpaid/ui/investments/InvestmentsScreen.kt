@@ -18,11 +18,14 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -39,17 +42,20 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wellpaid.R
 import com.wellpaid.ui.components.WellPaidMoneyDigitKeypadField
+import com.wellpaid.ui.theme.WellPaidCream
 import com.wellpaid.ui.theme.WellPaidGold
 import com.wellpaid.ui.theme.WellPaidNavy
 import com.wellpaid.ui.theme.WellPaidNavyDeep
 import com.wellpaid.ui.theme.WellPaidMaxContentWidth
 import com.wellpaid.ui.theme.wellPaidMaxContentWidth
+import com.wellpaid.ui.theme.wellPaidTopAppBarColors
 import com.wellpaid.util.formatBrlFromCents
 import java.time.Month
 import java.time.format.TextStyle
 import java.util.Locale
 import kotlin.math.max
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InvestmentsScreen(
     onNavigateBack: () -> Unit,
@@ -60,32 +66,39 @@ fun InvestmentsScreen(
     val overview = state.overview
     val locale = LocalConfiguration.current.locales[0] ?: Locale.getDefault()
 
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        containerColor = WellPaidCream,
+        topBar = {
+            CenterAlignedTopAppBar(
+                colors = wellPaidTopAppBarColors(),
+                title = {
+                    Text(
+                        text = stringResource(R.string.investments_title),
+                        style = MaterialTheme.typography.titleLarge,
+                        color = Color.White,
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.settings_back),
+                            tint = Color.White,
+                        )
+                    }
+                },
+            )
+        },
+    ) { innerPadding ->
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
             .fillMaxWidth()
+            .padding(innerPadding)
             .wellPaidMaxContentWidth(WellPaidMaxContentWidth)
             .padding(horizontal = 12.dp, vertical = 10.dp),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            IconButton(onClick = onNavigateBack) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(R.string.main_back_to_home),
-                )
-            }
-            Text(
-                text = stringResource(R.string.investments_title),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = WellPaidNavy,
-            )
-            Spacer(modifier = Modifier.height(1.dp))
-        }
         state.errorMessage?.let { msg ->
             Spacer(Modifier.height(6.dp))
             Text(
@@ -369,6 +382,7 @@ fun InvestmentsScreen(
                 fontWeight = FontWeight.SemiBold,
             )
         }
+    }
     }
 }
 

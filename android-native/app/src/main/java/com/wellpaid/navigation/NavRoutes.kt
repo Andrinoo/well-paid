@@ -74,4 +74,7 @@ object NavRoutes {
 
     /** Tela MVP de investimentos. */
     const val Investments = "investments"
+
+    /** Criar plano de reserva de emergência (fora do shell). */
+    const val EmergencyReserveNew = "emergency_reserve_new"
 }

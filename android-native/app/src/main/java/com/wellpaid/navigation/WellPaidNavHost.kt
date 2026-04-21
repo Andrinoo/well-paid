@@ -32,6 +32,7 @@ import com.wellpaid.ui.goals.GoalDetailScreen
 import com.wellpaid.ui.goals.GoalFormScreen
 import com.wellpaid.ui.incomes.IncomeFormScreen
 import com.wellpaid.ui.investments.InvestmentsScreen
+import com.wellpaid.ui.emergency.EmergencyReservePlanFormScreen
 import com.wellpaid.ui.login.LoginScreen
 import com.wellpaid.ui.main.MainShellScreen
 import com.wellpaid.ui.register.RegisterScreen
@@ -86,6 +87,13 @@ fun WellPaidNavHost(
             val refreshGoalsAndPop: () -> Unit = {
                 runCatching {
                     navController.getBackStackEntry(NavRoutes.Main).savedStateHandle["goal_list_dirty"] =
+                        System.currentTimeMillis()
+                }
+                navController.popBackStack()
+            }
+            val refreshEmergencyAndPop: () -> Unit = {
+                runCatching {
+                    navController.getBackStackEntry(NavRoutes.Main).savedStateHandle["emergency_reserve_dirty"] =
                         System.currentTimeMillis()
                 }
                 navController.popBackStack()
@@ -245,6 +253,9 @@ fun WellPaidNavHost(
                         onOpenInvestments = {
                             navController.navigate(NavRoutes.Investments)
                         },
+                        onOpenEmergencyReserveNew = {
+                            navController.navigate(NavRoutes.EmergencyReserveNew)
+                        },
                     )
                 }
                 composable(NavRoutes.Announcements) {
@@ -378,6 +389,16 @@ fun WellPaidNavHost(
                 }
                 composable(NavRoutes.Investments) {
                     InvestmentsScreen(onNavigateBack = { navController.popBackStack() })
+                }
+                composable(NavRoutes.EmergencyReserveNew) {
+                    val mainEntry = remember(navController) {
+                        navController.getBackStackEntry(NavRoutes.Main)
+                    }
+                    EmergencyReservePlanFormScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                        onCreatedNeedRefresh = refreshEmergencyAndPop,
+                        viewModel = hiltViewModel(mainEntry),
+                    )
                 }
                 composable(NavRoutes.ManageCategories) {
                     ManageCategoriesScreen(onNavigateBack = { navController.popBackStack() })

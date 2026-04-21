@@ -34,10 +34,12 @@ Derivado do plano mestre (secções 3–7): navegação, shell principal, defini
 - [ ] **Rendimentos** — novo e editar (`income_new`, `income/{id}`).
 - [ ] **Metas** — novo, detalhe, editar (`goal_new`, `goal/{id}`, `goal_edit/{id}`).
 - [ ] Após **eliminar meta** no editar: regressão ao Main sem segundo pop incorrecto (pilha limpa).
+- [ ] `emergency_reserve_dirty` (Main): após criar plano de reserva no ecrã dedicado, o tab agrega dados actualizados.
 - [ ] **Listas de compras** — lista, nova, detalhe (`shopping_lists`, `shopping_list_new`, `shopping_list/{listId}`).
 - [ ] **Anúncios** (`announcements`).
 - [ ] **Receivables** (`receivables`) e badge no shell se existir valor pendente.
 - [ ] **Investimentos** (`investments`) pelo atalho no menu expandido da barra inferior.
+- [ ] **Nova reserva (planos)** — `emergency_reserve_new` a partir do tab Reserva: ecrã dedicado com top bar navy; após criar, volta ao Main e a lista de planos actualiza.
 - [ ] **Definições** (`settings`) e sub-rotas: nome a apresentar, família, segurança, categorias.
 
 ### Dirty flags (refrescar listas no Main)
@@ -87,6 +89,7 @@ Derivado do plano mestre (secções 3–7): navegação, shell principal, defini
 ### Metas
 
 - [ ] Lista com progresso; miniatura se `referenceThumbnailUrl` presente.
+- [ ] **Detalhe no card (expandir)**: tocar *Detalhes* mostra estado, poupado/objectivo, “ainda a poupar”, preço de referência, link, alternativas, datas criada/actualizada, nota a tocar o cartão para o ecrã completo.
 - [ ] Formulário: pesquisa de preços / preview URL se usados; contribuição na meta.
 
 ### Listas de compras
@@ -102,6 +105,10 @@ Derivado do plano mestre (secções 3–7): navegação, shell principal, defini
 ### Reserva de emergência
 
 - [ ] Tab carrega plano/saldo; actualizar meta ou plano sem erro.
+- [ ] **Hero (registo geral)**: coluna com texto completo (saldo, meta mensal, progresso 1.º ano, n.º de planos) e barra de progresso, não grelha de quatro “minicards”.
+- [ ] **Planos com nome**: cada card mostra todos os campos (estado, saldo, mensal, descrição, validade, tecto, estimativa, contagem, concluído) sem colapsar.
+- [ ] **Adicionar reserva** abre ecrã dedicado (não toggle inline *Fechar*).
+- [ ] Bloco “**Dicas práticas**” e, com **&gt;1 plano**, secção “Vários planos: recompor” visível.
 
 ### Investimentos (novo)
 
@@ -127,4 +134,31 @@ Derivado do plano mestre (secções 3–7): navegação, shell principal, defini
 
 ---
 
-*Última actualização: alinhada ao grafo em `NavRoutes.kt` / `WellPaidNavHost.kt` e ao plano mestre Well Paid.*
+## 8. Rollout e requisitos não-funcionais (smoke)
+
+Executar após promover build a **staging** e repetir o subconjunto mínimo em **produção** logo após deploy.
+
+| NFR | O que verificar | Meta |
+|-----|----------------|------|
+| Disponibilidade | `GET /health` 200; login e um tab (ex. Início) carregam | OK sob carga normal de teste |
+| Latência percebida | Abrir despesas/rendimentos com lista não vazia; sem ecrã branco prolongado | &lt; ~2 s em rede 4G em condições normais |
+| Resiliência | Desligar rede a meio de refresh de lista: mensagem de erro ou retry, sem crash | Sem ANR / crash |
+| Dados | Logout e login: não vazamento de sessão de outro utilizador no mesmo dispositivo (limpar apresentação) | Só dados do user actual |
+| Investimentos | Ecrã com `Scaffold` navy coerente com Anúncios/Recados; back regressa ao Main | Alinhamento visual |
+| L10n | Reserva + metas: PT e EN sem chaves `R.string` em falta (Logcat) | Sem `MissingResource` |
+
+- [ ] Staging: percorridos n.ºs **1, 2 (subconj.), 3, 5, 6 (Reserva+Metas+Invest.)** com build candidato a release.
+- [ ] Produção: smoke **login → Main → tab Reserva → Investimentos** + um fluxo de escrita (ex. nova despesa de teste apagada depois).
+
+---
+
+## 9. Segurança e API (lembrete de operações)
+
+- **Nunca** comitar `.env` nem colar credenciais em docs (ver regra do repositório).
+- A API expõe **rate limit** (SlowAPI): respostas 429 com mensagem clara; clientes móveis devem tratar sem loop infinito de retry.
+- **CORS** vem de `CORS_*` / lista no settings; em produção evitar `*` com credenciais.
+- **Auth**: tokens só em tráfego HTTPS; o APK deve usar `API_BASE_URL` com `https` em release.
+
+---
+
+*Última actualização: alinhada ao grafo em `NavRoutes.kt` / `WellPaidNavHost.kt`, ecrã dedicado de reserva, cards de metas expandidos, e notas de rollout / API.*

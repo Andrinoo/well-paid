@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -26,6 +27,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -55,6 +57,7 @@ import com.wellpaid.ui.theme.WellPaidMaxContentWidth
 import com.wellpaid.ui.theme.wellPaidMaxContentWidth
 import com.wellpaid.core.model.goal.GoalDto
 import com.wellpaid.util.formatBrlFromCents
+import com.wellpaid.util.formatIsoDateToBr
 
 @Composable
 fun GoalsListContent(
@@ -163,23 +166,6 @@ private fun GoalCompactCard(
     } else {
         0f
     }
-    val status = if (goal.isActive) {
-        stringResource(R.string.goals_status_active)
-    } else {
-        stringResource(R.string.goals_status_archived)
-    }
-    val sub = buildString {
-        append(formatBrlFromCents(goal.currentCents))
-        append(" / ")
-        append(formatBrlFromCents(goal.targetCents))
-        append(" · ")
-        append(status)
-        if (!goal.isMine) {
-            append(" · ")
-            append(stringResource(R.string.goals_family_member))
-        }
-    }
-
     val context = LocalContext.current
     val thumbUrl = goal.referenceThumbnailUrl?.trim()?.takeIf { it.isNotEmpty() }
 
@@ -270,24 +256,12 @@ private fun GoalCompactCard(
             }
 
             if (expanded) {
+                Spacer(modifier = Modifier.size(8.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                Spacer(modifier = Modifier.size(8.dp))
+                GoalCardExpandedPanel(goal = goal)
                 Spacer(modifier = Modifier.size(6.dp))
-                Text(
-                    text = sub,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(modifier = Modifier.size(6.dp))
-                Text(
-                    text = stringResource(
-                        R.string.goal_detail_progress_label,
-                        formatBrlFromCents(goal.currentCents),
-                        formatBrlFromCents(goal.targetCents),
-                    ),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
                 if (onEditClick != null) {
-                    Spacer(modifier = Modifier.size(6.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                         IconButton(onClick = onEditClick) {
                             Icon(
@@ -301,4 +275,161 @@ private fun GoalCompactCard(
             }
         }
     }
+}
+
+@Composable
+private fun GoalListLabeledField(
+    label: String,
+    value: String,
+) {
+    Text(
+        text = label,
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    Spacer(Modifier.size(2.dp))
+    Text(
+        text = value,
+        style = MaterialTheme.typography.bodySmall,
+        fontWeight = FontWeight.Medium,
+        color = MaterialTheme.colorScheme.onSurface,
+    )
+}
+
+@Composable
+private fun GoalCardExpandedPanel(
+    goal: GoalDto,
+) {
+    val uriHandler = LocalUriHandler.current
+    val status = if (goal.isActive) {
+        stringResource(R.string.goals_status_active)
+    } else {
+        stringResource(R.string.goals_status_archived)
+    }
+    val remainingCents = (goal.targetCents - goal.currentCents).coerceAtLeast(0)
+    val url = goal.targetUrl?.trim().orEmpty()
+
+    GoalListLabeledField(
+        label = stringResource(R.string.goal_list_label_status),
+        value = status,
+    )
+    if (!goal.isMine) {
+        Spacer(Modifier.size(4.dp))
+        Text(
+            text = stringResource(R.string.goal_readonly_family),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.tertiary,
+        )
+    }
+    Spacer(Modifier.size(6.dp))
+    GoalListLabeledField(
+        label = stringResource(R.string.goal_list_label_saved),
+        value = formatBrlFromCents(goal.currentCents),
+    )
+    Spacer(Modifier.size(4.dp))
+    GoalListLabeledField(
+        label = stringResource(R.string.goal_list_label_target),
+        value = formatBrlFromCents(goal.targetCents),
+    )
+    Spacer(Modifier.size(4.dp))
+    Text(
+        text = stringResource(R.string.goal_list_remaining, formatBrlFromCents(remainingCents)),
+        style = MaterialTheme.typography.bodySmall,
+        color = WellPaidNavy,
+        fontWeight = FontWeight.SemiBold,
+    )
+    Spacer(Modifier.size(6.dp))
+    goal.referenceProductName?.takeIf { it.isNotBlank() }?.let { name ->
+        Text(
+            text = stringResource(R.string.goal_detail_product_name, name),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.size(4.dp))
+    }
+    goal.referencePriceCents?.let { cents ->
+        Text(
+            text = stringResource(R.string.goal_detail_reference_price, formatBrlFromCents(cents)),
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Spacer(Modifier.size(4.dp))
+    }
+    goal.priceCheckedAt?.takeIf { it.isNotBlank() }?.let { checkedAt ->
+        Text(
+            text = stringResource(R.string.goal_list_price_checked, formatIsoDateToBr(checkedAt)),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.size(4.dp))
+    }
+    goal.priceSource?.takeIf { it.isNotBlank() }?.let { source ->
+        GoalListLabeledField(
+            label = stringResource(R.string.goal_list_label_source),
+            value = source,
+        )
+        Spacer(Modifier.size(4.dp))
+    }
+    if (url.isNotEmpty()) {
+        Text(
+            text = stringResource(R.string.goal_list_url_label),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.size(2.dp))
+        Text(
+            text = url,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.size(2.dp))
+        TextButton(
+            onClick = { runCatching { uriHandler.openUri(url) } },
+        ) {
+            Text(stringResource(R.string.goal_detail_open_link))
+        }
+    }
+    if (goal.priceAlternatives.isNotEmpty()) {
+        Spacer(Modifier.size(4.dp))
+        Text(
+            text = stringResource(R.string.goal_detail_alternatives_count, goal.priceAlternatives.size),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.tertiary,
+        )
+        goal.priceAlternatives.forEach { alt ->
+            Spacer(Modifier.size(2.dp))
+            val line = if (alt.label.isNotBlank()) {
+                stringResource(
+                    R.string.goal_list_alternative_item,
+                    alt.label,
+                    formatBrlFromCents(alt.priceCents),
+                )
+            } else {
+                formatBrlFromCents(alt.priceCents)
+            }
+            Text(
+                text = line,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+    Spacer(Modifier.size(6.dp))
+    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+    Spacer(Modifier.size(4.dp))
+    GoalListLabeledField(
+        label = stringResource(R.string.goal_list_label_created),
+        value = formatIsoDateToBr(goal.createdAt),
+    )
+    Spacer(Modifier.size(4.dp))
+    GoalListLabeledField(
+        label = stringResource(R.string.goal_list_label_updated),
+        value = formatIsoDateToBr(goal.updatedAt),
+    )
+    Spacer(Modifier.size(4.dp))
+    Text(
+        text = stringResource(R.string.goal_list_tap_for_full),
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }
