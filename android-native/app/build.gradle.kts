@@ -36,6 +36,17 @@ val apiBaseUrlDebugOverride = localProperties.getProperty("api.base.url")?.let(:
 val apiBaseUrlReleaseOverride =
     localProperties.getProperty("api.release.base.url")?.let(::normalizeApiBaseUrl)
 
+fun debugApiUrlFromProject(): String {
+    val fromGradle =
+        (project.findProperty("wellpaid.api.debug.url") ?: rootProject.findProperty("wellpaid.api.debug.url"))
+            ?.toString()
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+    // Debug prioriza: local.properties (api.base.url) > gradle.properties (wellpaid.api.debug.url)
+    // > release URL para facilitar diagnóstico contra o mesmo backend.
+    return normalizeApiBaseUrl(fromGradle ?: releaseApiUrlFromProject())
+}
+
 fun releaseApiUrlFromProject(): String {
     val fromGradle =
         (project.findProperty("wellpaid.api.release.url") ?: rootProject.findProperty("wellpaid.api.release.url"))
@@ -83,7 +94,7 @@ android {
 
     buildTypes {
         debug {
-            val url = apiBaseUrlDebugOverride ?: normalizeApiBaseUrl("http://10.0.2.2:8000")
+            val url = apiBaseUrlDebugOverride ?: debugApiUrlFromProject()
             buildConfigField("String", "API_BASE_URL", "\"${escapeBuildConfigString(url)}\"")
         }
         release {

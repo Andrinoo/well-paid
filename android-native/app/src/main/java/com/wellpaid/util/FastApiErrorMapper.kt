@@ -5,7 +5,6 @@ import com.wellpaid.R
 import retrofit2.HttpException
 
 object FastApiErrorMapper {
-
     fun message(context: Context, t: Throwable): String {
         if (t !is HttpException) {
             return context.getString(R.string.login_error_network)
