@@ -99,8 +99,12 @@ fun WellPaidNavHost(
                 navController.popBackStack()
             }
             val popGoalEditAfterDelete: () -> Unit = {
-                navController.popBackStack()
-                navController.popBackStack()
+                // Uma só operação: volta até ao Main (remove edição e, se existir, detalhe).
+                // Dois popBackStack() seguidos falhavam quando a pilha era só Main → Editar (tela branca).
+                val ok = navController.popBackStack(NavRoutes.Main, inclusive = false)
+                if (!ok) {
+                    navController.popBackStack()
+                }
                 runCatching {
                     navController.getBackStackEntry(NavRoutes.Main).savedStateHandle["goal_list_dirty"] =
                         System.currentTimeMillis()

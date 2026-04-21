@@ -75,10 +75,12 @@ pytest
 ```
 backend/     # FastAPI, Alembic, modelos e testes
 mobile/      # App Flutter
-docs/        # Especificações de produto/UI versionadas (ex.: telas e padrões)
+docs/        # Documentação do produto (contratos API, fluxos UI, plano mestre agregado)
 .cursor/     # Regras do Cursor (ex.: não expor segredos em docs)
 ```
 
-### Documentação de telas e UI
+### Documentação (pasta `docs/`)
 
-- **`docs/SCREENS_AND_UI.md`** — descrição das telas principais, padrão lista+despesas/proventos (cartão com ação primária, sem FAB duplicado, ícones temáticos), Configurações (engrenagem), internacionalização e regras para ecrãs futuros.
+- **`docs/FLUXOGRAMAS_UI_E_NAVEGACAO.md`** — fluxogramas (login → Main → domínios, definições, app lock).
+- **`docs/WELL_PAID_DOCUMENTACAO_UNIFICADA.md`** — leitura única: plano mestre, planos Cursor exportados, contrato API, checklist QA, índice da raiz.
+- **`docs/ANDROID_API_BACKEND_CONTRACT.md`** — mapeamento DTO Android ↔ API FastAPI.

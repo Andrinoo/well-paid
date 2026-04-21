@@ -69,6 +69,7 @@ import com.wellpaid.ui.theme.WellPaidNavy
 import com.wellpaid.ui.theme.wellPaidScreenHorizontalPadding
 import com.wellpaid.ui.theme.wellPaidTopAppBarColors
 import com.wellpaid.util.formatMinorCurrencyFromCents
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -83,6 +84,8 @@ fun GoalFormScreen(
     var showDiscardExitDialog by remember { mutableStateOf(false) }
     var showSearchResultsSheet by remember { mutableStateOf(false) }
     var wasSearchingProducts by remember { mutableStateOf(false) }
+    val formScrollState = rememberScrollState()
+    var pendingScrollFormToSave by remember { mutableStateOf(false) }
 
     LaunchedEffect(state.isSearchingProducts, state.productSearchResults) {
         if (wasSearchingProducts && !state.isSearchingProducts && state.productSearchResults.isNotEmpty()) {
@@ -95,6 +98,13 @@ fun GoalFormScreen(
         if (state.productSearchResults.isEmpty()) {
             showSearchResultsSheet = false
         }
+    }
+
+    LaunchedEffect(pendingScrollFormToSave) {
+        if (!pendingScrollFormToSave) return@LaunchedEffect
+        delay(48)
+        formScrollState.animateScrollTo(formScrollState.maxValue)
+        pendingScrollFormToSave = false
     }
 
     fun tryLeave() {
@@ -164,7 +174,7 @@ fun GoalFormScreen(
                 .padding(inner)
                 .imePadding()
                 .wellPaidScreenHorizontalPadding()
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(formScrollState),
         ) {
             state.errorMessage?.let { msg ->
                 Text(
@@ -400,7 +410,11 @@ fun GoalFormScreen(
             hits = state.productSearchResults,
             isSaving = state.isSaving,
             onDismiss = { showSearchResultsSheet = false },
-            onSelect = { hit -> viewModel.applyProductListing(hit) },
+            onSelect = { hit ->
+                viewModel.applyProductListing(hit)
+                showSearchResultsSheet = false
+                pendingScrollFormToSave = true
+            },
         )
     }
 

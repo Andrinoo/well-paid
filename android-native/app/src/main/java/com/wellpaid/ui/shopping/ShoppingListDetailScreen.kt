@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -59,6 +60,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -99,6 +101,7 @@ import com.wellpaid.util.formatBrlFromCents
 import com.wellpaid.util.formatIsoDateForList
 import com.wellpaid.util.localDateToIso
 import com.wellpaid.util.parseBrlToCents
+import kotlinx.coroutines.delay
 import java.time.LocalDate
 import java.util.Locale
 
@@ -509,6 +512,7 @@ fun ShoppingListDetailScreen(
             groceryHits = state.groceryPriceHits,
             groceryLoading = state.groceryPriceSearchLoading,
             onLabelChanged = { viewModel.onShoppingItemLabelForPriceHints(it) },
+            onGroceryHintPicked = { viewModel.clearGroceryPriceHints() },
             onDismiss = {
                 viewModel.clearGroceryPriceHints()
                 showAddItem = false
@@ -535,6 +539,7 @@ fun ShoppingListDetailScreen(
             groceryHits = state.groceryPriceHits,
             groceryLoading = state.groceryPriceSearchLoading,
             onLabelChanged = { viewModel.onShoppingItemLabelForPriceHints(it) },
+            onGroceryHintPicked = { viewModel.clearGroceryPriceHints() },
             onDismiss = {
                 viewModel.clearGroceryPriceHints()
                 editItem = null
@@ -922,6 +927,8 @@ private fun AddEditItemBottomSheet(
     groceryHits: List<GoalProductHitDto> = emptyList(),
     groceryLoading: Boolean = false,
     onLabelChanged: (String) -> Unit = {},
+    /** Chamado ao escolher uma sugestão: limpar lista e aproximar o botão Guardar. */
+    onGroceryHintPicked: () -> Unit = {},
     onDismiss: () -> Unit,
     onSave: (String, Int, Int?) -> Unit,
     onClearPrice: (() -> Unit)? = null,
@@ -930,9 +937,22 @@ private fun AddEditItemBottomSheet(
         skipPartiallyExpanded = true,
         confirmValueChange = { new -> !(isSaving && new == SheetValue.Hidden) },
     )
+    val listState = rememberLazyListState()
     var label by remember(initialLabel) { mutableStateOf(initialLabel) }
     var qty by remember(initialQty) { mutableStateOf(initialQty) }
     var amount by remember(initialAmount) { mutableStateOf(initialAmount) }
+    var previousGroceryHitCount by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(groceryHits.size) {
+        if (previousGroceryHitCount > 0 && groceryHits.isEmpty()) {
+            delay(48)
+            val lastIndex = listState.layoutInfo.totalItemsCount - 1
+            if (lastIndex >= 0) {
+                listState.animateScrollToItem(lastIndex)
+            }
+        }
+        previousGroceryHitCount = groceryHits.size
+    }
 
     LaunchedEffect(initialLabel) {
         val t = initialLabel.trim()
@@ -956,6 +976,7 @@ private fun AddEditItemBottomSheet(
         containerColor = WellPaidCream,
     ) {
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
@@ -1100,6 +1121,7 @@ private fun AddEditItemBottomSheet(
                         onClick = {
                             label = hit.title.trim().take(200)
                             amount = centsToBrlInput(hit.priceCents)
+                            onGroceryHintPicked()
                         },
                         modifier = Modifier.padding(vertical = 5.dp),
                     )

@@ -1,7 +1,13 @@
 package com.wellpaid.ui.goals
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -33,11 +39,15 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import coil.size.Size
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
 import com.wellpaid.R
 import com.wellpaid.ui.components.WellPaidPrimaryAddRow
+import com.wellpaid.ui.theme.WellPaidNavy
 import com.wellpaid.ui.theme.WellPaidMaxContentWidth
 import com.wellpaid.ui.theme.wellPaidMaxContentWidth
 import com.wellpaid.core.model.goal.GoalDto
@@ -163,8 +173,42 @@ private fun GoalListRow(
         }
     }
 
+    val context = LocalContext.current
+    val thumbUrl = goal.referenceThumbnailUrl?.trim()?.takeIf { it.isNotEmpty() }
+
     ListItem(
         modifier = modifier.clickable(onClick = onClick),
+        leadingContent = {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(WellPaidNavy.copy(alpha = 0.06f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (thumbUrl != null) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(thumbUrl)
+                            .size(Size(96, 96))
+                            .crossfade(140)
+                            .build(),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(RoundedCornerShape(10.dp)),
+                        contentScale = ContentScale.Crop,
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Filled.Flag,
+                        contentDescription = null,
+                        tint = WellPaidNavy.copy(alpha = 0.38f),
+                        modifier = Modifier.size(26.dp),
+                    )
+                }
+            }
+        },
         headlineContent = {
             Text(
                 text = goal.title,
