@@ -55,6 +55,7 @@ import com.wellpaid.util.formatBrlFromCents
 import com.wellpaid.util.centsToBrlInput
 import com.wellpaid.util.formatIsoDateToBr
 import kotlin.math.roundToInt
+import kotlin.math.ceil
 
 @Composable
 fun EmergencyReserveContent(
@@ -273,12 +274,43 @@ fun EmergencyReserveContent(
                             }
                             if (expanded) {
                                 Spacer(Modifier.height(8.dp))
+                                plan.details?.takeIf { it.isNotBlank() }?.let { details ->
+                                    Text(
+                                        text = details,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    Spacer(Modifier.height(6.dp))
+                                }
                                 plan.planDurationMonths?.let { months ->
                                     Text(
                                         text = stringResource(R.string.emergency_plan_duration_months, months),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.tertiary,
                                     )
+                                }
+                                val targetCents = plan.targetCents
+                                if (targetCents != null && targetCents > 0) {
+                                    Text(
+                                        text = stringResource(
+                                            R.string.emergency_plan_target_line,
+                                            formatBrlFromCents(targetCents),
+                                        ),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    estimateMonthsToReachTarget(
+                                        currentCents = plan.balanceCents,
+                                        monthlyCents = plan.monthlyTargetCents,
+                                        targetCents = targetCents,
+                                    )?.let { months ->
+                                        Text(
+                                            text = stringResource(R.string.emergency_plan_estimate_line, months),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = WellPaidNavy,
+                                            fontWeight = FontWeight.SemiBold,
+                                        )
+                                    }
                                 }
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -389,6 +421,17 @@ fun EmergencyReserveContent(
                         shape = RoundedCornerShape(16.dp),
                     )
                     Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = state.newPlanDetailsText,
+                        onValueChange = { viewModel.setNewPlanDetailsText(it) },
+                        label = { Text(stringResource(R.string.emergency_new_plan_details_label)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 2,
+                        maxLines = 4,
+                        enabled = !state.isCreatingPlan && !state.isSaving,
+                        shape = RoundedCornerShape(16.dp),
+                    )
+                    Spacer(Modifier.height(8.dp))
                     WellPaidMoneyDigitKeypadField(
                         valueText = state.newPlanMonthlyText,
                         onValueTextChange = { viewModel.setNewPlanMonthlyText(it) },
@@ -402,6 +445,15 @@ fun EmergencyReserveContent(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 4.dp),
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    WellPaidMoneyDigitKeypadField(
+                        valueText = state.newPlanTargetText,
+                        onValueTextChange = { viewModel.setNewPlanTargetText(it) },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !state.isCreatingPlan && !state.isSaving,
+                        label = { Text(stringResource(R.string.emergency_new_plan_target_label)) },
+                        placeholder = stringResource(R.string.emergency_monthly_placeholder),
                     )
                     Spacer(Modifier.height(8.dp))
                     OutlinedTextField(
@@ -613,6 +665,17 @@ fun EmergencyReserveContent(
                         shape = RoundedCornerShape(16.dp),
                     )
                     Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = state.newPlanDetailsText,
+                        onValueChange = { viewModel.setNewPlanDetailsText(it) },
+                        label = { Text(stringResource(R.string.emergency_new_plan_details_label)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 2,
+                        maxLines = 4,
+                        enabled = !state.isCreatingPlan && !state.isSaving,
+                        shape = RoundedCornerShape(16.dp),
+                    )
+                    Spacer(Modifier.height(8.dp))
                     WellPaidMoneyDigitKeypadField(
                         valueText = state.newPlanMonthlyText,
                         onValueTextChange = { viewModel.setNewPlanMonthlyText(it) },
@@ -626,6 +689,15 @@ fun EmergencyReserveContent(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 4.dp),
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    WellPaidMoneyDigitKeypadField(
+                        valueText = state.newPlanTargetText,
+                        onValueTextChange = { viewModel.setNewPlanTargetText(it) },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !state.isCreatingPlan && !state.isSaving,
+                        label = { Text(stringResource(R.string.emergency_new_plan_target_label)) },
+                        placeholder = stringResource(R.string.emergency_monthly_placeholder),
                     )
                     Spacer(Modifier.height(8.dp))
                     OutlinedTextField(
@@ -690,12 +762,30 @@ fun EmergencyReserveContent(
                         enabled = !state.isUpdatingPlan,
                         shape = RoundedCornerShape(14.dp),
                     )
+                    OutlinedTextField(
+                        value = state.editingPlanDetailsText,
+                        onValueChange = { viewModel.setEditingPlanDetailsText(it) },
+                        label = { Text(stringResource(R.string.emergency_new_plan_details_label)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 2,
+                        maxLines = 4,
+                        enabled = !state.isUpdatingPlan,
+                        shape = RoundedCornerShape(14.dp),
+                    )
                     WellPaidMoneyDigitKeypadField(
                         valueText = state.editingPlanMonthlyText,
                         onValueTextChange = { viewModel.setEditingPlanMonthlyText(it) },
                         modifier = Modifier.fillMaxWidth(),
                         enabled = !state.isUpdatingPlan,
                         label = { Text(stringResource(R.string.emergency_new_plan_monthly_label)) },
+                        placeholder = stringResource(R.string.emergency_monthly_placeholder),
+                    )
+                    WellPaidMoneyDigitKeypadField(
+                        valueText = state.editingPlanTargetText,
+                        onValueTextChange = { viewModel.setEditingPlanTargetText(it) },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !state.isUpdatingPlan,
+                        label = { Text(stringResource(R.string.emergency_new_plan_target_label)) },
                         placeholder = stringResource(R.string.emergency_monthly_placeholder),
                     )
                     OutlinedTextField(
@@ -752,6 +842,17 @@ fun EmergencyReserveContent(
             },
         )
     }
+}
+
+private fun estimateMonthsToReachTarget(
+    currentCents: Int,
+    monthlyCents: Int,
+    targetCents: Int,
+): Int? {
+    if (monthlyCents <= 0) return null
+    val remaining = (targetCents - currentCents).coerceAtLeast(0)
+    if (remaining == 0) return 0
+    return ceil(remaining / monthlyCents.toDouble()).toInt()
 }
 
 @Composable

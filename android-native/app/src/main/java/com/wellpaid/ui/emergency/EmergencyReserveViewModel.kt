@@ -41,13 +41,17 @@ data class EmergencyReserveUiState(
     val accruals: List<EmergencyReserveAccrualDto> = emptyList(),
     val monthlyTargetText: String = "",
     val newPlanTitleText: String = "",
+    val newPlanDetailsText: String = "",
     val newPlanMonthlyText: String = "",
+    val newPlanTargetText: String = "",
     val newPlanDurationMonthsText: String = "",
     val showCreatePlanForm: Boolean = false,
     val expandedPlanId: String? = null,
     val editingPlanId: String? = null,
     val editingPlanTitleText: String = "",
+    val editingPlanDetailsText: String = "",
     val editingPlanMonthlyText: String = "",
+    val editingPlanTargetText: String = "",
     val editingPlanDurationMonthsText: String = "",
     val isUpdatingPlan: Boolean = false,
     val deletingPlanId: String? = null,
@@ -137,6 +141,14 @@ class EmergencyReserveViewModel @Inject constructor(
         _uiState.update { it.copy(newPlanMonthlyText = value) }
     }
 
+    fun setNewPlanDetailsText(value: String) {
+        _uiState.update { it.copy(newPlanDetailsText = value.take(1200)) }
+    }
+
+    fun setNewPlanTargetText(value: String) {
+        _uiState.update { it.copy(newPlanTargetText = value) }
+    }
+
     fun setNewPlanDurationMonthsText(value: String) {
         _uiState.update { it.copy(newPlanDurationMonthsText = value.filter { c -> c.isDigit() }.take(3)) }
     }
@@ -151,6 +163,8 @@ class EmergencyReserveViewModel @Inject constructor(
                 showCreatePlanForm = false,
                 newPlanTitleText = "",
                 newPlanMonthlyText = "",
+                newPlanDetailsText = "",
+                newPlanTargetText = "",
                 newPlanDurationMonthsText = "",
             )
         }
@@ -167,7 +181,9 @@ class EmergencyReserveViewModel @Inject constructor(
             it.copy(
                 editingPlanId = plan.id,
                 editingPlanTitleText = plan.title,
+                editingPlanDetailsText = plan.details.orEmpty(),
                 editingPlanMonthlyText = centsToBrlInput(plan.monthlyTargetCents),
+                editingPlanTargetText = plan.targetCents?.let { centsToBrlInput(it) }.orEmpty(),
                 editingPlanDurationMonthsText = plan.planDurationMonths?.toString().orEmpty(),
                 errorMessage = null,
             )
@@ -180,6 +196,8 @@ class EmergencyReserveViewModel @Inject constructor(
                 editingPlanId = null,
                 editingPlanTitleText = "",
                 editingPlanMonthlyText = "",
+                editingPlanDetailsText = "",
+                editingPlanTargetText = "",
                 editingPlanDurationMonthsText = "",
                 isUpdatingPlan = false,
             )
@@ -192,6 +210,14 @@ class EmergencyReserveViewModel @Inject constructor(
 
     fun setEditingPlanMonthlyText(value: String) {
         _uiState.update { it.copy(editingPlanMonthlyText = value) }
+    }
+
+    fun setEditingPlanDetailsText(value: String) {
+        _uiState.update { it.copy(editingPlanDetailsText = value.take(1200)) }
+    }
+
+    fun setEditingPlanTargetText(value: String) {
+        _uiState.update { it.copy(editingPlanTargetText = value) }
     }
 
     fun setEditingPlanDurationMonthsText(value: String) {
@@ -224,6 +250,8 @@ class EmergencyReserveViewModel @Inject constructor(
             return
         }
 
+        val targetCents = parseBrlToCents(s.newPlanTargetText)?.takeIf { it > 0 }
+
         val durationMonths = s.newPlanDurationMonthsText.toIntOrNull()
         if (s.newPlanDurationMonthsText.isNotBlank() && durationMonths == null) {
             _uiState.update {
@@ -238,7 +266,9 @@ class EmergencyReserveViewModel @Inject constructor(
                 api.createPlan(
                     EmergencyReservePlanCreateDto(
                         title = title,
+                        details = s.newPlanDetailsText.trim().ifBlank { null },
                         monthlyTargetCents = cents,
+                        targetCents = targetCents,
                         planDurationMonths = durationMonths,
                     ),
                 )
@@ -249,6 +279,8 @@ class EmergencyReserveViewModel @Inject constructor(
                             isCreatingPlan = false,
                             newPlanTitleText = "",
                             newPlanMonthlyText = "",
+                            newPlanDetailsText = "",
+                            newPlanTargetText = "",
                             newPlanDurationMonthsText = "",
                             showCreatePlanForm = false,
                             expandedPlanId = null,
@@ -285,6 +317,7 @@ class EmergencyReserveViewModel @Inject constructor(
             }
             return
         }
+        val targetCents = parseBrlToCents(s.editingPlanTargetText)?.takeIf { it > 0 }
         val durationMonths = s.editingPlanDurationMonthsText.toIntOrNull()
         if (s.editingPlanDurationMonthsText.isNotBlank() && durationMonths == null) {
             _uiState.update {
@@ -300,7 +333,9 @@ class EmergencyReserveViewModel @Inject constructor(
                     planId,
                     EmergencyReservePlanUpdateDto(
                         title = title,
+                        details = s.editingPlanDetailsText.trim().ifBlank { null },
                         monthlyTargetCents = cents,
+                        targetCents = targetCents,
                         planDurationMonths = durationMonths,
                     ),
                 )

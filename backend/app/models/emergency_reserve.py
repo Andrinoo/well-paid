@@ -29,7 +29,9 @@ class EmergencyReservePlan(Base, TimestampMixin):
         index=True,
     )
     title: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    details: Mapped[str | None] = mapped_column(String(1200), nullable=True)
     monthly_target_cents: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
+    target_cents: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     balance_cents: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
     tracking_start: Mapped[date] = mapped_column(Date, nullable=False)
     accrual_skip_months: Mapped[list[str]] = mapped_column(

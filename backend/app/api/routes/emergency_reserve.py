@@ -73,7 +73,9 @@ def list_reserve_plans(
         EmergencyReservePlanItem(
             id=r.id,
             title=r.title or "",
+            details=r.details,
             monthly_target_cents=int(r.monthly_target_cents),
+            target_cents=int(r.target_cents) if r.target_cents is not None else None,
             balance_cents=int(r.balance_cents),
             tracking_start=r.tracking_start,
             plan_duration_months=r.plan_duration_months,
@@ -97,14 +99,18 @@ def create_reserve_plan(
         db,
         user.id,
         title=body.title,
+        details=body.details,
         monthly_target_cents=body.monthly_target_cents,
+        target_cents=body.target_cents,
         tracking_start=body.tracking_start,
         plan_duration_months=body.plan_duration_months,
     )
     return EmergencyReservePlanItem(
         id=p.id,
         title=p.title or "",
+        details=p.details,
         monthly_target_cents=int(p.monthly_target_cents),
+        target_cents=int(p.target_cents) if p.target_cents is not None else None,
         balance_cents=int(p.balance_cents),
         tracking_start=p.tracking_start,
         plan_duration_months=p.plan_duration_months,
@@ -129,7 +135,9 @@ def update_reserve_plan(
             user.id,
             plan_id,
             title=body.title,
+            details=body.details,
             monthly_target_cents=body.monthly_target_cents,
+            target_cents=body.target_cents,
             tracking_start=body.tracking_start,
             plan_duration_months=body.plan_duration_months,
         )
@@ -140,7 +148,9 @@ def update_reserve_plan(
     return EmergencyReservePlanItem(
         id=p.id,
         title=p.title or "",
+        details=p.details,
         monthly_target_cents=int(p.monthly_target_cents),
+        target_cents=int(p.target_cents) if p.target_cents is not None else None,
         balance_cents=int(p.balance_cents),
         tracking_start=p.tracking_start,
         plan_duration_months=p.plan_duration_months,
@@ -210,7 +220,9 @@ def complete_reserve_plan(
     return EmergencyReservePlanItem(
         id=p.id,
         title=p.title or "",
+        details=p.details,
         monthly_target_cents=int(p.monthly_target_cents),
+        target_cents=int(p.target_cents) if p.target_cents is not None else None,
         balance_cents=int(p.balance_cents),
         tracking_start=p.tracking_start,
         plan_duration_months=p.plan_duration_months,

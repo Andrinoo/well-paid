@@ -161,7 +161,9 @@ def upsert_monthly_target(
         family_id=family_id,
         solo_user_id=solo_user_id if family_id is None else None,
         title="",
+        details=None,
         monthly_target_cents=int(monthly_target_cents),
+        target_cents=None,
         balance_cents=0,
         tracking_start=anchor,
         accrual_skip_months=[],
@@ -404,7 +406,9 @@ def create_plan(
     user_id: uuid.UUID,
     *,
     title: str,
+    details: str | None,
     monthly_target_cents: int,
+    target_cents: int | None = None,
     tracking_start: date | None = None,
     plan_duration_months: int | None = None,
 ) -> EmergencyReservePlan:
@@ -415,7 +419,9 @@ def create_plan(
         family_id=family_id,
         solo_user_id=solo_user_id if family_id is None else None,
         title=title.strip()[:200],
+        details=(details or "").strip()[:1200] or None,
         monthly_target_cents=int(monthly_target_cents),
+        target_cents=int(target_cents) if target_cents is not None else None,
         balance_cents=0,
         tracking_start=anchor,
         accrual_skip_months=[],
@@ -436,7 +442,9 @@ def update_plan_for_user(
     plan_id: uuid.UUID,
     *,
     title: str,
+    details: str | None,
     monthly_target_cents: int,
+    target_cents: int | None = None,
     tracking_start: date | None = None,
     plan_duration_months: int | None = None,
 ) -> EmergencyReservePlan | None:
@@ -446,7 +454,9 @@ def update_plan_for_user(
     if plan.status != "active":
         raise ValueError("plan_not_active")
     plan.title = title.strip()[:200]
+    plan.details = (details or "").strip()[:1200] or None
     plan.monthly_target_cents = int(monthly_target_cents)
+    plan.target_cents = int(target_cents) if target_cents is not None else None
     if tracking_start is not None:
         plan.tracking_start = first_of_month(tracking_start)
     plan.plan_duration_months = plan_duration_months

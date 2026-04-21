@@ -394,6 +394,8 @@
     <string name="emergency_plans_section_title">Your reserve plans</string>
     <string name="emergency_plan_untitled">Untitled plan</string>
     <string name="emergency_plan_duration_months">%1$d months</string>
+    <string name="emergency_plan_target_line">Target ceiling: %1$s</string>
+    <string name="emergency_plan_estimate_line">Estimated time to reach ceiling: %1$d months</string>
     <string name="emergency_plan_status_active">Active</string>
     <string name="emergency_plan_status_completed">Completed</string>
     <string name="emergency_accruals_title">Monthly accruals</string>
@@ -597,7 +599,9 @@
     <string name="emergency_readonly_not_owner">Only the household owner can change the emergency reserve settings.</string>
     <string name="emergency_new_plan_section">Add a named reserve</string>
     <string name="emergency_new_plan_name_label">Plan name</string>
+    <string name="emergency_new_plan_details_label">Reserve details</string>
     <string name="emergency_new_plan_monthly_label">Monthly amount for this plan (BRL)</string>
+    <string name="emergency_new_plan_target_label">Reserve ceiling (BRL)</string>
     <string name="emergency_create_plan">Create plan</string>
     <string name="emergency_plan_creating">Creating…</string>
     <string name="emergency_error_plan_name">Enter a name for the plan.</string>

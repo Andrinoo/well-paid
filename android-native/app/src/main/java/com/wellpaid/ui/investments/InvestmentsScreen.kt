@@ -31,6 +31,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -57,6 +58,7 @@ fun InvestmentsScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val overview = state.overview
+    val locale = LocalConfiguration.current.locales[0] ?: Locale.getDefault()
 
     Column(
         modifier = modifier
@@ -183,7 +185,11 @@ fun InvestmentsScreen(
                         FilterChip(
                             selected = state.newPositionType == type,
                             onClick = { viewModel.setNewPositionType(type) },
-                            label = { Text(type.uppercase()) },
+                            label = {
+                                Text(
+                                    text = instrumentLabelForKey(type),
+                                )
+                            },
                         )
                     }
                 }
@@ -257,7 +263,7 @@ fun InvestmentsScreen(
                     Text(
                         text = stringResource(
                             R.string.investments_position_line,
-                            position.instrumentType.uppercase(),
+                            instrumentLabelForKey(position.instrumentType),
                             formatBrlFromCents(position.principalCents),
                             position.annualRateBps / 100f,
                         ),
@@ -288,7 +294,7 @@ fun InvestmentsScreen(
             Spacer(Modifier.height(12.dp))
             overview?.buckets.orEmpty().forEach { bucket ->
                 InvestmentBucketCard(
-                    title = bucket.label,
+                    title = instrumentLabelForKey(bucket.key, fallback = bucket.label),
                     hint = stringResource(
                         R.string.investments_bucket_line_template,
                         formatBrlFromCents(bucket.allocatedCents),
@@ -326,8 +332,8 @@ fun InvestmentsScreen(
                 )
                 state.evolution.forEach { point ->
                     val monthLabel = Month.of(point.month)
-                        .getDisplayName(TextStyle.SHORT, Locale("pt", "BR"))
-                        .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("pt", "BR")) else it.toString() }
+                        .getDisplayName(TextStyle.SHORT, locale)
+                        .replaceFirstChar { if (it.isLowerCase()) it.titlecase(locale) else it.toString() }
                     val ratio = point.projectedTotalCents.toFloat() / maxProjected.toFloat()
                     InvestmentEvolutionBarRow(
                         monthLabel = "$monthLabel/${point.year}",
@@ -363,6 +369,19 @@ fun InvestmentsScreen(
                 fontWeight = FontWeight.SemiBold,
             )
         }
+    }
+}
+
+@Composable
+private fun instrumentLabelForKey(
+    key: String,
+    fallback: String? = null,
+): String {
+    return when (key.lowercase(Locale.ROOT)) {
+        "cdi" -> stringResource(R.string.investments_bucket_cdi)
+        "cdb" -> stringResource(R.string.investments_bucket_cdb)
+        "fixed_income" -> stringResource(R.string.investments_bucket_fixed_income)
+        else -> fallback ?: key.uppercase(Locale.ROOT)
     }
 }
 

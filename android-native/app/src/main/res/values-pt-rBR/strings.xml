@@ -394,6 +394,8 @@
     <string name="emergency_plans_section_title">Os teus planos de reserva</string>
     <string name="emergency_plan_untitled">Plano sem nome</string>
     <string name="emergency_plan_duration_months">%1$d meses</string>
+    <string name="emergency_plan_target_line">Teto alvo: %1$s</string>
+    <string name="emergency_plan_estimate_line">Tempo estimado para atingir teto: %1$d meses</string>
     <string name="emergency_plan_status_active">Activo</string>
     <string name="emergency_plan_status_completed">Concluído</string>
     <string name="emergency_accruals_title">Adesões mensais</string>
@@ -597,7 +599,9 @@
     <string name="emergency_readonly_not_owner">Só o titular da família pode alterar a reserva de emergência.</string>
     <string name="emergency_new_plan_section">Adicionar reserva nomeada</string>
     <string name="emergency_new_plan_name_label">Nome do plano</string>
+    <string name="emergency_new_plan_details_label">Detalhes da reserva</string>
     <string name="emergency_new_plan_monthly_label">Valor mensal deste plano (R$)</string>
+    <string name="emergency_new_plan_target_label">Teto da reserva (R$)</string>
     <string name="emergency_create_plan">Criar plano</string>
     <string name="emergency_plan_creating">A criar…</string>
     <string name="emergency_error_plan_name">Indique um nome para o plano.</string>
