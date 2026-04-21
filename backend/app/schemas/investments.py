@@ -44,3 +44,22 @@ class InvestmentPositionOut(BaseModel):
     annual_rate_bps: int = Field(ge=0)
     maturity_date: date | None = None
     is_liquid: bool = True
+
+
+class InvestmentSuggestedRatesOut(BaseModel):
+    """Taxas anuais sugeridas a partir do CDI (BACEN SGS) e fatores de configuração."""
+
+    cdi_annual_percent: float = Field(ge=0, description="Ex.: 10.5 significa 10,5% ao ano (nominal, decomposto do CDI).")
+    cdb_annual_percent: float = Field(ge=0)
+    fixed_income_annual_percent: float = Field(ge=0)
+    source: str = "fallback"
+    rates_fallback_used: bool = True
+
+
+class StockQuoteOut(BaseModel):
+    symbol: str
+    last_price: float = Field(ge=0)
+    currency: str = "BRL"
+    as_of: str | None = None
+    source: str = "brapi"
+    error: str | None = None

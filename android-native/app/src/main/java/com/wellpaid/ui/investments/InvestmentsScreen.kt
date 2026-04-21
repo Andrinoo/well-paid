@@ -1,6 +1,7 @@
 package com.wellpaid.ui.investments
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -25,6 +27,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -182,6 +185,22 @@ fun InvestmentsScreen(
                 )
             }
         }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            FilterChip(
+                selected = state.compactListMode,
+                onClick = { viewModel.setCompactListMode(true) },
+                label = { Text(stringResource(R.string.investments_view_compact)) },
+            )
+            FilterChip(
+                selected = !state.compactListMode,
+                onClick = { viewModel.setCompactListMode(false) },
+                label = { Text(stringResource(R.string.investments_view_cards)) },
+            )
+        }
+        Spacer(Modifier.height(8.dp))
 
         if (state.showCreatePositionForm) {
             Column(
@@ -193,14 +212,20 @@ fun InvestmentsScreen(
                     )
                     .padding(12.dp),
             ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("cdi", "cdb", "fixed_income").forEach { type ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    listOf("cdi", "cdb", "fixed_income", "tesouro", "stocks").forEach { type ->
                         FilterChip(
                             selected = state.newPositionType == type,
                             onClick = { viewModel.setNewPositionType(type) },
                             label = {
                                 Text(
                                     text = instrumentLabelForKey(type),
+                                    maxLines = 1,
                                 )
                             },
                         )
@@ -214,6 +239,35 @@ fun InvestmentsScreen(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
+                if (state.newPositionType == "stocks") {
+                    Spacer(Modifier.height(4.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        TextButton(
+                            onClick = { viewModel.fetchB3StockQuote() },
+                            enabled = !state.isFetchingQuote && !state.isSavingPosition,
+                        ) {
+                            if (state.isFetchingQuote) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp,
+                                )
+                            } else {
+                                Text(stringResource(R.string.investments_fetch_b3_quote))
+                            }
+                        }
+                    }
+                }
+                state.quoteInfoMessage?.let { q ->
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = q,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = WellPaidNavy,
+                    )
+                }
                 Spacer(Modifier.height(8.dp))
                 WellPaidMoneyDigitKeypadField(
                     valueText = state.newPositionPrincipalText,
@@ -224,13 +278,36 @@ fun InvestmentsScreen(
                     placeholder = stringResource(R.string.emergency_monthly_placeholder),
                 )
                 Spacer(Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = state.newPositionAnnualRateText,
-                    onValueChange = { viewModel.setNewPositionAnnualRateText(it) },
-                    label = { Text(stringResource(R.string.investments_field_rate)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    OutlinedTextField(
+                        value = state.newPositionAnnualRateText,
+                        onValueChange = { viewModel.setNewPositionAnnualRateText(it) },
+                        label = { Text(stringResource(R.string.investments_field_rate)) },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (state.newPositionType != "stocks") {
+                        TextButton(
+                            onClick = { viewModel.applyMarketRateToForm() },
+                            enabled = !state.isLoadingSuggestedRates && !state.isSavingPosition,
+                        ) {
+                            if (state.isLoadingSuggestedRates) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp,
+                                )
+                            } else {
+                                Text(
+                                    stringResource(R.string.investments_apply_market_rate),
+                                    maxLines = 2,
+                                )
+                            }
+                        }
+                    }
+                }
                 Spacer(Modifier.height(10.dp))
                 Button(
                     onClick = { viewModel.createPosition() },
@@ -255,42 +332,28 @@ fun InvestmentsScreen(
         }
 
         state.positions.forEach { position ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                        shape = RoundedCornerShape(12.dp),
-                    )
-                    .padding(12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = position.name,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = WellPaidNavy,
-                    )
-                    Text(
-                        text = stringResource(
-                            R.string.investments_position_line,
-                            instrumentLabelForKey(position.instrumentType),
-                            formatBrlFromCents(position.principalCents),
-                            position.annualRateBps / 100f,
-                        ),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                IconButton(onClick = { viewModel.deletePosition(position.id) }) {
-                    Icon(
-                        imageVector = Icons.Filled.Delete,
-                        contentDescription = stringResource(R.string.investments_delete_position),
-                        tint = MaterialTheme.colorScheme.error,
-                    )
-                }
+            val line = stringResource(
+                R.string.investments_position_line,
+                instrumentLabelForKey(position.instrumentType),
+                formatBrlFromCents(position.principalCents),
+                position.annualRateBps / 100f,
+            )
+            if (state.compactListMode) {
+                InvestmentPositionCompactRow(
+                    name = position.name,
+                    line = line,
+                    onDetails = { viewModel.openPositionDetails(position.id) },
+                    onTopUp = { viewModel.startTopUpFromPosition(position.id) },
+                    onDelete = { viewModel.deletePosition(position.id) },
+                )
+            } else {
+                InvestmentPositionCard(
+                    name = position.name,
+                    line = line,
+                    onDetails = { viewModel.openPositionDetails(position.id) },
+                    onTopUp = { viewModel.startTopUpFromPosition(position.id) },
+                    onDelete = { viewModel.deletePosition(position.id) },
+                )
             }
             Spacer(Modifier.height(8.dp))
         }
@@ -383,6 +446,167 @@ fun InvestmentsScreen(
             )
         }
     }
+    state.selectedPositionId?.let { selectedId ->
+        val selected = state.positions.firstOrNull { it.id == selectedId }
+        if (selected != null) {
+            ModalBottomSheet(
+                onDismissRequest = { viewModel.closePositionDetails() },
+            ) {
+                InvestmentPositionDetailsSheet(
+                    name = selected.name,
+                    line = stringResource(
+                        R.string.investments_position_line,
+                        instrumentLabelForKey(selected.instrumentType),
+                        formatBrlFromCents(selected.principalCents),
+                        selected.annualRateBps / 100f,
+                    ),
+                    onTopUp = { viewModel.startTopUpFromPosition(selected.id) },
+                    onDelete = {
+                        viewModel.deletePosition(selected.id)
+                        viewModel.closePositionDetails()
+                    },
+                    onClose = { viewModel.closePositionDetails() },
+                )
+            }
+        }
+    }
+    }
+}
+
+@Composable
+private fun InvestmentPositionCompactRow(
+    name: String,
+    line: String,
+    onDetails: () -> Unit,
+    onTopUp: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.30f),
+                shape = RoundedCornerShape(10.dp),
+            )
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = name,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = WellPaidNavy,
+                maxLines = 1,
+            )
+            Text(
+                text = line,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+            )
+        }
+        TextButton(onClick = onDetails) { Text(stringResource(R.string.investments_view_details)) }
+        TextButton(onClick = onTopUp) { Text(stringResource(R.string.investments_top_up)) }
+        IconButton(onClick = onDelete) {
+            Icon(
+                imageVector = Icons.Filled.Delete,
+                contentDescription = stringResource(R.string.investments_delete_position),
+                tint = MaterialTheme.colorScheme.error,
+            )
+        }
+    }
+}
+
+@Composable
+private fun InvestmentPositionCard(
+    name: String,
+    line: String,
+    onDetails: () -> Unit,
+    onTopUp: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                shape = RoundedCornerShape(12.dp),
+            )
+            .padding(12.dp),
+    ) {
+        Text(
+            text = name,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = WellPaidNavy,
+        )
+        Text(
+            text = line,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            TextButton(onClick = onDetails) { Text(stringResource(R.string.investments_view_details)) }
+            TextButton(onClick = onTopUp) { Text(stringResource(R.string.investments_top_up)) }
+            TextButton(onClick = onDelete) { Text(stringResource(R.string.investments_delete_position)) }
+        }
+    }
+}
+
+@Composable
+private fun InvestmentPositionDetailsSheet(
+    name: String,
+    line: String,
+    onTopUp: () -> Unit,
+    onDelete: () -> Unit,
+    onClose: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = name,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = WellPaidNavy,
+        )
+        Text(
+            text = line,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Button(
+                onClick = onTopUp,
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = WellPaidNavy,
+                    contentColor = Color.White,
+                ),
+            ) { Text(stringResource(R.string.investments_top_up)) }
+            Button(
+                onClick = onDelete,
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                ),
+            ) { Text(stringResource(R.string.investments_delete_position)) }
+        }
+        TextButton(onClick = onClose, modifier = Modifier.align(Alignment.End)) {
+            Text(stringResource(R.string.common_close))
+        }
     }
 }
 
@@ -395,6 +619,8 @@ private fun instrumentLabelForKey(
         "cdi" -> stringResource(R.string.investments_bucket_cdi)
         "cdb" -> stringResource(R.string.investments_bucket_cdb)
         "fixed_income" -> stringResource(R.string.investments_bucket_fixed_income)
+        "tesouro" -> stringResource(R.string.investments_bucket_tesouro)
+        "stocks" -> stringResource(R.string.investments_bucket_stocks)
         else -> fallback ?: key.uppercase(Locale.ROOT)
     }
 }

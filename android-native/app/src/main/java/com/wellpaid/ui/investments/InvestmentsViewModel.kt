@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.Locale
 import javax.inject.Inject
 
 data class InvestmentsUiState(
@@ -31,6 +32,11 @@ data class InvestmentsUiState(
     val newPositionPrincipalText: String = "",
     val newPositionAnnualRateText: String = "",
     val isSavingPosition: Boolean = false,
+    val compactListMode: Boolean = true,
+    val selectedPositionId: String? = null,
+    val isLoadingSuggestedRates: Boolean = false,
+    val isFetchingQuote: Boolean = false,
+    val quoteInfoMessage: String? = null,
     val errorMessage: String? = null,
 )
 
@@ -76,7 +82,7 @@ class InvestmentsViewModel @Inject constructor(
     }
 
     fun openCreatePositionForm() {
-        _uiState.update { it.copy(showCreatePositionForm = true) }
+        _uiState.update { it.copy(showCreatePositionForm = true, quoteInfoMessage = null) }
     }
 
     fun closeCreatePositionForm() {
@@ -88,12 +94,129 @@ class InvestmentsViewModel @Inject constructor(
                 newPositionPrincipalText = "",
                 newPositionAnnualRateText = "",
                 isSavingPosition = false,
+                quoteInfoMessage = null,
             )
         }
     }
 
     fun setNewPositionType(value: String) {
-        _uiState.update { it.copy(newPositionType = value) }
+        _uiState.update { it.copy(newPositionType = value, quoteInfoMessage = null) }
+    }
+
+    fun setCompactListMode(enabled: Boolean) {
+        _uiState.update { it.copy(compactListMode = enabled) }
+    }
+
+    fun openPositionDetails(positionId: String) {
+        _uiState.update { it.copy(selectedPositionId = positionId) }
+    }
+
+    fun closePositionDetails() {
+        _uiState.update { it.copy(selectedPositionId = null) }
+    }
+
+    fun startTopUpFromPosition(positionId: String) {
+        val p = _uiState.value.positions.firstOrNull { it.id == positionId } ?: return
+        _uiState.update {
+            it.copy(
+                selectedPositionId = null,
+                showCreatePositionForm = true,
+                newPositionType = p.instrumentType,
+                newPositionName = p.name,
+                newPositionPrincipalText = "",
+                newPositionAnnualRateText = String.format(
+                    Locale.US,
+                    "%.2f",
+                    p.annualRateBps / 100.0,
+                ).replace('.', ','),
+                quoteInfoMessage = null,
+                errorMessage = null,
+            )
+        }
+    }
+
+    /**
+     * Preenche a taxa anual a partir de BACEN (CDI) e fatores do servidor, como no resumo de investimentos.
+     * CDB: % do CDI configurado no backend, não cotação de um título específico.
+     */
+    fun applyMarketRateToForm() {
+        val s = _uiState.value
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingSuggestedRates = true, errorMessage = null) }
+            runCatching { api.getSuggestedRates() }
+                .onSuccess { rates ->
+                    val pct = when (s.newPositionType.lowercase(Locale.ROOT)) {
+                        "cdi" -> rates.cdiAnnualPercent
+                        "cdb" -> rates.cdbAnnualPercent
+                        "tesouro", "fixed_income" -> rates.fixedIncomeAnnualPercent
+                        else -> null
+                    }
+                    if (pct == null) {
+                        _uiState.update {
+                            it.copy(
+                                isLoadingSuggestedRates = false,
+                                errorMessage = appContext.getString(R.string.investments_market_rate_not_applicable),
+                            )
+                        }
+                        return@onSuccess
+                    }
+                    val text = String.format(Locale.US, "%.2f", pct).replace('.', ',')
+                    _uiState.update {
+                        it.copy(
+                            isLoadingSuggestedRates = false,
+                            newPositionAnnualRateText = text,
+                        )
+                    }
+                }
+                .onFailure { t ->
+                    _uiState.update {
+                        it.copy(
+                            isLoadingSuggestedRates = false,
+                            errorMessage = FastApiErrorMapper.message(appContext, t),
+                        )
+                    }
+                }
+        }
+    }
+
+    /**
+     * Cotação B3 (brapi), mesmo conceito de docs/stock.py. Usa o nome da posição como ticker (ex. PETR4).
+     */
+    fun fetchB3StockQuote() {
+        val sym = _uiState.value.newPositionName.trim()
+        if (sym.length < 3) {
+            _uiState.update { it.copy(errorMessage = appContext.getString(R.string.investments_error_ticker)) }
+            return
+        }
+        viewModelScope.launch {
+            _uiState.update { it.copy(isFetchingQuote = true, errorMessage = null) }
+            runCatching { api.getStockQuote(symbol = sym.uppercase(Locale.ROOT)) }
+                .onSuccess { q ->
+                    val line = if (!q.error.isNullOrBlank() || q.lastPrice <= 0) {
+                        appContext.getString(
+                            R.string.investments_quote_unavailable,
+                            q.error.orEmpty().ifBlank { "—" },
+                        )
+                    } else {
+                        val priceStr = String.format(Locale.US, "%.2f", q.lastPrice).replace('.', ',')
+                        val asOf = q.asOf?.trim().orEmpty()
+                        if (asOf.isNotEmpty()) {
+                            appContext.getString(R.string.investments_stock_quote_ref, priceStr, asOf)
+                        } else {
+                            appContext.getString(R.string.investments_stock_quote, priceStr)
+                        }
+                    }
+                    _uiState.update { it.copy(isFetchingQuote = false, quoteInfoMessage = line) }
+                }
+                .onFailure { t ->
+                    _uiState.update {
+                        it.copy(
+                            isFetchingQuote = false,
+                            errorMessage = FastApiErrorMapper.message(appContext, t),
+                        )
+                    }
+                }
+        }
     }
 
     fun setNewPositionName(value: String) {

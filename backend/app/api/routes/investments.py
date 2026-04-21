@@ -13,7 +13,11 @@ from app.schemas.investments import (
     InvestmentOverviewOut,
     InvestmentPositionCreate,
     InvestmentPositionOut,
+    InvestmentSuggestedRatesOut,
+    StockQuoteOut,
 )
+from app.services.investment_brapi import fetch_stock_quote_brapi
+from app.services.investment_market_rates import get_suggested_annual_rates
 from app.services.investments import (
     create_position_for_user,
     delete_position_for_user,
@@ -24,6 +28,50 @@ from app.services.investments import (
 
 router = APIRouter(prefix="/investments", tags=["investments"])
 logger = logging.getLogger(__name__)
+
+
+@router.get("/suggested-rates", response_model=InvestmentSuggestedRatesOut)
+@limiter.limit("60/minute")
+def read_suggested_annual_rates(
+    request: Request,
+    user: Annotated[User, Depends(get_current_user)],
+) -> InvestmentSuggestedRatesOut:
+    s = get_suggested_annual_rates()
+    return InvestmentSuggestedRatesOut(
+        cdi_annual_percent=float(s["cdi_annual_percent"]),
+        cdb_annual_percent=float(s["cdb_annual_percent"]),
+        fixed_income_annual_percent=float(s["fixed_income_annual_percent"]),
+        source=str(s.get("source") or "fallback_default"),
+        rates_fallback_used=bool(s.get("rates_fallback_used", True)),
+    )
+
+
+@router.get("/quote", response_model=StockQuoteOut)
+@limiter.limit("30/minute")
+def read_stock_quote(
+    request: Request,
+    user: Annotated[User, Depends(get_current_user)],
+    symbol: Annotated[str, Query(min_length=1, max_length=12, description="Ticker B3, ex. PETR4")],
+) -> StockQuoteOut:
+    raw = fetch_stock_quote_brapi(symbol)
+    if raw is None:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Falha ao consultar cotação.",
+        )
+    if raw.get("raw_error") is not None or raw.get("last_price") is None:
+        return StockQuoteOut(
+            symbol=symbol.strip().upper(),
+            last_price=0.0,
+            error=str(raw.get("raw_error") or "quote_unavailable"),
+        )
+    return StockQuoteOut(
+        symbol=symbol.strip().upper(),
+        last_price=float(raw["last_price"]),
+        as_of=raw.get("as_of"),
+        source="brapi",
+        error=None,
+    )
 
 
 @router.get("/overview", response_model=InvestmentOverviewOut)

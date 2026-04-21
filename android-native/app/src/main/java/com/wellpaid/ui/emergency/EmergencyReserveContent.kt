@@ -3,17 +3,21 @@ package com.wellpaid.ui.emergency
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.NightsStay
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
@@ -24,15 +28,22 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,6 +56,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
 import com.wellpaid.R
+import com.wellpaid.core.model.emergency.EmergencyReserveDto
 import com.wellpaid.core.model.emergency.EmergencyReservePlanDto
 import com.wellpaid.ui.components.WellPaidMoneyDigitKeypadField
 import com.wellpaid.ui.theme.WellPaidGold
@@ -59,6 +71,7 @@ import com.wellpaid.util.formatIsoDateToBr
 import kotlin.math.roundToInt
 import kotlin.math.ceil
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EmergencyReserveContent(
     mainRouteEntry: NavBackStackEntry,
@@ -72,6 +85,7 @@ fun EmergencyReserveContent(
         mainRouteEntry.savedStateHandle.getStateFlow("emergency_reserve_dirty", 0L)
     }
     val emergencyDirty by dirtyFlow.collectAsStateWithLifecycle()
+    var showPolicyTipsDialog by remember { mutableStateOf(false) }
     LaunchedEffect(emergencyDirty) {
         if (emergencyDirty != 0L) {
             viewModel.refresh()
@@ -87,7 +101,24 @@ fun EmergencyReserveContent(
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
+            TooltipBox(
+                    positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                    tooltip = {
+                        PlainTooltip {
+                            Text(stringResource(R.string.emergency_tips_policy_tooltip))
+                        }
+                    },
+                    state = rememberTooltipState(),
+                ) {
+                    IconButton(onClick = { showPolicyTipsDialog = true }) {
+                        Icon(
+                            Icons.Filled.Info,
+                            contentDescription = stringResource(R.string.emergency_info_icon_a11y),
+                        )
+                    }
+                }
             IconButton(onClick = { viewModel.refresh() }, enabled = !state.isLoading) {
                 Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.home_refresh))
             }
@@ -127,82 +158,6 @@ fun EmergencyReserveContent(
                 val pctAnnual = (progress * 100f).roundToInt().coerceIn(0, 100)
                 val planCount = state.plans.size
 
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(WellPaidNavyDeep)
-                        .padding(16.dp),
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Icon(
-                            Icons.Filled.NightsStay,
-                            contentDescription = null,
-                            tint = WellPaidGold,
-                        )
-                        Text(
-                            text = stringResource(R.string.emergency_hero_title),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color.White,
-                        )
-                    }
-                    Spacer(Modifier.height(14.dp))
-                    Text(
-                        text = stringResource(R.string.emergency_balance_label),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.White.copy(alpha = 0.72f),
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    DiscreetBalanceValue(
-                        cents = r.balanceCents,
-                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                        color = WellPaidGold,
-                        textAlign = TextAlign.Start,
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    Text(
-                        text = stringResource(
-                            R.string.emergency_meta_monthly_line,
-                            formatBrlFromCents(r.monthlyTargetCents),
-                        ),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Color.White.copy(alpha = 0.95f),
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = stringResource(R.string.emergency_hero_annual_line, pctAnnual),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Color.White.copy(alpha = 0.95f),
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = stringResource(R.string.emergency_hero_plans_count_line, planCount),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Color.White.copy(alpha = 0.95f),
-                    )
-                    Spacer(Modifier.height(14.dp))
-                    LinearProgressIndicator(
-                        progress = { progress },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(8.dp)
-                            .clip(RoundedCornerShape(4.dp)),
-                        color = WellPaidGold,
-                        trackColor = Color.White.copy(alpha = 0.15f),
-                    )
-                }
-
-                Spacer(Modifier.height(16.dp))
-                Text(
-                    text = stringResource(R.string.emergency_intro),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.height(12.dp))
                 Button(
                     onClick = onOpenReserveNew,
                     modifier = Modifier.fillMaxWidth(),
@@ -221,6 +176,14 @@ fun EmergencyReserveContent(
                     )
                 }
 
+                Spacer(Modifier.height(12.dp))
+                EmergencyReserveCompactHero(
+                    r = r,
+                    progress = progress,
+                    pctAnnual = pctAnnual,
+                    planCount = planCount,
+                )
+
                 if (state.plans.isNotEmpty()) {
                     Spacer(Modifier.height(16.dp))
                     Text(
@@ -231,13 +194,13 @@ fun EmergencyReserveContent(
                     )
                     Spacer(Modifier.height(8.dp))
                     state.plans.forEach { plan ->
-                        EmergencyReservePlanFullCard(
+                        EmergencyReservePlanCompactCard(
                             plan = plan,
                             enabled = !state.isUpdatingPlan && !state.isSaving,
                             onEdit = { viewModel.startEditingPlan(plan) },
                             onDelete = { viewModel.requestDeletePlan(plan.id) },
                         )
-                        Spacer(Modifier.height(12.dp))
+                        Spacer(Modifier.height(8.dp))
                     }
                 }
 
@@ -305,17 +268,6 @@ fun EmergencyReserveContent(
                     )
                 }
 
-                Spacer(Modifier.height(16.dp))
-                EmergencyReservePolicyGuidance(
-                    balanceCents = r.balanceCents,
-                    monthlyTargetCents = r.monthlyTargetCents,
-                )
-
-                Spacer(Modifier.height(12.dp))
-                EmergencyReservePracticalGuidance(
-                    showRecomposition = state.plans.size > 1,
-                )
-
                 Spacer(Modifier.height(12.dp))
                 Text(
                     text = stringResource(
@@ -364,14 +316,7 @@ fun EmergencyReserveContent(
                 }
             }
             if (r == null && !state.isLoading) {
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    text = stringResource(R.string.emergency_not_configured_hint),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(8.dp))
                 Button(
                     onClick = onOpenReserveNew,
                     modifier = Modifier.fillMaxWidth(),
@@ -389,7 +334,13 @@ fun EmergencyReserveContent(
                         fontWeight = FontWeight.SemiBold,
                     )
                 }
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    text = stringResource(R.string.emergency_not_configured_hint),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(8.dp))
                 WellPaidMoneyDigitKeypadField(
                     valueText = state.monthlyTargetText,
                     onValueTextChange = { viewModel.setMonthlyTargetText(it) },
@@ -441,6 +392,16 @@ fun EmergencyReserveContent(
                     }
             }
         }
+    }
+
+    if (showPolicyTipsDialog) {
+        val res = state.reserve
+        EmergencyTipsPolicyDialog(
+            onDismiss = { showPolicyTipsDialog = false },
+            balanceCents = res?.balanceCents ?: 0,
+            monthlyTargetCents = (res?.monthlyTargetCents ?: 0).coerceAtLeast(1),
+            showRecomposition = state.plans.size > 1,
+        )
     }
 
     if (state.editingPlanId != null) {
@@ -541,7 +502,71 @@ fun EmergencyReserveContent(
 }
 
 @Composable
-private fun EmergencyReservePlanFullCard(
+private fun EmergencyReserveCompactHero(
+    r: EmergencyReserveDto,
+    progress: Float,
+    pctAnnual: Int,
+    planCount: Int,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(WellPaidNavyDeep)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Icon(
+                Icons.Filled.NightsStay,
+                contentDescription = null,
+                tint = WellPaidGold,
+                modifier = Modifier.size(18.dp),
+            )
+            Text(
+                text = stringResource(R.string.emergency_hero_title),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.White,
+                maxLines = 1,
+            )
+        }
+        Spacer(Modifier.height(4.dp))
+        DiscreetBalanceValue(
+            cents = r.balanceCents,
+            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+            color = WellPaidGold,
+            textAlign = TextAlign.Start,
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = stringResource(
+                R.string.emergency_hero_subline,
+                formatBrlFromCents(r.monthlyTargetCents),
+                stringResource(R.string.emergency_hero_plans_count_short, planCount),
+                pctAnnual,
+            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = Color.White.copy(alpha = 0.88f),
+            maxLines = 2,
+        )
+        Spacer(Modifier.height(8.dp))
+        LinearProgressIndicator(
+            progress = { progress },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(4.dp)
+                .clip(RoundedCornerShape(2.dp)),
+            color = WellPaidGold,
+            trackColor = Color.White.copy(alpha = 0.15f),
+        )
+    }
+}
+
+@Composable
+private fun EmergencyReservePlanCompactCard(
     plan: EmergencyReservePlanDto,
     enabled: Boolean,
     onEdit: () -> Unit,
@@ -552,162 +577,97 @@ private fun EmergencyReservePlanFullCard(
         "completed" -> stringResource(R.string.emergency_plan_status_completed)
         else -> plan.status
     }
-    val detailsText = plan.details?.trim().orEmpty()
     val targetCents = plan.targetCents
-    val estimateMonths = if (targetCents != null && targetCents > 0) {
+    val estimateLine = if (targetCents != null && targetCents > 0) {
         estimateMonthsToReachTarget(
             currentCents = plan.balanceCents,
             monthlyCents = plan.monthlyTargetCents,
             targetCents = targetCents,
-        )
+        )?.let { months ->
+            stringResource(R.string.emergency_plan_estimate_line, months)
+        }
     } else {
         null
+    }
+    val line4 = if (targetCents != null && targetCents > 0) {
+        stringResource(R.string.emergency_plan_target_line, formatBrlFromCents(targetCents)) +
+            (estimateLine?.let { " · $it" } ?: "")
+    } else {
+        stringResource(R.string.emergency_plan_no_ceiling)
     }
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
-            .padding(14.dp),
+            .padding(horizontal = 10.dp, vertical = 8.dp),
     ) {
         Text(
             text = plan.title.ifBlank { stringResource(R.string.emergency_plan_untitled) },
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.SemiBold,
             color = WellPaidNavy,
-        )
-        Spacer(Modifier.height(10.dp))
-        ReservePlanLabeledField(
-            label = stringResource(R.string.emergency_plan_status_label),
-            value = statusLabel,
-        )
-        Spacer(Modifier.height(6.dp))
-        ReservePlanLabeledField(
-            label = stringResource(R.string.emergency_plan_label_balance),
-            value = formatBrlFromCents(plan.balanceCents),
-        )
-        Spacer(Modifier.height(6.dp))
-        ReservePlanLabeledField(
-            label = stringResource(R.string.emergency_plan_label_monthly),
-            value = formatBrlFromCents(plan.monthlyTargetCents),
-        )
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = stringResource(R.string.emergency_new_plan_details_label),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
         )
         Spacer(Modifier.height(2.dp))
         Text(
-            text = if (detailsText.isNotEmpty()) {
-                detailsText
-            } else {
-                stringResource(R.string.emergency_plan_no_details)
-            },
-            style = MaterialTheme.typography.bodyMedium,
-            color = if (detailsText.isNotEmpty()) {
-                MaterialTheme.colorScheme.onSurface
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            },
-        )
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = stringResource(R.string.emergency_plan_label_validity),
-            style = MaterialTheme.typography.labelSmall,
+            text = stringResource(
+                R.string.emergency_plan_one_line,
+                statusLabel,
+                formatBrlFromCents(plan.balanceCents),
+                formatBrlFromCents(plan.monthlyTargetCents),
+            ),
+            style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
         )
         Spacer(Modifier.height(2.dp))
         Text(
-            text = plan.planDurationMonths?.let { months ->
-                stringResource(R.string.emergency_plan_duration_months, months)
-            } ?: stringResource(R.string.emergency_plan_validity_open_ended),
-            style = MaterialTheme.typography.bodyMedium,
+            text = line4,
+            style = MaterialTheme.typography.labelSmall,
+            color = WellPaidNavy,
+            maxLines = 2,
         )
         Spacer(Modifier.height(6.dp))
-        if (targetCents != null && targetCents > 0) {
-            ReservePlanLabeledField(
-                label = stringResource(R.string.emergency_new_plan_target_label),
-                value = formatBrlFromCents(targetCents),
-            )
-            estimateMonths?.let { months ->
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = stringResource(R.string.emergency_plan_estimate_line, months),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = WellPaidNavy,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
-        } else {
-            ReservePlanLabeledField(
-                label = stringResource(R.string.emergency_new_plan_target_label),
-                value = stringResource(R.string.emergency_plan_no_ceiling),
-            )
-        }
-        Spacer(Modifier.height(6.dp))
-        ReservePlanLabeledField(
-            label = stringResource(R.string.emergency_plan_label_counting),
-            value = formatIsoDateToBr(plan.trackingStart),
-        )
-        plan.completedAt?.takeIf { it.isNotBlank() }?.let { completedAt ->
-            Spacer(Modifier.height(6.dp))
-            ReservePlanLabeledField(
-                label = stringResource(R.string.emergency_plan_label_completed),
-                value = formatIsoDateToBr(completedAt),
-            )
-        }
-        Spacer(Modifier.height(12.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Button(
                 onClick = onEdit,
                 modifier = Modifier.weight(1f),
                 enabled = enabled,
                 shape = RoundedCornerShape(20.dp),
+                contentPadding = PaddingValues(vertical = 6.dp, horizontal = 8.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = WellPaidNavy,
                     contentColor = Color.White,
                 ),
             ) {
-                Text(stringResource(R.string.emergency_plan_edit))
+                Text(
+                    stringResource(R.string.emergency_plan_edit),
+                    style = MaterialTheme.typography.labelLarge,
+                )
             }
             Button(
                 onClick = onDelete,
                 modifier = Modifier.weight(1f),
                 enabled = enabled,
                 shape = RoundedCornerShape(20.dp),
+                contentPadding = PaddingValues(vertical = 6.dp, horizontal = 8.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.errorContainer,
                     contentColor = MaterialTheme.colorScheme.onErrorContainer,
                 ),
             ) {
-                Text(stringResource(R.string.emergency_plan_delete))
+                Text(
+                    stringResource(R.string.emergency_plan_delete),
+                    style = MaterialTheme.typography.labelLarge,
+                )
             }
         }
     }
-}
-
-@Composable
-private fun ReservePlanLabeledField(
-    label: String,
-    value: String,
-) {
-    Text(
-        text = label,
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-    Spacer(Modifier.height(2.dp))
-    Text(
-        text = value,
-        style = MaterialTheme.typography.bodyMedium,
-        fontWeight = FontWeight.Medium,
-        color = MaterialTheme.colorScheme.onSurface,
-    )
 }
 
 private fun estimateMonthsToReachTarget(
@@ -722,9 +682,11 @@ private fun estimateMonthsToReachTarget(
 }
 
 @Composable
-private fun EmergencyReservePolicyGuidance(
+private fun EmergencyTipsPolicyDialog(
+    onDismiss: () -> Unit,
     balanceCents: Int,
     monthlyTargetCents: Int,
+    showRecomposition: Boolean,
 ) {
     val safeMonthly = monthlyTargetCents.coerceAtLeast(1)
     val monthsCovered = balanceCents.toFloat() / safeMonthly.toFloat()
@@ -740,89 +702,85 @@ private fun EmergencyReservePolicyGuidance(
         monthsCovered < 12f -> stringResource(R.string.emergency_policy_action_protect)
         else -> stringResource(R.string.emergency_policy_action_invest)
     }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-            .padding(12.dp),
-    ) {
-        Text(
-            text = stringResource(R.string.emergency_policy_title),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
-            color = WellPaidNavy,
-        )
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = stringResource(R.string.emergency_policy_coverage, monthsCovered),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.height(4.dp))
-        Text(
-            text = stringResource(R.string.emergency_policy_stage_label, maturityLabel),
-            style = MaterialTheme.typography.bodySmall,
-        )
-        Spacer(Modifier.height(4.dp))
-        Text(
-            text = actionLabel,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-@Composable
-private fun EmergencyReservePracticalGuidance(
-    showRecomposition: Boolean,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(WellPaidNavy.copy(alpha = 0.05f))
-            .padding(12.dp),
-    ) {
-        Text(
-            text = stringResource(R.string.emergency_guidance_tips_title),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
-            color = WellPaidNavy,
-        )
-        Spacer(Modifier.height(8.dp))
-        EmergencyGuidanceTipBullet(
-            stringResource(R.string.emergency_tip_named_plans),
-        )
-        Spacer(Modifier.height(6.dp))
-        EmergencyGuidanceTipBullet(
-            stringResource(R.string.emergency_tip_rebalance),
-        )
-        Spacer(Modifier.height(6.dp))
-        EmergencyGuidanceTipBullet(
-            stringResource(R.string.emergency_tip_liquidity),
-        )
-        Spacer(Modifier.height(6.dp))
-        EmergencyGuidanceTipBullet(
-            stringResource(R.string.emergency_tip_separate_purpose),
-        )
-        if (showRecomposition) {
-            Spacer(Modifier.height(10.dp))
-            Text(
-                text = stringResource(R.string.emergency_recomposition_title),
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = WellPaidNavy,
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = stringResource(R.string.emergency_recomposition_body),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
+    val scroll = rememberScrollState()
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.emergency_tips_policy_dialog_title)) },
+        text = {
+            Column(
+                modifier = Modifier
+                    .heightIn(max = 400.dp)
+                    .verticalScroll(scroll),
+            ) {
+                Text(
+                    text = stringResource(R.string.emergency_policy_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = WellPaidNavy,
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = stringResource(R.string.emergency_policy_coverage, monthsCovered),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = stringResource(R.string.emergency_policy_stage_label, maturityLabel),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = actionLabel,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = stringResource(R.string.emergency_guidance_tips_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = WellPaidNavy,
+                )
+                Spacer(Modifier.height(6.dp))
+                EmergencyGuidanceTipBullet(
+                    stringResource(R.string.emergency_tip_named_plans),
+                )
+                Spacer(Modifier.height(4.dp))
+                EmergencyGuidanceTipBullet(
+                    stringResource(R.string.emergency_tip_rebalance),
+                )
+                Spacer(Modifier.height(4.dp))
+                EmergencyGuidanceTipBullet(
+                    stringResource(R.string.emergency_tip_liquidity),
+                )
+                Spacer(Modifier.height(4.dp))
+                EmergencyGuidanceTipBullet(
+                    stringResource(R.string.emergency_tip_separate_purpose),
+                )
+                if (showRecomposition) {
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        text = stringResource(R.string.emergency_recomposition_title),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = WellPaidNavy,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = stringResource(R.string.emergency_recomposition_body),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.common_ok))
+            }
+        },
+    )
 }
 
 @Composable

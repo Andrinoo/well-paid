@@ -87,3 +87,28 @@ def get_market_rates_snapshot() -> dict[str, float | bool | str]:
     _cache_payload = payload
     _cache_expires_at = now + timedelta(seconds=ttl)
     return payload
+
+
+def _annual_percent_from_monthly_decimal(m: float) -> float:
+    """Converte taxa mensal composta (decimal) em % ao ano útil para exibição."""
+    if m <= 0:
+        return 0.0
+    return round(((1.0 + m) ** 12 - 1.0) * 100.0, 4)
+
+
+def get_suggested_annual_rates() -> dict[str, float | bool | str]:
+    """
+    Taxas anuais (%) para preenchimento automático no app (CDI real do BACEN quando disponível).
+    CDB no app segue o fator investments_cdb_pct_of_cdi sobre o CDI mensal (não é cotação por título).
+    """
+    snap = get_market_rates_snapshot()
+    cdi_m = float(snap["cdi_monthly"])
+    cdb_m = float(snap["cdb_monthly"])
+    fixed_m = float(snap["fixed_monthly"])
+    return {
+        "cdi_annual_percent": _annual_percent_from_monthly_decimal(cdi_m),
+        "cdb_annual_percent": _annual_percent_from_monthly_decimal(cdb_m),
+        "fixed_income_annual_percent": _annual_percent_from_monthly_decimal(fixed_m),
+        "source": str(snap.get("source") or "fallback_default"),
+        "rates_fallback_used": bool(snap.get("fallback_used", True)),
+    }

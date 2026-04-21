@@ -150,6 +150,11 @@ class Settings(BaseSettings):
     investments_rates_cache_ttl_seconds: int = 900
     investments_cdb_pct_of_cdi: float = 1.02
     investments_fallback_stable_window_months: int = 2
+    # Opcional: cotação de ações B3 (mesmo padrão que docs/stock.py — brapi.dev).
+    brapi_api_key: str = Field(
+        default="",
+        validation_alias=AliasChoices("brapi_api_key", "BRAPI_API_KEY"),
+    )
 
     @model_validator(mode="before")
     @classmethod

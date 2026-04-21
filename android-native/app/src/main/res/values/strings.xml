@@ -693,4 +693,23 @@
     <string name="investments_error_name">Enter a valid position name.</string>
     <string name="investments_error_principal">Enter a valid allocated amount.</string>
     <string name="investments_error_rate">Enter a valid annual rate.</string>
+    <string name="investments_bucket_tesouro">Treasury (Tesouro Direto / IPCA+)</string>
+    <string name="investments_bucket_stocks">Stocks (B3)</string>
+    <string name="investments_apply_market_rate">Use market rate (CDI)</string>
+    <string name="investments_fetch_b3_quote">B3 quote</string>
+    <string name="investments_market_rate_not_applicable">Automatic market rate is available for CDI, CDB, or general fixed income.</string>
+    <string name="investments_error_ticker">Enter a ticker in the name field (e.g. PETR4) before requesting a quote.</string>
+    <string name="investments_stock_quote">Quote: R$ %1$s</string>
+    <string name="investments_stock_quote_ref">Quote: R$ %1$s · %2$s</string>
+    <string name="investments_quote_unavailable">Quote unavailable (%1$s).</string>
+    <string name="investments_view_compact">Compact list</string>
+    <string name="investments_view_cards">Cards</string>
+    <string name="investments_view_details">Details</string>
+    <string name="investments_top_up">Top up</string>
+    <string name="emergency_info_icon_a11y">Open policy and practical tips</string>
+    <string name="emergency_tips_policy_dialog_title">Policy &amp; tips</string>
+    <string name="emergency_tips_policy_tooltip">Policy and tips</string>
+    <string name="emergency_hero_subline">%1$s · %2$s · 1st year: %3$d%%</string>
+    <string name="emergency_hero_plans_count_short">%1$d plans</string>
+    <string name="emergency_plan_one_line">%1$s · %2$s · %3$s</string>
 </resources>

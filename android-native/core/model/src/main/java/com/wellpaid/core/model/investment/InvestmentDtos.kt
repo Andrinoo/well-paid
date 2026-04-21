@@ -51,3 +51,22 @@ data class InvestmentPositionCreateDto(
     @SerialName("maturity_date") val maturityDate: String? = null,
     @SerialName("is_liquid") val isLiquid: Boolean = true,
 )
+
+@Serializable
+data class InvestmentSuggestedRatesDto(
+    @SerialName("cdi_annual_percent") val cdiAnnualPercent: Double,
+    @SerialName("cdb_annual_percent") val cdbAnnualPercent: Double,
+    @SerialName("fixed_income_annual_percent") val fixedIncomeAnnualPercent: Double,
+    @SerialName("source") val source: String = "fallback_default",
+    @SerialName("rates_fallback_used") val ratesFallbackUsed: Boolean = true,
+)
+
+@Serializable
+data class StockQuoteDto(
+    val symbol: String,
+    @SerialName("last_price") val lastPrice: Double = 0.0,
+    val currency: String = "BRL",
+    @SerialName("as_of") val asOf: String? = null,
+    val source: String = "brapi",
+    val error: String? = null,
+)
