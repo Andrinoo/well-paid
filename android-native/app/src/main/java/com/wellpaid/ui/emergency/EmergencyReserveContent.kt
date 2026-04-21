@@ -466,6 +466,19 @@ fun EmergencyReserveContent(
                         shape = RoundedCornerShape(14.dp),
                     )
                     WellPaidMoneyDigitKeypadField(
+                        valueText = state.editingPlanOpeningBalanceText,
+                        onValueTextChange = { viewModel.setEditingPlanOpeningBalanceText(it) },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !state.isUpdatingPlan,
+                        label = { Text(stringResource(R.string.emergency_plan_opening_label)) },
+                        placeholder = stringResource(R.string.emergency_monthly_placeholder),
+                    )
+                    Text(
+                        text = stringResource(R.string.emergency_plan_opening_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    WellPaidMoneyDigitKeypadField(
                         valueText = state.editingPlanMonthlyText,
                         onValueTextChange = { viewModel.setEditingPlanMonthlyText(it) },
                         modifier = Modifier.fillMaxWidth(),
@@ -716,6 +729,13 @@ private fun EmergencyReservePlanCompactCard(
                 formatBrlFromCents(plan.monthlyTargetCents),
             ),
             style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+        )
+        Spacer(Modifier.height(2.dp))
+        Text(
+            text = stringResource(R.string.emergency_plan_opening_line, formatBrlFromCents(plan.openingBalanceCents)),
+            style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
         )

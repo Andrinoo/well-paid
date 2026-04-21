@@ -722,6 +722,9 @@
     <string name="emergency_retroactive_plan_message">The start date is before today: %1$d month(s) already count toward the plan and %2$d month(s) remain until the target date. To reach the %3$s goal, the suggested corrected monthly amount is %4$s.</string>
     <string name="emergency_retroactive_apply">Apply correction</string>
     <string name="emergency_retroactive_dismiss">Ignore</string>
+    <string name="emergency_plan_opening_label">Initial deposit (optional)</string>
+    <string name="emergency_plan_opening_hint">Cash balance is this amount plus recorded contributions. The monthly breakdown uses real deposits. If you start late and leave this empty, balance stays at R$ 0,00 until you contribute — check “pace” (delta) for how far behind the schedule you are.</string>
+    <string name="emergency_plan_opening_line">Initial deposit: %1$s</string>
     <string name="emergency_selected_plan_contribution_label">This month contribution on selected plan (BRL)</string>
     <string name="emergency_selected_plan_fallback">Untitled plan</string>
     <string name="emergency_selected_plan_title">Selected plan for contribution: %1$s</string>

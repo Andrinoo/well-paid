@@ -10,7 +10,7 @@ class EmergencyReserveUpdate(BaseModel):
 
 class EmergencyReserveResponse(BaseModel):
     monthly_target_cents: int = Field(ge=0)
-    balance_cents: int = Field(ge=0)
+    balance_cents: int
     tracking_start: date_type = Field(description="Primeiro mês contabilizado (inclusivo)")
     configured: bool = Field(
         default=False,
@@ -41,7 +41,8 @@ class EmergencyReservePlanItem(BaseModel):
     details: str | None = None
     monthly_target_cents: int = Field(ge=0)
     target_cents: int | None = Field(default=None, ge=0)
-    balance_cents: int = Field(ge=0)
+    balance_cents: int
+    opening_balance_cents: int = Field(default=0, ge=0)
     tracking_start: date_type
     target_end_date: date_type | None = None
     plan_duration_months: int | None = None
@@ -63,6 +64,11 @@ class EmergencyReservePlanCreate(BaseModel):
     tracking_start: date_type | None = None
     target_end_date: date_type | None = None
     plan_duration_months: int | None = Field(default=None, ge=1, le=600)
+    opening_balance_cents: int | None = Field(
+        default=None,
+        ge=0,
+        description="Aporte inicial em centavos (dinheiro já na reserva ao criar o plano).",
+    )
 
 
 class EmergencyReservePlanUpdate(BaseModel):
@@ -73,6 +79,11 @@ class EmergencyReservePlanUpdate(BaseModel):
     tracking_start: date_type | None = None
     target_end_date: date_type | None = None
     plan_duration_months: int | None = Field(default=None, ge=1, le=600)
+    opening_balance_cents: int | None = Field(
+        default=None,
+        ge=0,
+        description="Aporte inicial (centavos). Omitir para não alterar.",
+    )
 
 
 class EmergencyReserveMonthRow(BaseModel):

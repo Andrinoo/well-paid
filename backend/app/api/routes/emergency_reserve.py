@@ -85,10 +85,10 @@ def list_reserve_plans(
     if not _tables_ready(db):
         return []
     rows = list_plans_for_user(db, user.id, active_only=False)
-    return [
-        _to_plan_item(r)
-        for r in rows
-    ]
+    d = date.today()
+    for r in rows:
+        ensure_accruals(db, r, d)
+    return [_to_plan_item(r) for r in rows]
 
 
 def _to_plan_item(r) -> EmergencyReservePlanItem:
@@ -100,6 +100,7 @@ def _to_plan_item(r) -> EmergencyReservePlanItem:
         monthly_target_cents=int(r.monthly_target_cents),
         target_cents=int(r.target_cents) if r.target_cents is not None else None,
         balance_cents=int(r.balance_cents),
+        opening_balance_cents=int(r.opening_balance_cents),
         tracking_start=r.tracking_start,
         target_end_date=r.target_end_date,
         plan_duration_months=r.plan_duration_months,
@@ -133,6 +134,7 @@ def create_reserve_plan(
         tracking_start=body.tracking_start,
         target_end_date=body.target_end_date,
         plan_duration_months=body.plan_duration_months,
+        opening_balance_cents=body.opening_balance_cents,
     )
     return _to_plan_item(p)
 
@@ -201,6 +203,7 @@ def update_reserve_plan(
             tracking_start=body.tracking_start,
             target_end_date=body.target_end_date,
             plan_duration_months=body.plan_duration_months,
+            opening_balance_cents=body.opening_balance_cents,
         )
     except ValueError as e:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(e)) from e

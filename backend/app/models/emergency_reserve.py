@@ -32,7 +32,10 @@ class EmergencyReservePlan(Base, TimestampMixin):
     details: Mapped[str | None] = mapped_column(String(1200), nullable=True)
     monthly_target_cents: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
     target_cents: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    # Saldo em dinheiro: opening_balance_cents + soma dos aportes manuais (recomputado no serviço).
     balance_cents: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
+    # Aporte inicial ao criar/editar o plano (centavos).
+    opening_balance_cents: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
     tracking_start: Mapped[date] = mapped_column(Date, nullable=False)
     target_end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     accrual_skip_months: Mapped[list[str]] = mapped_column(

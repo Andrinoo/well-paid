@@ -7,7 +7,7 @@ from datetime import date, datetime, timezone
 from math import ceil
 from typing import TYPE_CHECKING
 
-from sqlalchemy import select
+from sqlalchemy import extract, func, select
 from sqlalchemy.orm import Session
 
 from app.core.schema_introspection import session_has_table
@@ -177,6 +177,45 @@ def list_plans_for_user(
     return list(db.scalars(q).all())
 
 
+def contribution_sum_for_plan(db: Session, plan_id: uuid.UUID) -> int:
+    v = db.scalar(
+        select(func.coalesce(func.sum(EmergencyReserveContributionItem.amount_cents), 0)).where(
+            EmergencyReserveContributionItem.plan_id == plan_id
+        )
+    )
+    return int(v or 0)
+
+
+def refresh_plan_cash_balance(db: Session, plan: EmergencyReservePlan) -> None:
+    plan.balance_cents = int(plan.opening_balance_cents) + contribution_sum_for_plan(db, plan.id)
+
+
+def _persist_plan_cash_balance(db: Session, plan: EmergencyReservePlan) -> None:
+    refresh_plan_cash_balance(db, plan)
+    if db.is_modified(plan, include_collections=False):
+        db.commit()
+        db.refresh(plan)
+
+
+def contribution_deposits_by_year_month(db: Session, plan_id: uuid.UUID) -> dict[tuple[int, int], int]:
+    y = extract("year", EmergencyReserveContribution.contribution_date)
+    m = extract("month", EmergencyReserveContribution.contribution_date)
+    rows = db.execute(
+        select(y, m, func.sum(EmergencyReserveContributionItem.amount_cents))
+        .join(
+            EmergencyReserveContributionItem,
+            EmergencyReserveContributionItem.contribution_id == EmergencyReserveContribution.id,
+        )
+        .where(EmergencyReserveContributionItem.plan_id == plan_id)
+        .group_by(y, m)
+    ).all()
+    out: dict[tuple[int, int], int] = {}
+    for row in rows:
+        yy, mm, total = int(row[0]), int(row[1]), int(row[2] or 0)
+        out[(yy, mm)] = total
+    return out
+
+
 def get_plan_for_user(
     db: Session,
     user_id: uuid.UUID,
@@ -222,6 +261,7 @@ def upsert_monthly_target(
         monthly_target_cents=int(monthly_target_cents),
         target_cents=None,
         balance_cents=0,
+        opening_balance_cents=0,
         tracking_start=anchor,
         accrual_skip_months=[],
         plan_duration_months=None,
@@ -236,9 +276,11 @@ def upsert_monthly_target(
 def ensure_accruals(db: Session, plan: EmergencyReservePlan, today: date) -> bool:
     """Cria créditos mensais em falta até ao mês civil (respeitando duração do plano)."""
     if plan.status != "active":
+        _persist_plan_cash_balance(db, plan)
         return False
     tgt = int(plan.monthly_target_cents)
     if tgt <= 0:
+        _persist_plan_cash_balance(db, plan)
         return False
 
     start = first_of_month(plan.tracking_start)
@@ -247,6 +289,7 @@ def ensure_accruals(db: Session, plan: EmergencyReservePlan, today: date) -> boo
     if cap is not None and end > cap:
         end = cap
     if start > end:
+        _persist_plan_cash_balance(db, plan)
         return False
 
     changed = False
@@ -271,12 +314,12 @@ def ensure_accruals(db: Session, plan: EmergencyReservePlan, today: date) -> boo
                 amount_cents=tgt,
             )
         )
-        plan.balance_cents = int(plan.balance_cents) + tgt
         changed = True
 
     if changed:
         db.commit()
         db.refresh(plan)
+    _persist_plan_cash_balance(db, plan)
     return changed
 
 
@@ -391,7 +434,6 @@ def delete_accrual_for_user(
         return (plan, False)
     amt = int(row.amount_cents)
     db.delete(row)
-    plan.balance_cents = int(plan.balance_cents) - amt
     add_skip_month(plan, year, month)
     db.commit()
     db.refresh(plan)
@@ -431,17 +473,14 @@ def patch_accrual_for_user(
                     amount_cents=int(amount_cents),
                 )
             )
-            plan.balance_cents = int(plan.balance_cents) + int(amount_cents)
     else:
         old = int(row.amount_cents)
         if amount_cents == 0:
             db.delete(row)
-            plan.balance_cents = int(plan.balance_cents) - old
             add_skip_month(plan, year, month)
         else:
             remove_skip_month(plan, year, month)
             row.amount_cents = int(amount_cents)
-            plan.balance_cents = int(plan.balance_cents) + (int(amount_cents) - old)
     db.commit()
     db.refresh(plan)
     return plan
@@ -469,9 +508,11 @@ def create_plan(
     tracking_start: date | None = None,
     target_end_date: date | None = None,
     plan_duration_months: int | None = None,
+    opening_balance_cents: int | None = None,
 ) -> EmergencyReservePlan:
     family_id, solo_user_id = _resolve_scope(db, user_id)
     anchor = first_of_month(tracking_start or date.today())
+    opening = int(opening_balance_cents or 0)
     p = EmergencyReservePlan(
         id=uuid.uuid4(),
         family_id=family_id,
@@ -481,6 +522,7 @@ def create_plan(
         monthly_target_cents=int(monthly_target_cents),
         target_cents=int(target_cents) if target_cents is not None else None,
         balance_cents=0,
+        opening_balance_cents=opening,
         tracking_start=anchor,
         target_end_date=first_of_month(target_end_date) if target_end_date is not None else None,
         accrual_skip_months=[],
@@ -491,7 +533,7 @@ def create_plan(
     db.commit()
     db.refresh(p)
     ensure_accruals(db, p, date.today())
-    db.refresh(p)
+    _persist_plan_cash_balance(db, p)
     return p
 
 
@@ -507,6 +549,7 @@ def update_plan_for_user(
     tracking_start: date | None = None,
     target_end_date: date | None = None,
     plan_duration_months: int | None = None,
+    opening_balance_cents: int | None = None,
 ) -> EmergencyReservePlan | None:
     plan = get_plan_for_user(db, user_id, plan_id)
     if plan is None:
@@ -523,10 +566,12 @@ def update_plan_for_user(
         first_of_month(target_end_date) if target_end_date is not None else None
     )
     plan.plan_duration_months = plan_duration_months
+    if opening_balance_cents is not None:
+        plan.opening_balance_cents = int(opening_balance_cents)
     db.commit()
     db.refresh(plan)
     ensure_accruals(db, plan, date.today())
-    db.refresh(plan)
+    _persist_plan_cash_balance(db, plan)
     return plan
 
 
@@ -559,7 +604,9 @@ def complete_plan_transfer(
         raise ValueError("plan_not_found")
     if plan.status != "active":
         raise ValueError("plan_not_active")
-    amount = int(plan.balance_cents)
+    ensure_accruals(db, plan, date.today())
+    _persist_plan_cash_balance(db, plan)
+    amount = max(0, int(plan.balance_cents))
     peers = set(family_peer_user_ids(db, user_id))
 
     if goal_id is not None:
@@ -583,11 +630,14 @@ def complete_plan_transfer(
             raise ValueError("dest_plan_invalid")
         if dest.status != "active":
             raise ValueError("dest_not_active")
-        dest.balance_cents = int(dest.balance_cents) + amount
+        dest.opening_balance_cents = int(dest.opening_balance_cents) + amount
+        _persist_plan_cash_balance(db, dest)
         plan.transfer_goal_id = None
         plan.transfer_to_plan_id = to_plan_id
 
-    plan.balance_cents = 0
+    src_contrib_total = contribution_sum_for_plan(db, plan.id)
+    plan.opening_balance_cents = -src_contrib_total
+    _persist_plan_cash_balance(db, plan)
     plan.status = "completed"
     plan.completed_at = datetime.now(timezone.utc)
     db.commit()
@@ -601,7 +651,7 @@ def month_breakdown_for_plan(
     *,
     today: date | None = None,
 ) -> list[dict]:
-    """Por mês civil: esperado, depositado (acréscimo), déficit."""
+    """Por mês civil: esperado, depositado (aportes reais naquele mês), déficit."""
     d = today or date.today()
     start = first_of_month(plan.tracking_start)
     end = first_of_month(d)
@@ -611,18 +661,14 @@ def month_breakdown_for_plan(
     if start > end:
         return []
 
-    accrual_map: dict[tuple[int, int], int] = {}
-    for row in db.scalars(
-        select(EmergencyReserveAccrual).where(EmergencyReserveAccrual.plan_id == plan.id)
-    ).all():
-        accrual_map[(int(row.year), int(row.month))] = int(row.amount_cents)
+    dep_by_month = contribution_deposits_by_year_month(db, plan.id)
 
     tgt = int(plan.monthly_target_cents)
     out: list[dict] = []
     cumulative_expected = 0
     cumulative_deposited = 0
     for y, m in iter_months_inclusive(start, end):
-        dep = accrual_map.get((y, m), 0)
+        dep = int(dep_by_month.get((y, m), 0))
         shortfall = max(0, tgt - dep) if tgt > 0 else 0
         cumulative_expected += tgt
         cumulative_deposited += dep
@@ -664,6 +710,7 @@ def create_contribution(
     )
     db.add(contrib)
 
+    touched_plan_ids: dict[uuid.UUID, None] = {}
     for alloc in allocations:
         plan_id = alloc["plan_id"]
         amount_cents = int(alloc["amount_cents"])
@@ -672,7 +719,7 @@ def create_contribution(
             raise ValueError("plan_not_found_or_not_allowed")
         if plan.status != "active":
             raise ValueError("plan_not_active")
-        plan.balance_cents = int(plan.balance_cents) + amount_cents
+        touched_plan_ids[plan.id] = None
         db.add(
             EmergencyReserveContributionItem(
                 id=uuid.uuid4(),
@@ -684,4 +731,8 @@ def create_contribution(
 
     db.commit()
     db.refresh(contrib)
+    for pid in touched_plan_ids:
+        p2 = db.get(EmergencyReservePlan, pid)
+        if p2 is not None:
+            _persist_plan_cash_balance(db, p2)
     return contrib

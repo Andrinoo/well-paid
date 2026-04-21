@@ -149,6 +149,21 @@ fun EmergencyReservePlanFormScreen(
             )
             Spacer(Modifier.height(8.dp))
             WellPaidMoneyDigitKeypadField(
+                valueText = state.newPlanOpeningBalanceText,
+                onValueTextChange = { viewModel.setNewPlanOpeningBalanceText(it) },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !state.isCreatingPlan && !state.isSaving,
+                label = { Text(stringResource(R.string.emergency_plan_opening_label)) },
+                placeholder = stringResource(R.string.emergency_monthly_placeholder),
+            )
+            Text(
+                text = stringResource(R.string.emergency_plan_opening_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+            Spacer(Modifier.height(8.dp))
+            WellPaidMoneyDigitKeypadField(
                 valueText = state.newPlanMonthlyText,
                 onValueTextChange = { viewModel.setNewPlanMonthlyText(it) },
                 modifier = Modifier.fillMaxWidth(),

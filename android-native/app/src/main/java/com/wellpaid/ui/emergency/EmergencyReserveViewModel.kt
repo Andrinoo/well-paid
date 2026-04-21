@@ -64,6 +64,8 @@ data class EmergencyReserveUiState(
     val newPlanDurationMonthsText: String = "",
     val newPlanTrackingStartText: String = "",
     val newPlanTargetEndText: String = "",
+    /** Aporte inicial (dinheiro já na reserva ao criar o plano). */
+    val newPlanOpeningBalanceText: String = "",
     val newPlanRecommendedMonthlyCents: Int? = null,
     val newPlanRetroOffer: EmergencyRetroactivePlanOffer? = null,
     val newPlanRetroDismissFingerprint: String? = null,
@@ -75,8 +77,11 @@ data class EmergencyReserveUiState(
     val editingPlanDurationMonthsText: String = "",
     val editingPlanTrackingStartText: String = "",
     val editingPlanTargetEndText: String = "",
+    val editingPlanOpeningBalanceText: String = "",
     val editingPlanRecommendedMonthlyCents: Int? = null,
     val editingPlanBalanceCents: Int = 0,
+    val editingPlanInitialOpeningCents: Int = 0,
+    val editingPlanInitialBalanceCents: Int = 0,
     val editingPlanRetroOffer: EmergencyRetroactivePlanOffer? = null,
     val editingPlanRetroDismissFingerprint: String? = null,
     val isUpdatingPlan: Boolean = false,
@@ -177,6 +182,11 @@ class EmergencyReserveViewModel @Inject constructor(
         recalcNewPlanRecommendation()
     }
 
+    fun setNewPlanOpeningBalanceText(value: String) {
+        _uiState.update { it.copy(newPlanOpeningBalanceText = value) }
+        recalcNewPlanRecommendation()
+    }
+
     fun resetNewPlanFormFields() {
         _uiState.update {
             it.copy(
@@ -187,6 +197,7 @@ class EmergencyReserveViewModel @Inject constructor(
                 newPlanDurationMonthsText = "",
                 newPlanTrackingStartText = "",
                 newPlanTargetEndText = "",
+                newPlanOpeningBalanceText = "",
                 newPlanRecommendedMonthlyCents = null,
                 newPlanRetroOffer = null,
                 newPlanRetroDismissFingerprint = null,
@@ -206,8 +217,11 @@ class EmergencyReserveViewModel @Inject constructor(
                 editingPlanDurationMonthsText = plan.planDurationMonths?.toString().orEmpty(),
                 editingPlanTrackingStartText = plan.trackingStart,
                 editingPlanTargetEndText = plan.targetEndDate.orEmpty(),
+                editingPlanOpeningBalanceText = centsToBrlInput(plan.openingBalanceCents),
                 editingPlanRecommendedMonthlyCents = plan.monthlyNeededCents,
                 editingPlanBalanceCents = plan.balanceCents,
+                editingPlanInitialOpeningCents = plan.openingBalanceCents,
+                editingPlanInitialBalanceCents = plan.balanceCents,
                 editingPlanRetroOffer = null,
                 editingPlanRetroDismissFingerprint = null,
                 errorMessage = null,
@@ -227,8 +241,11 @@ class EmergencyReserveViewModel @Inject constructor(
                 editingPlanDurationMonthsText = "",
                 editingPlanTrackingStartText = "",
                 editingPlanTargetEndText = "",
+                editingPlanOpeningBalanceText = "",
                 editingPlanRecommendedMonthlyCents = null,
                 editingPlanBalanceCents = 0,
+                editingPlanInitialOpeningCents = 0,
+                editingPlanInitialBalanceCents = 0,
                 editingPlanRetroOffer = null,
                 editingPlanRetroDismissFingerprint = null,
                 isUpdatingPlan = false,
@@ -251,6 +268,11 @@ class EmergencyReserveViewModel @Inject constructor(
 
     fun setEditingPlanTargetText(value: String) {
         _uiState.update { it.copy(editingPlanTargetText = value) }
+        recalcEditingPlanRecommendation()
+    }
+
+    fun setEditingPlanOpeningBalanceText(value: String) {
+        _uiState.update { it.copy(editingPlanOpeningBalanceText = value) }
         recalcEditingPlanRecommendation()
     }
 
@@ -363,8 +385,8 @@ class EmergencyReserveViewModel @Inject constructor(
             _uiState.update { it.copy(errorMessage = appContext.getString(R.string.expense_error_date)) }
             return
         }
-        val targetEnd = parseIsoDateOrNull(s.newPlanTargetEndText)
-        if (s.newPlanTargetEndText.isNotBlank() && targetEnd == null) {
+        val targetEndParsed = parseIsoDateOrNull(s.newPlanTargetEndText)
+        if (s.newPlanTargetEndText.isNotBlank() && targetEndParsed == null) {
             _uiState.update { it.copy(errorMessage = appContext.getString(R.string.expense_error_due_date)) }
             return
         }
@@ -377,6 +399,11 @@ class EmergencyReserveViewModel @Inject constructor(
             return
         }
 
+        val resolvedEnd = resolveNewPlanEndLocal(s)
+        val targetEndForApi = targetEndParsed ?: resolvedEnd
+
+        val openingCents = parseBrlToCents(s.newPlanOpeningBalanceText)?.takeIf { it >= 0 }
+
         viewModelScope.launch {
             _uiState.update { it.copy(isCreatingPlan = true, errorMessage = null) }
             runCatching {
@@ -387,8 +414,9 @@ class EmergencyReserveViewModel @Inject constructor(
                         monthlyTargetCents = cents,
                         targetCents = targetCents,
                         trackingStart = trackingStart?.toString(),
-                        targetEndDate = targetEnd?.toString(),
+                        targetEndDate = targetEndForApi?.toString(),
                         planDurationMonths = durationMonths,
+                        openingBalanceCents = openingCents,
                     ),
                 )
             }
@@ -403,6 +431,7 @@ class EmergencyReserveViewModel @Inject constructor(
                             newPlanDurationMonthsText = "",
                             newPlanTrackingStartText = "",
                             newPlanTargetEndText = "",
+                            newPlanOpeningBalanceText = "",
                             newPlanRecommendedMonthlyCents = null,
                             newPlanRetroOffer = null,
                             newPlanRetroDismissFingerprint = null,
@@ -446,8 +475,8 @@ class EmergencyReserveViewModel @Inject constructor(
             _uiState.update { it.copy(errorMessage = appContext.getString(R.string.expense_error_date)) }
             return
         }
-        val targetEnd = parseIsoDateOrNull(s.editingPlanTargetEndText)
-        if (s.editingPlanTargetEndText.isNotBlank() && targetEnd == null) {
+        val targetEndParsed = parseIsoDateOrNull(s.editingPlanTargetEndText)
+        if (s.editingPlanTargetEndText.isNotBlank() && targetEndParsed == null) {
             _uiState.update { it.copy(errorMessage = appContext.getString(R.string.expense_error_due_date)) }
             return
         }
@@ -458,6 +487,10 @@ class EmergencyReserveViewModel @Inject constructor(
             }
             return
         }
+
+        val resolvedEnd = resolveEditingPlanEndLocal(s)
+        val targetEndForApi = targetEndParsed ?: resolvedEnd
+        val openingCents = parseBrlToCents(s.editingPlanOpeningBalanceText.trim()) ?: 0
 
         viewModelScope.launch {
             _uiState.update { it.copy(isUpdatingPlan = true, errorMessage = null) }
@@ -470,8 +503,9 @@ class EmergencyReserveViewModel @Inject constructor(
                         monthlyTargetCents = cents,
                         targetCents = targetCents,
                         trackingStart = trackingStart?.toString(),
-                        targetEndDate = targetEnd?.toString(),
+                        targetEndDate = targetEndForApi?.toString(),
                         planDurationMonths = durationMonths,
+                        openingBalanceCents = openingCents,
                     ),
                 )
             }.onSuccess {
@@ -656,15 +690,35 @@ class EmergencyReserveViewModel @Inject constructor(
     }
 
     private fun newPlanRetroFingerprint(s: EmergencyReserveUiState): String =
-        "${s.newPlanTrackingStartText}|${s.newPlanTargetEndText}|${s.newPlanMonthlyText}|${s.newPlanTargetText}"
+        "${s.newPlanTrackingStartText}|${s.newPlanTargetEndText}|${s.newPlanDurationMonthsText}|${s.newPlanOpeningBalanceText}|${s.newPlanMonthlyText}|${s.newPlanTargetText}"
 
     private fun editingPlanRetroFingerprint(s: EmergencyReserveUiState): String =
-        "${s.editingPlanTrackingStartText}|${s.editingPlanTargetEndText}|${s.editingPlanMonthlyText}|${s.editingPlanTargetText}"
+        "${s.editingPlanTrackingStartText}|${s.editingPlanTargetEndText}|${s.editingPlanDurationMonthsText}|${s.editingPlanOpeningBalanceText}|${s.editingPlanMonthlyText}|${s.editingPlanTargetText}"
+
+    private fun resolveNewPlanEndLocal(s: EmergencyReserveUiState): LocalDate? {
+        parseIsoDateOrNull(s.newPlanTargetEndText)?.let { return firstOfMonth(it) }
+        val start = parseIsoDateOrNull(s.newPlanTrackingStartText)?.let { firstOfMonth(it) } ?: return null
+        val dur = s.newPlanDurationMonthsText.toIntOrNull()?.takeIf { it > 0 } ?: return null
+        return start.plusMonths((dur - 1).toLong())
+    }
+
+    private fun resolveEditingPlanEndLocal(s: EmergencyReserveUiState): LocalDate? {
+        parseIsoDateOrNull(s.editingPlanTargetEndText)?.let { return firstOfMonth(it) }
+        val start = parseIsoDateOrNull(s.editingPlanTrackingStartText)?.let { firstOfMonth(it) } ?: return null
+        val dur = s.editingPlanDurationMonthsText.toIntOrNull()?.takeIf { it > 0 } ?: return null
+        return start.plusMonths((dur - 1).toLong())
+    }
+
+    private fun editingCashCentsForRecalc(s: EmergencyReserveUiState): Int {
+        val contribPart = s.editingPlanInitialBalanceCents - s.editingPlanInitialOpeningCents
+        val open = parseBrlToCents(s.editingPlanOpeningBalanceText)?.takeIf { it >= 0 }
+            ?: s.editingPlanInitialOpeningCents
+        return open + contribPart
+    }
 
     private fun recalcNewPlanRecommendation() {
         val s = _uiState.value
-        val end = parseIsoDateOrNull(s.newPlanTargetEndText)
-        if (end == null) {
+        val end = resolveNewPlanEndLocal(s) ?: run {
             _uiState.update {
                 it.copy(
                     newPlanRecommendedMonthlyCents = null,
@@ -673,7 +727,8 @@ class EmergencyReserveViewModel @Inject constructor(
             }
             return
         }
-        val start = parseIsoDateOrNull(s.newPlanTrackingStartText) ?: LocalDate.now().withDayOfMonth(1)
+        val start = parseIsoDateOrNull(s.newPlanTrackingStartText)?.let { firstOfMonth(it) }
+            ?: LocalDate.now().withDayOfMonth(1)
         val today = LocalDate.now()
         val (monthsTotal, monthsPassed, monthsRemaining) = timelineMonthsAndRemaining(start, end, today)
         val monthly = parseBrlToCents(s.newPlanMonthlyText)?.takeIf { it > 0 }
@@ -689,8 +744,8 @@ class EmergencyReserveViewModel @Inject constructor(
             }
             return
         }
-        val balance = 0
-        val remainingAmount = (targetPacingCents - balance).coerceAtLeast(0)
+        val openingCents = parseBrlToCents(s.newPlanOpeningBalanceText)?.takeIf { it >= 0 } ?: 0
+        val remainingAmount = (targetPacingCents - openingCents).coerceAtLeast(0)
         val recommended = if (remainingAmount == 0) {
             0
         } else {
@@ -728,8 +783,7 @@ class EmergencyReserveViewModel @Inject constructor(
 
     private fun recalcEditingPlanRecommendation() {
         val s = _uiState.value
-        val end = parseIsoDateOrNull(s.editingPlanTargetEndText)
-        if (end == null) {
+        val end = resolveEditingPlanEndLocal(s) ?: run {
             _uiState.update {
                 it.copy(
                     editingPlanRecommendedMonthlyCents = null,
@@ -738,7 +792,8 @@ class EmergencyReserveViewModel @Inject constructor(
             }
             return
         }
-        val start = parseIsoDateOrNull(s.editingPlanTrackingStartText) ?: LocalDate.now().withDayOfMonth(1)
+        val start = parseIsoDateOrNull(s.editingPlanTrackingStartText)?.let { firstOfMonth(it) }
+            ?: LocalDate.now().withDayOfMonth(1)
         val today = LocalDate.now()
         val (monthsTotal, monthsPassed, monthsRemaining) = timelineMonthsAndRemaining(start, end, today)
         val monthly = parseBrlToCents(s.editingPlanMonthlyText)?.takeIf { it > 0 }
@@ -754,8 +809,8 @@ class EmergencyReserveViewModel @Inject constructor(
             }
             return
         }
-        val balance = s.editingPlanBalanceCents.coerceAtLeast(0)
-        val remainingAmount = (targetPacingCents - balance).coerceAtLeast(0)
+        val cashCents = editingCashCentsForRecalc(s)
+        val remainingAmount = (targetPacingCents - cashCents).coerceAtLeast(0)
         val recommended = if (remainingAmount == 0) {
             0
         } else {

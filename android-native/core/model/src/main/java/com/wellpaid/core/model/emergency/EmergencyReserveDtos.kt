@@ -32,6 +32,7 @@ data class EmergencyReservePlanDto(
     @SerialName("monthly_target_cents") val monthlyTargetCents: Int,
     @SerialName("target_cents") val targetCents: Int? = null,
     @SerialName("balance_cents") val balanceCents: Int,
+    @SerialName("opening_balance_cents") val openingBalanceCents: Int = 0,
     @SerialName("tracking_start") val trackingStart: String,
     @SerialName("target_end_date") val targetEndDate: String? = null,
     @SerialName("plan_duration_months") val planDurationMonths: Int? = null,
@@ -54,6 +55,7 @@ data class EmergencyReservePlanCreateDto(
     @SerialName("tracking_start") val trackingStart: String? = null,
     @SerialName("target_end_date") val targetEndDate: String? = null,
     @SerialName("plan_duration_months") val planDurationMonths: Int? = null,
+    @SerialName("opening_balance_cents") val openingBalanceCents: Int? = null,
 )
 
 @Serializable
@@ -65,6 +67,7 @@ data class EmergencyReservePlanUpdateDto(
     @SerialName("tracking_start") val trackingStart: String? = null,
     @SerialName("target_end_date") val targetEndDate: String? = null,
     @SerialName("plan_duration_months") val planDurationMonths: Int? = null,
+    @SerialName("opening_balance_cents") val openingBalanceCents: Int? = null,
 )
 
 @Serializable
