@@ -62,6 +62,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wellpaid.R
 import com.wellpaid.core.model.goal.GoalProductHitDto
 import com.wellpaid.ui.components.ProductPriceHitCard
+import com.wellpaid.ui.components.WellPaidMoneyDigitKeypadField
 import com.wellpaid.ui.theme.WellPaidCream
 import com.wellpaid.ui.theme.WellPaidCreamMuted
 import com.wellpaid.ui.theme.WellPaidGold
@@ -197,26 +198,24 @@ fun GoalFormScreen(
             )
             Spacer(Modifier.height(12.dp))
 
-            OutlinedTextField(
-                value = state.targetText,
-                onValueChange = { viewModel.setTargetText(it) },
+            WellPaidMoneyDigitKeypadField(
+                valueText = state.targetText,
+                onValueTextChange = { viewModel.setTargetText(it) },
                 label = { Text(stringResource(R.string.goal_field_target)) },
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                supportingText = { Text(stringResource(R.string.expense_field_amount_hint)) },
-                shape = RoundedCornerShape(14.dp),
+                enabled = !state.isSaving,
+                placeholder = stringResource(R.string.expense_field_amount_hint),
             )
 
             if (!viewModel.isEditMode) {
                 Spacer(Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = state.initialText,
-                    onValueChange = { viewModel.setInitialText(it) },
+                WellPaidMoneyDigitKeypadField(
+                    valueText = state.initialText,
+                    onValueTextChange = { viewModel.setInitialText(it) },
                     label = { Text(stringResource(R.string.goal_field_initial)) },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    supportingText = { Text(stringResource(R.string.goal_field_initial_hint)) },
-                    shape = RoundedCornerShape(14.dp),
+                    enabled = !state.isSaving,
+                    placeholder = stringResource(R.string.goal_field_initial_hint),
                 )
             }
 

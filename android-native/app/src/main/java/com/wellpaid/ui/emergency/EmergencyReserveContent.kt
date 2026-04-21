@@ -449,6 +449,50 @@ fun EmergencyReserveContent(
                     }
                 }
             }
+            if (r == null && !state.isLoading) {
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = stringResource(R.string.emergency_not_configured_hint),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                if (!state.canEditReserve) {
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        text = stringResource(R.string.emergency_readonly_not_owner),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.tertiary,
+                    )
+                } else {
+                    Spacer(Modifier.height(16.dp))
+                    WellPaidMoneyDigitKeypadField(
+                        valueText = state.monthlyTargetText,
+                        onValueTextChange = { viewModel.setMonthlyTargetText(it) },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !state.isSaving,
+                        label = { Text(stringResource(R.string.emergency_monthly_target_field)) },
+                        placeholder = stringResource(R.string.emergency_monthly_placeholder),
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Button(
+                        onClick = { viewModel.saveMonthlyTarget() },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !state.isSaving,
+                        shape = RoundedCornerShape(24.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = WellPaidGold,
+                            contentColor = WellPaidNavy,
+                        ),
+                    ) {
+                        Text(
+                            text = if (state.isSaving) stringResource(R.string.emergency_saving)
+                            else stringResource(R.string.emergency_save_meta),
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                }
+            }
         }
     }
 
