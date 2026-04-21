@@ -9,6 +9,7 @@ import com.wellpaid.core.model.emergency.EmergencyReserveAccrualDto
 import com.wellpaid.core.model.emergency.EmergencyReserveDto
 import com.wellpaid.core.model.emergency.EmergencyReservePlanCreateDto
 import com.wellpaid.core.model.emergency.EmergencyReservePlanDto
+import com.wellpaid.core.model.emergency.EmergencyReservePlanUpdateDto
 import com.wellpaid.core.model.emergency.EmergencyReserveUpdateDto
 import com.wellpaid.core.network.EmergencyReserveApi
 import com.wellpaid.data.FamilyMeRepository
@@ -41,6 +42,14 @@ data class EmergencyReserveUiState(
     val monthlyTargetText: String = "",
     val newPlanTitleText: String = "",
     val newPlanMonthlyText: String = "",
+    val newPlanDurationMonthsText: String = "",
+    val editingPlanId: String? = null,
+    val editingPlanTitleText: String = "",
+    val editingPlanMonthlyText: String = "",
+    val editingPlanDurationMonthsText: String = "",
+    val isUpdatingPlan: Boolean = false,
+    val deletingPlanId: String? = null,
+    val showDeletePlanConfirm: Boolean = false,
     val errorMessage: String? = null,
     /** Só o titular da família altera a meta quando existe agregado. */
     val canEditReserve: Boolean = true,
@@ -119,6 +128,54 @@ class EmergencyReserveViewModel @Inject constructor(
         _uiState.update { it.copy(newPlanMonthlyText = value) }
     }
 
+    fun setNewPlanDurationMonthsText(value: String) {
+        _uiState.update { it.copy(newPlanDurationMonthsText = value.filter { c -> c.isDigit() }.take(3)) }
+    }
+
+    fun startEditingPlan(plan: EmergencyReservePlanDto) {
+        _uiState.update {
+            it.copy(
+                editingPlanId = plan.id,
+                editingPlanTitleText = plan.title,
+                editingPlanMonthlyText = centsToBrlInput(plan.monthlyTargetCents),
+                editingPlanDurationMonthsText = plan.planDurationMonths?.toString().orEmpty(),
+                errorMessage = null,
+            )
+        }
+    }
+
+    fun cancelEditingPlan() {
+        _uiState.update {
+            it.copy(
+                editingPlanId = null,
+                editingPlanTitleText = "",
+                editingPlanMonthlyText = "",
+                editingPlanDurationMonthsText = "",
+                isUpdatingPlan = false,
+            )
+        }
+    }
+
+    fun setEditingPlanTitleText(value: String) {
+        _uiState.update { it.copy(editingPlanTitleText = value) }
+    }
+
+    fun setEditingPlanMonthlyText(value: String) {
+        _uiState.update { it.copy(editingPlanMonthlyText = value) }
+    }
+
+    fun setEditingPlanDurationMonthsText(value: String) {
+        _uiState.update { it.copy(editingPlanDurationMonthsText = value.filter { c -> c.isDigit() }.take(3)) }
+    }
+
+    fun requestDeletePlan(planId: String) {
+        _uiState.update { it.copy(showDeletePlanConfirm = true, deletingPlanId = planId) }
+    }
+
+    fun dismissDeletePlan() {
+        _uiState.update { it.copy(showDeletePlanConfirm = false, deletingPlanId = null) }
+    }
+
     fun createNamedPlan() {
         val s = _uiState.value
         if (!s.canEditReserve) {
@@ -143,6 +200,14 @@ class EmergencyReserveViewModel @Inject constructor(
             return
         }
 
+        val durationMonths = s.newPlanDurationMonthsText.toIntOrNull()
+        if (s.newPlanDurationMonthsText.isNotBlank() && durationMonths == null) {
+            _uiState.update {
+                it.copy(errorMessage = appContext.getString(R.string.emergency_error_plan_duration))
+            }
+            return
+        }
+
         viewModelScope.launch {
             _uiState.update { it.copy(isCreatingPlan = true, errorMessage = null) }
             runCatching {
@@ -150,6 +215,7 @@ class EmergencyReserveViewModel @Inject constructor(
                     EmergencyReservePlanCreateDto(
                         title = title,
                         monthlyTargetCents = cents,
+                        planDurationMonths = durationMonths,
                     ),
                 )
             }
@@ -159,6 +225,7 @@ class EmergencyReserveViewModel @Inject constructor(
                             isCreatingPlan = false,
                             newPlanTitleText = "",
                             newPlanMonthlyText = "",
+                            newPlanDurationMonthsText = "",
                             errorMessage = null,
                         )
                     }
@@ -168,6 +235,99 @@ class EmergencyReserveViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isCreatingPlan = false,
+                            errorMessage = FastApiErrorMapper.message(appContext, t),
+                        )
+                    }
+                }
+        }
+    }
+
+    fun saveEditingPlan() {
+        val s = _uiState.value
+        if (!s.canEditReserve) {
+            _uiState.update {
+                it.copy(errorMessage = appContext.getString(R.string.emergency_readonly_not_owner))
+            }
+            return
+        }
+        val planId = s.editingPlanId ?: return
+        val title = s.editingPlanTitleText.trim()
+        if (title.isEmpty()) {
+            _uiState.update {
+                it.copy(errorMessage = appContext.getString(R.string.emergency_error_plan_name))
+            }
+            return
+        }
+        val cents = parseBrlToCents(s.editingPlanMonthlyText)?.takeIf { it > 0 }
+        if (cents == null) {
+            _uiState.update {
+                it.copy(errorMessage = appContext.getString(R.string.emergency_error_target))
+            }
+            return
+        }
+        val durationMonths = s.editingPlanDurationMonthsText.toIntOrNull()
+        if (s.editingPlanDurationMonthsText.isNotBlank() && durationMonths == null) {
+            _uiState.update {
+                it.copy(errorMessage = appContext.getString(R.string.emergency_error_plan_duration))
+            }
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isUpdatingPlan = true, errorMessage = null) }
+            runCatching {
+                api.updatePlan(
+                    planId,
+                    EmergencyReservePlanUpdateDto(
+                        title = title,
+                        monthlyTargetCents = cents,
+                        planDurationMonths = durationMonths,
+                    ),
+                )
+            }.onSuccess {
+                cancelEditingPlan()
+                refresh()
+            }.onFailure { t ->
+                _uiState.update {
+                    it.copy(
+                        isUpdatingPlan = false,
+                        errorMessage = FastApiErrorMapper.message(appContext, t),
+                    )
+                }
+            }
+        }
+    }
+
+    fun deletePlanConfirmed() {
+        val s = _uiState.value
+        if (!s.canEditReserve) {
+            _uiState.update {
+                it.copy(errorMessage = appContext.getString(R.string.emergency_readonly_not_owner))
+            }
+            return
+        }
+        val planId = s.deletingPlanId ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isUpdatingPlan = true, errorMessage = null) }
+            runCatching {
+                val resp = api.deletePlan(planId)
+                if (!resp.isSuccessful) error("HTTP ${resp.code()}")
+            }
+                .onSuccess {
+                    _uiState.update {
+                        it.copy(
+                            isUpdatingPlan = false,
+                            showDeletePlanConfirm = false,
+                            deletingPlanId = null,
+                        )
+                    }
+                    if (_uiState.value.editingPlanId == planId) cancelEditingPlan()
+                    refresh()
+                }
+                .onFailure { t ->
+                    _uiState.update {
+                        it.copy(
+                            isUpdatingPlan = false,
                             errorMessage = FastApiErrorMapper.message(appContext, t),
                         )
                     }

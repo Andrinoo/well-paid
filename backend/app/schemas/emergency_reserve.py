@@ -53,6 +53,13 @@ class EmergencyReservePlanCreate(BaseModel):
     plan_duration_months: int | None = Field(default=None, ge=1, le=600)
 
 
+class EmergencyReservePlanUpdate(BaseModel):
+    title: str = Field(default="", max_length=200)
+    monthly_target_cents: int = Field(ge=0)
+    tracking_start: date_type | None = None
+    plan_duration_months: int | None = Field(default=None, ge=1, le=600)
+
+
 class EmergencyReserveMonthRow(BaseModel):
     year: int
     month: int

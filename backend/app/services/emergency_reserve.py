@@ -430,6 +430,46 @@ def create_plan(
     return p
 
 
+def update_plan_for_user(
+    db: Session,
+    user_id: uuid.UUID,
+    plan_id: uuid.UUID,
+    *,
+    title: str,
+    monthly_target_cents: int,
+    tracking_start: date | None = None,
+    plan_duration_months: int | None = None,
+) -> EmergencyReservePlan | None:
+    plan = get_plan_for_user(db, user_id, plan_id)
+    if plan is None:
+        return None
+    if plan.status != "active":
+        raise ValueError("plan_not_active")
+    plan.title = title.strip()[:200]
+    plan.monthly_target_cents = int(monthly_target_cents)
+    if tracking_start is not None:
+        plan.tracking_start = first_of_month(tracking_start)
+    plan.plan_duration_months = plan_duration_months
+    db.commit()
+    db.refresh(plan)
+    ensure_accruals(db, plan, date.today())
+    db.refresh(plan)
+    return plan
+
+
+def delete_plan_for_user(
+    db: Session,
+    user_id: uuid.UUID,
+    plan_id: uuid.UUID,
+) -> bool:
+    plan = get_plan_for_user(db, user_id, plan_id)
+    if plan is None:
+        return False
+    db.delete(plan)
+    db.commit()
+    return True
+
+
 def complete_plan_transfer(
     db: Session,
     user_id: uuid.UUID,

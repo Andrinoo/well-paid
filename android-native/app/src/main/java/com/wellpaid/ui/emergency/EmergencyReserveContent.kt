@@ -24,8 +24,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -39,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wellpaid.R
+import com.wellpaid.ui.components.WellPaidMoneyDigitKeypadField
 import com.wellpaid.ui.theme.WellPaidGold
 import com.wellpaid.ui.theme.WellPaidMaxContentWidth
 import com.wellpaid.ui.theme.WellPaidNavy
@@ -223,6 +226,38 @@ fun EmergencyReserveContent(
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
+                            if (state.canEditReserve && plan.status == "active") {
+                                Spacer(Modifier.height(8.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    Button(
+                                        onClick = { viewModel.startEditingPlan(plan) },
+                                        modifier = Modifier.weight(1f),
+                                        enabled = !state.isUpdatingPlan && !state.isSaving,
+                                        shape = RoundedCornerShape(20.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = WellPaidNavy,
+                                            contentColor = Color.White,
+                                        ),
+                                    ) {
+                                        Text(stringResource(R.string.emergency_plan_edit))
+                                    }
+                                    Button(
+                                        onClick = { viewModel.requestDeletePlan(plan.id) },
+                                        modifier = Modifier.weight(1f),
+                                        enabled = !state.isUpdatingPlan && !state.isSaving,
+                                        shape = RoundedCornerShape(20.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                                            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                                        ),
+                                    ) {
+                                        Text(stringResource(R.string.emergency_plan_delete))
+                                    }
+                                }
+                            }
                         }
                         Spacer(Modifier.height(8.dp))
                     }
@@ -238,14 +273,13 @@ fun EmergencyReserveContent(
                 }
 
                 Spacer(Modifier.height(16.dp))
-                OutlinedTextField(
-                    value = state.monthlyTargetText,
-                    onValueChange = { viewModel.setMonthlyTargetText(it) },
-                    placeholder = { Text(stringResource(R.string.emergency_monthly_placeholder)) },
+                WellPaidMoneyDigitKeypadField(
+                    valueText = state.monthlyTargetText,
+                    onValueTextChange = { viewModel.setMonthlyTargetText(it) },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
                     enabled = state.canEditReserve && !state.isSaving,
-                    shape = RoundedCornerShape(16.dp),
+                    label = { Text(stringResource(R.string.emergency_monthly_target_field)) },
+                    placeholder = stringResource(R.string.emergency_monthly_placeholder),
                 )
 
                 Spacer(Modifier.height(12.dp))
@@ -312,13 +346,26 @@ fun EmergencyReserveContent(
                         shape = RoundedCornerShape(16.dp),
                     )
                     Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = state.newPlanMonthlyText,
-                        onValueChange = { viewModel.setNewPlanMonthlyText(it) },
+                    WellPaidMoneyDigitKeypadField(
+                        valueText = state.newPlanMonthlyText,
+                        onValueTextChange = { viewModel.setNewPlanMonthlyText(it) },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !state.isCreatingPlan && !state.isSaving,
                         label = { Text(stringResource(R.string.emergency_new_plan_monthly_label)) },
-                        supportingText = {
-                            Text(stringResource(R.string.emergency_new_plan_monthly_footnote))
-                        },
+                        placeholder = stringResource(R.string.emergency_monthly_placeholder),
+                    )
+                    Text(
+                        text = stringResource(R.string.emergency_new_plan_monthly_footnote),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = state.newPlanDurationMonthsText,
+                        onValueChange = { viewModel.setNewPlanDurationMonthsText(it) },
+                        label = { Text(stringResource(R.string.emergency_new_plan_duration_label)) },
+                        supportingText = { Text(stringResource(R.string.emergency_new_plan_duration_footnote)) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         enabled = !state.isCreatingPlan && !state.isSaving,
@@ -403,5 +450,83 @@ fun EmergencyReserveContent(
                 }
             }
         }
+    }
+
+    if (state.editingPlanId != null) {
+        AlertDialog(
+            onDismissRequest = { viewModel.cancelEditingPlan() },
+            title = { Text(stringResource(R.string.emergency_plan_edit_title)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = state.editingPlanTitleText,
+                        onValueChange = { viewModel.setEditingPlanTitleText(it) },
+                        label = { Text(stringResource(R.string.emergency_new_plan_name_label)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        enabled = !state.isUpdatingPlan,
+                        shape = RoundedCornerShape(14.dp),
+                    )
+                    WellPaidMoneyDigitKeypadField(
+                        valueText = state.editingPlanMonthlyText,
+                        onValueTextChange = { viewModel.setEditingPlanMonthlyText(it) },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !state.isUpdatingPlan,
+                        label = { Text(stringResource(R.string.emergency_new_plan_monthly_label)) },
+                        placeholder = stringResource(R.string.emergency_monthly_placeholder),
+                    )
+                    OutlinedTextField(
+                        value = state.editingPlanDurationMonthsText,
+                        onValueChange = { viewModel.setEditingPlanDurationMonthsText(it) },
+                        label = { Text(stringResource(R.string.emergency_new_plan_duration_label)) },
+                        supportingText = { Text(stringResource(R.string.emergency_new_plan_duration_footnote)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        enabled = !state.isUpdatingPlan,
+                        shape = RoundedCornerShape(14.dp),
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { viewModel.saveEditingPlan() },
+                    enabled = !state.isUpdatingPlan,
+                ) {
+                    Text(stringResource(R.string.emergency_plan_save))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { viewModel.cancelEditingPlan() },
+                    enabled = !state.isUpdatingPlan,
+                ) {
+                    Text(stringResource(R.string.common_cancel))
+                }
+            },
+        )
+    }
+
+    if (state.showDeletePlanConfirm) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissDeletePlan() },
+            title = { Text(stringResource(R.string.emergency_plan_delete_title)) },
+            text = { Text(stringResource(R.string.emergency_plan_delete_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = { viewModel.deletePlanConfirmed() },
+                    enabled = !state.isUpdatingPlan,
+                ) {
+                    Text(stringResource(R.string.emergency_plan_delete_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { viewModel.dismissDeletePlan() },
+                    enabled = !state.isUpdatingPlan,
+                ) {
+                    Text(stringResource(R.string.common_cancel))
+                }
+            },
+        )
     }
 }

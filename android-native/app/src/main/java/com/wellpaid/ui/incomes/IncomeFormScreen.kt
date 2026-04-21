@@ -46,6 +46,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wellpaid.R
 import com.wellpaid.ui.components.WellPaidDatePickerField
+import com.wellpaid.ui.components.WellPaidMoneyDigitKeypadField
 import com.wellpaid.ui.theme.WellPaidCreamMuted
 import com.wellpaid.ui.theme.WellPaidGold
 import com.wellpaid.ui.theme.WellPaidNavy
@@ -149,15 +150,13 @@ fun IncomeFormScreen(
             )
             Spacer(Modifier.height(12.dp))
 
-            OutlinedTextField(
-                value = state.amountText,
-                onValueChange = { if (canEdit) viewModel.setAmountText(it) },
-                label = { Text(stringResource(R.string.income_field_amount)) },
+            WellPaidMoneyDigitKeypadField(
+                valueText = state.amountText,
+                onValueTextChange = { if (canEdit) viewModel.setAmountText(it) },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = canEdit,
-                singleLine = true,
-                supportingText = { Text(stringResource(R.string.expense_field_amount_hint)) },
-                shape = RoundedCornerShape(14.dp),
+                label = { Text(stringResource(R.string.income_field_amount)) },
+                placeholder = stringResource(R.string.expense_field_amount_hint),
             )
             Spacer(Modifier.height(12.dp))
 

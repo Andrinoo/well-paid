@@ -6,8 +6,11 @@ import com.wellpaid.core.model.emergency.EmergencyReserveDto
 import com.wellpaid.core.model.emergency.EmergencyReserveMonthRowDto
 import com.wellpaid.core.model.emergency.EmergencyReservePlanCreateDto
 import com.wellpaid.core.model.emergency.EmergencyReservePlanDto
+import com.wellpaid.core.model.emergency.EmergencyReservePlanUpdateDto
 import com.wellpaid.core.model.emergency.EmergencyReserveUpdateDto
+import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.PUT
@@ -31,6 +34,15 @@ interface EmergencyReserveApi {
 
     @POST("emergency-reserve/plans")
     suspend fun createPlan(@Body body: EmergencyReservePlanCreateDto): EmergencyReservePlanDto
+
+    @PUT("emergency-reserve/plans/{planId}")
+    suspend fun updatePlan(
+        @Path("planId") planId: String,
+        @Body body: EmergencyReservePlanUpdateDto,
+    ): EmergencyReservePlanDto
+
+    @DELETE("emergency-reserve/plans/{planId}")
+    suspend fun deletePlan(@Path("planId") planId: String): Response<Unit>
 
     @GET("emergency-reserve/plans/{planId}/months")
     suspend fun listPlanMonths(@Path("planId") planId: String): List<EmergencyReserveMonthRowDto>

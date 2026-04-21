@@ -598,4 +598,14 @@
     <string name="emergency_plan_creating">A criar…</string>
     <string name="emergency_error_plan_name">Indique um nome para o plano.</string>
     <string name="emergency_new_plan_monthly_footnote">Deixe vazio para usar o valor mensal acima.</string>
+    <string name="emergency_new_plan_duration_label">Período de validade (meses)</string>
+    <string name="emergency_new_plan_duration_footnote">Opcional. Deixe vazio para plano sem prazo fixo.</string>
+    <string name="emergency_error_plan_duration">Indique uma duração válida em meses.</string>
+    <string name="emergency_plan_edit">Editar</string>
+    <string name="emergency_plan_delete">Excluir</string>
+    <string name="emergency_plan_edit_title">Editar plano de reserva</string>
+    <string name="emergency_plan_save">Salvar plano</string>
+    <string name="emergency_plan_delete_title">Excluir plano de reserva</string>
+    <string name="emergency_plan_delete_message">Deseja excluir este plano de reserva permanentemente?</string>
+    <string name="emergency_plan_delete_confirm">Excluir</string>
 </resources>

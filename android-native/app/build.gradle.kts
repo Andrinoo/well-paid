@@ -59,9 +59,9 @@ android {
         applicationId = "com.wellpaid"
         minSdk = 26
         targetSdk = 35
-        // Alinha com a revisão Alembic em `head` (ex.: 029 → 0.1.28). Atualizar ao adicionar migrações.
-        versionCode = 28
-        versionName = "0.1.28"
+        // Alinha com a revisão Alembic em `head` (ex.: 030 → 0.1.29). Atualizar ao adicionar migrações.
+        versionCode = 29
+        versionName = "0.1.29"
         val revisionPrefix =
             (project.findProperty("wellpaid.revision.code") as String?)?.trim()?.takeIf { it.isNotEmpty() }
                 ?: "AN_CA_RBCCA"

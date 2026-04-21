@@ -598,4 +598,14 @@
     <string name="emergency_plan_creating">Creating…</string>
     <string name="emergency_error_plan_name">Enter a name for the plan.</string>
     <string name="emergency_new_plan_monthly_footnote">Leave empty to use the monthly amount above.</string>
+    <string name="emergency_new_plan_duration_label">Validity period (months)</string>
+    <string name="emergency_new_plan_duration_footnote">Optional. Leave empty for an open-ended plan.</string>
+    <string name="emergency_error_plan_duration">Enter a valid duration in months.</string>
+    <string name="emergency_plan_edit">Edit</string>
+    <string name="emergency_plan_delete">Delete</string>
+    <string name="emergency_plan_edit_title">Edit reserve plan</string>
+    <string name="emergency_plan_save">Save plan</string>
+    <string name="emergency_plan_delete_title">Delete reserve plan</string>
+    <string name="emergency_plan_delete_message">Do you want to permanently delete this reserve plan?</string>
+    <string name="emergency_plan_delete_confirm">Delete</string>
 </resources>

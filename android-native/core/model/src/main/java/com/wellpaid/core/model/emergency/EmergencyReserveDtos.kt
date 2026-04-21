@@ -45,6 +45,14 @@ data class EmergencyReservePlanCreateDto(
 )
 
 @Serializable
+data class EmergencyReservePlanUpdateDto(
+    val title: String = "",
+    @SerialName("monthly_target_cents") val monthlyTargetCents: Int,
+    @SerialName("tracking_start") val trackingStart: String? = null,
+    @SerialName("plan_duration_months") val planDurationMonths: Int? = null,
+)
+
+@Serializable
 data class EmergencyReserveMonthRowDto(
     val year: Int,
     val month: Int,

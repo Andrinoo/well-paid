@@ -20,12 +20,14 @@ from app.schemas.emergency_reserve import (
     EmergencyReserveMonthRow,
     EmergencyReservePlanCreate,
     EmergencyReservePlanItem,
+    EmergencyReservePlanUpdate,
     EmergencyReserveResponse,
     EmergencyReserveUpdate,
 )
 from app.services.emergency_reserve import (
     complete_plan_transfer,
     create_plan,
+    delete_plan_for_user,
     delete_accrual_for_user,
     delete_reserve_for_user,
     ensure_accruals,
@@ -35,6 +37,7 @@ from app.services.emergency_reserve import (
     list_plans_for_user,
     month_breakdown_for_plan,
     patch_accrual_for_user,
+    update_plan_for_user,
     upsert_monthly_target,
 )
 
@@ -108,6 +111,56 @@ def create_reserve_plan(
         status=p.status,
         completed_at=p.completed_at.date() if p.completed_at else None,
     )
+
+
+@router.put("/plans/{plan_id}", response_model=EmergencyReservePlanItem)
+def update_reserve_plan(
+    plan_id: UUID,
+    body: EmergencyReservePlanUpdate,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> EmergencyReservePlanItem:
+    if not _tables_ready(db):
+        raise _reserve_unavailable()
+    _require_owner_if_family_scope(db, user.id)
+    try:
+        p = update_plan_for_user(
+            db,
+            user.id,
+            plan_id,
+            title=body.title,
+            monthly_target_cents=body.monthly_target_cents,
+            tracking_start=body.tracking_start,
+            plan_duration_months=body.plan_duration_months,
+        )
+    except ValueError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+    if p is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Plano não encontrado")
+    return EmergencyReservePlanItem(
+        id=p.id,
+        title=p.title or "",
+        monthly_target_cents=int(p.monthly_target_cents),
+        balance_cents=int(p.balance_cents),
+        tracking_start=p.tracking_start,
+        plan_duration_months=p.plan_duration_months,
+        status=p.status,
+        completed_at=p.completed_at.date() if p.completed_at else None,
+    )
+
+
+@router.delete("/plans/{plan_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_reserve_plan(
+    plan_id: UUID,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> Response:
+    if not _tables_ready(db):
+        raise _reserve_unavailable()
+    _require_owner_if_family_scope(db, user.id)
+    if not delete_plan_for_user(db, user.id, plan_id):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Plano não encontrado")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/plans/{plan_id}/months", response_model=list[EmergencyReserveMonthRow])
