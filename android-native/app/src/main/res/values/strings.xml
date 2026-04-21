@@ -714,4 +714,19 @@
     <string name="emergency_hero_subline">%1$s · %2$s · 1st year: %3$d%%</string>
     <string name="emergency_hero_plans_count_short">%1$d plans</string>
     <string name="emergency_plan_one_line">%1$s · %2$s · %3$s</string>
+    <string name="emergency_tracking_start_date_label">Start date (YYYY-MM-DD)</string>
+    <string name="emergency_target_end_date_label">Target/end date (YYYY-MM-DD)</string>
+    <string name="emergency_monthly_suggestion">Monthly suggestion: %1$s</string>
+    <string name="emergency_selected_plan_contribution_label">This month contribution on selected plan (BRL)</string>
+    <string name="emergency_selected_plan_fallback">Untitled plan</string>
+    <string name="emergency_selected_plan_title">Selected plan for contribution: %1$s</string>
+    <string name="emergency_register_selected_contribution">Record contribution on selected plan</string>
+    <string name="emergency_register_contribution_short">Record contribution</string>
+    <string name="emergency_pace_below">Below average</string>
+    <string name="emergency_pace_above">Above average</string>
+    <string name="emergency_pace_on_track">On track</string>
+    <string name="emergency_pace_unknown">No data</string>
+    <string name="emergency_pace_delta_line">%1$s · Delta: %2$s</string>
+    <string name="emergency_select_plan">Select</string>
+    <string name="emergency_selected_plan">Selected</string>
 </resources>

@@ -17,6 +17,9 @@ from app.schemas.emergency_reserve import (
     EmergencyReserveAccrualItem,
     EmergencyReserveAccrualPatch,
     EmergencyReserveCompleteBody,
+    EmergencyReserveContributionCreate,
+    EmergencyReserveContributionItem,
+    EmergencyReserveContributionResponse,
     EmergencyReserveMonthRow,
     EmergencyReservePlanCreate,
     EmergencyReservePlanItem,
@@ -26,6 +29,7 @@ from app.schemas.emergency_reserve import (
 )
 from app.services.emergency_reserve import (
     complete_plan_transfer,
+    create_contribution,
     create_plan,
     delete_plan_for_user,
     delete_accrual_for_user,
@@ -36,6 +40,7 @@ from app.services.emergency_reserve import (
     list_accruals_for_user,
     list_plans_for_user,
     month_breakdown_for_plan,
+    plan_timeline_metrics,
     patch_accrual_for_user,
     update_plan_for_user,
     upsert_monthly_target,
@@ -81,20 +86,32 @@ def list_reserve_plans(
         return []
     rows = list_plans_for_user(db, user.id, active_only=False)
     return [
-        EmergencyReservePlanItem(
-            id=r.id,
-            title=r.title or "",
-            details=r.details,
-            monthly_target_cents=int(r.monthly_target_cents),
-            target_cents=int(r.target_cents) if r.target_cents is not None else None,
-            balance_cents=int(r.balance_cents),
-            tracking_start=r.tracking_start,
-            plan_duration_months=r.plan_duration_months,
-            status=r.status,
-            completed_at=r.completed_at.date() if r.completed_at else None,
-        )
+        _to_plan_item(r)
         for r in rows
     ]
+
+
+def _to_plan_item(r) -> EmergencyReservePlanItem:
+    metrics = plan_timeline_metrics(r)
+    return EmergencyReservePlanItem(
+        id=r.id,
+        title=r.title or "",
+        details=r.details,
+        monthly_target_cents=int(r.monthly_target_cents),
+        target_cents=int(r.target_cents) if r.target_cents is not None else None,
+        balance_cents=int(r.balance_cents),
+        tracking_start=r.tracking_start,
+        target_end_date=r.target_end_date,
+        plan_duration_months=r.plan_duration_months,
+        months_total=metrics["months_total"],
+        months_passed=metrics["months_passed"],
+        months_remaining=metrics["months_remaining"],
+        monthly_needed_cents=metrics["monthly_needed_cents"],
+        pace_status=metrics["pace_status"],
+        pace_delta_cents=metrics["pace_delta_cents"],
+        status=r.status,
+        completed_at=r.completed_at.date() if r.completed_at else None,
+    )
 
 
 @router.post("/plans", response_model=EmergencyReservePlanItem, status_code=status.HTTP_201_CREATED)
@@ -114,19 +131,51 @@ def create_reserve_plan(
         monthly_target_cents=body.monthly_target_cents,
         target_cents=body.target_cents,
         tracking_start=body.tracking_start,
+        target_end_date=body.target_end_date,
         plan_duration_months=body.plan_duration_months,
     )
-    return EmergencyReservePlanItem(
-        id=p.id,
-        title=p.title or "",
-        details=p.details,
-        monthly_target_cents=int(p.monthly_target_cents),
-        target_cents=int(p.target_cents) if p.target_cents is not None else None,
-        balance_cents=int(p.balance_cents),
-        tracking_start=p.tracking_start,
-        plan_duration_months=p.plan_duration_months,
-        status=p.status,
-        completed_at=p.completed_at.date() if p.completed_at else None,
+    return _to_plan_item(p)
+
+
+@router.post("/contributions", response_model=EmergencyReserveContributionResponse, status_code=status.HTTP_201_CREATED)
+def create_manual_contribution(
+    body: EmergencyReserveContributionCreate,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> EmergencyReserveContributionResponse:
+    if not _tables_ready(db):
+        raise _reserve_unavailable()
+    _require_owner_if_family_scope(db, user.id)
+    total_alloc = sum(int(a.amount_cents) for a in body.allocations)
+    if total_alloc != int(body.total_amount_cents):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            detail="A soma das alocações deve ser igual ao total do aporte",
+        )
+    try:
+        c = create_contribution(
+            db,
+            user.id,
+            contribution_date=body.contribution_date,
+            total_amount_cents=body.total_amount_cents,
+            allocations=[{"plan_id": a.plan_id, "amount_cents": a.amount_cents} for a in body.allocations],
+            note=body.note,
+        )
+    except ValueError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+    return EmergencyReserveContributionResponse(
+        id=c.id,
+        contribution_date=c.contribution_date,
+        total_amount_cents=int(c.total_amount_cents),
+        note=c.note,
+        created_at=c.created_at.date() if c.created_at else None,
+        items=[
+            EmergencyReserveContributionItem(
+                plan_id=i.plan_id,
+                amount_cents=int(i.amount_cents),
+            )
+            for i in c.items
+        ],
     )
 
 
@@ -150,24 +199,14 @@ def update_reserve_plan(
             monthly_target_cents=body.monthly_target_cents,
             target_cents=body.target_cents,
             tracking_start=body.tracking_start,
+            target_end_date=body.target_end_date,
             plan_duration_months=body.plan_duration_months,
         )
     except ValueError as e:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
     if p is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Plano não encontrado")
-    return EmergencyReservePlanItem(
-        id=p.id,
-        title=p.title or "",
-        details=p.details,
-        monthly_target_cents=int(p.monthly_target_cents),
-        target_cents=int(p.target_cents) if p.target_cents is not None else None,
-        balance_cents=int(p.balance_cents),
-        tracking_start=p.tracking_start,
-        plan_duration_months=p.plan_duration_months,
-        status=p.status,
-        completed_at=p.completed_at.date() if p.completed_at else None,
-    )
+    return _to_plan_item(p)
 
 
 @router.delete("/plans/{plan_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -228,18 +267,7 @@ def complete_reserve_plan(
             )
     except ValueError as e:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
-    return EmergencyReservePlanItem(
-        id=p.id,
-        title=p.title or "",
-        details=p.details,
-        monthly_target_cents=int(p.monthly_target_cents),
-        target_cents=int(p.target_cents) if p.target_cents is not None else None,
-        balance_cents=int(p.balance_cents),
-        tracking_start=p.tracking_start,
-        plan_duration_months=p.plan_duration_months,
-        status=p.status,
-        completed_at=p.completed_at.date() if p.completed_at else None,
-    )
+    return _to_plan_item(p)
 
 
 @router.get("", response_model=EmergencyReserveResponse)

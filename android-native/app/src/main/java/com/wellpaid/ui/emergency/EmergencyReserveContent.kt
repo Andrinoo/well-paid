@@ -196,9 +196,12 @@ fun EmergencyReserveContent(
                     )
                     Spacer(Modifier.height(8.dp))
                     state.plans.forEach { plan ->
+                        val isSelected = state.selectedPlanId == plan.id
                         EmergencyReservePlanCompactCard(
                             plan = plan,
+                            isSelected = isSelected,
                             enabled = !state.isUpdatingPlan && !state.isSaving,
+                            onSelect = { viewModel.selectPlanForContribution(plan.id) },
                             onEdit = { viewModel.startEditingPlan(plan) },
                             onDelete = { viewModel.requestDeletePlan(plan.id) },
                         )
@@ -207,12 +210,24 @@ fun EmergencyReserveContent(
                 }
 
                 Spacer(Modifier.height(16.dp))
+                Text(
+                    text = stringResource(
+                        R.string.emergency_selected_plan_title,
+                        (
+                        state.plans.firstOrNull { it.id == state.selectedPlanId }?.title
+                            ?: stringResource(R.string.emergency_selected_plan_fallback)
+                        ),
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(8.dp))
                 WellPaidMoneyDigitKeypadField(
-                    valueText = state.monthlyTargetText,
-                    onValueTextChange = { viewModel.setMonthlyTargetText(it) },
+                    valueText = state.selectedPlanContributionText,
+                    onValueTextChange = { viewModel.setSelectedPlanContributionText(it) },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !state.isSaving,
-                    label = { Text(stringResource(R.string.emergency_monthly_target_field)) },
+                    label = { Text(stringResource(R.string.emergency_selected_plan_contribution_label)) },
                     placeholder = stringResource(R.string.emergency_monthly_placeholder),
                 )
 
@@ -242,7 +257,7 @@ fun EmergencyReserveContent(
 
                 Spacer(Modifier.height(16.dp))
                 Button(
-                    onClick = { viewModel.saveMonthlyTarget() },
+                    onClick = { viewModel.saveSelectedPlanContribution() },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !state.isSaving,
                     shape = RoundedCornerShape(24.dp),
@@ -255,7 +270,7 @@ fun EmergencyReserveContent(
                         text = if (state.isSaving) {
                             stringResource(R.string.emergency_saving)
                         } else {
-                            stringResource(R.string.emergency_save_meta)
+                            stringResource(R.string.emergency_register_selected_contribution)
                         },
                         fontWeight = FontWeight.SemiBold,
                     )
@@ -344,16 +359,16 @@ fun EmergencyReserveContent(
                 )
                 Spacer(Modifier.height(8.dp))
                 WellPaidMoneyDigitKeypadField(
-                    valueText = state.monthlyTargetText,
-                    onValueTextChange = { viewModel.setMonthlyTargetText(it) },
+                    valueText = state.selectedPlanContributionText,
+                    onValueTextChange = { viewModel.setSelectedPlanContributionText(it) },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !state.isSaving,
-                    label = { Text(stringResource(R.string.emergency_monthly_target_field)) },
+                    label = { Text(stringResource(R.string.emergency_selected_plan_contribution_label)) },
                     placeholder = stringResource(R.string.emergency_monthly_placeholder),
                 )
-                    Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(12.dp))
                 Button(
-                    onClick = { viewModel.saveMonthlyTarget() },
+                    onClick = { viewModel.saveSelectedPlanContribution() },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !state.isSaving,
                     shape = RoundedCornerShape(24.dp),
@@ -364,7 +379,7 @@ fun EmergencyReserveContent(
                 ) {
                     Text(
                         text = if (state.isSaving) stringResource(R.string.emergency_saving)
-                        else stringResource(R.string.emergency_save_meta),
+                        else stringResource(R.string.emergency_register_contribution_short),
                         fontWeight = FontWeight.SemiBold,
                     )
                 }
@@ -431,6 +446,24 @@ fun EmergencyReserveContent(
                         enabled = !state.isUpdatingPlan,
                         shape = RoundedCornerShape(14.dp),
                     )
+                    OutlinedTextField(
+                        value = state.editingPlanTrackingStartText,
+                        onValueChange = { viewModel.setEditingPlanTrackingStartText(it) },
+                        label = { Text(stringResource(R.string.emergency_tracking_start_date_label)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        enabled = !state.isUpdatingPlan,
+                        shape = RoundedCornerShape(14.dp),
+                    )
+                    OutlinedTextField(
+                        value = state.editingPlanTargetEndText,
+                        onValueChange = { viewModel.setEditingPlanTargetEndText(it) },
+                        label = { Text(stringResource(R.string.emergency_target_end_date_label)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        enabled = !state.isUpdatingPlan,
+                        shape = RoundedCornerShape(14.dp),
+                    )
                     WellPaidMoneyDigitKeypadField(
                         valueText = state.editingPlanMonthlyText,
                         onValueTextChange = { viewModel.setEditingPlanMonthlyText(it) },
@@ -447,6 +480,16 @@ fun EmergencyReserveContent(
                         label = { Text(stringResource(R.string.emergency_new_plan_target_label)) },
                         placeholder = stringResource(R.string.emergency_monthly_placeholder),
                     )
+                    state.editingPlanRecommendedMonthlyCents?.let { rec ->
+                        Text(
+                            text = stringResource(
+                                R.string.emergency_monthly_suggestion,
+                                formatBrlFromCents(rec),
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                     OutlinedTextField(
                         value = state.editingPlanDurationMonthsText,
                         onValueChange = { viewModel.setEditingPlanDurationMonthsText(it) },
@@ -571,7 +614,9 @@ private fun EmergencyReserveCompactHero(
 @Composable
 private fun EmergencyReservePlanCompactCard(
     plan: EmergencyReservePlanDto,
+    isSelected: Boolean,
     enabled: Boolean,
+    onSelect: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -597,6 +642,12 @@ private fun EmergencyReservePlanCompactCard(
             (estimateLine?.let { " · $it" } ?: "")
     } else {
         stringResource(R.string.emergency_plan_no_ceiling)
+    }
+    val paceLabel = when (plan.paceStatus) {
+        "below" -> stringResource(R.string.emergency_pace_below)
+        "above" -> stringResource(R.string.emergency_pace_above)
+        "on_track" -> stringResource(R.string.emergency_pace_on_track)
+        else -> stringResource(R.string.emergency_pace_unknown)
     }
 
     Column(
@@ -632,11 +683,42 @@ private fun EmergencyReservePlanCompactCard(
             color = WellPaidNavy,
             maxLines = 2,
         )
+        Spacer(Modifier.height(2.dp))
+        Text(
+            text = stringResource(
+                R.string.emergency_pace_delta_line,
+                paceLabel,
+                formatBrlFromCents(plan.paceDeltaCents),
+            ),
+            style = MaterialTheme.typography.labelSmall,
+            color = if (plan.paceStatus == "below") MaterialTheme.colorScheme.error else WellPaidNavy,
+            maxLines = 1,
+        )
         Spacer(Modifier.height(6.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
+            Button(
+                onClick = onSelect,
+                modifier = Modifier.weight(1f),
+                enabled = enabled,
+                shape = RoundedCornerShape(20.dp),
+                contentPadding = PaddingValues(vertical = 6.dp, horizontal = 8.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isSelected) WellPaidGold else MaterialTheme.colorScheme.surface,
+                    contentColor = WellPaidNavy,
+                ),
+            ) {
+                Text(
+                    if (isSelected) {
+                        stringResource(R.string.emergency_selected_plan)
+                    } else {
+                        stringResource(R.string.emergency_select_plan)
+                    },
+                    style = MaterialTheme.typography.labelLarge,
+                )
+            }
             Button(
                 onClick = onEdit,
                 modifier = Modifier.weight(1f),

@@ -123,6 +123,26 @@ fun EmergencyReservePlanFormScreen(
                 shape = RoundedCornerShape(16.dp),
             )
             Spacer(Modifier.height(8.dp))
+            OutlinedTextField(
+                value = state.newPlanTrackingStartText,
+                onValueChange = { viewModel.setNewPlanTrackingStartText(it) },
+                label = { Text(stringResource(R.string.emergency_tracking_start_date_label)) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                enabled = !state.isCreatingPlan && !state.isSaving,
+                shape = RoundedCornerShape(16.dp),
+            )
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(
+                value = state.newPlanTargetEndText,
+                onValueChange = { viewModel.setNewPlanTargetEndText(it) },
+                label = { Text(stringResource(R.string.emergency_target_end_date_label)) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                enabled = !state.isCreatingPlan && !state.isSaving,
+                shape = RoundedCornerShape(16.dp),
+            )
+            Spacer(Modifier.height(8.dp))
             WellPaidMoneyDigitKeypadField(
                 valueText = state.newPlanMonthlyText,
                 onValueTextChange = { viewModel.setNewPlanMonthlyText(it) },
@@ -146,6 +166,17 @@ fun EmergencyReservePlanFormScreen(
                 label = { Text(stringResource(R.string.emergency_new_plan_target_label)) },
                 placeholder = stringResource(R.string.emergency_monthly_placeholder),
             )
+            state.newPlanRecommendedMonthlyCents?.let { rec ->
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = stringResource(
+                        R.string.emergency_monthly_suggestion,
+                        com.wellpaid.util.formatBrlFromCents(rec),
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             Spacer(Modifier.height(8.dp))
             OutlinedTextField(
                 value = state.newPlanDurationMonthsText,

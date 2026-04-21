@@ -34,6 +34,7 @@ class EmergencyReservePlan(Base, TimestampMixin):
     target_cents: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     balance_cents: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
     tracking_start: Mapped[date] = mapped_column(Date, nullable=False)
+    target_end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     accrual_skip_months: Mapped[list[str]] = mapped_column(
         JSONB,
         nullable=False,
@@ -56,6 +57,11 @@ class EmergencyReservePlan(Base, TimestampMixin):
 
     accruals: Mapped[list["EmergencyReserveAccrual"]] = relationship(
         "EmergencyReserveAccrual",
+        back_populates="plan",
+        cascade="all, delete-orphan",
+    )
+    contribution_items: Mapped[list["EmergencyReserveContributionItem"]] = relationship(
+        "EmergencyReserveContributionItem",
         back_populates="plan",
         cascade="all, delete-orphan",
     )
@@ -92,4 +98,76 @@ class EmergencyReserveAccrual(Base):
 
     plan: Mapped["EmergencyReservePlan"] = relationship(
         "EmergencyReservePlan", back_populates="accruals"
+    )
+
+
+class EmergencyReserveContribution(Base, TimestampMixin):
+    """Lançamento de aporte manual (cabeçalho) para um ou mais planos."""
+
+    __tablename__ = "emergency_reserve_contributions"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    family_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("families.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    solo_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    contribution_date: Mapped[date] = mapped_column(Date, nullable=False)
+    total_amount_cents: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    note: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
+    items: Mapped[list["EmergencyReserveContributionItem"]] = relationship(
+        "EmergencyReserveContributionItem",
+        back_populates="contribution",
+        cascade="all, delete-orphan",
+    )
+
+
+class EmergencyReserveContributionItem(Base):
+    """Alocação de um aporte manual para um plano específico."""
+
+    __tablename__ = "emergency_reserve_contribution_items"
+    __table_args__ = (
+        UniqueConstraint(
+            "contribution_id",
+            "plan_id",
+            name="uq_emergency_reserve_contribution_items_contribution_plan",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    contribution_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("emergency_reserve_contributions.id", ondelete="CASCADE"),
+        index=True,
+    )
+    plan_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("emergency_reserve_plans.id", ondelete="CASCADE"),
+        index=True,
+    )
+    amount_cents: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
+
+    contribution: Mapped["EmergencyReserveContribution"] = relationship(
+        "EmergencyReserveContribution", back_populates="items"
+    )
+    plan: Mapped["EmergencyReservePlan"] = relationship(
+        "EmergencyReservePlan", back_populates="contribution_items"
     )

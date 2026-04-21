@@ -4,13 +4,19 @@ from __future__ import annotations
 
 import uuid
 from datetime import date, datetime, timezone
+from math import ceil
 from typing import TYPE_CHECKING
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.schema_introspection import session_has_table
-from app.models.emergency_reserve import EmergencyReserveAccrual, EmergencyReservePlan
+from app.models.emergency_reserve import (
+    EmergencyReserveAccrual,
+    EmergencyReserveContribution,
+    EmergencyReserveContributionItem,
+    EmergencyReservePlan,
+)
 from app.models.family import FamilyMember
 from app.models.goal import Goal
 from app.models.goal_contribution import GoalContribution
@@ -59,6 +65,57 @@ def last_included_month_first(tracking_start: date, plan_duration_months: int | 
         return None
     start = first_of_month(tracking_start)
     return add_months(start, plan_duration_months - 1)
+
+
+def months_between_inclusive(start: date, end: date) -> int:
+    if end < start:
+        return 0
+    return (end.year - start.year) * 12 + (end.month - start.month) + 1
+
+
+def pace_status_from_delta(delta_cents: int, tolerance_cents: int = 100) -> str:
+    if delta_cents > tolerance_cents:
+        return "above"
+    if delta_cents < -tolerance_cents:
+        return "below"
+    return "on_track"
+
+
+def plan_timeline_metrics(
+    plan: EmergencyReservePlan,
+    *,
+    today: date | None = None,
+) -> dict:
+    d = today or date.today()
+    start = first_of_month(plan.tracking_start)
+    end_target = first_of_month(plan.target_end_date) if plan.target_end_date else None
+
+    if end_target is not None:
+        months_total = months_between_inclusive(start, end_target)
+        months_passed = months_between_inclusive(start, min(first_of_month(d), end_target))
+        months_remaining = max(0, months_total - months_passed)
+    else:
+        months_total = None
+        months_passed = max(0, months_between_inclusive(start, first_of_month(d)))
+        months_remaining = None
+
+    expected_so_far = int(plan.monthly_target_cents) * months_passed
+    pace_delta_cents = int(plan.balance_cents) - expected_so_far
+
+    monthly_needed_cents: int | None = None
+    if plan.target_cents is not None and end_target is not None:
+        remaining_amount = max(0, int(plan.target_cents) - int(plan.balance_cents))
+        remaining_months = max(1, months_remaining or 0)
+        monthly_needed_cents = ceil(remaining_amount / remaining_months) if remaining_amount > 0 else 0
+
+    return {
+        "months_total": months_total,
+        "months_passed": months_passed,
+        "months_remaining": months_remaining,
+        "monthly_needed_cents": monthly_needed_cents,
+        "pace_delta_cents": pace_delta_cents,
+        "pace_status": pace_status_from_delta(pace_delta_cents),
+    }
 
 
 def _skip_keys(plan: EmergencyReservePlan) -> set[str]:
@@ -410,6 +467,7 @@ def create_plan(
     monthly_target_cents: int,
     target_cents: int | None = None,
     tracking_start: date | None = None,
+    target_end_date: date | None = None,
     plan_duration_months: int | None = None,
 ) -> EmergencyReservePlan:
     family_id, solo_user_id = _resolve_scope(db, user_id)
@@ -424,6 +482,7 @@ def create_plan(
         target_cents=int(target_cents) if target_cents is not None else None,
         balance_cents=0,
         tracking_start=anchor,
+        target_end_date=first_of_month(target_end_date) if target_end_date is not None else None,
         accrual_skip_months=[],
         plan_duration_months=plan_duration_months,
         status="active",
@@ -446,6 +505,7 @@ def update_plan_for_user(
     monthly_target_cents: int,
     target_cents: int | None = None,
     tracking_start: date | None = None,
+    target_end_date: date | None = None,
     plan_duration_months: int | None = None,
 ) -> EmergencyReservePlan | None:
     plan = get_plan_for_user(db, user_id, plan_id)
@@ -459,6 +519,9 @@ def update_plan_for_user(
     plan.target_cents = int(target_cents) if target_cents is not None else None
     if tracking_start is not None:
         plan.tracking_start = first_of_month(tracking_start)
+    plan.target_end_date = (
+        first_of_month(target_end_date) if target_end_date is not None else None
+    )
     plan.plan_duration_months = plan_duration_months
     db.commit()
     db.refresh(plan)
@@ -556,9 +619,14 @@ def month_breakdown_for_plan(
 
     tgt = int(plan.monthly_target_cents)
     out: list[dict] = []
+    cumulative_expected = 0
+    cumulative_deposited = 0
     for y, m in iter_months_inclusive(start, end):
         dep = accrual_map.get((y, m), 0)
         shortfall = max(0, tgt - dep) if tgt > 0 else 0
+        cumulative_expected += tgt
+        cumulative_deposited += dep
+        cumulative_delta = cumulative_deposited - cumulative_expected
         out.append(
             {
                 "year": y,
@@ -566,6 +634,54 @@ def month_breakdown_for_plan(
                 "expected_cents": tgt,
                 "deposited_cents": dep,
                 "shortfall_cents": shortfall,
+                "cumulative_expected_cents": cumulative_expected,
+                "cumulative_deposited_cents": cumulative_deposited,
+                "cumulative_delta_cents": cumulative_delta,
+                "pace_status": pace_status_from_delta(cumulative_delta),
             }
         )
     return out
+
+
+def create_contribution(
+    db: Session,
+    user_id: uuid.UUID,
+    *,
+    contribution_date: date | None,
+    total_amount_cents: int,
+    allocations: list[dict],
+    note: str | None = None,
+) -> EmergencyReserveContribution:
+    family_id, solo_user_id = _resolve_scope(db, user_id)
+    contrib = EmergencyReserveContribution(
+        id=uuid.uuid4(),
+        family_id=family_id,
+        solo_user_id=solo_user_id if family_id is None else None,
+        contribution_date=contribution_date or date.today(),
+        total_amount_cents=int(total_amount_cents),
+        created_by_user_id=user_id,
+        note=(note or "").strip()[:500] or None,
+    )
+    db.add(contrib)
+
+    for alloc in allocations:
+        plan_id = alloc["plan_id"]
+        amount_cents = int(alloc["amount_cents"])
+        plan = get_plan_for_user(db, user_id, plan_id)
+        if plan is None:
+            raise ValueError("plan_not_found_or_not_allowed")
+        if plan.status != "active":
+            raise ValueError("plan_not_active")
+        plan.balance_cents = int(plan.balance_cents) + amount_cents
+        db.add(
+            EmergencyReserveContributionItem(
+                id=uuid.uuid4(),
+                contribution_id=contrib.id,
+                plan_id=plan.id,
+                amount_cents=amount_cents,
+            )
+        )
+
+    db.commit()
+    db.refresh(contrib)
+    return contrib

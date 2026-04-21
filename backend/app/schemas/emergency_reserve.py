@@ -43,7 +43,14 @@ class EmergencyReservePlanItem(BaseModel):
     target_cents: int | None = Field(default=None, ge=0)
     balance_cents: int = Field(ge=0)
     tracking_start: date_type
+    target_end_date: date_type | None = None
     plan_duration_months: int | None = None
+    months_total: int | None = None
+    months_passed: int | None = None
+    months_remaining: int | None = None
+    monthly_needed_cents: int | None = Field(default=None, ge=0)
+    pace_status: str = "unknown"
+    pace_delta_cents: int = 0
     status: str
     completed_at: date_type | None = None
 
@@ -54,6 +61,7 @@ class EmergencyReservePlanCreate(BaseModel):
     monthly_target_cents: int = Field(ge=0)
     target_cents: int | None = Field(default=None, ge=0)
     tracking_start: date_type | None = None
+    target_end_date: date_type | None = None
     plan_duration_months: int | None = Field(default=None, ge=1, le=600)
 
 
@@ -63,6 +71,7 @@ class EmergencyReservePlanUpdate(BaseModel):
     monthly_target_cents: int = Field(ge=0)
     target_cents: int | None = Field(default=None, ge=0)
     tracking_start: date_type | None = None
+    target_end_date: date_type | None = None
     plan_duration_months: int | None = Field(default=None, ge=1, le=600)
 
 
@@ -72,8 +81,38 @@ class EmergencyReserveMonthRow(BaseModel):
     expected_cents: int = Field(ge=0)
     deposited_cents: int = Field(ge=0)
     shortfall_cents: int = Field(ge=0)
+    cumulative_expected_cents: int = Field(ge=0)
+    cumulative_deposited_cents: int = Field(ge=0)
+    cumulative_delta_cents: int
+    pace_status: str = "unknown"
 
 
 class EmergencyReserveCompleteBody(BaseModel):
     goal_id: UUID | None = None
     to_plan_id: UUID | None = None
+
+
+class EmergencyReserveContributionAllocation(BaseModel):
+    plan_id: UUID
+    amount_cents: int = Field(gt=0)
+
+
+class EmergencyReserveContributionCreate(BaseModel):
+    contribution_date: date_type | None = None
+    total_amount_cents: int = Field(gt=0)
+    allocations: list[EmergencyReserveContributionAllocation] = Field(min_length=1)
+    note: str | None = Field(default=None, max_length=500)
+
+
+class EmergencyReserveContributionItem(BaseModel):
+    plan_id: UUID
+    amount_cents: int = Field(gt=0)
+
+
+class EmergencyReserveContributionResponse(BaseModel):
+    id: UUID
+    contribution_date: date_type
+    total_amount_cents: int = Field(gt=0)
+    note: str | None = None
+    created_at: date_type | None = None
+    items: list[EmergencyReserveContributionItem]

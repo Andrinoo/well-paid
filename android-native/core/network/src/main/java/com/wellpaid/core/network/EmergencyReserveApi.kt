@@ -1,6 +1,8 @@
 package com.wellpaid.core.network
 
 import com.wellpaid.core.model.emergency.EmergencyReserveAccrualDto
+import com.wellpaid.core.model.emergency.EmergencyReserveContributionCreateDto
+import com.wellpaid.core.model.emergency.EmergencyReserveContributionResponseDto
 import com.wellpaid.core.model.emergency.EmergencyReserveCompleteDto
 import com.wellpaid.core.model.emergency.EmergencyReserveDto
 import com.wellpaid.core.model.emergency.EmergencyReserveMonthRowDto
@@ -52,4 +54,9 @@ interface EmergencyReserveApi {
         @Path("planId") planId: String,
         @Body body: EmergencyReserveCompleteDto,
     ): EmergencyReservePlanDto
+
+    @POST("emergency-reserve/contributions")
+    suspend fun createContribution(
+        @Body body: EmergencyReserveContributionCreateDto,
+    ): EmergencyReserveContributionResponseDto
 }
