@@ -161,7 +161,7 @@ fun EmergencyReserveContent(
                 Button(
                     onClick = onOpenReserveNew,
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = state.canEditReserve && !state.isCreatingPlan && !state.isSaving && !state.isUpdatingPlan,
+                    enabled = !state.isCreatingPlan && !state.isSaving && !state.isUpdatingPlan,
                     shape = RoundedCornerShape(24.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = WellPaidNavy,
@@ -177,14 +177,6 @@ fun EmergencyReserveContent(
                 }
 
                 Spacer(Modifier.height(12.dp))
-                if (!state.canEditReserve) {
-                    Text(
-                        text = stringResource(R.string.emergency_readonly_not_owner),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.tertiary,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                }
                 EmergencyReserveCompactHero(
                     r = r,
                     progress = progress,
@@ -328,7 +320,7 @@ fun EmergencyReserveContent(
                 Button(
                     onClick = onOpenReserveNew,
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = state.canEditReserve && !state.isCreatingPlan && !state.isSaving && !state.isUpdatingPlan,
+                    enabled = !state.isCreatingPlan && !state.isSaving && !state.isUpdatingPlan,
                     shape = RoundedCornerShape(24.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = WellPaidNavy,
@@ -343,14 +335,6 @@ fun EmergencyReserveContent(
                     )
                 }
                 Spacer(Modifier.height(10.dp))
-                if (!state.canEditReserve) {
-                    Text(
-                        text = stringResource(R.string.emergency_readonly_not_owner),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.tertiary,
-                    )
-                    Spacer(Modifier.height(6.dp))
-                }
                 Text(
                     text = stringResource(R.string.emergency_not_configured_hint),
                     style = MaterialTheme.typography.bodyMedium,

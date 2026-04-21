@@ -73,16 +73,10 @@ class EmergencyReserveViewModel @Inject constructor(
 
     init {
         familyMeRepository.family
-            .onEach { f ->
-                // Fallback defensivo: se a API de família não marcar `isSelf` corretamente,
-                // não bloqueamos a tela localmente. O backend continua como autoridade final.
-                val can = if (f == null) {
-                    true
-                } else {
-                    val self = f.members.find { it.isSelf }
-                    if (self == null) true else self.role == "owner"
-                }
-                _uiState.update { it.copy(canEditReserve = can) }
+            .onEach {
+                // Não bloquear edição localmente para evitar falso negativo de role/isSelf.
+                // O backend é a autoridade final de permissão.
+                _uiState.update { s -> s.copy(canEditReserve = true) }
             }
             .launchIn(viewModelScope)
         viewModelScope.launch {

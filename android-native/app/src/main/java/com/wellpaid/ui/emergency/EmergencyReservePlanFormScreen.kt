@@ -100,22 +100,13 @@ fun EmergencyReservePlanFormScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 12.dp),
             )
-            if (!state.canEditReserve) {
-                Text(
-                    text = stringResource(R.string.emergency_readonly_not_owner),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.tertiary,
-                    modifier = Modifier.padding(bottom = 10.dp),
-                )
-            }
-
             OutlinedTextField(
                 value = state.newPlanTitleText,
                 onValueChange = { viewModel.setNewPlanTitleText(it) },
                 label = { Text(stringResource(R.string.emergency_new_plan_name_label)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                enabled = state.canEditReserve && !state.isCreatingPlan && !state.isSaving,
+                enabled = !state.isCreatingPlan && !state.isSaving,
                 shape = RoundedCornerShape(16.dp),
             )
             Spacer(Modifier.height(8.dp))
@@ -126,7 +117,7 @@ fun EmergencyReservePlanFormScreen(
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 2,
                 maxLines = 4,
-                enabled = state.canEditReserve && !state.isCreatingPlan && !state.isSaving,
+                enabled = !state.isCreatingPlan && !state.isSaving,
                 shape = RoundedCornerShape(16.dp),
             )
             Spacer(Modifier.height(8.dp))
@@ -134,7 +125,7 @@ fun EmergencyReservePlanFormScreen(
                 valueText = state.newPlanMonthlyText,
                 onValueTextChange = { viewModel.setNewPlanMonthlyText(it) },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = state.canEditReserve && !state.isCreatingPlan && !state.isSaving,
+                enabled = !state.isCreatingPlan && !state.isSaving,
                 label = { Text(stringResource(R.string.emergency_new_plan_monthly_label)) },
                 placeholder = stringResource(R.string.emergency_monthly_placeholder),
             )
@@ -149,7 +140,7 @@ fun EmergencyReservePlanFormScreen(
                 valueText = state.newPlanTargetText,
                 onValueTextChange = { viewModel.setNewPlanTargetText(it) },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = state.canEditReserve && !state.isCreatingPlan && !state.isSaving,
+                enabled = !state.isCreatingPlan && !state.isSaving,
                 label = { Text(stringResource(R.string.emergency_new_plan_target_label)) },
                 placeholder = stringResource(R.string.emergency_monthly_placeholder),
             )
@@ -161,14 +152,14 @@ fun EmergencyReservePlanFormScreen(
                 supportingText = { Text(stringResource(R.string.emergency_new_plan_duration_footnote)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                enabled = state.canEditReserve && !state.isCreatingPlan && !state.isSaving,
+                enabled = !state.isCreatingPlan && !state.isSaving,
                 shape = RoundedCornerShape(16.dp),
             )
             Spacer(Modifier.height(20.dp))
             Button(
                 onClick = { viewModel.createNamedPlan(onSuccess = onCreatedNeedRefresh) },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = state.canEditReserve && !state.isCreatingPlan && !state.isSaving,
+                enabled = !state.isCreatingPlan && !state.isSaving,
                 shape = RoundedCornerShape(24.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = WellPaidNavy,
