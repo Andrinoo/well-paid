@@ -58,6 +58,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
 import com.wellpaid.R
+import com.wellpaid.ui.components.WellPaidDatePickerField
 import com.wellpaid.core.model.emergency.EmergencyReserveDto
 import com.wellpaid.core.model.emergency.EmergencyReservePlanDto
 import com.wellpaid.ui.components.WellPaidMoneyDigitKeypadField
@@ -446,21 +447,19 @@ fun EmergencyReserveContent(
                         enabled = !state.isUpdatingPlan,
                         shape = RoundedCornerShape(14.dp),
                     )
-                    OutlinedTextField(
-                        value = state.editingPlanTrackingStartText,
-                        onValueChange = { viewModel.setEditingPlanTrackingStartText(it) },
+                    WellPaidDatePickerField(
                         label = { Text(stringResource(R.string.emergency_tracking_start_date_label)) },
+                        isoDate = state.editingPlanTrackingStartText,
+                        onIsoDateChange = { viewModel.setEditingPlanTrackingStartText(it) },
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
                         enabled = !state.isUpdatingPlan,
                         shape = RoundedCornerShape(14.dp),
                     )
-                    OutlinedTextField(
-                        value = state.editingPlanTargetEndText,
-                        onValueChange = { viewModel.setEditingPlanTargetEndText(it) },
+                    WellPaidDatePickerField(
                         label = { Text(stringResource(R.string.emergency_target_end_date_label)) },
+                        isoDate = state.editingPlanTargetEndText,
+                        onIsoDateChange = { viewModel.setEditingPlanTargetEndText(it) },
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
                         enabled = !state.isUpdatingPlan,
                         shape = RoundedCornerShape(14.dp),
                     )

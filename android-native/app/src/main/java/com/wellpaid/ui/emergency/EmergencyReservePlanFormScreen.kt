@@ -33,6 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wellpaid.R
+import com.wellpaid.ui.components.WellPaidDatePickerField
 import com.wellpaid.ui.components.WellPaidMoneyDigitKeypadField
 import com.wellpaid.ui.theme.WellPaidCream
 import com.wellpaid.ui.theme.WellPaidNavy
@@ -123,22 +124,20 @@ fun EmergencyReservePlanFormScreen(
                 shape = RoundedCornerShape(16.dp),
             )
             Spacer(Modifier.height(8.dp))
-            OutlinedTextField(
-                value = state.newPlanTrackingStartText,
-                onValueChange = { viewModel.setNewPlanTrackingStartText(it) },
+            WellPaidDatePickerField(
                 label = { Text(stringResource(R.string.emergency_tracking_start_date_label)) },
+                isoDate = state.newPlanTrackingStartText,
+                onIsoDateChange = { viewModel.setNewPlanTrackingStartText(it) },
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
                 enabled = !state.isCreatingPlan && !state.isSaving,
                 shape = RoundedCornerShape(16.dp),
             )
             Spacer(Modifier.height(8.dp))
-            OutlinedTextField(
-                value = state.newPlanTargetEndText,
-                onValueChange = { viewModel.setNewPlanTargetEndText(it) },
+            WellPaidDatePickerField(
                 label = { Text(stringResource(R.string.emergency_target_end_date_label)) },
+                isoDate = state.newPlanTargetEndText,
+                onIsoDateChange = { viewModel.setNewPlanTargetEndText(it) },
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
                 enabled = !state.isCreatingPlan && !state.isSaving,
                 shape = RoundedCornerShape(16.dp),
             )
