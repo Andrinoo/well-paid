@@ -77,4 +77,9 @@ object NavRoutes {
 
     /** Criar plano de reserva de emergência (fora do shell). */
     const val EmergencyReserveNew = "emergency_reserve_new"
+
+    private const val EMERGENCY_PLAN = "emergency_plan"
+    const val EmergencyPlanDetailRoute = "$EMERGENCY_PLAN/{planId}"
+
+    fun emergencyPlanDetail(planId: String): String = "$EMERGENCY_PLAN/$planId"
 }

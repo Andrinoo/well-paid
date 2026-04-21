@@ -10,6 +10,7 @@ import com.wellpaid.core.model.emergency.EmergencyReserveContributionAllocationD
 import com.wellpaid.core.model.emergency.EmergencyReserveContributionCreateDto
 import com.wellpaid.core.model.emergency.EmergencyReserveDto
 import com.wellpaid.core.model.emergency.EmergencyReservePlanCreateDto
+import com.wellpaid.core.model.emergency.EmergencyReserveMonthRowDto
 import com.wellpaid.core.model.emergency.EmergencyReservePlanDto
 import com.wellpaid.core.model.emergency.EmergencyReservePlanUpdateDto
 import com.wellpaid.core.model.emergency.EmergencyReserveUpdateDto
@@ -93,6 +94,10 @@ data class EmergencyReserveUiState(
     val errorMessage: String? = null,
     /** Só o titular da família altera a meta quando existe agregado. */
     val canEditReserve: Boolean = true,
+    /** Breakdown mensal (GET …/plans/{id}/months) — ecrã de detalhe do plano. */
+    val planDetailMonthRows: List<EmergencyReserveMonthRowDto> = emptyList(),
+    val planDetailMonthsLoading: Boolean = false,
+    val planDetailMonthsError: String? = null,
 )
 
 @HiltViewModel
@@ -133,7 +138,11 @@ class EmergencyReserveViewModel @Inject constructor(
         }
     }
 
-    fun refresh() {
+    /**
+     * @param rebindEditingPlanId Se definido, após atualizar listas volta a preencher o formulário de edição
+     * com esse plano (útil após gravar no ecrã de detalhe).
+     */
+    fun refresh(rebindEditingPlanId: String? = null) {
         if (tokenStorage.getAccessToken().isNullOrBlank()) {
             _uiState.update {
                 it.copy(
@@ -148,25 +157,88 @@ class EmergencyReserveViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            val reserveResult = runCatching { api.getReserve() }
-            val accrualsResult = runCatching { api.listAccruals(limit = 12) }
-            val plansResult = runCatching { api.listPlans() }
-            val reserve = reserveResult.getOrNull()
-            _uiState.update {
-                it.copy(
-                    isLoading = false,
-                    reserve = reserve,
-                    plans = plansResult.getOrElse { emptyList() },
-                    accruals = accrualsResult.getOrElse { emptyList() },
-                    monthlyTargetText = reserve?.let { r -> centsToBrlInput(r.monthlyTargetCents) }
-                        ?: it.monthlyTargetText,
-                    selectedPlanId = it.selectedPlanId ?: plansResult.getOrElse { emptyList() }.firstOrNull()?.id,
-                    errorMessage = reserveResult.exceptionOrNull()?.let { e ->
-                        FastApiErrorMapper.message(appContext, e)
-                    },
-                )
+            loadEmergencySnapshot()
+            applyRebindAfterRefresh(rebindEditingPlanId)
+        }
+    }
+
+    private suspend fun loadEmergencySnapshot() {
+        _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+        val reserveResult = runCatching { api.getReserve() }
+        val accrualsResult = runCatching { api.listAccruals(limit = 12) }
+        val plansResult = runCatching { api.listPlans() }
+        val reserve = reserveResult.getOrNull()
+        _uiState.update {
+            it.copy(
+                isLoading = false,
+                reserve = reserve,
+                plans = plansResult.getOrElse { emptyList() },
+                accruals = accrualsResult.getOrElse { emptyList() },
+                monthlyTargetText = reserve?.let { r -> centsToBrlInput(r.monthlyTargetCents) }
+                    ?: it.monthlyTargetText,
+                selectedPlanId = it.selectedPlanId ?: plansResult.getOrElse { emptyList() }.firstOrNull()?.id,
+                errorMessage = reserveResult.exceptionOrNull()?.let { e ->
+                    FastApiErrorMapper.message(appContext, e)
+                },
+            )
+        }
+    }
+
+    private fun applyRebindAfterRefresh(rebindEditingPlanId: String?) {
+        val rebind = rebindEditingPlanId ?: return
+        val plan = _uiState.value.plans.firstOrNull { it.id == rebind } ?: return
+        startEditingPlan(plan)
+        loadPlanMonthBreakdown(rebind)
+    }
+
+    fun prepareEmergencyPlanDetail(planId: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(errorMessage = null) }
+            if (tokenStorage.getAccessToken().isNullOrBlank()) {
+                _uiState.update {
+                    it.copy(errorMessage = appContext.getString(R.string.emergency_need_login))
+                }
+                return@launch
             }
+            if (_uiState.value.plans.none { it.id == planId }) {
+                loadEmergencySnapshot()
+            }
+            val plan = _uiState.value.plans.firstOrNull { it.id == planId }
+            if (plan == null) {
+                _uiState.update {
+                    it.copy(errorMessage = appContext.getString(R.string.emergency_plan_detail_not_found))
+                }
+                return@launch
+            }
+            selectPlanForContribution(planId)
+            startEditingPlan(plan)
+            loadPlanMonthBreakdown(planId)
+        }
+    }
+
+    fun loadPlanMonthBreakdown(planId: String) {
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(planDetailMonthsLoading = true, planDetailMonthsError = null)
+            }
+            runCatching { api.listPlanMonths(planId) }
+                .onSuccess { rows ->
+                    _uiState.update {
+                        it.copy(
+                            planDetailMonthRows = rows,
+                            planDetailMonthsLoading = false,
+                            planDetailMonthsError = null,
+                        )
+                    }
+                }
+                .onFailure { t ->
+                    _uiState.update {
+                        it.copy(
+                            planDetailMonthsLoading = false,
+                            planDetailMonthsError = FastApiErrorMapper.message(appContext, t),
+                        )
+                    }
+                }
         }
     }
 
@@ -275,6 +347,9 @@ class EmergencyReserveViewModel @Inject constructor(
                 editingPlanRetroOffer = null,
                 editingPlanRetroDismissFingerprint = null,
                 isUpdatingPlan = false,
+                planDetailMonthRows = emptyList(),
+                planDetailMonthsLoading = false,
+                planDetailMonthsError = null,
             )
         }
     }
@@ -411,8 +486,9 @@ class EmergencyReserveViewModel @Inject constructor(
                     ),
                 )
             }.onSuccess {
+                val rebind = _uiState.value.editingPlanId
                 _uiState.update { it.copy(isSaving = false, selectedPlanContributionText = "") }
-                refresh()
+                refresh(rebindEditingPlanId = rebind)
             }.onFailure { t ->
                 _uiState.update {
                     it.copy(
@@ -580,8 +656,8 @@ class EmergencyReserveViewModel @Inject constructor(
                     ),
                 )
             }.onSuccess {
-                cancelEditingPlan()
-                refresh()
+                _uiState.update { it.copy(isUpdatingPlan = false) }
+                refresh(rebindEditingPlanId = planId)
             }.onFailure { t ->
                 _uiState.update {
                     it.copy(
@@ -593,7 +669,7 @@ class EmergencyReserveViewModel @Inject constructor(
         }
     }
 
-    fun deletePlanConfirmed() {
+    fun deletePlanConfirmed(onDeleted: (() -> Unit)? = null) {
         val s = _uiState.value
         val planId = s.deletingPlanId ?: return
         viewModelScope.launch {
@@ -612,6 +688,7 @@ class EmergencyReserveViewModel @Inject constructor(
                     }
                     if (_uiState.value.editingPlanId == planId) cancelEditingPlan()
                     refresh()
+                    onDeleted?.invoke()
                 }
                 .onFailure { t ->
                     _uiState.update {

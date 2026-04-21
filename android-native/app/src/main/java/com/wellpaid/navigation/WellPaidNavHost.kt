@@ -32,6 +32,7 @@ import com.wellpaid.ui.goals.GoalDetailScreen
 import com.wellpaid.ui.goals.GoalFormScreen
 import com.wellpaid.ui.incomes.IncomeFormScreen
 import com.wellpaid.ui.investments.InvestmentsScreen
+import com.wellpaid.ui.emergency.EmergencyPlanDetailScreen
 import com.wellpaid.ui.emergency.EmergencyReservePlanFormScreen
 import com.wellpaid.ui.login.LoginScreen
 import com.wellpaid.ui.main.MainShellScreen
@@ -256,6 +257,9 @@ fun WellPaidNavHost(
                         onOpenEmergencyReserveNew = {
                             navController.navigate(NavRoutes.EmergencyReserveNew)
                         },
+                        onOpenEmergencyPlanDetail = { planId ->
+                            navController.navigate(NavRoutes.emergencyPlanDetail(planId))
+                        },
                     )
                 }
                 composable(NavRoutes.Announcements) {
@@ -397,6 +401,25 @@ fun WellPaidNavHost(
                     EmergencyReservePlanFormScreen(
                         onNavigateBack = { navController.popBackStack() },
                         onCreatedNeedRefresh = refreshEmergencyAndPop,
+                        viewModel = hiltViewModel(mainEntry),
+                    )
+                }
+                composable(
+                    route = NavRoutes.EmergencyPlanDetailRoute,
+                    arguments = listOf(
+                        navArgument("planId") { type = NavType.StringType },
+                    ),
+                ) { backStackEntry ->
+                    val planId = backStackEntry.arguments?.getString("planId") ?: return@composable
+                    val mainEntry = remember(navController) {
+                        navController.getBackStackEntry(NavRoutes.Main)
+                    }
+                    EmergencyPlanDetailScreen(
+                        planId = planId,
+                        onNavigateBack = { navController.popBackStack() },
+                        onPlanDeletedNavigateBack = {
+                            refreshEmergencyAndPop()
+                        },
                         viewModel = hiltViewModel(mainEntry),
                     )
                 }

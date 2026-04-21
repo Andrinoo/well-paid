@@ -120,6 +120,7 @@ fun MainShellScreen(
     onOpenReceivables: () -> Unit,
     onOpenInvestments: () -> Unit,
     onOpenEmergencyReserveNew: () -> Unit,
+    onOpenEmergencyPlanDetail: (String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: MainShellViewModel = hiltViewModel(),
 ) {
@@ -485,6 +486,7 @@ fun MainShellScreen(
                         modifier = Modifier.fillMaxSize(),
                         tabSwipe = tabSwipeModifier,
                         onOpenReserveNew = onOpenEmergencyReserveNew,
+                        onOpenPlanDetail = onOpenEmergencyPlanDetail,
                         viewModel = emergencyViewModel,
                     )
                     else -> Text(
