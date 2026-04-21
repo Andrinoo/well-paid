@@ -718,6 +718,10 @@
     <string name="emergency_tracking_start_date_label">Start date (YYYY-MM-DD)</string>
     <string name="emergency_target_end_date_label">Target/end date (YYYY-MM-DD)</string>
     <string name="emergency_monthly_suggestion">Monthly suggestion: %1$s</string>
+    <string name="emergency_retroactive_plan_title">Retroactive start</string>
+    <string name="emergency_retroactive_plan_message">The start date is before today: %1$d month(s) already count toward the plan and %2$d month(s) remain until the target date. To reach the %3$s goal, the suggested corrected monthly amount is %4$s.</string>
+    <string name="emergency_retroactive_apply">Apply correction</string>
+    <string name="emergency_retroactive_dismiss">Ignore</string>
     <string name="emergency_selected_plan_contribution_label">This month contribution on selected plan (BRL)</string>
     <string name="emergency_selected_plan_fallback">Untitled plan</string>
     <string name="emergency_selected_plan_title">Selected plan for contribution: %1$s</string>

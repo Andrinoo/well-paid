@@ -34,6 +34,18 @@ import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
 import javax.inject.Inject
+import kotlin.math.ceil
+
+/** Aviso de plano com início retroativo: mensal corrigida e meta implícita (M × meses). */
+data class EmergencyRetroactivePlanOffer(
+    val monthsPassed: Int,
+    val monthsRemaining: Int,
+    val goalCentsForMessage: Int,
+    val adjustedMonthlyCents: Int,
+    /** Meta total se só houver mensal “original” (M × meses do período). */
+    val impliedCeilingCents: Int,
+    val hasExplicitTarget: Boolean,
+)
 
 data class EmergencyReserveUiState(
     val isLoading: Boolean = true,
@@ -53,6 +65,8 @@ data class EmergencyReserveUiState(
     val newPlanTrackingStartText: String = "",
     val newPlanTargetEndText: String = "",
     val newPlanRecommendedMonthlyCents: Int? = null,
+    val newPlanRetroOffer: EmergencyRetroactivePlanOffer? = null,
+    val newPlanRetroDismissFingerprint: String? = null,
     val editingPlanId: String? = null,
     val editingPlanTitleText: String = "",
     val editingPlanDetailsText: String = "",
@@ -62,6 +76,9 @@ data class EmergencyReserveUiState(
     val editingPlanTrackingStartText: String = "",
     val editingPlanTargetEndText: String = "",
     val editingPlanRecommendedMonthlyCents: Int? = null,
+    val editingPlanBalanceCents: Int = 0,
+    val editingPlanRetroOffer: EmergencyRetroactivePlanOffer? = null,
+    val editingPlanRetroDismissFingerprint: String? = null,
     val isUpdatingPlan: Boolean = false,
     val deletingPlanId: String? = null,
     val showDeletePlanConfirm: Boolean = false,
@@ -143,6 +160,7 @@ class EmergencyReserveViewModel @Inject constructor(
 
     fun setNewPlanMonthlyText(value: String) {
         _uiState.update { it.copy(newPlanMonthlyText = value) }
+        recalcNewPlanRecommendation()
     }
 
     fun setNewPlanDetailsText(value: String) {
@@ -151,6 +169,7 @@ class EmergencyReserveViewModel @Inject constructor(
 
     fun setNewPlanTargetText(value: String) {
         _uiState.update { it.copy(newPlanTargetText = value) }
+        recalcNewPlanRecommendation()
     }
 
     fun setNewPlanDurationMonthsText(value: String) {
@@ -169,6 +188,8 @@ class EmergencyReserveViewModel @Inject constructor(
                 newPlanTrackingStartText = "",
                 newPlanTargetEndText = "",
                 newPlanRecommendedMonthlyCents = null,
+                newPlanRetroOffer = null,
+                newPlanRetroDismissFingerprint = null,
                 errorMessage = null,
             )
         }
@@ -186,9 +207,13 @@ class EmergencyReserveViewModel @Inject constructor(
                 editingPlanTrackingStartText = plan.trackingStart,
                 editingPlanTargetEndText = plan.targetEndDate.orEmpty(),
                 editingPlanRecommendedMonthlyCents = plan.monthlyNeededCents,
+                editingPlanBalanceCents = plan.balanceCents,
+                editingPlanRetroOffer = null,
+                editingPlanRetroDismissFingerprint = null,
                 errorMessage = null,
             )
         }
+        recalcEditingPlanRecommendation()
     }
 
     fun cancelEditingPlan() {
@@ -203,6 +228,9 @@ class EmergencyReserveViewModel @Inject constructor(
                 editingPlanTrackingStartText = "",
                 editingPlanTargetEndText = "",
                 editingPlanRecommendedMonthlyCents = null,
+                editingPlanBalanceCents = 0,
+                editingPlanRetroOffer = null,
+                editingPlanRetroDismissFingerprint = null,
                 isUpdatingPlan = false,
             )
         }
@@ -214,6 +242,7 @@ class EmergencyReserveViewModel @Inject constructor(
 
     fun setEditingPlanMonthlyText(value: String) {
         _uiState.update { it.copy(editingPlanMonthlyText = value) }
+        recalcEditingPlanRecommendation()
     }
 
     fun setEditingPlanDetailsText(value: String) {
@@ -222,6 +251,7 @@ class EmergencyReserveViewModel @Inject constructor(
 
     fun setEditingPlanTargetText(value: String) {
         _uiState.update { it.copy(editingPlanTargetText = value) }
+        recalcEditingPlanRecommendation()
     }
 
     fun setEditingPlanDurationMonthsText(value: String) {
@@ -374,6 +404,8 @@ class EmergencyReserveViewModel @Inject constructor(
                             newPlanTrackingStartText = "",
                             newPlanTargetEndText = "",
                             newPlanRecommendedMonthlyCents = null,
+                            newPlanRetroOffer = null,
+                            newPlanRetroDismissFingerprint = null,
                             errorMessage = null,
                         )
                     }
@@ -539,33 +571,223 @@ class EmergencyReserveViewModel @Inject constructor(
         return runCatching { LocalDate.parse(value.trim()) }.getOrNull()
     }
 
+    fun dismissNewPlanRetroOffer() {
+        val s = _uiState.value
+        _uiState.update {
+            it.copy(
+                newPlanRetroOffer = null,
+                newPlanRetroDismissFingerprint = newPlanRetroFingerprint(s),
+            )
+        }
+    }
+
+    fun applyNewPlanRetroCorrection() {
+        val offer = _uiState.value.newPlanRetroOffer ?: return
+        _uiState.update { s ->
+            s.copy(
+                newPlanMonthlyText = centsToBrlInput(offer.adjustedMonthlyCents),
+                newPlanTargetText = if (!offer.hasExplicitTarget) {
+                    centsToBrlInput(offer.impliedCeilingCents)
+                } else {
+                    s.newPlanTargetText
+                },
+                newPlanRetroOffer = null,
+                newPlanRetroDismissFingerprint = null,
+            )
+        }
+        recalcNewPlanRecommendation()
+    }
+
+    fun dismissEditingPlanRetroOffer() {
+        val s = _uiState.value
+        _uiState.update {
+            it.copy(
+                editingPlanRetroOffer = null,
+                editingPlanRetroDismissFingerprint = editingPlanRetroFingerprint(s),
+            )
+        }
+    }
+
+    fun applyEditingPlanRetroCorrection() {
+        val offer = _uiState.value.editingPlanRetroOffer ?: return
+        _uiState.update { s ->
+            s.copy(
+                editingPlanMonthlyText = centsToBrlInput(offer.adjustedMonthlyCents),
+                editingPlanTargetText = if (!offer.hasExplicitTarget) {
+                    centsToBrlInput(offer.impliedCeilingCents)
+                } else {
+                    s.editingPlanTargetText
+                },
+                editingPlanRetroOffer = null,
+                editingPlanRetroDismissFingerprint = null,
+            )
+        }
+        recalcEditingPlanRecommendation()
+    }
+
+    private fun firstOfMonth(d: LocalDate): LocalDate = d.withDayOfMonth(1)
+
+    private fun monthsBetweenInclusive(start: LocalDate, end: LocalDate): Int {
+        val s = firstOfMonth(start)
+        val e = firstOfMonth(end)
+        if (e < s) return 0
+        return (e.year - s.year) * 12 + (e.monthValue - s.monthValue) + 1
+    }
+
+    /** Alinha ao backend: meses totais início→fim, meses já decorridos até hoje, meses restantes (mín. 1). */
+    private fun timelineMonthsAndRemaining(
+        trackingStart: LocalDate,
+        targetEnd: LocalDate,
+        today: LocalDate = LocalDate.now(),
+    ): Triple<Int, Int, Int> {
+        val startM = firstOfMonth(trackingStart)
+        val endM = firstOfMonth(targetEnd)
+        val todayM = firstOfMonth(today)
+        val monthsTotal = monthsBetweenInclusive(startM, endM).coerceAtLeast(1)
+        val cap = if (todayM < endM) todayM else endM
+        val monthsPassed = monthsBetweenInclusive(startM, cap).coerceIn(0, monthsTotal)
+        val monthsRemaining = (monthsTotal - monthsPassed).coerceAtLeast(1)
+        return Triple(monthsTotal, monthsPassed, monthsRemaining)
+    }
+
+    private fun safeMultiplyCents(monthlyCents: Int, months: Int): Int {
+        val p = monthlyCents.toLong() * months.toLong()
+        return p.coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
+    }
+
+    private fun newPlanRetroFingerprint(s: EmergencyReserveUiState): String =
+        "${s.newPlanTrackingStartText}|${s.newPlanTargetEndText}|${s.newPlanMonthlyText}|${s.newPlanTargetText}"
+
+    private fun editingPlanRetroFingerprint(s: EmergencyReserveUiState): String =
+        "${s.editingPlanTrackingStartText}|${s.editingPlanTargetEndText}|${s.editingPlanMonthlyText}|${s.editingPlanTargetText}"
+
     private fun recalcNewPlanRecommendation() {
         val s = _uiState.value
-        val targetCents = parseBrlToCents(s.newPlanTargetText)?.takeIf { it > 0 } ?: run {
-            _uiState.update { it.copy(newPlanRecommendedMonthlyCents = null) }
+        val end = parseIsoDateOrNull(s.newPlanTargetEndText)
+        if (end == null) {
+            _uiState.update {
+                it.copy(
+                    newPlanRecommendedMonthlyCents = null,
+                    newPlanRetroOffer = null,
+                )
+            }
             return
         }
         val start = parseIsoDateOrNull(s.newPlanTrackingStartText) ?: LocalDate.now().withDayOfMonth(1)
-        val end = parseIsoDateOrNull(s.newPlanTargetEndText) ?: run {
-            _uiState.update { it.copy(newPlanRecommendedMonthlyCents = null) }
+        val today = LocalDate.now()
+        val (monthsTotal, monthsPassed, monthsRemaining) = timelineMonthsAndRemaining(start, end, today)
+        val monthly = parseBrlToCents(s.newPlanMonthlyText)?.takeIf { it > 0 }
+        val explicitTarget = parseBrlToCents(s.newPlanTargetText)?.takeIf { it > 0 }
+        val impliedCeiling = monthly?.let { safeMultiplyCents(it, monthsTotal) }
+        val targetPacingCents = explicitTarget ?: impliedCeiling
+        if (targetPacingCents == null || targetPacingCents <= 0) {
+            _uiState.update {
+                it.copy(
+                    newPlanRecommendedMonthlyCents = null,
+                    newPlanRetroOffer = null,
+                )
+            }
             return
         }
-        val months = ((end.year - start.year) * 12 + (end.monthValue - start.monthValue) + 1).coerceAtLeast(1)
-        _uiState.update { it.copy(newPlanRecommendedMonthlyCents = kotlin.math.ceil(targetCents / months.toDouble()).toInt()) }
+        val balance = 0
+        val remainingAmount = (targetPacingCents - balance).coerceAtLeast(0)
+        val recommended = if (remainingAmount == 0) {
+            0
+        } else {
+            ceil(remainingAmount.toDouble() / monthsRemaining.toDouble()).toInt()
+        }
+        val fp = newPlanRetroFingerprint(s)
+        val typedDiffers = monthly == null || monthly != recommended
+        val offer = if (
+            monthsPassed > 0 &&
+            recommended > 0 &&
+            typedDiffers &&
+            fp != s.newPlanRetroDismissFingerprint
+        ) {
+            val hasExplicit = explicitTarget != null
+            val goalMsg = explicitTarget ?: (impliedCeiling ?: targetPacingCents)
+            val impliedForApply = impliedCeiling ?: explicitTarget ?: 0
+            EmergencyRetroactivePlanOffer(
+                monthsPassed = monthsPassed,
+                monthsRemaining = monthsRemaining,
+                goalCentsForMessage = goalMsg,
+                adjustedMonthlyCents = recommended,
+                impliedCeilingCents = impliedForApply,
+                hasExplicitTarget = hasExplicit,
+            )
+        } else {
+            null
+        }
+        _uiState.update {
+            it.copy(
+                newPlanRecommendedMonthlyCents = recommended.takeIf { it > 0 },
+                newPlanRetroOffer = offer,
+            )
+        }
     }
 
     private fun recalcEditingPlanRecommendation() {
         val s = _uiState.value
-        val targetCents = parseBrlToCents(s.editingPlanTargetText)?.takeIf { it > 0 } ?: run {
-            _uiState.update { it.copy(editingPlanRecommendedMonthlyCents = null) }
+        val end = parseIsoDateOrNull(s.editingPlanTargetEndText)
+        if (end == null) {
+            _uiState.update {
+                it.copy(
+                    editingPlanRecommendedMonthlyCents = null,
+                    editingPlanRetroOffer = null,
+                )
+            }
             return
         }
         val start = parseIsoDateOrNull(s.editingPlanTrackingStartText) ?: LocalDate.now().withDayOfMonth(1)
-        val end = parseIsoDateOrNull(s.editingPlanTargetEndText) ?: run {
-            _uiState.update { it.copy(editingPlanRecommendedMonthlyCents = null) }
+        val today = LocalDate.now()
+        val (monthsTotal, monthsPassed, monthsRemaining) = timelineMonthsAndRemaining(start, end, today)
+        val monthly = parseBrlToCents(s.editingPlanMonthlyText)?.takeIf { it > 0 }
+        val explicitTarget = parseBrlToCents(s.editingPlanTargetText)?.takeIf { it > 0 }
+        val impliedCeiling = monthly?.let { safeMultiplyCents(it, monthsTotal) }
+        val targetPacingCents = explicitTarget ?: impliedCeiling
+        if (targetPacingCents == null || targetPacingCents <= 0) {
+            _uiState.update {
+                it.copy(
+                    editingPlanRecommendedMonthlyCents = null,
+                    editingPlanRetroOffer = null,
+                )
+            }
             return
         }
-        val months = ((end.year - start.year) * 12 + (end.monthValue - start.monthValue) + 1).coerceAtLeast(1)
-        _uiState.update { it.copy(editingPlanRecommendedMonthlyCents = kotlin.math.ceil(targetCents / months.toDouble()).toInt()) }
+        val balance = s.editingPlanBalanceCents.coerceAtLeast(0)
+        val remainingAmount = (targetPacingCents - balance).coerceAtLeast(0)
+        val recommended = if (remainingAmount == 0) {
+            0
+        } else {
+            ceil(remainingAmount.toDouble() / monthsRemaining.toDouble()).toInt()
+        }
+        val fp = editingPlanRetroFingerprint(s)
+        val typedDiffers = monthly == null || monthly != recommended
+        val offer = if (
+            monthsPassed > 0 &&
+            recommended > 0 &&
+            typedDiffers &&
+            fp != s.editingPlanRetroDismissFingerprint
+        ) {
+            val hasExplicit = explicitTarget != null
+            val goalMsg = explicitTarget ?: (impliedCeiling ?: targetPacingCents)
+            val impliedForApply = impliedCeiling ?: explicitTarget ?: 0
+            EmergencyRetroactivePlanOffer(
+                monthsPassed = monthsPassed,
+                monthsRemaining = monthsRemaining,
+                goalCentsForMessage = goalMsg,
+                adjustedMonthlyCents = recommended,
+                impliedCeilingCents = impliedForApply,
+                hasExplicitTarget = hasExplicit,
+            )
+        } else {
+            null
+        }
+        _uiState.update {
+            it.copy(
+                editingPlanRecommendedMonthlyCents = recommended.takeIf { it > 0 },
+                editingPlanRetroOffer = offer,
+            )
+        }
     }
 }

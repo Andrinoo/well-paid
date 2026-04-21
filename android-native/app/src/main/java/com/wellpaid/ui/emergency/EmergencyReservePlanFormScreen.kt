@@ -1,6 +1,8 @@
 package com.wellpaid.ui.emergency
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,6 +15,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -21,6 +25,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -33,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wellpaid.R
+import com.wellpaid.util.formatBrlFromCents
 import com.wellpaid.ui.components.WellPaidDatePickerField
 import com.wellpaid.ui.components.WellPaidMoneyDigitKeypadField
 import com.wellpaid.ui.theme.WellPaidCream
@@ -170,11 +176,53 @@ fun EmergencyReservePlanFormScreen(
                 Text(
                     text = stringResource(
                         R.string.emergency_monthly_suggestion,
-                        com.wellpaid.util.formatBrlFromCents(rec),
+                        formatBrlFromCents(rec),
                     ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+            state.newPlanRetroOffer?.let { offer ->
+                Spacer(Modifier.height(8.dp))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    ),
+                ) {
+                    Column(Modifier.padding(12.dp)) {
+                        Text(
+                            text = stringResource(R.string.emergency_retroactive_plan_title),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = WellPaidNavy,
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            text = stringResource(
+                                R.string.emergency_retroactive_plan_message,
+                                offer.monthsPassed,
+                                offer.monthsRemaining,
+                                formatBrlFromCents(offer.goalCentsForMessage),
+                                formatBrlFromCents(offer.adjustedMonthlyCents),
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        )
+                        Spacer(Modifier.height(10.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End,
+                        ) {
+                            TextButton(onClick = { viewModel.dismissNewPlanRetroOffer() }) {
+                                Text(stringResource(R.string.emergency_retroactive_dismiss))
+                            }
+                            TextButton(onClick = { viewModel.applyNewPlanRetroCorrection() }) {
+                                Text(stringResource(R.string.emergency_retroactive_apply))
+                            }
+                        }
+                    }
+                }
             }
             Spacer(Modifier.height(8.dp))
             OutlinedTextField(

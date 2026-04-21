@@ -718,6 +718,10 @@
     <string name="emergency_tracking_start_date_label">Data de início (AAAA-MM-DD)</string>
     <string name="emergency_target_end_date_label">Data alvo/fim (AAAA-MM-DD)</string>
     <string name="emergency_monthly_suggestion">Sugestão mensal: %1$s</string>
+    <string name="emergency_retroactive_plan_title">Início retroativo</string>
+    <string name="emergency_retroactive_plan_message">A data de início é anterior a hoje: %1$d mês(es) já entram no plano e faltam %2$d mês(es) até à data-alvo. Para alcançar a meta de %3$s, a mensal corrigida sugerida é %4$s.</string>
+    <string name="emergency_retroactive_apply">Aplicar correção</string>
+    <string name="emergency_retroactive_dismiss">Ignorar</string>
     <string name="emergency_selected_plan_contribution_label">Aporte deste mês no plano selecionado (R$)</string>
     <string name="emergency_selected_plan_fallback">Plano sem nome</string>
     <string name="emergency_selected_plan_title">Plano selecionado para aporte: %1$s</string>

@@ -22,6 +22,8 @@ import androidx.compose.material.icons.filled.NightsStay
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -488,6 +490,48 @@ fun EmergencyReserveContent(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                    }
+                    state.editingPlanRetroOffer?.let { offer ->
+                        Spacer(Modifier.height(8.dp))
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            ),
+                        ) {
+                            Column(Modifier.padding(12.dp)) {
+                                Text(
+                                    text = stringResource(R.string.emergency_retroactive_plan_title),
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = WellPaidNavy,
+                                )
+                                Spacer(Modifier.height(6.dp))
+                                Text(
+                                    text = stringResource(
+                                        R.string.emergency_retroactive_plan_message,
+                                        offer.monthsPassed,
+                                        offer.monthsRemaining,
+                                        formatBrlFromCents(offer.goalCentsForMessage),
+                                        formatBrlFromCents(offer.adjustedMonthlyCents),
+                                    ),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                )
+                                Spacer(Modifier.height(10.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.End,
+                                ) {
+                                    TextButton(onClick = { viewModel.dismissEditingPlanRetroOffer() }) {
+                                        Text(stringResource(R.string.emergency_retroactive_dismiss))
+                                    }
+                                    TextButton(onClick = { viewModel.applyEditingPlanRetroCorrection() }) {
+                                        Text(stringResource(R.string.emergency_retroactive_apply))
+                                    }
+                                }
+                            }
+                        }
                     }
                     OutlinedTextField(
                         value = state.editingPlanDurationMonthsText,
