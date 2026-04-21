@@ -185,12 +185,6 @@ class EmergencyReserveViewModel @Inject constructor(
 
     fun createNamedPlan() {
         val s = _uiState.value
-        if (!s.canEditReserve) {
-            _uiState.update {
-                it.copy(errorMessage = appContext.getString(R.string.emergency_readonly_not_owner))
-            }
-            return
-        }
         val title = s.newPlanTitleText.trim()
         if (title.isEmpty()) {
             _uiState.update {
@@ -251,12 +245,6 @@ class EmergencyReserveViewModel @Inject constructor(
 
     fun saveEditingPlan() {
         val s = _uiState.value
-        if (!s.canEditReserve) {
-            _uiState.update {
-                it.copy(errorMessage = appContext.getString(R.string.emergency_readonly_not_owner))
-            }
-            return
-        }
         val planId = s.editingPlanId ?: return
         val title = s.editingPlanTitleText.trim()
         if (title.isEmpty()) {
@@ -307,12 +295,6 @@ class EmergencyReserveViewModel @Inject constructor(
 
     fun deletePlanConfirmed() {
         val s = _uiState.value
-        if (!s.canEditReserve) {
-            _uiState.update {
-                it.copy(errorMessage = appContext.getString(R.string.emergency_readonly_not_owner))
-            }
-            return
-        }
         val planId = s.deletingPlanId ?: return
         viewModelScope.launch {
             _uiState.update { it.copy(isUpdatingPlan = true, errorMessage = null) }
@@ -344,12 +326,6 @@ class EmergencyReserveViewModel @Inject constructor(
 
     fun saveMonthlyTarget() {
         val s = _uiState.value
-        if (!s.canEditReserve) {
-            _uiState.update {
-                it.copy(errorMessage = appContext.getString(R.string.emergency_readonly_not_owner))
-            }
-            return
-        }
         val cents = parseBrlToCents(s.monthlyTargetText)
         if (cents == null || cents < 0) {
             _uiState.update {
