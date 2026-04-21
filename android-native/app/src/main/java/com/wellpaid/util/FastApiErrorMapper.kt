@@ -1,12 +1,16 @@
 package com.wellpaid.util
 
 import android.content.Context
+import android.util.Log
 import com.wellpaid.R
 import retrofit2.HttpException
 
 object FastApiErrorMapper {
+    private const val TAG = "WellPaidApiError"
+
     fun message(context: Context, t: Throwable): String {
         if (t !is HttpException) {
+            Log.e(TAG, "non-http failure: ${t::class.java.simpleName}: ${t.message}", t)
             return context.getString(R.string.login_error_network)
         }
         val raw = try {
@@ -14,7 +18,14 @@ object FastApiErrorMapper {
         } catch (_: Exception) {
             ""
         }
-        extractJsonDetail(raw)?.let { return it }
+        val endpoint = t.response()?.raw()?.request?.url?.toString().orEmpty()
+        val detail = extractJsonDetail(raw)
+        Log.e(
+            TAG,
+            "http=${t.code()} endpoint=$endpoint detail=${detail ?: "<none>"} raw=${raw.take(500)}",
+            t,
+        )
+        detail?.let { return it }
         return when (t.code()) {
             400 -> context.getString(R.string.error_bad_request)
             401 -> context.getString(R.string.login_error_invalid)

@@ -11,7 +11,6 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.core.schema_introspection import session_has_table
-from app.models.family import Family
 from app.models.family import FamilyMember
 from app.models.user import User
 from app.schemas.emergency_reserve import (
@@ -67,18 +66,10 @@ def _require_owner_if_family_scope(db: Session, user_id) -> None:
     has_shared_scope = db.scalar(
         select(FamilyMember.id).where(FamilyMember.family_id == family_id).offset(1).limit(1)
     ) is not None
-    # Fallback de segurança para evitar falso negativo: em alguns casos de dados legados
-    # o criador da família pode estar sem role "owner" apesar de ser o titular efetivo.
-    is_family_creator = db.scalar(
-        select(Family.created_by_user_id).where(Family.id == family_id)
-    ) == user_id
-    if has_shared_scope and not (_is_owner_role(role) or is_family_creator):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=(
-                "Apenas o titular da família pode alterar ou remover a reserva de emergência"
-            ),
-        )
+    # Modo família ainda não está maduro para bloquear operações por role na reserva.
+    # Mantemos a função para possível reativação futura, mas sem impedir alterações.
+    if has_shared_scope and not _is_owner_role(role):
+        return
 
 
 @router.get("/plans", response_model=list[EmergencyReservePlanItem])
