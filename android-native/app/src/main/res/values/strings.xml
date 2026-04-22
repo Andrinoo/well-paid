@@ -723,6 +723,7 @@
     <string name="investments_error_name">Enter a valid position name.</string>
     <string name="investments_error_principal">Enter a valid allocated amount.</string>
     <string name="investments_error_rate">Enter a valid annual rate.</string>
+    <string name="investments_error_session_expired">Session expired. Sign in again to save your position.</string>
     <string name="investments_bucket_tesouro">Treasury (Tesouro Direto / IPCA+)</string>
     <string name="investments_bucket_stocks">Stocks (B3)</string>
     <string name="investments_apply_market_rate">Use market rate (CDI)</string>

@@ -15,10 +15,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.wellpaid.R
+import com.wellpaid.ui.components.WellPaidMoneyDigitKeypadField
 import com.wellpaid.ui.theme.WellPaidCream
 import com.wellpaid.ui.theme.WellPaidNavy
 
@@ -52,12 +55,12 @@ fun InvestmentsFixedIncomeJoinScreen(
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
         )
-        OutlinedTextField(
-            value = state.newPositionPrincipalText,
-            onValueChange = onPrincipalChange,
+        WellPaidMoneyDigitKeypadField(
+            valueText = state.newPositionPrincipalText,
+            onValueTextChange = onPrincipalChange,
+            enabled = !state.isSavingPosition,
             label = { Text(stringResource(R.string.investments_field_principal)) },
             modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
         )
         OutlinedTextField(
             value = state.newPositionAnnualRateText,
@@ -65,6 +68,7 @@ fun InvestmentsFixedIncomeJoinScreen(
             label = { Text(stringResource(R.string.investments_field_rate)) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         )
         Spacer(Modifier.height(4.dp))
         Button(onClick = onSave, modifier = Modifier.fillMaxWidth()) {

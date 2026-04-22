@@ -21,9 +21,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.wellpaid.R
+import com.wellpaid.ui.components.WellPaidMoneyDigitKeypadField
 import com.wellpaid.ui.theme.WellPaidCream
 import com.wellpaid.ui.theme.WellPaidNavy
 
@@ -59,12 +62,12 @@ fun InvestmentsStockJoinScreen(
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
         )
-        OutlinedTextField(
-            value = state.averagePriceText,
-            onValueChange = onAveragePriceChange,
+        WellPaidMoneyDigitKeypadField(
+            valueText = state.averagePriceText,
+            onValueTextChange = onAveragePriceChange,
+            enabled = !state.isSavingPosition,
             label = { Text(stringResource(R.string.investments_field_average_price)) },
             modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
         )
         state.quoteInfoMessage?.let { quote ->
             Text(
@@ -78,12 +81,12 @@ fun InvestmentsStockJoinScreen(
             Switch(checked = state.stockJoinModeByValue, onCheckedChange = onModeByValueChange)
         }
         if (state.stockJoinModeByValue) {
-            OutlinedTextField(
-                value = state.newPositionPrincipalText,
-                onValueChange = onValueChange,
+            WellPaidMoneyDigitKeypadField(
+                valueText = state.newPositionPrincipalText,
+                onValueTextChange = onValueChange,
+                enabled = !state.isSavingPosition,
                 label = { Text(stringResource(R.string.investments_field_principal)) },
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
             )
         } else {
             OutlinedTextField(
@@ -92,6 +95,7 @@ fun InvestmentsStockJoinScreen(
                 label = { Text(stringResource(R.string.investments_field_quantity)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             )
         }
         state.stockJoinAdjustedAlert?.let {

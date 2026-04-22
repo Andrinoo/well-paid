@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import retrofit2.HttpException
 import java.util.Locale
 import java.util.regex.Pattern
 import javax.inject.Inject
@@ -723,10 +724,14 @@ class InvestmentsViewModel @Inject constructor(
                 closeCreatePositionForm()
                 refresh()
             }.onFailure { t ->
+                val mappedMessage = when ((t as? HttpException)?.code()) {
+                    401, 403 -> appContext.getString(R.string.investments_error_session_expired)
+                    else -> FastApiErrorMapper.message(appContext, t)
+                }
                 _uiState.update {
                     it.copy(
                         isSavingPosition = false,
-                        errorMessage = FastApiErrorMapper.message(appContext, t),
+                        errorMessage = mappedMessage,
                     )
                 }
             }
