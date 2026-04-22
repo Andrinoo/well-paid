@@ -1,5 +1,6 @@
 package com.wellpaid.ui.investments
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.Canvas
@@ -32,9 +33,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -72,6 +75,7 @@ fun InvestmentsScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val overview = state.overview
     val pullRefreshing = state.isLoading && (overview != null || state.positions.isNotEmpty())
+    BackHandler(enabled = state.showSearchResultsScreen) { viewModel.closeSearchResults() }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -218,63 +222,33 @@ fun InvestmentsScreen(
                 label = { Text(stringResource(R.string.investments_global_search_label)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = WellPaidCreamMuted,
+                    unfocusedContainerColor = WellPaidCreamMuted,
+                ),
             )
-            if (state.isSearchingGlobalTickers || state.globalTickerSuggestions.isNotEmpty()) {
-                Spacer(Modifier.height(6.dp))
-            }
-            if (state.isSearchingGlobalTickers) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 6.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Text(
-                    text = stringResource(R.string.investments_loading_button),
-                    style = MaterialTheme.typography.bodySmall,
+                    text = stringResource(R.string.investments_family_search_toggle),
+                    style = MaterialTheme.typography.labelMedium,
                     color = Color.White.copy(alpha = 0.9f),
                 )
-            } else {
-                state.globalTickerSuggestions.forEach { suggestion ->
-                    TextButton(
-                        onClick = { viewModel.selectTickerSuggestion(suggestion.symbol, fromGlobalSearch = true) },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Column(modifier = Modifier.fillMaxWidth()) {
-                            Text(
-                                text = "${suggestion.symbol} · ${suggestion.name}",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = Color.White,
-                            )
-                            Text(
-                                text = "${instrumentLabelForKey(suggestion.instrumentType)} · ${suggestion.source.uppercase(Locale.ROOT)}",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color.White.copy(alpha = 0.76f),
-                            )
-                        }
-                    }
-                }
+                Switch(
+                    checked = state.familySearchEnabled,
+                    onCheckedChange = { viewModel.setFamilySearchEnabled(it) },
+                )
             }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Button(
-                    onClick = {
-                        if (state.showCreatePositionForm) viewModel.closeCreatePositionForm()
-                        else viewModel.openCreatePositionForm()
-                    },
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = WellPaidGold,
-                        contentColor = WellPaidNavy,
-                    ),
-                    shape = RoundedCornerShape(14.dp),
-                ) {
-                    Text(
-                        text = if (state.showCreatePositionForm) {
-                            stringResource(R.string.common_cancel)
-                        } else {
-                            stringResource(R.string.investments_add_position)
-                        },
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
-            }
+            Text(
+                text = stringResource(R.string.investments_global_search_helper),
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.White.copy(alpha = 0.75f),
+            )
         }
 
         Spacer(Modifier.height(12.dp))

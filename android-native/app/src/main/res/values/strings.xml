@@ -727,7 +727,9 @@
     <string name="investments_bucket_stocks">Stocks (B3)</string>
     <string name="investments_apply_market_rate">Use market rate (CDI)</string>
     <string name="investments_fetch_b3_quote">B3 quote</string>
-    <string name="investments_global_search_label">Search asset/ticker (e.g. PETR, CDB, CDI)</string>
+    <string name="investments_global_search_label">Search and add position (e.g. PETR4, CDB, CDI)</string>
+    <string name="investments_global_search_helper">Type an exact ticker to open directly. Turn on family search to browse list.</string>
+    <string name="investments_family_search_toggle">Search family list</string>
     <string name="investments_search_results_title">Market search</string>
     <string name="investments_top_movers_hour">Top 10 of the hour</string>
     <string name="investments_top_movers_day">Top 10 of the day</string>

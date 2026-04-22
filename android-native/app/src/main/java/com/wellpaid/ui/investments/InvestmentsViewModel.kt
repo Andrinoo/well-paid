@@ -69,6 +69,7 @@ data class InvestmentsUiState(
     val newPositionType: String = "cdi",
     val newPositionName: String = "",
     val globalSearchText: String = "",
+    val familySearchEnabled: Boolean = false,
     val showSearchResultsScreen: Boolean = false,
     val quantityText: String = "",
     val averagePriceText: String = "",
@@ -178,6 +179,16 @@ class InvestmentsViewModel @Inject constructor(
                 .debounce(300)
                 .distinctUntilChanged()
                 .collectLatest { query ->
+                    if (!_uiState.value.familySearchEnabled) {
+                        _uiState.update {
+                            it.copy(
+                                globalTickerSuggestions = emptyList(),
+                                isSearchingGlobalTickers = false,
+                                showSearchResultsScreen = false,
+                            )
+                        }
+                        return@collectLatest
+                    }
                     if (query.length < 2) {
                         _uiState.update {
                             it.copy(
@@ -480,10 +491,37 @@ class InvestmentsViewModel @Inject constructor(
     }
 
     fun setGlobalSearchText(value: String) {
+        val trimmed = value.trim()
         _uiState.update { it.copy(globalSearchText = value) }
-        globalTickerQueryFlow.tryEmit(value.trim())
-        if (value.trim().length >= 2) {
+        if (_uiState.value.familySearchEnabled) {
+            globalTickerQueryFlow.tryEmit(trimmed)
+        } else {
+            _uiState.update {
+                it.copy(
+                    isSearchingGlobalTickers = false,
+                    globalTickerSuggestions = emptyList(),
+                    showSearchResultsScreen = false,
+                )
+            }
+        }
+        if (trimmed.length >= 2) {
             loadTopMoversIfNeeded()
+        }
+        if (!_uiState.value.familySearchEnabled) {
+            val maybeTicker = extractTickerFromText(trimmed)
+            if (!maybeTicker.isNullOrBlank() && maybeTicker.length >= 5) {
+                openStockJoin(maybeTicker)
+                return
+            }
+            val upper = trimmed.uppercase(Locale.ROOT)
+            if (upper == "CDB" || upper == "CDI" || upper.contains("RENDA FIXA")) {
+                val type = when {
+                    upper.contains("CDB") -> "cdb"
+                    upper.contains("CDI") -> "cdi"
+                    else -> "fixed_income"
+                }
+                openFixedIncomeJoin(symbol = upper, instrumentType = type)
+            }
         }
     }
 
@@ -499,6 +537,23 @@ class InvestmentsViewModel @Inject constructor(
 
     fun closeSearchResults() {
         _uiState.update { it.copy(showSearchResultsScreen = false) }
+    }
+
+    fun setFamilySearchEnabled(enabled: Boolean) {
+        _uiState.update {
+            it.copy(
+                familySearchEnabled = enabled,
+                showSearchResultsScreen = if (enabled) it.showSearchResultsScreen else false,
+                globalTickerSuggestions = if (enabled) it.globalTickerSuggestions else emptyList(),
+                isSearchingGlobalTickers = if (enabled) it.isSearchingGlobalTickers else false,
+            )
+        }
+        if (enabled) {
+            val q = _uiState.value.globalSearchText.trim()
+            if (q.length >= 2) {
+                globalTickerQueryFlow.tryEmit(q)
+            }
+        }
     }
 
     fun selectTickerSuggestion(symbol: String, fromGlobalSearch: Boolean = false) {
