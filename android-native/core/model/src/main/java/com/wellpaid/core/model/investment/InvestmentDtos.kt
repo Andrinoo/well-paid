@@ -70,3 +70,23 @@ data class StockQuoteDto(
     val source: String = "brapi",
     val error: String? = null,
 )
+
+@Serializable
+data class TickerSearchItemDto(
+    val symbol: String,
+    val name: String,
+)
+
+@Serializable
+data class StockHistoryPointDto(
+    val close: Double = 0.0,
+    @SerialName("as_of") val asOf: String? = null,
+)
+
+@Serializable
+data class StockHistoryDto(
+    val symbol: String,
+    val range: String,
+    val points: List<StockHistoryPointDto> = emptyList(),
+    val error: String? = null,
+)

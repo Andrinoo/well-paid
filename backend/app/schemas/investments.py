@@ -63,3 +63,20 @@ class StockQuoteOut(BaseModel):
     as_of: str | None = None
     source: str = "brapi"
     error: str | None = None
+
+
+class TickerSearchItemOut(BaseModel):
+    symbol: str
+    name: str
+
+
+class StockHistoryPointOut(BaseModel):
+    close: float = Field(ge=0)
+    as_of: str | None = None
+
+
+class StockHistoryOut(BaseModel):
+    symbol: str
+    range: str
+    points: list[StockHistoryPointOut] = Field(default_factory=list)
+    error: str | None = None

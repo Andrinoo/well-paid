@@ -14,9 +14,11 @@ from app.schemas.investments import (
     InvestmentPositionCreate,
     InvestmentPositionOut,
     InvestmentSuggestedRatesOut,
+    StockHistoryOut,
     StockQuoteOut,
+    TickerSearchItemOut,
 )
-from app.services.investment_brapi import fetch_stock_quote_brapi
+from app.services.investment_brapi import fetch_stock_history_brapi, fetch_stock_quote_brapi
 from app.services.investment_market_rates import get_suggested_annual_rates
 from app.services.investments import (
     create_position_for_user,
@@ -25,6 +27,7 @@ from app.services.investments import (
     get_investment_overview_for_user,
     list_positions_for_user,
 )
+from app.services.ticker_cache import ticker_cache_service
 
 router = APIRouter(prefix="/investments", tags=["investments"])
 logger = logging.getLogger(__name__)
@@ -72,6 +75,40 @@ def read_stock_quote(
         source="brapi",
         error=None,
     )
+
+
+@router.get("/quote/history", response_model=StockHistoryOut)
+@limiter.limit("30/minute")
+def read_stock_quote_history(
+    request: Request,
+    user: Annotated[User, Depends(get_current_user)],
+    symbol: Annotated[str, Query(min_length=1, max_length=12, description="Ticker B3, ex. PETR4")],
+    range: Annotated[str, Query(min_length=2, max_length=8, description="5m,30m,60m,3h,12h,1d,1w,1m,3m,6m,1y")] = "1m",
+) -> StockHistoryOut:
+    raw = fetch_stock_history_brapi(symbol=symbol, range_key=range)
+    if raw is None:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Falha ao consultar histórico.",
+        )
+    return StockHistoryOut(
+        symbol=str(raw.get("symbol") or symbol.strip().upper()),
+        range=range,
+        points=list(raw.get("points") or []),
+        error=raw.get("raw_error"),
+    )
+
+
+@router.get("/tickers/search", response_model=list[TickerSearchItemOut])
+@limiter.limit("60/minute")
+def search_tickers(
+    request: Request,
+    user: Annotated[User, Depends(get_current_user)],
+    q: Annotated[str, Query(min_length=2, max_length=24)],
+    limit: Annotated[int, Query(ge=1, le=50)] = 12,
+) -> list[TickerSearchItemOut]:
+    rows = ticker_cache_service.search(q, limit=limit)
+    return [TickerSearchItemOut(symbol=r["symbol"], name=r["name"]) for r in rows]
 
 
 @router.get("/overview", response_model=InvestmentOverviewOut)

@@ -5,7 +5,9 @@ import com.wellpaid.core.model.investment.InvestmentEvolutionPointDto
 import com.wellpaid.core.model.investment.InvestmentPositionCreateDto
 import com.wellpaid.core.model.investment.InvestmentPositionDto
 import com.wellpaid.core.model.investment.InvestmentSuggestedRatesDto
+import com.wellpaid.core.model.investment.StockHistoryDto
 import com.wellpaid.core.model.investment.StockQuoteDto
+import com.wellpaid.core.model.investment.TickerSearchItemDto
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -22,6 +24,18 @@ interface InvestmentsApi {
     suspend fun getStockQuote(
         @Query("symbol") symbol: String,
     ): StockQuoteDto
+
+    @GET("investments/quote/history")
+    suspend fun getStockQuoteHistory(
+        @Query("symbol") symbol: String,
+        @Query("range") range: String,
+    ): StockHistoryDto
+
+    @GET("investments/tickers/search")
+    suspend fun searchTickers(
+        @Query("q") query: String,
+        @Query("limit") limit: Int = 12,
+    ): List<TickerSearchItemDto>
 
     @GET("investments/overview")
     suspend fun getOverview(): InvestmentOverviewDto

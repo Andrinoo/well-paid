@@ -27,6 +27,7 @@ from app.api.routes import (
 )
 from app.core.config import get_settings
 from app.core.limiter import limiter
+from app.services.ticker_cache import ticker_cache_service
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -77,6 +78,15 @@ def _log_smtp_status() -> None:
         )
     else:
         logger.info("SMTP ativo: host=%s port=%s mail_from=%s", host, s.smtp_port, mf)
+
+
+@app.on_event("startup")
+def _warm_ticker_cache() -> None:
+    try:
+        ticker_cache_service.warm_up()
+        logger.info("Ticker cache warmed on startup.")
+    except Exception:
+        logger.exception("Failed to warm ticker cache on startup.")
 
 
 def _rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
