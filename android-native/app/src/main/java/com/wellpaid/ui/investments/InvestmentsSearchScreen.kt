@@ -15,6 +15,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -72,11 +73,20 @@ fun InvestmentsSearchScreen(
         OutlinedTextField(
             value = query,
             onValueChange = onQueryChange,
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color.White, RoundedCornerShape(12.dp)),
+            modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             label = { Text(stringResource(R.string.investments_global_search_label)) },
+            shape = RoundedCornerShape(12.dp),
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = Color.White,
+                unfocusedContainerColor = Color.White,
+                focusedTextColor = WellPaidNavy,
+                unfocusedTextColor = WellPaidNavy,
+                focusedLabelColor = WellPaidNavy,
+                unfocusedLabelColor = WellPaidNavy.copy(alpha = 0.8f),
+                focusedIndicatorColor = WellPaidGold,
+                unfocusedIndicatorColor = WellPaidNavy.copy(alpha = 0.35f),
+            ),
         )
         Spacer(Modifier.height(8.dp))
 
