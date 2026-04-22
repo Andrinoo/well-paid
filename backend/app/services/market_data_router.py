@@ -38,10 +38,11 @@ class MarketDataRouterService:
         q = (query or "").strip().upper()
         if len(q) < 2:
             return []
+        synthetic = self._synthetic_fixed_income_rows(q)
         raw_rows = self.b3.search_tickers(query=q, limit=max(40, limit))
         if not raw_rows:
             raw_rows = self.brapi.search_tickers(query=q, limit=max(40, limit))
-        return self._rank_and_trim_search_rows(raw_rows, query=q, limit=limit)
+        return self._rank_and_trim_search_rows([*synthetic, *raw_rows], query=q, limit=limit)
 
     def quote(self, symbol: str) -> dict[str, Any] | None:
         ticker = self._normalize_ticker(symbol)
@@ -117,6 +118,51 @@ class MarketDataRouterService:
         if not m:
             return None
         return m.group(1)
+
+    def _synthetic_fixed_income_rows(self, query: str) -> list[dict[str, Any]]:
+        q = query.upper()
+        rows: list[dict[str, Any]] = []
+        if "CDB" in q:
+            rows.append(
+                {
+                    "symbol": "CDB",
+                    "name": "CDB - Certificado de Deposito Bancario",
+                    "instrument_type": "cdb",
+                    "source": "wellpaid",
+                    "confidence": 0.99,
+                }
+            )
+        if "CDI" in q:
+            rows.append(
+                {
+                    "symbol": "CDI",
+                    "name": "CDI - Certificado de Deposito Interbancario",
+                    "instrument_type": "cdi",
+                    "source": "wellpaid",
+                    "confidence": 0.99,
+                }
+            )
+        if "TESOURO" in q or "IPCA" in q or "SELIC" in q:
+            rows.append(
+                {
+                    "symbol": "TESOURO",
+                    "name": "Tesouro Direto",
+                    "instrument_type": "tesouro",
+                    "source": "wellpaid",
+                    "confidence": 0.96,
+                }
+            )
+        if "RENDA FIXA" in q:
+            rows.append(
+                {
+                    "symbol": "RENDA_FIXA",
+                    "name": "Renda fixa (geral)",
+                    "instrument_type": "fixed_income",
+                    "source": "wellpaid",
+                    "confidence": 0.95,
+                }
+            )
+        return rows
 
 
 market_data_router = MarketDataRouterService()

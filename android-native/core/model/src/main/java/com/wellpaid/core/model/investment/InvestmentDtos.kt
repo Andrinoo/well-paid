@@ -36,6 +36,7 @@ data class InvestmentPositionDto(
     val id: String,
     @SerialName("instrument_type") val instrumentType: String,
     val name: String,
+    val description: String? = null,
     @SerialName("principal_cents") val principalCents: Int,
     @SerialName("annual_rate_bps") val annualRateBps: Int,
     @SerialName("maturity_date") val maturityDate: String? = null,
@@ -46,6 +47,7 @@ data class InvestmentPositionDto(
 data class InvestmentPositionCreateDto(
     @SerialName("instrument_type") val instrumentType: String,
     val name: String,
+    val description: String? = null,
     @SerialName("principal_cents") val principalCents: Int,
     @SerialName("annual_rate_bps") val annualRateBps: Int,
     @SerialName("maturity_date") val maturityDate: String? = null,

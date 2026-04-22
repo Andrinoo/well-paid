@@ -5,13 +5,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -51,10 +48,9 @@ fun InvestmentsSearchScreen(
 
     Column(
         modifier = Modifier
-            .fillMaxSize()
+            .fillMaxWidth()
             .background(WellPaidCream)
-            .padding(12.dp)
-            .verticalScroll(rememberScrollState()),
+            .padding(12.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -85,7 +81,7 @@ fun InvestmentsSearchScreen(
         if (isSearching) {
             CircularProgressIndicator()
         } else {
-            suggestions.forEach { item ->
+            suggestions.take(5).forEach { item ->
                 Button(
                     onClick = { onSelectTicker(item.symbol) },
                     modifier = Modifier.fillMaxWidth(),
@@ -114,21 +110,21 @@ fun InvestmentsSearchScreen(
         if (!explicitWindow || showHour) {
             TopMoversSection(
                 title = stringResource(R.string.investments_top_movers_hour),
-                items = topHour,
+                items = topHour.take(5),
                 onSelectTicker = onSelectTicker,
             )
         }
         if (!explicitWindow || showDay) {
             TopMoversSection(
                 title = stringResource(R.string.investments_top_movers_day),
-                items = topDay,
+                items = topDay.take(5),
                 onSelectTicker = onSelectTicker,
             )
         }
         if (!explicitWindow || showWeek) {
             TopMoversSection(
                 title = stringResource(R.string.investments_top_movers_week),
-                items = topWeek,
+                items = topWeek.take(5),
                 onSelectTicker = onSelectTicker,
             )
         }

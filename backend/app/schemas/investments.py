@@ -30,6 +30,7 @@ class InvestmentEvolutionPointOut(BaseModel):
 class InvestmentPositionCreate(BaseModel):
     instrument_type: str = Field(min_length=2, max_length=32)
     name: str = Field(min_length=2, max_length=180)
+    description: str | None = Field(default=None, max_length=220)
     principal_cents: int = Field(gt=0)
     annual_rate_bps: int = Field(ge=0, le=100000)
     maturity_date: date | None = None
@@ -40,6 +41,7 @@ class InvestmentPositionOut(BaseModel):
     id: str
     instrument_type: str
     name: str
+    description: str | None = None
     principal_cents: int = Field(ge=0)
     annual_rate_bps: int = Field(ge=0)
     maturity_date: date | None = None

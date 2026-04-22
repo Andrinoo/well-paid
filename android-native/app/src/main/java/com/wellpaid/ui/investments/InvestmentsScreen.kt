@@ -122,7 +122,27 @@ fun InvestmentsScreen(
             )
         }
 
-        if (state.showSearchResultsScreen) {
+        if (state.showStockJoinScreen) {
+            InvestmentsStockJoinScreen(
+                state = state,
+                onDescriptionChange = { viewModel.setStockJoinDescription(it) },
+                onModeByValueChange = { viewModel.setStockJoinModeByValue(it) },
+                onQuantityChange = { viewModel.setQuantityText(it) },
+                onValueChange = { viewModel.setStockJoinValueText(it) },
+                onAveragePriceChange = { viewModel.setAveragePriceText(it) },
+                onSave = { viewModel.createPosition() },
+                onBack = { viewModel.closeStockJoin() },
+            )
+        } else if (state.showFixedIncomeJoinScreen) {
+            InvestmentsFixedIncomeJoinScreen(
+                state = state,
+                onDescriptionChange = { viewModel.setFixedIncomeDescription(it) },
+                onPrincipalChange = { viewModel.setNewPositionPrincipalText(it) },
+                onRateChange = { viewModel.setNewPositionAnnualRateText(it) },
+                onSave = { viewModel.createPosition() },
+                onBack = { viewModel.closeFixedIncomeJoin() },
+            )
+        } else if (state.showSearchResultsScreen) {
             InvestmentsSearchScreen(
                 query = state.globalSearchText,
                 suggestions = state.globalTickerSuggestions,

@@ -25,6 +25,7 @@ class InvestmentPosition(Base, TimestampMixin):
     )
     instrument_type: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(180), nullable=False)
+    description: Mapped[str | None] = mapped_column(String(220), nullable=True)
     principal_cents: Mapped[int] = mapped_column(BigInteger, nullable=False)
     annual_rate_bps: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     maturity_date: Mapped[date | None] = mapped_column(Date, nullable=True)
