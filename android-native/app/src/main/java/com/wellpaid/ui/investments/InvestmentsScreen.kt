@@ -221,12 +221,16 @@ fun InvestmentsScreen(
             OutlinedTextField(
                 value = state.globalSearchText,
                 onValueChange = { viewModel.setGlobalSearchText(it) },
-                label = { Text(stringResource(R.string.investments_global_search_label)) },
+                placeholder = { Text(stringResource(R.string.investments_global_search_label)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = WellPaidCreamMuted,
                     unfocusedContainerColor = WellPaidCreamMuted,
+                    focusedTextColor = WellPaidNavy,
+                    unfocusedTextColor = WellPaidNavy,
+                    focusedPlaceholderColor = WellPaidNavy.copy(alpha = 0.65f),
+                    unfocusedPlaceholderColor = WellPaidNavy.copy(alpha = 0.65f),
                 ),
             )
             Row(

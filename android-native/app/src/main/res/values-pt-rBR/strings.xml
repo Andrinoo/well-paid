@@ -730,11 +730,16 @@
     <string name="investments_global_search_label">Pesquisar e adicionar posição (ex.: PETR4, CDB, CDI)</string>
     <string name="investments_global_search_helper">Ticker exato abre direto. Ative "Pesquisar família" para abrir lista.</string>
     <string name="investments_family_search_toggle">Pesquisar família</string>
+    <string name="investments_search_results_title">Pesquisa de mercado</string>
+    <string name="investments_top_movers_hour">Top 10 da hora</string>
+    <string name="investments_top_movers_day">Top 10 do dia</string>
+    <string name="investments_top_movers_week">Top 10 da semana</string>
     <string name="investments_market_rate_not_applicable">Taxa automática disponível para CDI, CDB ou renda fixa geral.</string>
     <string name="investments_error_ticker">Indique o ticker (ex. PETR4) no nome da posição antes de buscar a cotação.</string>
     <string name="investments_stock_quote">Cotação: R$ %1$s</string>
     <string name="investments_stock_quote_ref">Cotação: R$ %1$s · %2$s</string>
     <string name="investments_quote_unavailable">Cotação indisponível (%1$s).</string>
+    <string name="investments_field_target_price">Preço-alvo (opcional)</string>
     <string name="investments_view_compact">Lista compacta</string>
     <string name="investments_view_cards">Cards</string>
     <string name="investments_view_details">Detalhes</string>
