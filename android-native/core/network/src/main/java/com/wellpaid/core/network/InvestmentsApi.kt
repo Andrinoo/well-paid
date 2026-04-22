@@ -10,6 +10,7 @@ import com.wellpaid.core.model.investment.MacroSnapshotDto
 import com.wellpaid.core.model.investment.StockHistoryDto
 import com.wellpaid.core.model.investment.StockQuoteDto
 import com.wellpaid.core.model.investment.TickerSearchItemDto
+import com.wellpaid.core.model.investment.TopMoverItemDto
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -38,6 +39,12 @@ interface InvestmentsApi {
         @Query("q") query: String,
         @Query("limit") limit: Int = 12,
     ): List<TickerSearchItemDto>
+
+    @GET("investments/tickers/top-movers")
+    suspend fun getTopMovers(
+        @Query("window") window: String,
+        @Query("limit") limit: Int = 10,
+    ): List<TopMoverItemDto>
 
     @GET("investments/macro/snapshot")
     suspend fun getMacroSnapshot(): MacroSnapshotDto

@@ -11,6 +11,7 @@ import com.wellpaid.core.model.investment.InvestmentPositionDto
 import com.wellpaid.core.model.investment.InvestmentOverviewDto
 import com.wellpaid.core.model.investment.MacroSnapshotDto
 import com.wellpaid.core.model.investment.StockHistoryPointDto
+import com.wellpaid.core.model.investment.TopMoverItemDto
 import com.wellpaid.core.network.InvestmentsApi
 import com.wellpaid.util.FastApiErrorMapper
 import com.wellpaid.util.parseBrlToCents
@@ -49,6 +50,16 @@ data class FundamentalPreviewUi(
     val source: String = "fundamentus",
 )
 
+data class TopMoverUi(
+    val symbol: String,
+    val name: String,
+    val changePercent: Double,
+    val volume: Double,
+    val window: String,
+    val source: String,
+    val confidence: Double? = null,
+)
+
 data class InvestmentsUiState(
     val isLoading: Boolean = true,
     val overview: InvestmentOverviewDto? = null,
@@ -58,6 +69,7 @@ data class InvestmentsUiState(
     val newPositionType: String = "cdi",
     val newPositionName: String = "",
     val globalSearchText: String = "",
+    val showSearchResultsScreen: Boolean = false,
     val quantityText: String = "",
     val averagePriceText: String = "",
     val targetPriceText: String = "",
@@ -66,6 +78,10 @@ data class InvestmentsUiState(
     val newPositionAnnualRateText: String = "",
     val tickerSuggestions: List<TickerSuggestionUi> = emptyList(),
     val globalTickerSuggestions: List<TickerSuggestionUi> = emptyList(),
+    val topMoversHour: List<TopMoverUi> = emptyList(),
+    val topMoversDay: List<TopMoverUi> = emptyList(),
+    val topMoversWeek: List<TopMoverUi> = emptyList(),
+    val isLoadingTopMovers: Boolean = false,
     val isSearchingGlobalTickers: Boolean = false,
     val isSearchingTickers: Boolean = false,
     val isSavingPosition: Boolean = false,
@@ -160,11 +176,12 @@ class InvestmentsViewModel @Inject constructor(
                             it.copy(
                                 globalTickerSuggestions = emptyList(),
                                 isSearchingGlobalTickers = false,
+                                showSearchResultsScreen = false,
                             )
                         }
                         return@collectLatest
                     }
-                    _uiState.update { it.copy(isSearchingGlobalTickers = true) }
+                    _uiState.update { it.copy(isSearchingGlobalTickers = true, showSearchResultsScreen = true) }
                     runCatching { api.searchTickers(query = query, limit = 14) }
                         .onSuccess { rows ->
                             _uiState.update {
@@ -193,6 +210,16 @@ class InvestmentsViewModel @Inject constructor(
                 }
         }
     }
+
+    private fun TopMoverItemDto.toUi(): TopMoverUi = TopMoverUi(
+        symbol = symbol,
+        name = name,
+        changePercent = changePercent,
+        volume = volume,
+        window = window,
+        source = source,
+        confidence = confidence,
+    )
 
     fun refresh() {
         viewModelScope.launch {
@@ -448,10 +475,23 @@ class InvestmentsViewModel @Inject constructor(
     fun setGlobalSearchText(value: String) {
         _uiState.update { it.copy(globalSearchText = value) }
         globalTickerQueryFlow.tryEmit(value.trim())
+        if (value.trim().length >= 2) {
+            loadTopMoversIfNeeded()
+        }
     }
 
     fun clearGlobalSearch() {
-        _uiState.update { it.copy(globalSearchText = "", globalTickerSuggestions = emptyList()) }
+        _uiState.update {
+            it.copy(
+                globalSearchText = "",
+                globalTickerSuggestions = emptyList(),
+                showSearchResultsScreen = false,
+            )
+        }
+    }
+
+    fun closeSearchResults() {
+        _uiState.update { it.copy(showSearchResultsScreen = false) }
     }
 
     fun selectTickerSuggestion(symbol: String, fromGlobalSearch: Boolean = false) {
@@ -463,9 +503,30 @@ class InvestmentsViewModel @Inject constructor(
                 globalTickerSuggestions = if (fromGlobalSearch) emptyList() else it.globalTickerSuggestions,
                 newPositionType = "stocks",
                 showCreatePositionForm = true,
+                showSearchResultsScreen = false,
             )
         }
         fetchB3StockQuoteAndFundamentals()
+    }
+
+    private fun loadTopMoversIfNeeded() {
+        val current = _uiState.value
+        if (current.isLoadingTopMovers) return
+        if (current.topMoversHour.isNotEmpty() && current.topMoversDay.isNotEmpty() && current.topMoversWeek.isNotEmpty()) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingTopMovers = true) }
+            val hour = runCatching { api.getTopMovers(window = "hour", limit = 10) }.getOrElse { emptyList() }
+            val day = runCatching { api.getTopMovers(window = "day", limit = 10) }.getOrElse { emptyList() }
+            val week = runCatching { api.getTopMovers(window = "week", limit = 10) }.getOrElse { emptyList() }
+            _uiState.update {
+                it.copy(
+                    isLoadingTopMovers = false,
+                    topMoversHour = hour.map { row -> row.toUi() },
+                    topMoversDay = day.map { row -> row.toUi() },
+                    topMoversWeek = week.map { row -> row.toUi() },
+                )
+            }
+        }
     }
 
     fun setNewPositionPrincipalText(value: String) {

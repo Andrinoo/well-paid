@@ -122,6 +122,20 @@ fun InvestmentsScreen(
             )
         }
 
+        if (state.showSearchResultsScreen) {
+            InvestmentsSearchScreen(
+                query = state.globalSearchText,
+                suggestions = state.globalTickerSuggestions,
+                isSearching = state.isSearchingGlobalTickers,
+                isLoadingTopMovers = state.isLoadingTopMovers,
+                topHour = state.topMoversHour,
+                topDay = state.topMoversDay,
+                topWeek = state.topMoversWeek,
+                onQueryChange = { viewModel.setGlobalSearchText(it) },
+                onSelectTicker = { viewModel.selectTickerSuggestion(it, fromGlobalSearch = true) },
+                onBack = { viewModel.closeSearchResults() },
+            )
+        } else {
         Spacer(Modifier.height(8.dp))
         Column(
             modifier = Modifier
@@ -475,6 +489,7 @@ fun InvestmentsScreen(
         }
 
         Spacer(Modifier.height(12.dp))
+        }
     }
     }
     state.selectedPositionId?.let { selectedId ->

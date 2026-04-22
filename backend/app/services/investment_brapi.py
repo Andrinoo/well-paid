@@ -66,6 +66,64 @@ def fetch_stock_quote_brapi(symbol: str) -> dict[str, Any] | None:
     return {"last_price": last, "as_of": as_of, "raw_error": None}
 
 
+def fetch_stock_quote_snapshot_brapi(symbol: str) -> dict[str, Any] | None:
+    """
+    Retorna snapshot mais completo para rankings:
+    { symbol, name, last_price, change_percent, volume, as_of, raw_error }
+    """
+    s = (symbol or "").strip().upper()
+    if not s or len(s) > 12:
+        return None
+    token = (get_settings().brapi_api_key or "").strip()
+    url = f"{_BRAPI_BASE}/quote/{s}"
+    params: dict[str, str] = {}
+    if token:
+        params["token"] = token
+    try:
+        with httpx.Client(timeout=12.0, headers={"User-Agent": _USER_AGENT}) as client:
+            r = client.get(url, params=params or None)
+    except Exception:
+        logger.exception("BRAPI snapshot request failed for %s", s)
+        return None
+    if r.status_code != 200:
+        return None
+    try:
+        data = r.json()
+    except Exception:
+        return None
+    results = data.get("results") or []
+    if not results:
+        return None
+    row = results[0] if isinstance(results[0], dict) else {}
+    raw_price = row.get("regularMarketPrice") or row.get("lastPrice") or row.get("close")
+    try:
+        price = float(raw_price) if raw_price is not None else 0.0
+    except (TypeError, ValueError):
+        price = 0.0
+    raw_cp = row.get("regularMarketChangePercent") or row.get("changePercent")
+    try:
+        change_percent = float(raw_cp) if raw_cp is not None else None
+    except (TypeError, ValueError):
+        change_percent = None
+    raw_vol = row.get("regularMarketVolume") or row.get("volume")
+    try:
+        volume = float(raw_vol) if raw_vol is not None else None
+    except (TypeError, ValueError):
+        volume = None
+    dref = row.get("regularMarketTime") or row.get("updatedAt") or row.get("date")
+    as_of = str(dref) if dref is not None else None
+    name = str(row.get("shortName") or row.get("longName") or row.get("name") or s).strip()
+    return {
+        "symbol": s,
+        "name": name,
+        "last_price": price,
+        "change_percent": change_percent,
+        "volume": volume,
+        "as_of": as_of,
+        "raw_error": None if price > 0 else "no_price",
+    }
+
+
 def search_tickers_brapi(query: str, *, limit: int = 12) -> list[dict[str, str]]:
     q = (query or "").strip()
     if len(q) < 2:

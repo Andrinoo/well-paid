@@ -132,3 +132,8 @@ class B3Provider:
             "source": self.source,
             "confidence": 0.95,
         }
+
+    def top_movers(self, window: str, limit: int = 10) -> list[dict[str, Any]]:
+        # Placeholder: endpoint/cobertura B3 varia por contrato.
+        # Mantemos interface para priorização futura sem quebrar roteador.
+        return []

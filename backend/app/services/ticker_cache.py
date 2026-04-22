@@ -12,13 +12,15 @@ from app.services.market_data_router import market_data_router
 class _TickerCacheState:
     loaded_at: datetime | None = None
     by_prefix: dict[str, list[dict[str, Any]]] | None = None
+    top_movers: dict[str, list[dict[str, Any]]] | None = None
 
 
 class TickerCacheService:
     def __init__(self, ttl_minutes: int = 60) -> None:
         self._ttl = timedelta(minutes=max(5, ttl_minutes))
+        self._top_ttl = timedelta(minutes=5)
         self._lock = Lock()
-        self._state = _TickerCacheState(by_prefix={})
+        self._state = _TickerCacheState(by_prefix={}, top_movers={})
 
     def _is_fresh(self) -> bool:
         if self._state.loaded_at is None:
@@ -48,6 +50,27 @@ class TickerCacheService:
             if self._state.loaded_at is None or not self._is_fresh():
                 self._state.loaded_at = datetime.now(timezone.utc)
         return rows[:limit]
+
+    def get_top_movers(self, window: str, *, limit: int = 10) -> list[dict[str, Any]] | None:
+        w = (window or "").strip().lower()
+        with self._lock:
+            if self._state.loaded_at is None:
+                return None
+            fresh = datetime.now(timezone.utc) - self._state.loaded_at < self._top_ttl
+            if not fresh:
+                return None
+            rows = (self._state.top_movers or {}).get(w)
+            if rows is None:
+                return None
+            return rows[:limit]
+
+    def set_top_movers(self, window: str, rows: list[dict[str, Any]]) -> None:
+        w = (window or "").strip().lower()
+        with self._lock:
+            if self._state.top_movers is None:
+                self._state.top_movers = {}
+            self._state.top_movers[w] = rows
+            self._state.loaded_at = datetime.now(timezone.utc)
 
 
 ticker_cache_service = TickerCacheService()

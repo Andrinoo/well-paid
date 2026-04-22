@@ -12,6 +12,7 @@ from app.services.providers.sgs_provider import SgsProvider
 _TICKER_RX = re.compile(r"^[A-Z]{4}\d{1,2}$")
 _TICKER_FAMILY_RX = re.compile(r"^([A-Z]{4})(\d{1,2})?$")
 _ALLOWED_RANGES = {"5m", "30m", "60m", "3h", "12h", "1d", "1w", "1m", "3m", "6m", "1y"}
+_ALLOWED_MOVER_WINDOWS = {"hour", "day", "week"}
 
 
 @dataclass
@@ -63,6 +64,15 @@ class MarketDataRouterService:
     def fundamentals(self, symbol: str) -> dict[str, Any] | None:
         ticker = self._normalize_ticker(symbol)
         return self.fundamentus.fundamentals(ticker)
+
+    def top_movers(self, window: str, limit: int = 10) -> list[dict[str, Any]]:
+        w = (window or "").strip().lower()
+        if w not in _ALLOWED_MOVER_WINDOWS:
+            raise ValueError("window_invalid")
+        top = self.b3.top_movers(window=w, limit=limit)
+        if top:
+            return top
+        return self.brapi.top_movers(window=w, limit=limit)
 
     def _rank_and_trim_search_rows(
         self,

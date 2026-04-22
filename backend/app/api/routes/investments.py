@@ -19,6 +19,7 @@ from app.schemas.investments import (
     StockHistoryOut,
     StockQuoteOut,
     TickerSearchItemOut,
+    TopMoverItemOut,
 )
 from app.services.investment_market_rates import get_suggested_annual_rates
 from app.services.market_data_router import market_data_router
@@ -127,6 +128,37 @@ def search_tickers(
             symbol=r["symbol"],
             name=r["name"],
             instrument_type=str(r.get("instrument_type") or "stocks"),
+            source=str(r.get("source") or "unknown"),
+            confidence=r.get("confidence"),
+        )
+        for r in rows
+    ]
+
+
+@router.get("/tickers/top-movers", response_model=list[TopMoverItemOut])
+@limiter.limit("60/minute")
+def read_top_movers(
+    request: Request,
+    user: Annotated[User, Depends(get_current_user)],
+    window: Annotated[str, Query(min_length=3, max_length=8, description="hour|day|week")] = "day",
+    limit: Annotated[int, Query(ge=1, le=30)] = 10,
+) -> list[TopMoverItemOut]:
+    cached = ticker_cache_service.get_top_movers(window=window, limit=limit)
+    if cached is not None:
+        rows = cached
+    else:
+        try:
+            rows = market_data_router.top_movers(window=window, limit=limit)
+        except ValueError:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Janela inválida")
+        ticker_cache_service.set_top_movers(window=window, rows=rows)
+    return [
+        TopMoverItemOut(
+            symbol=str(r.get("symbol") or ""),
+            name=str(r.get("name") or r.get("symbol") or ""),
+            change_percent=float(r.get("change_percent") or 0.0),
+            volume=float(r.get("volume") or 0.0),
+            window=str(r.get("window") or window),
             source=str(r.get("source") or "unknown"),
             confidence=r.get("confidence"),
         )

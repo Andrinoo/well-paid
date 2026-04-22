@@ -116,3 +116,14 @@ data class EquityFundamentalsDto(
     val source: String = "fundamentus",
     val confidence: Double? = null,
 )
+
+@Serializable
+data class TopMoverItemDto(
+    val symbol: String,
+    val name: String,
+    @SerialName("change_percent") val changePercent: Double = 0.0,
+    val volume: Double = 0.0,
+    val window: String,
+    val source: String = "brapi",
+    val confidence: Double? = null,
+)

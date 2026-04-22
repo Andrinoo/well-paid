@@ -104,3 +104,13 @@ class EquityFundamentalsOut(BaseModel):
     roe: str | None = None
     source: str = "fundamentus"
     confidence: float | None = Field(default=None, ge=0, le=1)
+
+
+class TopMoverItemOut(BaseModel):
+    symbol: str
+    name: str
+    change_percent: float
+    volume: float = Field(ge=0)
+    window: str
+    source: str = "brapi"
+    confidence: float | None = Field(default=None, ge=0, le=1)
