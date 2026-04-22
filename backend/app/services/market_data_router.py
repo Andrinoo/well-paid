@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from app.services.providers.b3_provider import B3Provider
@@ -15,10 +15,10 @@ _ALLOWED_RANGES = {"5m", "30m", "60m", "3h", "12h", "1d", "1w", "1m", "3m", "6m"
 
 @dataclass
 class MarketDataRouterService:
-    b3: B3Provider = B3Provider()
-    brapi: BrapiProvider = BrapiProvider()
-    sgs: SgsProvider = SgsProvider()
-    fundamentus: FundamentusProvider = FundamentusProvider()
+    b3: B3Provider = field(default_factory=B3Provider)
+    brapi: BrapiProvider = field(default_factory=BrapiProvider)
+    sgs: SgsProvider = field(default_factory=SgsProvider)
+    fundamentus: FundamentusProvider = field(default_factory=FundamentusProvider)
 
     def _normalize_ticker(self, symbol: str) -> str:
         s = (symbol or "").strip().upper()
