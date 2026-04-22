@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wellpaid.R
 import com.wellpaid.core.model.auth.TokenStorage
-import com.wellpaid.core.model.emergency.EmergencyReserveAccrualDto
 import com.wellpaid.core.model.emergency.EmergencyReserveContributionAllocationDto
 import com.wellpaid.core.model.emergency.EmergencyReserveContributionCreateDto
 import com.wellpaid.core.model.emergency.EmergencyReserveDto
@@ -57,7 +56,6 @@ data class EmergencyReserveUiState(
     val isCreatingPlan: Boolean = false,
     val reserve: EmergencyReserveDto? = null,
     val plans: List<EmergencyReservePlanDto> = emptyList(),
-    val accruals: List<EmergencyReserveAccrualDto> = emptyList(),
     val monthlyTargetText: String = "",
     val selectedPlanId: String? = null,
     val selectedPlanContributionText: String = "",
@@ -149,7 +147,6 @@ class EmergencyReserveViewModel @Inject constructor(
                     isLoading = false,
                     reserve = null,
                     plans = emptyList(),
-                    accruals = emptyList(),
                     errorMessage = appContext.getString(R.string.emergency_need_login),
                 )
             }
@@ -165,7 +162,6 @@ class EmergencyReserveViewModel @Inject constructor(
     private suspend fun loadEmergencySnapshot() {
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
         val reserveResult = runCatching { api.getReserve() }
-        val accrualsResult = runCatching { api.listAccruals(limit = 12) }
         val plansResult = runCatching { api.listPlans() }
         val reserve = reserveResult.getOrNull()
         _uiState.update {
@@ -173,7 +169,6 @@ class EmergencyReserveViewModel @Inject constructor(
                 isLoading = false,
                 reserve = reserve,
                 plans = plansResult.getOrElse { emptyList() },
-                accruals = accrualsResult.getOrElse { emptyList() },
                 monthlyTargetText = reserve?.let { r -> centsToBrlInput(r.monthlyTargetCents) }
                     ?: it.monthlyTargetText,
                 selectedPlanId = it.selectedPlanId ?: plansResult.getOrElse { emptyList() }.firstOrNull()?.id,
@@ -347,9 +342,6 @@ class EmergencyReserveViewModel @Inject constructor(
                 editingPlanRetroOffer = null,
                 editingPlanRetroDismissFingerprint = null,
                 isUpdatingPlan = false,
-                planDetailMonthRows = emptyList(),
-                planDetailMonthsLoading = false,
-                planDetailMonthsError = null,
             )
         }
     }
@@ -724,12 +716,6 @@ class EmergencyReserveViewModel @Inject constructor(
                             monthlyTargetText = centsToBrlInput(r.monthlyTargetCents),
                             errorMessage = null,
                         )
-                    }
-                    viewModelScope.launch {
-                        runCatching { api.listAccruals(limit = 12) }
-                            .onSuccess { list ->
-                                _uiState.update { it.copy(accruals = list) }
-                            }
                     }
                 }
                 .onFailure { t ->

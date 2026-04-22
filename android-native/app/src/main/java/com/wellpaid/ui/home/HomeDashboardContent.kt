@@ -123,6 +123,7 @@ fun HomeDashboardContent(
             listOf(
                 mainRouteEntry.savedStateHandle.get<Long>("user_profile_dirty") ?: 0L,
                 mainRouteEntry.savedStateHandle.get<Long>("announcements_dirty") ?: 0L,
+                mainRouteEntry.savedStateHandle.get<Long>("emergency_reserve_dirty") ?: 0L,
             )
         }.distinctUntilChanged().collect { marks ->
             if (marks.any { it > 0L }) viewModel.refresh()
@@ -315,7 +316,7 @@ fun HomeDashboardContent(
                             if (it.isLowerCase()) it.titlecase(locale) else it.toString()
                         }
 
-                        if (overview != null && (cashflow != null || state.cashflowError != null)) {
+                        if (overview != null) {
                             val shortcutSegmentRadius = 5.dp
                             val shortcutSegmentShapeStart = RoundedCornerShape(
                                 topStart = shortcutSegmentRadius,
@@ -452,11 +453,25 @@ fun HomeDashboardContent(
                                                         )
                                                     } ?: run {
                                                         if (state.cashflowError == null) {
-                                                            Text(
-                                                                text = stringResource(R.string.home_cashflow_empty),
-                                                                style = MaterialTheme.typography.bodyMedium,
-                                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                            )
+                                                            if (state.isLoading) {
+                                                                Row(
+                                                                    Modifier
+                                                                        .fillMaxWidth()
+                                                                        .weight(1f)
+                                                                        .padding(24.dp),
+                                                                    horizontalArrangement = Arrangement.Center,
+                                                                    verticalAlignment = Alignment.CenterVertically,
+                                                                ) {
+                                                                    CircularProgressIndicator()
+                                                                }
+                                                            } else {
+                                                                Text(
+                                                                    text = stringResource(R.string.home_cashflow_empty),
+                                                                    style = MaterialTheme.typography.bodyMedium,
+                                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                                    modifier = Modifier.weight(1f),
+                                                                )
+                                                            }
                                                         }
                                                     }
                                                 }
@@ -466,12 +481,6 @@ fun HomeDashboardContent(
                                     }
                                 }
                             }
-                        } else if (overview != null && cashflow == null && state.cashflowError == null && !state.isLoading) {
-                            Text(
-                                text = stringResource(R.string.home_cashflow_title),
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.SemiBold,
-                            )
                         }
                     }
                     PullRefreshIndicator(

@@ -27,6 +27,8 @@ class UiPreferencesRepository @Inject constructor(
         val keypadHapticsEnabled = booleanPreferencesKey("keypad_haptics_enabled")
         /** Só pede período em meses no plano de reserva; data-alvo fim é derivada e o campo fica oculto. */
         val emergencyPlanHideTargetEndDate = booleanPreferencesKey("emergency_plan_hide_target_end")
+        /** Se true, permite capturas de ecrã (remove FLAG_SECURE). Por defeito false = bloqueio ativo. */
+        val screenshotsAllowed = booleanPreferencesKey("screenshots_allowed")
     }
 
     val shoppingAutoGroceryHintsFlow: Flow<Boolean> =
@@ -40,6 +42,9 @@ class UiPreferencesRepository @Inject constructor(
 
     val emergencyPlanHideTargetEndFlow: Flow<Boolean> =
         dataStore.data.map { it[Keys.emergencyPlanHideTargetEndDate] ?: false }
+
+    val screenshotsAllowedFlow: Flow<Boolean> =
+        dataStore.data.map { it[Keys.screenshotsAllowed] ?: false }
 
     suspend fun setShoppingAutoGroceryHints(value: Boolean) {
         dataStore.edit { it[Keys.shoppingAutoGroceryHints] = value }
@@ -55,5 +60,9 @@ class UiPreferencesRepository @Inject constructor(
 
     suspend fun setEmergencyPlanHideTargetEndDate(value: Boolean) {
         dataStore.edit { it[Keys.emergencyPlanHideTargetEndDate] = value }
+    }
+
+    suspend fun setScreenshotsAllowed(value: Boolean) {
+        dataStore.edit { it[Keys.screenshotsAllowed] = value }
     }
 }

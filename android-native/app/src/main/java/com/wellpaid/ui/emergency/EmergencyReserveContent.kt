@@ -1,5 +1,6 @@
 package com.wellpaid.ui.emergency
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -18,6 +19,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.NightsStay
 import androidx.compose.material.icons.filled.Refresh
@@ -31,6 +34,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -70,8 +74,8 @@ import com.wellpaid.ui.theme.DiscreetBalanceValue
 import com.wellpaid.util.formatBrlFromCents
 import com.wellpaid.util.centsToBrlInput
 import com.wellpaid.util.formatIsoDateToBr
+import kotlin.math.abs
 import kotlin.math.roundToInt
-import kotlin.math.ceil
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -90,7 +94,6 @@ fun EmergencyReserveContent(
     val emergencyDirty by dirtyFlow.collectAsStateWithLifecycle()
     var showPolicyTipsDialog by remember { mutableStateOf(false) }
     var globalMetaExpanded by remember { mutableStateOf(false) }
-    var accrualsExpanded by remember { mutableStateOf(false) }
     LaunchedEffect(emergencyDirty) {
         if (emergencyDirty != 0L) {
             viewModel.refresh()
@@ -169,8 +172,8 @@ fun EmergencyReserveContent(
                     enabled = !state.isCreatingPlan && !state.isSaving && !state.isUpdatingPlan,
                     shape = RoundedCornerShape(24.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = WellPaidNavy,
-                        contentColor = Color.White,
+                        containerColor = WellPaidGold,
+                        contentColor = WellPaidNavy,
                     ),
                 ) {
                     Icon(Icons.Filled.Add, contentDescription = null)
@@ -209,16 +212,30 @@ fun EmergencyReserveContent(
                 }
 
                 Spacer(Modifier.height(12.dp))
-                TextButton(
+                OutlinedButton(
                     onClick = { globalMetaExpanded = !globalMetaExpanded },
                     modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, WellPaidGold),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = WellPaidNavy,
+                    ),
                 ) {
-                    Text(
-                        text = stringResource(R.string.emergency_hub_global_meta_title),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = WellPaidNavy,
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = stringResource(R.string.emergency_hub_global_meta_title),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Icon(
+                            imageVector = if (globalMetaExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                            contentDescription = null,
+                        )
+                    }
                 }
                 if (globalMetaExpanded) {
                     Text(
@@ -258,8 +275,8 @@ fun EmergencyReserveContent(
                         enabled = !state.isSaving,
                         shape = RoundedCornerShape(24.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = WellPaidNavy,
-                            contentColor = Color.White,
+                            containerColor = WellPaidGold,
+                            contentColor = WellPaidNavy,
                         ),
                     ) {
                         Text(
@@ -267,6 +284,15 @@ fun EmergencyReserveContent(
                             fontWeight = FontWeight.SemiBold,
                         )
                     }
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(
+                            R.string.emergency_tracking_start,
+                            formatIsoDateToBr(r.trackingStart),
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
 
                 if (!r.configured) {
@@ -277,59 +303,6 @@ fun EmergencyReserveContent(
                         color = MaterialTheme.colorScheme.tertiary,
                     )
                 }
-
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    text = stringResource(
-                        R.string.emergency_tracking_start,
-                        formatIsoDateToBr(r.trackingStart),
-                    ),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-
-                Spacer(Modifier.height(16.dp))
-                TextButton(
-                    onClick = { accrualsExpanded = !accrualsExpanded },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(
-                        text = stringResource(R.string.emergency_accruals_collapsed_title),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = WellPaidNavy,
-                    )
-                }
-                if (accrualsExpanded) {
-                    Spacer(Modifier.height(8.dp))
-                    if (state.accruals.isEmpty()) {
-                        Text(
-                            text = stringResource(R.string.emergency_accruals_empty),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    } else {
-                        state.accruals.forEach { a ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 6.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Text(
-                                    text = viewModel.formatAccrualMonth(a.year, a.month),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                )
-                                Text(
-                                    text = formatBrlFromCents(a.amountCents),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Medium,
-                                )
-                            }
-                        }
-                    }
-                }
             }
             if (r == null && !state.isLoading) {
                 Spacer(Modifier.height(8.dp))
@@ -339,8 +312,8 @@ fun EmergencyReserveContent(
                     enabled = !state.isCreatingPlan && !state.isSaving && !state.isUpdatingPlan,
                     shape = RoundedCornerShape(24.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = WellPaidNavy,
-                        contentColor = Color.White,
+                        containerColor = WellPaidGold,
+                        contentColor = WellPaidNavy,
                     ),
                 ) {
                     Icon(Icons.Filled.Add, contentDescription = null)
@@ -420,7 +393,7 @@ private fun EmergencyReserveCompactHero(
             ),
             style = MaterialTheme.typography.bodySmall,
             color = Color.White.copy(alpha = 0.88f),
-            maxLines = 2,
+            maxLines = 1,
         )
         Spacer(Modifier.height(8.dp))
         LinearProgressIndicator(
@@ -441,35 +414,39 @@ private fun EmergencyReservePlanCompactCard(
     enabled: Boolean,
     onOpen: () -> Unit,
 ) {
-    val statusLabel = when (plan.status) {
-        "active" -> stringResource(R.string.emergency_plan_status_active)
-        "completed" -> stringResource(R.string.emergency_plan_status_completed)
-        else -> plan.status
-    }
     val targetCents = plan.targetCents
-    val estimateLine = if (targetCents != null && targetCents > 0) {
-        estimateMonthsToReachTarget(
-            currentCents = plan.balanceCents,
-            monthlyCents = plan.monthlyTargetCents,
-            targetCents = targetCents,
-        )?.let { months ->
-            stringResource(R.string.emergency_plan_estimate_line, months)
+    val compactLine = if (targetCents != null && targetCents > 0) {
+        val pct = ((plan.balanceCents * 100L) / targetCents).toInt().coerceIn(0, 999)
+        stringResource(
+            R.string.emergency_plan_card_compact_vs_target,
+            formatBrlFromCents(plan.balanceCents),
+            pct,
+        )
+    } else {
+        val paceShort = when (plan.paceStatus) {
+            "below" -> stringResource(
+                R.string.emergency_plan_card_compact_pace_delta,
+                formatBrlFromCents(abs(plan.paceDeltaCents)),
+            )
+            "above" -> stringResource(
+                R.string.emergency_plan_card_compact_pace_delta,
+                formatBrlFromCents(abs(plan.paceDeltaCents)),
+            )
+            "on_track" -> stringResource(R.string.emergency_pace_on_track)
+            else -> stringResource(R.string.emergency_pace_unknown)
         }
-    } else {
-        null
+        stringResource(
+            R.string.emergency_plan_card_compact_balance_pace,
+            formatBrlFromCents(plan.balanceCents),
+            paceShort,
+        )
     }
-    val line4 = if (targetCents != null && targetCents > 0) {
-        stringResource(R.string.emergency_plan_target_line, formatBrlFromCents(targetCents)) +
-            (estimateLine?.let { " · $it" } ?: "")
-    } else {
-        stringResource(R.string.emergency_plan_no_ceiling)
-    }
-    val paceLabel = when (plan.paceStatus) {
-        "below" -> stringResource(R.string.emergency_pace_below)
-        "above" -> stringResource(R.string.emergency_pace_above)
-        "on_track" -> stringResource(R.string.emergency_pace_on_track)
-        else -> stringResource(R.string.emergency_pace_unknown)
-    }
+    val detailColor =
+        if (plan.paceStatus == "below" && (targetCents == null || targetCents <= 0)) {
+            MaterialTheme.colorScheme.error
+        } else {
+            WellPaidNavy
+        }
 
     Column(
         modifier = Modifier
@@ -489,42 +466,12 @@ private fun EmergencyReservePlanCompactCard(
             color = WellPaidNavy,
             maxLines = 1,
         )
-        Spacer(Modifier.height(2.dp))
+        Spacer(Modifier.height(4.dp))
         Text(
-            text = stringResource(
-                R.string.emergency_plan_one_line,
-                statusLabel,
-                formatBrlFromCents(plan.balanceCents),
-                formatBrlFromCents(plan.monthlyTargetCents),
-            ),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-        )
-        Spacer(Modifier.height(2.dp))
-        Text(
-            text = stringResource(R.string.emergency_plan_opening_line, formatBrlFromCents(plan.openingBalanceCents)),
+            text = compactLine,
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-        )
-        Spacer(Modifier.height(2.dp))
-        Text(
-            text = line4,
-            style = MaterialTheme.typography.labelSmall,
-            color = WellPaidNavy,
+            color = detailColor,
             maxLines = 2,
-        )
-        Spacer(Modifier.height(2.dp))
-        Text(
-            text = stringResource(
-                R.string.emergency_pace_delta_line,
-                paceLabel,
-                formatBrlFromCents(plan.paceDeltaCents),
-            ),
-            style = MaterialTheme.typography.labelSmall,
-            color = if (plan.paceStatus == "below") MaterialTheme.colorScheme.error else WellPaidNavy,
-            maxLines = 1,
         )
         Spacer(Modifier.height(6.dp))
         Text(
@@ -534,17 +481,6 @@ private fun EmergencyReservePlanCompactCard(
             color = WellPaidNavy,
         )
     }
-}
-
-private fun estimateMonthsToReachTarget(
-    currentCents: Int,
-    monthlyCents: Int,
-    targetCents: Int,
-): Int? {
-    if (monthlyCents <= 0) return null
-    val remaining = (targetCents - currentCents).coerceAtLeast(0)
-    if (remaining == 0) return 0
-    return ceil(remaining / monthlyCents.toDouble()).toInt()
 }
 
 @Composable

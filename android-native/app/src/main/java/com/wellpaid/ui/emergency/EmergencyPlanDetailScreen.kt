@@ -1,5 +1,6 @@
 package com.wellpaid.ui.emergency
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,17 +14,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -36,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wellpaid.R
@@ -46,7 +49,6 @@ import com.wellpaid.ui.theme.WellPaidMaxContentWidth
 import com.wellpaid.ui.theme.WellPaidNavy
 import com.wellpaid.ui.theme.wellPaidMaxContentWidth
 import com.wellpaid.ui.theme.wellPaidTopAppBarColors
-import com.wellpaid.util.formatBrlFromCents
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,6 +56,8 @@ fun EmergencyPlanDetailScreen(
     planId: String,
     onNavigateBack: () -> Unit,
     onPlanDeletedNavigateBack: () -> Unit,
+    onOpenPlanStatus: () -> Unit,
+    onOpenMonthlyProgress: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: EmergencyReserveViewModel,
 ) {
@@ -86,6 +90,7 @@ fun EmergencyPlanDetailScreen(
                         style = MaterialTheme.typography.titleLarge,
                         color = Color.White,
                         maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 },
                 navigationIcon = {
@@ -125,7 +130,7 @@ fun EmergencyPlanDetailScreen(
                 .padding(innerPadding)
                 .wellPaidMaxContentWidth(WellPaidMaxContentWidth)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .padding(horizontal = 12.dp, vertical = 6.dp),
         ) {
             state.errorMessage?.let { msg ->
                 if (state.editingPlanId == planId || plan == null) {
@@ -133,14 +138,36 @@ fun EmergencyPlanDetailScreen(
                         text = msg,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(bottom = 8.dp),
+                        modifier = Modifier.padding(bottom = 6.dp),
                     )
                 }
             }
 
-            plan?.let { p ->
-                EmergencyPlanDetailSummaryCard(plan = p)
-                Spacer(Modifier.height(16.dp))
+            plan?.let {
+                OutlinedButton(
+                    onClick = onOpenPlanStatus,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, WellPaidGold),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = WellPaidNavy),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = stringResource(R.string.emergency_plan_open_status),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = null,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
             }
 
             Text(
@@ -149,7 +176,7 @@ fun EmergencyPlanDetailScreen(
                 fontWeight = FontWeight.SemiBold,
                 color = WellPaidNavy,
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(6.dp))
             WellPaidMoneyDigitKeypadField(
                 valueText = state.selectedPlanContributionText,
                 onValueTextChange = { viewModel.setSelectedPlanContributionText(it) },
@@ -157,8 +184,9 @@ fun EmergencyPlanDetailScreen(
                 enabled = !state.isSaving && state.selectedPlanId == planId,
                 label = { Text(stringResource(R.string.emergency_selected_plan_contribution_label)) },
                 placeholder = stringResource(R.string.emergency_monthly_placeholder),
+                dense = true,
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(6.dp))
             Button(
                 onClick = { viewModel.saveSelectedPlanContribution() },
                 modifier = Modifier.fillMaxWidth(),
@@ -179,9 +207,9 @@ fun EmergencyPlanDetailScreen(
                 )
             }
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(12.dp))
             HorizontalDivider()
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(10.dp))
 
             Text(
                 text = stringResource(R.string.emergency_plan_detail_edit_section),
@@ -189,22 +217,22 @@ fun EmergencyPlanDetailScreen(
                 fontWeight = FontWeight.SemiBold,
                 color = WellPaidNavy,
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(6.dp))
             EmergencyPlanEditFields(
                 state = state,
                 hideEmergencyTargetEnd = hideTargetEnd,
                 enabled = !state.isUpdatingPlan,
                 viewModel = viewModel,
             )
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(8.dp))
             Button(
                 onClick = { viewModel.saveEditingPlan() },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !state.isUpdatingPlan && state.editingPlanId == planId,
                 shape = RoundedCornerShape(24.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = WellPaidNavy,
-                    contentColor = Color.White,
+                    containerColor = WellPaidGold,
+                    contentColor = WellPaidNavy,
                 ),
             ) {
                 Text(
@@ -217,79 +245,34 @@ fun EmergencyPlanDetailScreen(
                 )
             }
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(12.dp))
             HorizontalDivider()
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(10.dp))
 
-            Text(
-                text = stringResource(R.string.emergency_plan_detail_breakdown_section),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = WellPaidNavy,
-            )
-            Spacer(Modifier.height(8.dp))
-            when {
-                state.planDetailMonthsLoading -> {
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.Center,
-                    ) {
-                        CircularProgressIndicator()
-                    }
-                }
-                state.planDetailMonthsError != null -> {
+            OutlinedButton(
+                onClick = onOpenMonthlyProgress,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, WellPaidGold),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = WellPaidNavy),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     Text(
-                        text = state.planDetailMonthsError!!,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
+                        text = stringResource(R.string.emergency_plan_detail_breakdown_section),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
                     )
-                }
-                state.planDetailMonthRows.isEmpty() -> {
-                    Text(
-                        text = stringResource(R.string.emergency_plan_detail_months_empty),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = null,
                     )
-                }
-                else -> {
-                    state.planDetailMonthRows.forEach { row ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 6.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                text = viewModel.formatAccrualMonth(row.year, row.month),
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                            Column(horizontalAlignment = Alignment.End) {
-                                Text(
-                                    text = stringResource(
-                                        R.string.emergency_plan_month_row_expected_deposited,
-                                        formatBrlFromCents(row.expectedCents),
-                                        formatBrlFromCents(row.depositedCents),
-                                    ),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                                Text(
-                                    text = stringResource(
-                                        R.string.emergency_plan_month_row_cumulative_delta,
-                                        formatBrlFromCents(row.cumulativeDeltaCents),
-                                    ),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = WellPaidNavy,
-                                )
-                            }
-                        }
-                    }
                 }
             }
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(12.dp))
         }
     }
 
@@ -317,50 +300,6 @@ fun EmergencyPlanDetailScreen(
                 ) {
                     Text(stringResource(R.string.common_cancel))
                 }
-            },
-        )
-    }
-}
-
-@Composable
-private fun EmergencyPlanDetailSummaryCard(plan: EmergencyReservePlanDto) {
-    val paceLabel = when (plan.paceStatus) {
-        "below" -> stringResource(R.string.emergency_pace_below)
-        "above" -> stringResource(R.string.emergency_pace_above)
-        "on_track" -> stringResource(R.string.emergency_pace_on_track)
-        else -> stringResource(R.string.emergency_pace_unknown)
-    }
-    val statusStr = when (plan.status) {
-        "active" -> stringResource(R.string.emergency_plan_status_active)
-        "completed" -> stringResource(R.string.emergency_plan_status_completed)
-        else -> plan.status
-    }
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-    ) {
-        Text(
-            text = stringResource(
-                R.string.emergency_plan_one_line,
-                statusStr,
-                formatBrlFromCents(plan.balanceCents),
-                formatBrlFromCents(plan.monthlyTargetCents),
-            ),
-            style = MaterialTheme.typography.bodyMedium,
-        )
-        Spacer(Modifier.height(4.dp))
-        Text(
-            text = stringResource(
-                R.string.emergency_pace_delta_line,
-                paceLabel,
-                formatBrlFromCents(plan.paceDeltaCents),
-            ),
-            style = MaterialTheme.typography.bodySmall,
-            color = if (plan.paceStatus == "below") {
-                MaterialTheme.colorScheme.error
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
             },
         )
     }

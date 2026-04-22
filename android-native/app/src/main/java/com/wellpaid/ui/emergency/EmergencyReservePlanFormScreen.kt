@@ -1,5 +1,6 @@
 package com.wellpaid.ui.emergency
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,9 +11,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -22,6 +26,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -29,23 +34,26 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wellpaid.R
-import com.wellpaid.util.formatBrlFromCents
 import com.wellpaid.ui.components.WellPaidDatePickerField
 import com.wellpaid.ui.components.WellPaidMoneyDigitKeypadField
 import com.wellpaid.ui.theme.WellPaidCream
-import com.wellpaid.ui.theme.WellPaidNavy
 import com.wellpaid.ui.theme.WellPaidMaxContentWidth
+import com.wellpaid.ui.theme.WellPaidNavy
 import com.wellpaid.ui.theme.wellPaidMaxContentWidth
 import com.wellpaid.ui.theme.wellPaidTopAppBarColors
+import com.wellpaid.util.formatBrlFromCents
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,6 +65,7 @@ fun EmergencyReservePlanFormScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val hideTargetEnd by viewModel.hideEmergencyPlanTargetEnd.collectAsStateWithLifecycle()
+    var moreOptionsExpanded by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.resetNewPlanFormFields()
@@ -104,12 +113,6 @@ fun EmergencyReservePlanFormScreen(
                 )
             }
 
-            Text(
-                text = stringResource(R.string.emergency_new_plan_section),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 12.dp),
-            )
             OutlinedTextField(
                 value = state.newPlanTitleText,
                 onValueChange = { viewModel.setNewPlanTitleText(it) },
@@ -120,16 +123,55 @@ fun EmergencyReservePlanFormScreen(
                 shape = RoundedCornerShape(16.dp),
             )
             Spacer(Modifier.height(8.dp))
-            OutlinedTextField(
-                value = state.newPlanDetailsText,
-                onValueChange = { viewModel.setNewPlanDetailsText(it) },
-                label = { Text(stringResource(R.string.emergency_new_plan_details_label)) },
+            OutlinedButton(
+                onClick = { moreOptionsExpanded = !moreOptionsExpanded },
                 modifier = Modifier.fillMaxWidth(),
-                minLines = 2,
-                maxLines = 4,
-                enabled = !state.isCreatingPlan && !state.isSaving,
-                shape = RoundedCornerShape(16.dp),
-            )
+                shape = RoundedCornerShape(12.dp),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(R.string.emergency_new_plan_more_options),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = WellPaidNavy,
+                    )
+                    Icon(
+                        imageVector = if (moreOptionsExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                        contentDescription = null,
+                        tint = WellPaidNavy,
+                    )
+                }
+            }
+            AnimatedVisibility(visible = moreOptionsExpanded) {
+                Column(Modifier.fillMaxWidth()) {
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = state.newPlanDetailsText,
+                        onValueChange = { viewModel.setNewPlanDetailsText(it) },
+                        label = { Text(stringResource(R.string.emergency_new_plan_details_label)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 2,
+                        maxLines = 4,
+                        enabled = !state.isCreatingPlan && !state.isSaving,
+                        shape = RoundedCornerShape(16.dp),
+                    )
+                    if (!hideTargetEnd) {
+                        Spacer(Modifier.height(8.dp))
+                        WellPaidDatePickerField(
+                            label = { Text(stringResource(R.string.emergency_target_end_date_label)) },
+                            isoDate = state.newPlanTargetEndText,
+                            onIsoDateChange = { viewModel.setNewPlanTargetEndText(it) },
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !state.isCreatingPlan && !state.isSaving,
+                            shape = RoundedCornerShape(16.dp),
+                        )
+                    }
+                }
+            }
             Spacer(Modifier.height(8.dp))
             WellPaidDatePickerField(
                 label = { Text(stringResource(R.string.emergency_tracking_start_date_label)) },
@@ -151,23 +193,6 @@ fun EmergencyReservePlanFormScreen(
                 enabled = !state.isCreatingPlan && !state.isSaving,
                 shape = RoundedCornerShape(16.dp),
             )
-            Text(
-                text = stringResource(R.string.emergency_plan_duration_target_sync_hint),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp),
-            )
-            if (!hideTargetEnd) {
-                Spacer(Modifier.height(8.dp))
-                WellPaidDatePickerField(
-                    label = { Text(stringResource(R.string.emergency_target_end_date_label)) },
-                    isoDate = state.newPlanTargetEndText,
-                    onIsoDateChange = { viewModel.setNewPlanTargetEndText(it) },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !state.isCreatingPlan && !state.isSaving,
-                    shape = RoundedCornerShape(16.dp),
-                )
-            }
             Spacer(Modifier.height(8.dp))
             WellPaidMoneyDigitKeypadField(
                 valueText = state.newPlanOpeningBalanceText,
@@ -177,12 +202,6 @@ fun EmergencyReservePlanFormScreen(
                 label = { Text(stringResource(R.string.emergency_plan_opening_label)) },
                 placeholder = stringResource(R.string.emergency_monthly_placeholder),
             )
-            Text(
-                text = stringResource(R.string.emergency_plan_opening_hint),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp),
-            )
             Spacer(Modifier.height(8.dp))
             WellPaidMoneyDigitKeypadField(
                 valueText = state.newPlanMonthlyText,
@@ -191,12 +210,6 @@ fun EmergencyReservePlanFormScreen(
                 enabled = !state.isCreatingPlan && !state.isSaving,
                 label = { Text(stringResource(R.string.emergency_new_plan_monthly_label)) },
                 placeholder = stringResource(R.string.emergency_monthly_placeholder),
-            )
-            Text(
-                text = stringResource(R.string.emergency_new_plan_monthly_footnote),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp),
             )
             Spacer(Modifier.height(8.dp))
             WellPaidMoneyDigitKeypadField(

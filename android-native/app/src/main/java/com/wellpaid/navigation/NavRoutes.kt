@@ -82,4 +82,14 @@ object NavRoutes {
     const val EmergencyPlanDetailRoute = "$EMERGENCY_PLAN/{planId}"
 
     fun emergencyPlanDetail(planId: String): String = "$EMERGENCY_PLAN/$planId"
+
+    private const val EMERGENCY_PLAN_MONTHS = "emergency_plan_months"
+    const val EmergencyPlanMonthBreakdownRoute = "$EMERGENCY_PLAN_MONTHS/{planId}"
+
+    fun emergencyPlanMonthBreakdown(planId: String): String = "$EMERGENCY_PLAN_MONTHS/$planId"
+
+    private const val EMERGENCY_PLAN_STATUS = "emergency_plan_status"
+    const val EmergencyPlanStatusRoute = "$EMERGENCY_PLAN_STATUS/{planId}"
+
+    fun emergencyPlanStatus(planId: String): String = "$EMERGENCY_PLAN_STATUS/$planId"
 }

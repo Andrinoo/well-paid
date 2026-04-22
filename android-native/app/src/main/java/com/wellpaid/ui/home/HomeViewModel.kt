@@ -103,7 +103,11 @@ class HomeViewModel @Inject constructor(
         val period = _uiState.value.period
         viewModelScope.launch {
             _uiState.update {
-                it.copy(isLoading = true, errorMessage = null, cashflowError = null)
+                it.copy(
+                    isLoading = true,
+                    errorMessage = null,
+                    cashflowError = null,
+                )
             }
             // Perfil primeiro: mesmo token do dashboard; garante nome/full_name antes dos agregados.
             val fromApi = runCatching { userApi.getCurrentUser() }

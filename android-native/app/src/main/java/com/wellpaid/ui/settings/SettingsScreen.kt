@@ -155,6 +155,7 @@ fun SettingsScreen(
         }
         var keypadHapticsEnabled by remember { mutableStateOf(true) }
         var hideEmergencyTargetEnd by remember { mutableStateOf(false) }
+        var screenshotsAllowed by remember { mutableStateOf(false) }
         LaunchedEffect(uiPreferencesRepository) {
             uiPreferencesRepository.keypadHapticsEnabledFlow.collect { enabled ->
                 keypadHapticsEnabled = enabled
@@ -163,6 +164,11 @@ fun SettingsScreen(
         LaunchedEffect(uiPreferencesRepository) {
             uiPreferencesRepository.emergencyPlanHideTargetEndFlow.collect { v ->
                 hideEmergencyTargetEnd = v
+            }
+        }
+        LaunchedEffect(uiPreferencesRepository) {
+            uiPreferencesRepository.screenshotsAllowedFlow.collect { v ->
+                screenshotsAllowed = v
             }
         }
         Column(
@@ -356,6 +362,35 @@ fun SettingsScreen(
                                     hideEmergencyTargetEnd = v
                                     scope.launch {
                                         uiPreferencesRepository.setEmergencyPlanHideTargetEndDate(v)
+                                    }
+                                },
+                            )
+                        },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+                    ListItem(
+                        headlineContent = {
+                            Text(
+                                stringResource(R.string.settings_tile_screenshots_allowed),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Medium,
+                            )
+                        },
+                        supportingContent = {
+                            Text(
+                                stringResource(R.string.settings_tile_screenshots_allowed_hint),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        },
+                        trailingContent = {
+                            Switch(
+                                checked = screenshotsAllowed,
+                                onCheckedChange = { v ->
+                                    screenshotsAllowed = v
+                                    scope.launch {
+                                        uiPreferencesRepository.setScreenshotsAllowed(v)
                                     }
                                 },
                             )

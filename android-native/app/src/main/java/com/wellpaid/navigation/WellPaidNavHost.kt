@@ -6,7 +6,9 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -32,7 +34,11 @@ import com.wellpaid.ui.goals.GoalDetailScreen
 import com.wellpaid.ui.goals.GoalFormScreen
 import com.wellpaid.ui.incomes.IncomeFormScreen
 import com.wellpaid.ui.investments.InvestmentsScreen
+import com.wellpaid.data.UiPreferencesRepository
+import com.wellpaid.ui.SecureWindowPolicyEffect
 import com.wellpaid.ui.emergency.EmergencyPlanDetailScreen
+import com.wellpaid.ui.emergency.EmergencyPlanMonthBreakdownScreen
+import com.wellpaid.ui.emergency.EmergencyPlanStatusScreen
 import com.wellpaid.ui.emergency.EmergencyReservePlanFormScreen
 import com.wellpaid.ui.login.LoginScreen
 import com.wellpaid.ui.main.MainShellScreen
@@ -127,6 +133,14 @@ fun WellPaidNavHost(
                     AppSecurityEntryPoint::class.java,
                 ).appSecurityManager()
             }
+            val uiPreferencesRepository = remember(context.applicationContext) {
+                UiPreferencesRepository(context.applicationContext)
+            }
+            var screenshotsAllowed by remember { mutableStateOf(false) }
+            LaunchedEffect(uiPreferencesRepository) {
+                uiPreferencesRepository.screenshotsAllowedFlow.collect { screenshotsAllowed = it }
+            }
+            SecureWindowPolicyEffect(screenshotsAllowed)
             val locked by securityManager.locked.collectAsStateWithLifecycle()
             val hidePrivacy by securityManager.privacyHideAmounts.collectAsStateWithLifecycle()
             val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -420,6 +434,44 @@ fun WellPaidNavHost(
                         onPlanDeletedNavigateBack = {
                             refreshEmergencyAndPop()
                         },
+                        onOpenPlanStatus = {
+                            navController.navigate(NavRoutes.emergencyPlanStatus(planId))
+                        },
+                        onOpenMonthlyProgress = {
+                            navController.navigate(NavRoutes.emergencyPlanMonthBreakdown(planId))
+                        },
+                        viewModel = hiltViewModel(mainEntry),
+                    )
+                }
+                composable(
+                    route = NavRoutes.EmergencyPlanStatusRoute,
+                    arguments = listOf(
+                        navArgument("planId") { type = NavType.StringType },
+                    ),
+                ) { statusEntry ->
+                    val statusPlanId = statusEntry.arguments?.getString("planId") ?: return@composable
+                    val mainEntryStatus = remember(navController) {
+                        navController.getBackStackEntry(NavRoutes.Main)
+                    }
+                    EmergencyPlanStatusScreen(
+                        planId = statusPlanId,
+                        onNavigateBack = { navController.popBackStack() },
+                        viewModel = hiltViewModel(mainEntryStatus),
+                    )
+                }
+                composable(
+                    route = NavRoutes.EmergencyPlanMonthBreakdownRoute,
+                    arguments = listOf(
+                        navArgument("planId") { type = NavType.StringType },
+                    ),
+                ) { monthEntry ->
+                    val monthPlanId = monthEntry.arguments?.getString("planId") ?: return@composable
+                    val mainEntry = remember(navController) {
+                        navController.getBackStackEntry(NavRoutes.Main)
+                    }
+                    EmergencyPlanMonthBreakdownScreen(
+                        planId = monthPlanId,
+                        onNavigateBack = { navController.popBackStack() },
                         viewModel = hiltViewModel(mainEntry),
                     )
                 }

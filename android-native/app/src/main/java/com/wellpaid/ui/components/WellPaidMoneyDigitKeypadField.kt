@@ -90,6 +90,7 @@ fun WellPaidMoneyDigitKeypadField(
     maxDigits: Int = BRL_CENT_DIGIT_CHAIN_MAX,
     onDone: () -> Unit = {},
     onKeypadOpenChange: (Boolean) -> Unit = {},
+    dense: Boolean = false,
 ) {
     var keypadOpen by remember { mutableStateOf(false) }
     var digits by remember(valueText) { mutableStateOf(digitsFromValueText(valueText)) }
@@ -144,6 +145,7 @@ fun WellPaidMoneyDigitKeypadField(
             shape = shape,
             colors = colors,
             singleLine = true,
+            textStyle = if (dense) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodyLarge,
             modifier = Modifier
                 .fillMaxWidth()
                 .onFocusChanged { st ->

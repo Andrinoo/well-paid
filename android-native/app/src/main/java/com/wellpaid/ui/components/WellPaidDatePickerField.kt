@@ -7,12 +7,12 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
@@ -99,6 +99,8 @@ fun WellPaidDatePickerField(
     modifier: Modifier = Modifier,
     colors: TextFieldColors = OutlinedTextFieldDefaults.colors(),
     shape: RoundedCornerShape = RoundedCornerShape(12.dp),
+    /** Reduz altura vertical do campo (ecrãs densos, ex. detalhe reserva). */
+    dense: Boolean = false,
 ) {
     val locale = LocalConfiguration.current.locales[0] ?: Locale.getDefault()
     var open by remember { mutableStateOf(false) }
@@ -110,6 +112,7 @@ fun WellPaidDatePickerField(
         readOnly = true,
         enabled = enabled,
         label = label,
+        textStyle = if (dense) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodyLarge,
         modifier = modifier
             .fillMaxWidth()
             .clickable(

@@ -38,7 +38,7 @@ fun EmergencyPlanEditFields(
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         OutlinedTextField(
             value = state.editingPlanTitleText,
@@ -48,41 +48,44 @@ fun EmergencyPlanEditFields(
             singleLine = true,
             enabled = enabled,
             shape = RoundedCornerShape(14.dp),
+            textStyle = MaterialTheme.typography.bodyMedium,
         )
         OutlinedTextField(
             value = state.editingPlanDetailsText,
             onValueChange = { viewModel.setEditingPlanDetailsText(it) },
             label = { Text(stringResource(R.string.emergency_new_plan_details_label)) },
             modifier = Modifier.fillMaxWidth(),
-            minLines = 2,
-            maxLines = 4,
+            minLines = 1,
+            maxLines = 2,
             enabled = enabled,
             shape = RoundedCornerShape(14.dp),
+            textStyle = MaterialTheme.typography.bodyMedium,
         )
-        WellPaidDatePickerField(
-            label = { Text(stringResource(R.string.emergency_tracking_start_date_label)) },
-            isoDate = state.editingPlanTrackingStartText,
-            onIsoDateChange = { viewModel.setEditingPlanTrackingStartText(it) },
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            enabled = enabled,
-            shape = RoundedCornerShape(14.dp),
-        )
-        OutlinedTextField(
-            value = state.editingPlanDurationMonthsText,
-            onValueChange = { viewModel.setEditingPlanDurationMonthsText(it) },
-            label = { Text(stringResource(R.string.emergency_new_plan_duration_label)) },
-            supportingText = { Text(stringResource(R.string.emergency_new_plan_duration_footnote)) },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            enabled = enabled,
-            shape = RoundedCornerShape(14.dp),
-        )
-        Text(
-            text = stringResource(R.string.emergency_plan_duration_target_sync_hint),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            WellPaidDatePickerField(
+                label = { Text(stringResource(R.string.emergency_tracking_start_date_label)) },
+                isoDate = state.editingPlanTrackingStartText,
+                onIsoDateChange = { viewModel.setEditingPlanTrackingStartText(it) },
+                modifier = Modifier.weight(1.55f),
+                enabled = enabled,
+                shape = RoundedCornerShape(14.dp),
+                dense = true,
+            )
+            OutlinedTextField(
+                value = state.editingPlanDurationMonthsText,
+                onValueChange = { viewModel.setEditingPlanDurationMonthsText(it) },
+                label = { Text(stringResource(R.string.emergency_duration_months_short)) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.weight(0.95f),
+                singleLine = true,
+                enabled = enabled,
+                shape = RoundedCornerShape(14.dp),
+                textStyle = MaterialTheme.typography.bodyMedium,
+            )
+        }
         if (!hideEmergencyTargetEnd) {
             WellPaidDatePickerField(
                 label = { Text(stringResource(R.string.emergency_target_end_date_label)) },
@@ -91,29 +94,32 @@ fun EmergencyPlanEditFields(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = enabled,
                 shape = RoundedCornerShape(14.dp),
+                dense = true,
             )
         }
-        WellPaidMoneyDigitKeypadField(
-            valueText = state.editingPlanOpeningBalanceText,
-            onValueTextChange = { viewModel.setEditingPlanOpeningBalanceText(it) },
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            enabled = enabled,
-            label = { Text(stringResource(R.string.emergency_plan_opening_label)) },
-            placeholder = stringResource(R.string.emergency_monthly_placeholder),
-        )
-        Text(
-            text = stringResource(R.string.emergency_plan_opening_hint),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        WellPaidMoneyDigitKeypadField(
-            valueText = state.editingPlanMonthlyText,
-            onValueTextChange = { viewModel.setEditingPlanMonthlyText(it) },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = enabled,
-            label = { Text(stringResource(R.string.emergency_new_plan_monthly_label)) },
-            placeholder = stringResource(R.string.emergency_monthly_placeholder),
-        )
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            WellPaidMoneyDigitKeypadField(
+                valueText = state.editingPlanOpeningBalanceText,
+                onValueTextChange = { viewModel.setEditingPlanOpeningBalanceText(it) },
+                modifier = Modifier.weight(1f),
+                enabled = enabled,
+                label = { Text(stringResource(R.string.emergency_plan_opening_label)) },
+                placeholder = stringResource(R.string.emergency_monthly_placeholder),
+                dense = true,
+            )
+            WellPaidMoneyDigitKeypadField(
+                valueText = state.editingPlanMonthlyText,
+                onValueTextChange = { viewModel.setEditingPlanMonthlyText(it) },
+                modifier = Modifier.weight(1f),
+                enabled = enabled,
+                label = { Text(stringResource(R.string.emergency_new_plan_monthly_label)) },
+                placeholder = stringResource(R.string.emergency_monthly_placeholder),
+                dense = true,
+            )
+        }
         WellPaidMoneyDigitKeypadField(
             valueText = state.editingPlanTargetText,
             onValueTextChange = { viewModel.setEditingPlanTargetText(it) },
@@ -121,6 +127,7 @@ fun EmergencyPlanEditFields(
             enabled = enabled,
             label = { Text(stringResource(R.string.emergency_new_plan_target_label)) },
             placeholder = stringResource(R.string.emergency_monthly_placeholder),
+            dense = true,
         )
         state.editingPlanRecommendedMonthlyCents?.let { rec ->
             Text(
@@ -133,7 +140,7 @@ fun EmergencyPlanEditFields(
             )
         }
         state.editingPlanRetroOffer?.let { offer ->
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(4.dp))
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
