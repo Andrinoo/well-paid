@@ -19,6 +19,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -65,6 +66,13 @@ fun InvestmentsStockJoinScreen(
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
         )
+        state.quoteInfoMessage?.let { quote ->
+            Text(
+                text = quote,
+                style = MaterialTheme.typography.bodySmall,
+                color = Color(0xFF1B5E20),
+            )
+        }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(stringResource(R.string.investments_mode_by_value))
             Switch(checked = state.stockJoinModeByValue, onCheckedChange = onModeByValueChange)

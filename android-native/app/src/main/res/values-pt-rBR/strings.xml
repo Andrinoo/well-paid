@@ -82,7 +82,7 @@
     <string name="tab_incomes">Proventos</string>
     <string name="tab_goals">Metas</string>
     <string name="tab_emergency">Reserva</string>
-    <string name="main_tab_placeholder">%1$s — em breve</string>
+    <string name="main_tab_placeholder">%1$s �?? em breve</string>
     <string name="home_need_login">Inicie sessão para ver o resumo do mês e as despesas por categoria.</string>
     <string name="home_greeting_named">Olá, %1$s</string>
     <string name="home_greeting_fallback">Olá</string>
@@ -188,7 +188,7 @@
     <string name="expense_field_category">Categoria</string>
     <string name="expense_field_status">Estado</string>
     <string name="expense_save">Salvar</string>
-    <string name="expense_saving">A guardar…</string>
+    <string name="expense_saving">A guardar�?�</string>
     <string name="expense_mark_paid">Marcar como paga</string>
     <string name="expense_share_decline">Não aceito pagar a minha parte</string>
     <string name="expense_share_assume_full">Assumir esta despesa (valor total desta linha)</string>
@@ -205,7 +205,7 @@
     <string name="expense_delete_message_installment_partial">Este plano tem parcelas já pagas. Só serão removidas as parcelas pendentes futuras; o histórico pago mantém-se.</string>
     <string name="expense_delete_installment_choice_lead">Este plano tem parcelas já pagas. O que pretende remover?</string>
     <string name="expense_delete_future_only">Remover só parcelas futuras pendentes</string>
-    <string name="expense_delete_entire_plan">Apagar plano inteiro (incluindo pagas)…</string>
+    <string name="expense_delete_entire_plan">Apagar plano inteiro (incluindo pagas)�?�</string>
     <string name="expense_delete_full_wipe_title">Apagar o plano inteiro?</string>
     <string name="expense_delete_full_wipe_message">Todas as prestações, incluindo as já marcadas como pagas, serão removidas. Esta ação não pode ser anulada na aplicação.</string>
     <string name="expense_delete_confirm">Eliminar</string>
@@ -240,12 +240,12 @@
     <string name="expense_list_delete_recurring_title">Eliminar esta ocorrência?</string>
     <string name="expense_list_delete_recurring_msg">Só esta data é removida; o resto da série mantém-se. Se esta linha for a âncora da recorrência, abra a despesa e pare a série aí.</string>
     <string name="expense_fab_new">Nova despesa</string>
-    <string name="expense_type_single">Única</string>
+    <string name="expense_type_single">�?nica</string>
     <string name="expense_type_installments">Parcelas</string>
     <string name="expense_type_recurring">Recorrente</string>
     <string name="expense_installment_count">Número de prestações</string>
-    <string name="expense_installment_hint">2–999</string>
-    <string name="expense_installment_helper">Indique quantas prestações tem o plano (2–999).</string>
+    <string name="expense_installment_hint">2�??999</string>
+    <string name="expense_installment_helper">Indique quantas prestações tem o plano (2�??999).</string>
     <string name="expense_installment_total_label">Prestações</string>
     <string name="expense_recurring_frequency">Frequência</string>
     <string name="expense_freq_monthly">mensal</string>
@@ -288,7 +288,7 @@
     <string name="income_field_notes_optional">Opcional.</string>
     <string name="income_field_category">Categoria</string>
     <string name="income_save">Guardar</string>
-    <string name="income_saving">A guardar…</string>
+    <string name="income_saving">A guardar�?�</string>
     <string name="income_delete">Eliminar</string>
     <string name="income_delete_title">Eliminar provento</string>
     <string name="income_delete_message">Esta ação não pode ser anulada na aplicação. Continuar?</string>
@@ -313,12 +313,12 @@
     <string name="goal_list_label_target">Objectivo</string>
     <string name="goal_list_remaining">Ainda a poupar: %1$s</string>
     <string name="goal_list_label_created">Criada</string>
-    <string name="goal_list_label_updated">Última alteração</string>
+    <string name="goal_list_label_updated">�?ltima alteração</string>
     <string name="goal_list_label_source">Fonte</string>
     <string name="goal_list_price_checked">Preço de referência em: %1$s</string>
     <string name="goal_list_url_label">Ligação</string>
     <string name="goal_list_alternative_item">%1$s · %2$s</string>
-    <string name="goal_list_tap_for_full">Toca o cartão para o ecrã completo (contribuições, actualizar preço, eliminar, …).</string>
+    <string name="goal_list_tap_for_full">Toca o cartão para o ecrã completo (contribuições, actualizar preço, eliminar, �?�).</string>
     <string name="goal_fab_new">Nova meta</string>
     <string name="goal_detail_title">Meta</string>
     <string name="goal_edit_action">Editar meta</string>
@@ -330,28 +330,28 @@
     <string name="goal_detail_product_name">Nome detectado: %1$s</string>
     <string name="goal_detail_alternatives_count">%1$d preços alternativos</string>
     <string name="goal_detail_progress_label">%1$s de %2$s</string>
-    <string name="goal_readonly_family">Meta de outro membro da família — só consulta.</string>
+    <string name="goal_readonly_family">Meta de outro membro da família �?? só consulta.</string>
     <string name="goal_contribute_button">Registar contribuição</string>
     <string name="goal_contribute_title">Contribuir</string>
     <string name="goal_contribute_amount">Valor (R$)</string>
     <string name="goal_contribute_note">Nota (opcional)</string>
     <string name="goal_contribute_confirm">Confirmar</string>
-    <string name="goal_contribute_saving">A registar…</string>
+    <string name="goal_contribute_saving">A registar�?�</string>
     <string name="goal_contribute_cancel">Cancelar</string>
     <string name="goal_error_contribute_amount">Indique um valor válido.</string>
     <string name="goal_form_new_title">Nova meta</string>
     <string name="goal_form_edit_title">Editar meta</string>
-    <string name="goal_form_loading">A carregar a meta…</string>
+    <string name="goal_form_loading">A carregar a meta�?�</string>
     <string name="goal_field_title">Título</string>
     <string name="goal_field_title_hint_short">Nome da meta (ex.: Ar condicionado 12000 BTUs).</string>
     <string name="goal_field_title_search_hint">Pesquisamos no Google Shopping (via SerpAPI no servidor) com este texto. Ex.: ar condicionado 12000 BTUs.</string>
     <string name="goal_price_search_section_title">Preço de referência</string>
     <string name="goal_optional_search_or_link_label">Termo extra ou link (opcional)</string>
-    <string name="goal_optional_search_or_link_hint">Vazio = usa o título. Ou escreve outro termo, ou cola link com ?q=… / página de produto (https).</string>
+    <string name="goal_optional_search_or_link_hint">Vazio = usa o título. Ou escreve outro termo, ou cola link com ?q=�?� / página de produto (https).</string>
     <string name="goal_unified_search_prices">Pesquisar preços</string>
     <string name="goal_auto_product_search">Pesquisa de preços (Google Shopping)</string>
     <string name="goal_auto_product_search_hint">Desligue para só pesquisar quando precisar (poupa dados).</string>
-    <string name="goal_price_search_disabled">Ligue “Pesquisa de preços (Google Shopping)” acima para pesquisar produtos.</string>
+    <string name="goal_price_search_disabled">Ligue �??Pesquisa de preços (Google Shopping)�?� acima para pesquisar produtos.</string>
     <string name="goal_field_target">Objetivo (valor total)</string>
     <string name="goal_field_initial">Valor já poupado (opcional)</string>
     <string name="goal_field_initial_hint">Opcional no registo. Use 0 ou deixe vazio.</string>
@@ -359,14 +359,14 @@
     <string name="goal_search_section_title">Sugestões de preço (Google Shopping)</string>
     <string name="goal_field_link_section_title">Link opcional</string>
     <string name="goal_field_link">Link de produto ou pesquisa (opcional)</string>
-    <string name="goal_field_link_hint">Modo simples: escreve um título (2+ letras) e pesquisamos por ti. Opcionalmente cola um URL de pesquisa com ?q=… para sincronizar o termo, ou um URL de página de produto e usa «Obter o valor deste link» abaixo.</string>
+    <string name="goal_field_link_hint">Modo simples: escreve um título (2+ letras) e pesquisamos por ti. Opcionalmente cola um URL de pesquisa com ?q=�?� para sincronizar o termo, ou um URL de página de produto e usa «Obter o valor deste link» abaixo.</string>
     <string name="goal_field_link_autocomplete_hint">URLs de pesquisa carregam sugestões automaticamente; URLs de produto servem só para o botão de obter preço.</string>
     <string name="goal_reference_price_label">Preço de referência</string>
     <string name="goal_refresh_price">Actualizar preço de referência</string>
-    <string name="goal_refreshing_price">A obter preço…</string>
+    <string name="goal_refreshing_price">A obter preço�?�</string>
     <string name="goal_error_url_required_for_refresh">Adicione um link primeiro para actualizar o preço de referência.</string>
     <string name="goal_save">Guardar</string>
-    <string name="goal_saving">A guardar…</string>
+    <string name="goal_saving">A guardar�?�</string>
     <string name="goal_delete">Eliminar meta</string>
     <string name="goal_delete_title">Eliminar meta</string>
     <string name="goal_delete_message">Só é possível eliminar se o saldo registado for zero. Continuar?</string>
@@ -379,14 +379,14 @@
     <string name="goal_error_title">Indique um título.</string>
     <string name="goal_error_target">Indique um objetivo válido maior que zero.</string>
     <string name="goal_error_initial">Valor inicial inválido.</string>
-    <string name="goal_search_auto_hint">A pesquisa usa o título da meta (2+ letras) ou um URL (?q=…) no campo opcional. Até doze resultados abrem numa lista — escolhe um para definir o nome da meta, o valor e o link. Sem navegador.</string>
+    <string name="goal_search_auto_hint">A pesquisa usa o título da meta (2+ letras) ou um URL (?q=�?�) no campo opcional. Até doze resultados abrem numa lista �?? escolhe um para definir o nome da meta, o valor e o link. Sem navegador.</string>
     <string name="goal_search_refresh_suggestions">Pesquisar de novo</string>
     <string name="goal_search_results_title">Resultados da pesquisa</string>
     <string name="goal_search_results_sheet_subtitle">Escolhe um anúncio. O título da meta passa a ser o nome do produto e preenchemos valor e link.</string>
     <string name="goal_search_results_banner_title">%1$d resultados</string>
-    <string name="goal_search_results_banner_subtitle">Abre a lista para escolher — a meta guardada usará esse nome exacto.</string>
+    <string name="goal_search_results_banner_subtitle">Abre a lista para escolher �?? a meta guardada usará esse nome exacto.</string>
     <string name="goal_search_products_by_title">Pesquisar de novo pelo título</string>
-    <string name="goal_searching_products">A pesquisar…</string>
+    <string name="goal_searching_products">A pesquisar�?�</string>
     <string name="goal_error_query_too_short">Escreva pelo menos 2 caracteres no título.</string>
     <string name="goal_error_query_title_or_search_url">Indique pelo menos 2 letras no título ou no campo opcional, ou cole um link https.</string>
     <string name="goal_fetch_target_from_link">Obter o valor da meta deste link</string>
@@ -401,7 +401,7 @@
     <string name="emergency_monthly_target_label">Meta mensal de poupança</string>
     <string name="emergency_monthly_target_field">Valor mensal (R$)</string>
     <string name="emergency_save_target">Guardar meta mensal</string>
-    <string name="emergency_saving">A guardar…</string>
+    <string name="emergency_saving">A guardar�?�</string>
     <string name="emergency_error_target">Indique um valor mensal válido.</string>
     <string name="emergency_plans_section_title">Os teus planos de reserva</string>
     <string name="emergency_plan_untitled">Plano sem nome</string>
@@ -418,7 +418,7 @@
     <string name="emergency_plan_label_balance">Saldo do plano (R$)</string>
     <string name="emergency_plan_label_monthly">Valor mensal (R$)</string>
     <string name="emergency_plan_label_validity">Validade</string>
-    <string name="emergency_plan_validity_open_ended">Aberto — sem prazo fixo (meses)</string>
+    <string name="emergency_plan_validity_open_ended">Aberto �?? sem prazo fixo (meses)</string>
     <string name="emergency_plan_label_counting">Contagem desde</string>
     <string name="emergency_plan_label_completed">Concluído em</string>
     <string name="emergency_plan_no_details">Sem descrição.</string>
@@ -440,7 +440,7 @@
     <string name="display_name_preview_label">Pré-visualização (topo do Início)</string>
     <string name="display_name_preview_placeholder">utilizador</string>
     <string name="display_name_preview_subline">Receitas · saldo · despesas (ilustração)</string>
-    <string name="display_name_menu_item">Nome na saudação…</string>
+    <string name="display_name_menu_item">Nome na saudação�?�</string>
     <string name="settings_profile_section">Perfil</string>
     <string name="settings_section_prefs">Preferências</string>
     <string name="settings_section_about">Sobre</string>
@@ -452,12 +452,12 @@
     <string name="manage_categories_income_section">Proventos</string>
     <string name="manage_categories_name_hint">Nome</string>
     <string name="manage_categories_add">Adicionar</string>
-    <string name="manage_categories_saving">A guardar…</string>
+    <string name="manage_categories_saving">A guardar�?�</string>
     <string name="manage_categories_saved_expense">Categoria de despesa registada com sucesso.</string>
     <string name="manage_categories_saved_income">Categoria de provento registada com sucesso.</string>
     <string name="manage_categories_existing_dropdown_label">Ver registadas</string>
-    <string name="manage_categories_existing_summary">%d registadas — toque para ver</string>
-    <string name="manage_categories_existing_empty">Ainda não há — adicione acima</string>
+    <string name="manage_categories_existing_summary">%d registadas �?? toque para ver</string>
+    <string name="manage_categories_existing_empty">Ainda não há �?? adicione acima</string>
     <string name="settings_tile_display_name">Nome na saudação</string>
     <string name="settings_tile_language">Idioma</string>
     <string name="settings_tile_keypad_haptics">Háptico dos teclados numéricos</string>
@@ -488,7 +488,7 @@
     <string name="shopping_field_title">Título (opcional)</string>
     <string name="shopping_field_store">Loja (opcional)</string>
     <string name="shopping_save">Salvar</string>
-    <string name="shopping_saving">A guardar…</string>
+    <string name="shopping_saving">A guardar�?�</string>
     <string name="shopping_detail_title">Lista</string>
     <string name="shopping_items_label">Itens</string>
     <string name="shopping_status_draft">Rascunho</string>
@@ -532,7 +532,7 @@
     <string name="shopping_remove_item_confirm">Remover esta linha?</string>
     <string name="shopping_clear_unit_price">Limpar custo</string>
     <string name="shopping_estimated_total">Total estimado</string>
-    <string name="shopping_estimated_total_footnote">Soma de (custo por unidade × quantidade) nas linhas com custo.</string>
+    <string name="shopping_estimated_total_footnote">Soma de (custo por unidade �? quantidade) nas linhas com custo.</string>
     <string name="shopping_item_unit_label">Custo</string>
     <string name="shopping_currency_prefix">R$</string>
     <string name="shopping_item_no_price_hint">Sem valor (preencher na loja)</string>
@@ -541,7 +541,7 @@
         <item quantity="other">%d itens no total</item>
     </plurals>
 
-    <string name="privacy_amount_masked">R$ ••••</string>
+    <string name="privacy_amount_masked">R$ �?��?��?��?�</string>
     <string name="security_title">Segurança e privacidade</string>
     <string name="settings_security_section">Segurança</string>
     <string name="settings_open_security">Segurança e privacidade</string>
@@ -555,7 +555,7 @@
     <string name="security_lock_method_both">PIN e biometria</string>
     <string name="security_lock_method_both_sub">Biometria em primeiro lugar; PIN como alternativa.</string>
     <string name="security_quick_login_title">Entrada rápida com biometria</string>
-    <string name="security_quick_login_subtitle">No ecrã de login, use impressão digital ou rosto em vez de escrever a palavra-passe. Active o interruptor e confirme com a biometria—a sessão fica guardada encriptada só neste aparelho.</string>
+    <string name="security_quick_login_subtitle">No ecrã de login, use impressão digital ou rosto em vez de escrever a palavra-passe. Active o interruptor e confirme com a biometria�??a sessão fica guardada encriptada só neste aparelho.</string>
     <string name="security_quick_login_error_network">Não foi possível activar a entrada rápida. Verifique a ligação e se tem sessão iniciada e tente de novo.</string>
     <string name="security_quick_login_need_remember">Active «Lembrar credenciais» no ecrã de início de sessão, entre uma vez e volte aqui para activar a entrada rápida.</string>
     <string name="security_quick_login_biometric_cancelled">O registo da biometria foi cancelado.</string>
@@ -634,7 +634,7 @@
     <string name="emergency_new_plan_monthly_label">Valor mensal deste plano (R$)</string>
     <string name="emergency_new_plan_target_label">Teto da reserva (R$)</string>
     <string name="emergency_create_plan">Criar plano</string>
-    <string name="emergency_plan_creating">A criar…</string>
+    <string name="emergency_plan_creating">A criar�?�</string>
     <string name="emergency_error_plan_name">Indique um nome para o plano.</string>
     <string name="emergency_new_plan_monthly_footnote">Deixe vazio para usar o valor mensal acima.</string>
     <string name="emergency_duration_months_short">Total de meses</string>
@@ -658,7 +658,7 @@
     <string name="emergency_accruals_collapsed_title">Acréscimos recentes (todos os planos)</string>
     <string name="emergency_plan_card_compact_vs_target">%1$s · %2$d%% da meta</string>
     <string name="emergency_plan_card_compact_balance_pace">%1$s · %2$s</string>
-    <string name="emergency_plan_card_compact_pace_delta">Δ %1$s</string>
+    <string name="emergency_plan_card_compact_pace_delta">�? %1$s</string>
     <string name="emergency_plan_open_detail">Abrir detalhe</string>
     <string name="emergency_error_plan_duration">Indique uma duração válida em meses.</string>
     <string name="emergency_plan_edit">Editar</string>
@@ -683,12 +683,12 @@
     <string name="emergency_policy_action_protect">Consolide liquidez: valide se o valor cobre riscos reais da família e ajuste a meta mensal se necessário.</string>
     <string name="emergency_policy_action_invest">Com base protegida, excedentes podem migrar gradualmente para investimentos conservadores (ex.: CDI/CDB), sem comprometer liquidez da reserva.</string>
     <string name="emergency_guidance_tips_title">Dicas práticas</string>
-    <string name="emergency_tip_named_plans">Dá nomes e propósito claros a cada plano (ex.: 3 a 6 meses de mínimo, ou 12 meses de despesas). Assim acompanhas mais de um alvo sem misturar tudo no mesmo “saco” mental.</string>
+    <string name="emergency_tip_named_plans">Dá nomes e propósito claros a cada plano (ex.: 3 a 6 meses de mínimo, ou 12 meses de despesas). Assim acompanhas mais de um alvo sem misturar tudo no mesmo �??saco�?� mental.</string>
     <string name="emergency_tip_rebalance">Revisa a meta global mensal quando o rendimento ou o custo da casa muda, para que a adesão automática se mantenha realista no que poupas de facto.</string>
     <string name="emergency_tip_liquidity">Mantém a parte verdadeiramente de emergência em meios muito líquidos e de baixa volatilidade. A área de investimentos é para o que excede uma almofada segura, não o núcleo de que podes precisar em dias.</string>
-    <string name="emergency_tip_separate_purpose">Não uses este dinheiro para compras correntes ou “planejadas” no dia a dia. Se tiveres de o usar, tenta recompor a reserva ainda nesse mês ou no seguinte, antes de outro gasto discricionário.</string>
-    <string name="emergency_recomposition_title">Vários planos: como “recompor” na prática</string>
-    <string name="emergency_recomposition_body">Com vários planos, o saldo na app ainda resulta do mesmo fluxo de adesões. O tecto e o valor mensal de cada plano mostram quando podes levar excedente para investimentos sem tocar no colchão de que precisas nos próximos meses. Ajusta metas quando a vida muda, não só quando um plano está “cheio”.</string>
+    <string name="emergency_tip_separate_purpose">Não uses este dinheiro para compras correntes ou �??planejadas�?� no dia a dia. Se tiveres de o usar, tenta recompor a reserva ainda nesse mês ou no seguinte, antes de outro gasto discricionário.</string>
+    <string name="emergency_recomposition_title">Vários planos: como �??recompor�?� na prática</string>
+    <string name="emergency_recomposition_body">Com vários planos, o saldo na app ainda resulta do mesmo fluxo de adesões. O tecto e o valor mensal de cada plano mostram quando podes levar excedente para investimentos sem tocar no colchão de que precisas nos próximos meses. Ajusta metas quando a vida muda, não só quando um plano está �??cheio�?�.</string>
     <string name="investments_title">Investimentos</string>
     <string name="investments_summary_title">Resumo da carteira</string>
     <string name="investments_summary_balance_placeholder">R$ 0,00</string>
@@ -701,7 +701,7 @@
     <string name="investments_bucket_fixed_income_hint">Consolidar posições conservadoras e sinalizar distribuição da carteira.</string>
     <string name="investments_coming_soon_button">Dados automáticos em breve</string>
     <string name="investments_bucket_line_template">Alocado: %1$s · Rendimento: %2$s · %3$.2f%%/mês</string>
-    <string name="investments_loading_button">Atualizando…</string>
+    <string name="investments_loading_button">Atualizando�?�</string>
     <string name="investments_refresh_button">Atualizar dados</string>
     <string name="investments_rates_estimated_badge">Taxa estimada (fallback temporário)</string>
     <string name="investments_evolution_title">Evolução estimada</string>
@@ -716,7 +716,7 @@
     <string name="investments_field_principal">Valor aplicado (R$)</string>
     <string name="investments_field_rate">Taxa anual (%)</string>
     <string name="investments_save_position">Salvar posição</string>
-    <string name="investments_saving_position">Salvando posição…</string>
+    <string name="investments_saving_position">Salvando posição�?�</string>
     <string name="investments_position_line">%1$s · %2$s · %3$.2f%% a.a.</string>
     <string name="investments_delete_position">Excluir posição</string>
     <string name="investments_error_name">Informe um nome válido para a posição.</string>
@@ -729,6 +729,18 @@
     <string name="investments_global_search_label">Pesquisar e adicionar posição (ex.: PETR4, CDB, CDI)</string>
     <string name="investments_global_search_helper">Ticker exato abre direto. Ative "Pesquisar família" para abrir lista.</string>
     <string name="investments_family_search_toggle">Pesquisar família</string>
+    <string name="investments_search_results_title">Pesquisa de mercado</string>
+    <string name="investments_top_movers_hour">Top 10 da hora</string>
+    <string name="investments_top_movers_day">Top 10 do dia</string>
+    <string name="investments_top_movers_week">Top 10 da semana</string>
+    <string name="investments_field_quantity">Quantidade</string>
+    <string name="investments_field_average_price">Pre�o m�dio (R$)</string>
+    <string name="investments_error_stock_quantity_price">Para a��es, informe quantidade e pre�o m�dio.</string>
+    <string name="investments_field_description">Descri��o breve</string>
+    <string name="investments_stock_join_title">Adicionar posi��o em a��es</string>
+    <string name="investments_fixed_income_join_title">Adicionar posi��o em renda fixa</string>
+    <string name="investments_mode_by_value">Informar por valor</string>
+    <string name="investments_whole_share_adjusted">Ajustado para %1$d a��es inteiras (%2$s).</string>
     <string name="investments_market_rate_not_applicable">Taxa automática disponível para CDI, CDB ou renda fixa geral.</string>
     <string name="investments_error_ticker">Indique o ticker (ex. PETR4) no nome da posição antes de buscar a cotação.</string>
     <string name="investments_stock_quote">Cotação: R$ %1$s</string>
@@ -753,7 +765,7 @@
     <string name="emergency_retroactive_apply">Aplicar correção</string>
     <string name="emergency_retroactive_dismiss">Ignorar</string>
     <string name="emergency_plan_opening_label">Aporte inicial (opcional)</string>
-    <string name="emergency_plan_opening_hint">O saldo em dinheiro é este valor mais os aportes registados. O detalhe mensal usa só aportes reais. Se o plano é retroativo e deixa este campo vazio, o saldo fica 0 até aportar — veja o ritmo (delta) para o atraso face ao cronograma.</string>
+    <string name="emergency_plan_opening_hint">O saldo em dinheiro é este valor mais os aportes registados. O detalhe mensal usa só aportes reais. Se o plano é retroativo e deixa este campo vazio, o saldo fica 0 até aportar �?? veja o ritmo (delta) para o atraso face ao cronograma.</string>
     <string name="emergency_plan_opening_line">Aporte inicial: %1$s</string>
     <string name="emergency_selected_plan_contribution_label">Aporte deste mês no plano selecionado (R$)</string>
     <string name="emergency_selected_plan_fallback">Plano sem nome</string>

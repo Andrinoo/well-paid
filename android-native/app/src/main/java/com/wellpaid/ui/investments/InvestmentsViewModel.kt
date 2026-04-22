@@ -456,12 +456,23 @@ class InvestmentsViewModel @Inject constructor(
                         }
                     }
                     _uiState.update {
+                        val shouldAutofillAverage = it.newPositionType == "stocks" &&
+                            (it.averagePriceText.isBlank() || (it.averagePriceText.replace(",", ".").toDoubleOrNull() ?: 0.0) <= 0.0)
+                        val averageFromQuote = if (q.lastPrice > 0) {
+                            String.format(Locale.US, "%.2f", q.lastPrice).replace('.', ',')
+                        } else {
+                            null
+                        }
                         it.copy(
                             isFetchingQuote = false,
                             quoteInfoMessage = line,
                             quoteSourceLabel = q.source,
                             quoteConfidence = q.confidence,
+                            averagePriceText = if (shouldAutofillAverage && averageFromQuote != null) averageFromQuote else it.averagePriceText,
                         )
+                    }
+                    if (q.lastPrice > 0) {
+                        recalculatePrincipalFromStocks()
                     }
                     if (state.newPositionType == "stocks") {
                         loadHistoryForSymbol(sym.uppercase(Locale.ROOT), state.selectedHistoryRange)
