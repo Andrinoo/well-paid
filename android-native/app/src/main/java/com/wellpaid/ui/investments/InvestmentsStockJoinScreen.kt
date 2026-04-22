@@ -1,6 +1,8 @@
 package com.wellpaid.ui.investments
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,9 +12,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -21,14 +25,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.wellpaid.R
 import com.wellpaid.ui.components.WellPaidMoneyDigitKeypadField
+import com.wellpaid.ui.theme.WellPaidCardWhite
 import com.wellpaid.ui.theme.WellPaidCream
+import com.wellpaid.ui.theme.WellPaidCreamMuted
+import com.wellpaid.ui.theme.WellPaidGold
 import com.wellpaid.ui.theme.WellPaidNavy
+import com.wellpaid.ui.theme.WellPaidPositive
+
+private val JoinCardCorner = RoundedCornerShape(14.dp)
+private val JoinHeroCorner = RoundedCornerShape(16.dp)
+private val JoinFieldCorner = RoundedCornerShape(12.dp)
 
 @Composable
 fun InvestmentsStockJoinScreen(
@@ -45,8 +58,8 @@ fun InvestmentsStockJoinScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(WellPaidCream)
-            .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(
             text = stringResource(R.string.investments_stock_join_title),
@@ -54,65 +67,213 @@ fun InvestmentsStockJoinScreen(
             color = WellPaidNavy,
             fontWeight = FontWeight.SemiBold,
         )
-        Text(text = state.newPositionName, style = MaterialTheme.typography.titleSmall, color = WellPaidNavy)
-        OutlinedTextField(
-            value = state.stockJoinDescription,
-            onValueChange = onDescriptionChange,
-            label = { Text(stringResource(R.string.investments_field_description)) },
+
+        Surface(
             modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-        )
-        WellPaidMoneyDigitKeypadField(
-            valueText = state.averagePriceText,
-            onValueTextChange = onAveragePriceChange,
-            enabled = !state.isSavingPosition,
-            label = { Text(stringResource(R.string.investments_field_average_price)) },
-            modifier = Modifier.fillMaxWidth(),
-        )
-        state.quoteInfoMessage?.let { quote ->
+            shape = JoinHeroCorner,
+            color = WellPaidNavy,
+            shadowElevation = 2.dp,
+        ) {
+            Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+                Text(
+                    text = stringResource(R.string.investments_bucket_stocks),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color.White.copy(alpha = 0.75f),
+                    fontWeight = FontWeight.Medium,
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = state.newPositionName,
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+
+        val hasMarketBlock = state.quoteInfoMessage != null || state.selectedFundamentals != null
+        if (hasMarketBlock) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(WellPaidCreamMuted.copy(alpha = 0.72f), JoinCardCorner)
+                    .border(1.dp, WellPaidGold.copy(alpha = 0.38f), JoinCardCorner)
+                    .padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.investments_stock_join_section_market),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = WellPaidNavy.copy(alpha = 0.88f),
+                )
+                state.quoteInfoMessage?.let { quote ->
+                    Text(
+                        text = quote,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = WellPaidPositive,
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
+                state.selectedFundamentals?.let { f -> StockJoinFundamentalsRow(fundamentals = f) }
+            }
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(WellPaidCardWhite, JoinCardCorner)
+                .border(1.dp, WellPaidGold.copy(alpha = 0.38f), JoinCardCorner)
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
             Text(
-                text = quote,
-                style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFF1B5E20),
+                text = stringResource(R.string.investments_stock_join_section_form),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = WellPaidNavy.copy(alpha = 0.88f),
             )
-        }
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(stringResource(R.string.investments_mode_by_value))
-            Switch(checked = state.stockJoinModeByValue, onCheckedChange = onModeByValueChange)
-        }
-        if (state.stockJoinModeByValue) {
-            WellPaidMoneyDigitKeypadField(
-                valueText = state.newPositionPrincipalText,
-                onValueTextChange = onValueChange,
-                enabled = !state.isSavingPosition,
-                label = { Text(stringResource(R.string.investments_field_principal)) },
-                modifier = Modifier.fillMaxWidth(),
-            )
-        } else {
             OutlinedTextField(
-                value = state.quantityText,
-                onValueChange = onQuantityChange,
-                label = { Text(stringResource(R.string.investments_field_quantity)) },
+                value = state.stockJoinDescription,
+                onValueChange = onDescriptionChange,
+                label = { Text(stringResource(R.string.investments_field_description)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                shape = JoinFieldCorner,
             )
+            WellPaidMoneyDigitKeypadField(
+                valueText = state.averagePriceText,
+                onValueTextChange = onAveragePriceChange,
+                enabled = !state.isSavingPosition,
+                label = { Text(stringResource(R.string.investments_field_average_price)) },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = JoinFieldCorner,
+                color = WellPaidCreamMuted.copy(alpha = 0.55f),
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        text = stringResource(R.string.investments_mode_by_value),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = WellPaidNavy,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Switch(
+                        checked = state.stockJoinModeByValue,
+                        onCheckedChange = onModeByValueChange,
+                    )
+                }
+            }
+            if (state.stockJoinModeByValue) {
+                WellPaidMoneyDigitKeypadField(
+                    valueText = state.newPositionPrincipalText,
+                    onValueTextChange = onValueChange,
+                    enabled = !state.isSavingPosition,
+                    label = { Text(stringResource(R.string.investments_field_principal)) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            } else {
+                OutlinedTextField(
+                    value = state.quantityText,
+                    onValueChange = onQuantityChange,
+                    label = { Text(stringResource(R.string.investments_field_quantity)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = JoinFieldCorner,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                )
+            }
         }
-        state.stockJoinAdjustedAlert?.let {
-            Text(text = it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.tertiary)
-        }
-        state.selectedFundamentals?.let { f ->
+
+        state.stockJoinAdjustedAlert?.let { alert ->
             Text(
-                text = "DY ${f.dy ?: "—"} · P/L ${f.pl ?: "—"} · P/VP ${f.pvp ?: "—"}",
+                text = alert,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.tertiary,
+                modifier = Modifier.padding(horizontal = 4.dp),
             )
         }
-        Spacer(Modifier.height(4.dp))
-        Button(onClick = onSave, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
+
+        Spacer(Modifier.height(2.dp))
+        Button(
+            onClick = onSave,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+        ) {
             Text(stringResource(R.string.investments_save_position))
         }
         TextButton(onClick = onBack) { Text(stringResource(R.string.common_close)) }
     }
 }
 
+@Composable
+private fun StockJoinFundamentalsRow(fundamentals: FundamentalPreviewUi) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        StockJoinMetricCell(
+            modifier = Modifier.weight(1f),
+            label = stringResource(R.string.investments_metric_dy),
+            value = fundamentals.dy ?: "—",
+        )
+        StockJoinMetricCell(
+            modifier = Modifier.weight(1f),
+            label = stringResource(R.string.investments_metric_pl),
+            value = fundamentals.pl ?: "—",
+        )
+        StockJoinMetricCell(
+            modifier = Modifier.weight(1f),
+            label = stringResource(R.string.investments_metric_pvp),
+            value = fundamentals.pvp ?: "—",
+        )
+    }
+}
+
+@Composable
+private fun StockJoinMetricCell(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(10.dp),
+        color = WellPaidCardWhite,
+        border = BorderStroke(1.dp, WellPaidGold.copy(alpha = 0.28f)),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 6.dp, vertical = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = WellPaidNavy,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+}

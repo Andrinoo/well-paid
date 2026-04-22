@@ -76,7 +76,15 @@ fun InvestmentsScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val overview = state.overview
     val pullRefreshing = state.isLoading && (overview != null || state.positions.isNotEmpty())
-    BackHandler(enabled = state.showSearchResultsScreen) { viewModel.closeSearchResults() }
+    val inInvestmentsSubFlow =
+        state.showSearchResultsScreen || state.showStockJoinScreen || state.showFixedIncomeJoinScreen
+    BackHandler(enabled = inInvestmentsSubFlow) {
+        when {
+            state.showStockJoinScreen -> viewModel.closeStockJoin()
+            state.showFixedIncomeJoinScreen -> viewModel.closeFixedIncomeJoin()
+            state.showSearchResultsScreen -> viewModel.closeSearchResults()
+        }
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -92,7 +100,16 @@ fun InvestmentsScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(
+                        onClick = {
+                            when {
+                                state.showStockJoinScreen -> viewModel.closeStockJoin()
+                                state.showFixedIncomeJoinScreen -> viewModel.closeFixedIncomeJoin()
+                                state.showSearchResultsScreen -> viewModel.closeSearchResults()
+                                else -> onNavigateBack()
+                            }
+                        },
+                    ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.settings_back),

@@ -741,6 +741,11 @@
     <string name="investments_error_stock_quantity_price">For stocks, enter quantity and average price.</string>
     <string name="investments_field_description">Short description</string>
     <string name="investments_stock_join_title">Join stock position</string>
+    <string name="investments_stock_join_section_market">Quote &amp; ratios</string>
+    <string name="investments_stock_join_section_form">Position details</string>
+    <string name="investments_metric_dy">DY</string>
+    <string name="investments_metric_pl">P/L</string>
+    <string name="investments_metric_pvp">P/VP</string>
     <string name="investments_fixed_income_join_title">Join fixed income position</string>
     <string name="investments_mode_by_value">Inform by value</string>
     <string name="investments_whole_share_adjusted">Adjusted to %1$d whole shares (%2$s).</string>
