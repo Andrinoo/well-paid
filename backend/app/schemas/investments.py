@@ -62,6 +62,7 @@ class StockQuoteOut(BaseModel):
     currency: str = "BRL"
     as_of: str | None = None
     source: str = "brapi"
+    confidence: float | None = Field(default=None, ge=0, le=1)
     error: str | None = None
 
 
@@ -79,4 +80,24 @@ class StockHistoryOut(BaseModel):
     symbol: str
     range: str
     points: list[StockHistoryPointOut] = Field(default_factory=list)
+    source: str = "brapi"
+    confidence: float | None = Field(default=None, ge=0, le=1)
     error: str | None = None
+
+
+class MacroSnapshotOut(BaseModel):
+    cdi: float | None = None
+    selic: float | None = None
+    ipca: float | None = None
+    source: str = "sgs"
+    confidence: float | None = Field(default=None, ge=0, le=1)
+
+
+class EquityFundamentalsOut(BaseModel):
+    symbol: str
+    pl: str | None = None
+    pvp: str | None = None
+    dividend_yield: str | None = None
+    roe: str | None = None
+    source: str = "fundamentus"
+    confidence: float | None = Field(default=None, ge=0, le=1)

@@ -15,8 +15,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -39,14 +37,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -167,6 +160,14 @@ fun InvestmentsScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.White.copy(alpha = 0.8f),
             )
+            state.macroSnapshot?.let { macro ->
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "CDI ${macro.cdi ?: "—"} · SELIC ${macro.selic ?: "—"} · IPCA ${macro.ipca ?: "—"}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White.copy(alpha = 0.78f),
+                )
+            }
             if (overview?.ratesFallbackUsed == true) {
                 Spacer(Modifier.height(6.dp))
                 Text(
@@ -290,6 +291,14 @@ fun InvestmentsScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = WellPaidNavy,
                     )
+                    val src = state.quoteSourceLabel
+                    if (!src.isNullOrBlank()) {
+                        Text(
+                            text = "Fonte: ${src.uppercase(Locale.ROOT)}" + (state.quoteConfidence?.let { c -> " · conf ${"%.2f".format(Locale.US, c)}" } ?: ""),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
                 Spacer(Modifier.height(8.dp))
                 WellPaidMoneyDigitKeypadField(
@@ -406,6 +415,8 @@ fun InvestmentsScreen(
                     historyPoints = state.selectedPositionHistory,
                     historyRange = state.selectedHistoryRange,
                     historySymbol = state.selectedPositionHistorySymbol,
+                    historySource = state.selectedPositionHistorySource,
+                    historyConfidence = state.selectedPositionHistoryConfidence,
                     isLoadingHistory = state.isLoadingHistory,
                     historyErrorMessage = state.historyErrorMessage,
                     buckets = overview?.buckets.orEmpty(),
@@ -426,19 +437,13 @@ private fun InvestmentEvolutionChart(
     isLoading: Boolean,
     historyErrorMessage: String?,
     buckets: List<InvestmentBucketDto>,
+    source: String?,
+    confidence: Double?,
     modifier: Modifier = Modifier,
 ) {
     val maxClose = max(1, points.maxOfOrNull { it.close }?.toInt() ?: 1)
     val minClose = points.minOfOrNull { it.close } ?: 0.0
-    var chartWidthPx by remember(points) { mutableIntStateOf(0) }
-    var selectedIndex by remember(points) { mutableIntStateOf(points.lastIndex.coerceAtLeast(0)) }
-    val selectedPoint = points.getOrNull(selectedIndex)
-
-    fun xToNearestIndex(x: Float): Int {
-        if (points.isEmpty() || chartWidthPx <= 0) return 0
-        val step = chartWidthPx.toFloat() / points.size.toFloat()
-        return (x / step).toInt().coerceIn(0, points.lastIndex)
-    }
+    val selectedPoint = points.lastOrNull()
 
     Column(
         modifier = modifier
@@ -451,22 +456,7 @@ private fun InvestmentEvolutionChart(
                 color = WellPaidGold.copy(alpha = 0.35f),
                 shape = RoundedCornerShape(12.dp),
             )
-            .padding(12.dp)
-            .pointerInput(points, chartWidthPx) {
-                detectTapGestures { offset ->
-                    selectedIndex = xToNearestIndex(offset.x)
-                }
-            }
-            .pointerInput(points, chartWidthPx) {
-                detectDragGestures(
-                    onDragStart = { offset ->
-                        selectedIndex = xToNearestIndex(offset.x)
-                    },
-                    onDrag = { change, _ ->
-                        selectedIndex = xToNearestIndex(change.position.x)
-                    },
-                )
-            },
+            .padding(12.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -482,6 +472,14 @@ private fun InvestmentEvolutionChart(
             Text(
                 text = range.uppercase(Locale.ROOT),
                 style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (!source.isNullOrBlank()) {
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = "Fonte: ${source.uppercase(Locale.ROOT)}" + (confidence?.let { c -> " · conf ${"%.2f".format(Locale.US, c)}" } ?: ""),
+                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -516,14 +514,14 @@ private fun InvestmentEvolutionChart(
             Canvas(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(140.dp)
-                    .onSizeChanged { chartWidthPx = it.width },
+                    .height(140.dp),
             ) {
                 val width = size.width
                 val height = size.height
                 val barSlot = width / points.size.toFloat()
                 val barWidth = (barSlot * 0.62f).coerceAtLeast(8f)
                 val valueRange = (maxClose - minClose.toInt()).coerceAtLeast(1).toFloat()
+                val selectedIndex = points.lastIndex
                 val selectedX = (selectedIndex * barSlot) + (barSlot / 2f)
 
                 drawLine(
@@ -675,6 +673,8 @@ private fun InvestmentPositionDetailsSheet(
     historyPoints: List<StockHistoryPointDto>,
     historyRange: String,
     historySymbol: String?,
+    historySource: String?,
+    historyConfidence: Double?,
     isLoadingHistory: Boolean,
     historyErrorMessage: String?,
     buckets: List<InvestmentBucketDto>,
@@ -727,6 +727,8 @@ private fun InvestmentPositionDetailsSheet(
             isLoading = isLoadingHistory,
             historyErrorMessage = historyErrorMessage,
             buckets = buckets,
+            source = historySource,
+            confidence = historyConfidence,
             modifier = Modifier.fillMaxWidth(),
         )
         Row(

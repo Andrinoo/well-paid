@@ -5,6 +5,8 @@ import com.wellpaid.core.model.investment.InvestmentEvolutionPointDto
 import com.wellpaid.core.model.investment.InvestmentPositionCreateDto
 import com.wellpaid.core.model.investment.InvestmentPositionDto
 import com.wellpaid.core.model.investment.InvestmentSuggestedRatesDto
+import com.wellpaid.core.model.investment.EquityFundamentalsDto
+import com.wellpaid.core.model.investment.MacroSnapshotDto
 import com.wellpaid.core.model.investment.StockHistoryDto
 import com.wellpaid.core.model.investment.StockQuoteDto
 import com.wellpaid.core.model.investment.TickerSearchItemDto
@@ -36,6 +38,14 @@ interface InvestmentsApi {
         @Query("q") query: String,
         @Query("limit") limit: Int = 12,
     ): List<TickerSearchItemDto>
+
+    @GET("investments/macro/snapshot")
+    suspend fun getMacroSnapshot(): MacroSnapshotDto
+
+    @GET("investments/fundamentals")
+    suspend fun getEquityFundamentals(
+        @Query("symbol") symbol: String,
+    ): EquityFundamentalsDto
 
     @GET("investments/overview")
     suspend fun getOverview(): InvestmentOverviewDto

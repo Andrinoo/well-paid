@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from threading import Lock
 
-from app.services.investment_brapi import search_tickers_brapi
+from app.services.market_data_router import market_data_router
 
 
 @dataclass
@@ -31,7 +31,7 @@ class TickerCacheService:
             for prefix in prefixes:
                 if prefix in self._state.by_prefix:
                     continue
-                self._state.by_prefix[prefix] = search_tickers_brapi(prefix, limit=20)
+                self._state.by_prefix[prefix] = market_data_router.search_tickers(prefix, limit=20)
             self._state.loaded_at = datetime.now(timezone.utc)
 
     def search(self, query: str, *, limit: int = 12) -> list[dict[str, str]]:
@@ -41,7 +41,7 @@ class TickerCacheService:
         with self._lock:
             if self._is_fresh() and q in self._state.by_prefix:
                 return self._state.by_prefix[q][:limit]
-        rows = search_tickers_brapi(q, limit=max(limit, 20))
+        rows = market_data_router.search_tickers(q, limit=max(limit, 20))
         with self._lock:
             self._state.by_prefix[q] = rows
             if self._state.loaded_at is None or not self._is_fresh():

@@ -9,17 +9,19 @@ from app.core.database import get_db
 from app.core.limiter import limiter
 from app.models.user import User
 from app.schemas.investments import (
+    EquityFundamentalsOut,
     InvestmentEvolutionPointOut,
     InvestmentOverviewOut,
     InvestmentPositionCreate,
     InvestmentPositionOut,
     InvestmentSuggestedRatesOut,
+    MacroSnapshotOut,
     StockHistoryOut,
     StockQuoteOut,
     TickerSearchItemOut,
 )
-from app.services.investment_brapi import fetch_stock_history_brapi, fetch_stock_quote_brapi
 from app.services.investment_market_rates import get_suggested_annual_rates
+from app.services.market_data_router import market_data_router
 from app.services.investments import (
     create_position_for_user,
     delete_position_for_user,
@@ -56,23 +58,29 @@ def read_stock_quote(
     user: Annotated[User, Depends(get_current_user)],
     symbol: Annotated[str, Query(min_length=1, max_length=12, description="Ticker B3, ex. PETR4")],
 ) -> StockQuoteOut:
-    raw = fetch_stock_quote_brapi(symbol)
+    try:
+        raw = market_data_router.quote(symbol)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ticker inválido")
     if raw is None:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Falha ao consultar cotação.",
         )
-    if raw.get("raw_error") is not None or raw.get("last_price") is None:
+    if raw.get("error") is not None or raw.get("last_price") is None:
         return StockQuoteOut(
             symbol=symbol.strip().upper(),
             last_price=0.0,
-            error=str(raw.get("raw_error") or "quote_unavailable"),
+            error=str(raw.get("error") or "quote_unavailable"),
+            source=str(raw.get("source") or "brapi"),
+            confidence=raw.get("confidence"),
         )
     return StockQuoteOut(
         symbol=symbol.strip().upper(),
         last_price=float(raw["last_price"]),
         as_of=raw.get("as_of"),
-        source="brapi",
+        source=str(raw.get("source") or "brapi"),
+        confidence=raw.get("confidence"),
         error=None,
     )
 
@@ -85,7 +93,11 @@ def read_stock_quote_history(
     symbol: Annotated[str, Query(min_length=1, max_length=12, description="Ticker B3, ex. PETR4")],
     range: Annotated[str, Query(min_length=2, max_length=8, description="5m,30m,60m,3h,12h,1d,1w,1m,3m,6m,1y")] = "1m",
 ) -> StockHistoryOut:
-    raw = fetch_stock_history_brapi(symbol=symbol, range_key=range)
+    try:
+        raw = market_data_router.history(symbol=symbol, range_key=range)
+    except ValueError as exc:
+        detail = "Ticker inválido" if str(exc) == "ticker_invalid" else "Range inválido"
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)
     if raw is None:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
@@ -95,7 +107,9 @@ def read_stock_quote_history(
         symbol=str(raw.get("symbol") or symbol.strip().upper()),
         range=range,
         points=list(raw.get("points") or []),
-        error=raw.get("raw_error"),
+        source=str(raw.get("source") or "brapi"),
+        confidence=raw.get("confidence"),
+        error=raw.get("error"),
     )
 
 
@@ -109,6 +123,46 @@ def search_tickers(
 ) -> list[TickerSearchItemOut]:
     rows = ticker_cache_service.search(q, limit=limit)
     return [TickerSearchItemOut(symbol=r["symbol"], name=r["name"]) for r in rows]
+
+
+@router.get("/macro/snapshot", response_model=MacroSnapshotOut)
+@limiter.limit("30/minute")
+def read_macro_snapshot(
+    request: Request,
+    user: Annotated[User, Depends(get_current_user)],
+) -> MacroSnapshotOut:
+    data = market_data_router.macro_snapshot()
+    return MacroSnapshotOut(
+        cdi=data.get("cdi"),
+        selic=data.get("selic"),
+        ipca=data.get("ipca"),
+        source=str(data.get("source") or "sgs"),
+        confidence=data.get("confidence"),
+    )
+
+
+@router.get("/fundamentals", response_model=EquityFundamentalsOut)
+@limiter.limit("30/minute")
+def read_equity_fundamentals(
+    request: Request,
+    user: Annotated[User, Depends(get_current_user)],
+    symbol: Annotated[str, Query(min_length=1, max_length=12, description="Ticker B3, ex. PETR4")],
+) -> EquityFundamentalsOut:
+    try:
+        data = market_data_router.fundamentals(symbol)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ticker inválido")
+    if data is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fundamentos indisponíveis")
+    return EquityFundamentalsOut(
+        symbol=str(data.get("symbol") or symbol.strip().upper()),
+        pl=data.get("pl"),
+        pvp=data.get("pvp"),
+        dividend_yield=data.get("dividend_yield"),
+        roe=data.get("roe"),
+        source=str(data.get("source") or "fundamentus"),
+        confidence=data.get("confidence"),
+    )
 
 
 @router.get("/overview", response_model=InvestmentOverviewOut)

@@ -155,6 +155,17 @@ class Settings(BaseSettings):
         default="",
         validation_alias=AliasChoices("brapi_api_key", "BRAPI_API_KEY"),
     )
+    # B3 For Developers (opcional). Se vazio, o roteador usa BRAPI como fallback principal.
+    b3_api_key: str = Field(
+        default="",
+        validation_alias=AliasChoices("b3_api_key", "B3_API_KEY"),
+    )
+    b3_api_base_url: str = Field(
+        default="",
+        validation_alias=AliasChoices("b3_api_base_url", "B3_API_BASE_URL"),
+    )
+    market_provider_timeout_seconds: float = 10.0
+    market_provider_retries: int = 1
 
     @model_validator(mode="before")
     @classmethod

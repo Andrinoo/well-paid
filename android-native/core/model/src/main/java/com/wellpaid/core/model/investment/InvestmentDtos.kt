@@ -68,6 +68,7 @@ data class StockQuoteDto(
     val currency: String = "BRL",
     @SerialName("as_of") val asOf: String? = null,
     val source: String = "brapi",
+    val confidence: Double? = null,
     val error: String? = null,
 )
 
@@ -88,5 +89,27 @@ data class StockHistoryDto(
     val symbol: String,
     val range: String,
     val points: List<StockHistoryPointDto> = emptyList(),
+    val source: String = "brapi",
+    val confidence: Double? = null,
     val error: String? = null,
+)
+
+@Serializable
+data class MacroSnapshotDto(
+    val cdi: Double? = null,
+    val selic: Double? = null,
+    val ipca: Double? = null,
+    val source: String = "sgs",
+    val confidence: Double? = null,
+)
+
+@Serializable
+data class EquityFundamentalsDto(
+    val symbol: String,
+    val pl: String? = null,
+    val pvp: String? = null,
+    @SerialName("dividend_yield") val dividendYield: String? = null,
+    val roe: String? = null,
+    val source: String = "fundamentus",
+    val confidence: Double? = null,
 )

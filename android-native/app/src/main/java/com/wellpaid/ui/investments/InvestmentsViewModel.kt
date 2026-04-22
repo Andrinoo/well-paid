@@ -8,6 +8,7 @@ import com.wellpaid.core.model.investment.InvestmentEvolutionPointDto
 import com.wellpaid.core.model.investment.InvestmentPositionCreateDto
 import com.wellpaid.core.model.investment.InvestmentPositionDto
 import com.wellpaid.core.model.investment.InvestmentOverviewDto
+import com.wellpaid.core.model.investment.MacroSnapshotDto
 import com.wellpaid.core.model.investment.StockHistoryPointDto
 import com.wellpaid.core.network.InvestmentsApi
 import com.wellpaid.util.FastApiErrorMapper
@@ -54,11 +55,16 @@ data class InvestmentsUiState(
     val selectedHistoryRange: String = "1m",
     val selectedPositionHistory: List<StockHistoryPointDto> = emptyList(),
     val selectedPositionHistorySymbol: String? = null,
+    val selectedPositionHistorySource: String? = null,
+    val selectedPositionHistoryConfidence: Double? = null,
     val isLoadingHistory: Boolean = false,
     val historyErrorMessage: String? = null,
+    val macroSnapshot: MacroSnapshotDto? = null,
     val isLoadingSuggestedRates: Boolean = false,
     val isFetchingQuote: Boolean = false,
     val quoteInfoMessage: String? = null,
+    val quoteSourceLabel: String? = null,
+    val quoteConfidence: Double? = null,
     val errorMessage: String? = null,
 )
 
@@ -124,6 +130,7 @@ class InvestmentsViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             val overviewResult = runCatching { api.getOverview() }
             val positionsResult = runCatching { api.listPositions() }
+            val macroResult = runCatching { api.getMacroSnapshot() }
             overviewResult
                 .onSuccess { payload ->
                     _uiState.update {
@@ -131,6 +138,7 @@ class InvestmentsViewModel @Inject constructor(
                             isLoading = false,
                             overview = payload,
                             positions = positionsResult.getOrElse { emptyList() },
+                            macroSnapshot = macroResult.getOrNull(),
                             errorMessage = null,
                         )
                     }
@@ -217,6 +225,8 @@ class InvestmentsViewModel @Inject constructor(
                 selectedPositionId = null,
                 selectedPositionHistory = emptyList(),
                 selectedPositionHistorySymbol = null,
+                selectedPositionHistorySource = null,
+                selectedPositionHistoryConfidence = null,
                 isLoadingHistory = false,
                 historyErrorMessage = null,
             )
@@ -326,7 +336,14 @@ class InvestmentsViewModel @Inject constructor(
                             appContext.getString(R.string.investments_stock_quote, priceStr)
                         }
                     }
-                    _uiState.update { it.copy(isFetchingQuote = false, quoteInfoMessage = line) }
+                    _uiState.update {
+                        it.copy(
+                            isFetchingQuote = false,
+                            quoteInfoMessage = line,
+                            quoteSourceLabel = q.source,
+                            quoteConfidence = q.confidence,
+                        )
+                    }
                     if (state.newPositionType == "stocks") {
                         loadHistoryForSymbol(sym.uppercase(Locale.ROOT), state.selectedHistoryRange)
                     }
@@ -452,6 +469,8 @@ class InvestmentsViewModel @Inject constructor(
                     isLoadingHistory = true,
                     historyErrorMessage = null,
                     selectedPositionHistorySymbol = symbol,
+                    selectedPositionHistorySource = null,
+                    selectedPositionHistoryConfidence = null,
                 )
             }
             runCatching {
@@ -463,6 +482,8 @@ class InvestmentsViewModel @Inject constructor(
                             isLoadingHistory = false,
                             selectedPositionHistory = response.points,
                             selectedPositionHistorySymbol = response.symbol,
+                            selectedPositionHistorySource = response.source,
+                            selectedPositionHistoryConfidence = response.confidence,
                             historyErrorMessage = response.error?.takeIf { err -> err.isNotBlank() },
                         )
                     }
