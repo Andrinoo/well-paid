@@ -76,6 +76,9 @@ data class StockQuoteDto(
 data class TickerSearchItemDto(
     val symbol: String,
     val name: String,
+    @SerialName("instrument_type") val instrumentType: String = "stocks",
+    val source: String = "unknown",
+    val confidence: Double? = null,
 )
 
 @Serializable

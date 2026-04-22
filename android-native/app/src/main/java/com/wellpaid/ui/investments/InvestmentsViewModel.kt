@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wellpaid.R
 import com.wellpaid.core.model.investment.InvestmentEvolutionPointDto
+import com.wellpaid.core.model.investment.EquityFundamentalsDto
 import com.wellpaid.core.model.investment.InvestmentPositionCreateDto
 import com.wellpaid.core.model.investment.InvestmentPositionDto
 import com.wellpaid.core.model.investment.InvestmentOverviewDto
@@ -35,6 +36,17 @@ val InvestmentHistoryRanges = listOf("5m", "30m", "60m", "3h", "12h", "1d", "1w"
 data class TickerSuggestionUi(
     val symbol: String,
     val name: String,
+    val instrumentType: String = "stocks",
+    val source: String = "unknown",
+    val confidence: Double? = null,
+)
+
+data class FundamentalPreviewUi(
+    val symbol: String,
+    val dy: String? = null,
+    val pl: String? = null,
+    val pvp: String? = null,
+    val source: String = "fundamentus",
 )
 
 data class InvestmentsUiState(
@@ -45,9 +57,16 @@ data class InvestmentsUiState(
     val showCreatePositionForm: Boolean = false,
     val newPositionType: String = "cdi",
     val newPositionName: String = "",
+    val globalSearchText: String = "",
+    val quantityText: String = "",
+    val averagePriceText: String = "",
+    val targetPriceText: String = "",
+    val selectedFundamentals: FundamentalPreviewUi? = null,
     val newPositionPrincipalText: String = "",
     val newPositionAnnualRateText: String = "",
     val tickerSuggestions: List<TickerSuggestionUi> = emptyList(),
+    val globalTickerSuggestions: List<TickerSuggestionUi> = emptyList(),
+    val isSearchingGlobalTickers: Boolean = false,
     val isSearchingTickers: Boolean = false,
     val isSavingPosition: Boolean = false,
     val compactListMode: Boolean = true,
@@ -76,16 +95,18 @@ class InvestmentsViewModel @Inject constructor(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(InvestmentsUiState())
     val uiState: StateFlow<InvestmentsUiState> = _uiState.asStateFlow()
-    private val tickerQueryFlow = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    private val formTickerQueryFlow = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    private val globalTickerQueryFlow = MutableSharedFlow<String>(extraBufferCapacity = 1)
 
     init {
-        observeTickerSearch()
+        observeFormTickerSearch()
+        observeGlobalTickerSearch()
         refresh()
     }
 
-    private fun observeTickerSearch() {
+    private fun observeFormTickerSearch() {
         viewModelScope.launch {
-            tickerQueryFlow
+            formTickerQueryFlow
                 .debounce(350)
                 .distinctUntilChanged()
                 .collectLatest { query ->
@@ -108,6 +129,9 @@ class InvestmentsViewModel @Inject constructor(
                                         TickerSuggestionUi(
                                             symbol = row.symbol,
                                             name = row.name,
+                                            instrumentType = row.instrumentType,
+                                            source = row.source,
+                                            confidence = row.confidence,
                                         )
                                     },
                                 )
@@ -118,6 +142,51 @@ class InvestmentsViewModel @Inject constructor(
                                 it.copy(
                                     isSearchingTickers = false,
                                     tickerSuggestions = emptyList(),
+                                )
+                            }
+                        }
+                }
+        }
+    }
+
+    private fun observeGlobalTickerSearch() {
+        viewModelScope.launch {
+            globalTickerQueryFlow
+                .debounce(300)
+                .distinctUntilChanged()
+                .collectLatest { query ->
+                    if (query.length < 2) {
+                        _uiState.update {
+                            it.copy(
+                                globalTickerSuggestions = emptyList(),
+                                isSearchingGlobalTickers = false,
+                            )
+                        }
+                        return@collectLatest
+                    }
+                    _uiState.update { it.copy(isSearchingGlobalTickers = true) }
+                    runCatching { api.searchTickers(query = query, limit = 14) }
+                        .onSuccess { rows ->
+                            _uiState.update {
+                                it.copy(
+                                    isSearchingGlobalTickers = false,
+                                    globalTickerSuggestions = rows.map { row ->
+                                        TickerSuggestionUi(
+                                            symbol = row.symbol,
+                                            name = row.name,
+                                            instrumentType = row.instrumentType,
+                                            source = row.source,
+                                            confidence = row.confidence,
+                                        )
+                                    },
+                                )
+                            }
+                        }
+                        .onFailure {
+                            _uiState.update {
+                                it.copy(
+                                    isSearchingGlobalTickers = false,
+                                    globalTickerSuggestions = emptyList(),
                                 )
                             }
                         }
@@ -160,6 +229,7 @@ class InvestmentsViewModel @Inject constructor(
                 showCreatePositionForm = true,
                 quoteInfoMessage = null,
                 tickerSuggestions = emptyList(),
+                globalTickerSuggestions = emptyList(),
                 newPositionType = "fixed_income",
             )
         }
@@ -171,6 +241,10 @@ class InvestmentsViewModel @Inject constructor(
                 showCreatePositionForm = false,
                 newPositionType = "fixed_income",
                 newPositionName = "",
+                quantityText = "",
+                averagePriceText = "",
+                targetPriceText = "",
+                selectedFundamentals = null,
                 newPositionPrincipalText = "",
                 newPositionAnnualRateText = "",
                 isSavingPosition = false,
@@ -189,7 +263,7 @@ class InvestmentsViewModel @Inject constructor(
             )
         }
         if (value == "stocks") {
-            tickerQueryFlow.tryEmit(_uiState.value.newPositionName.trim())
+            formTickerQueryFlow.tryEmit(_uiState.value.newPositionName.trim())
         }
     }
 
@@ -360,23 +434,38 @@ class InvestmentsViewModel @Inject constructor(
     }
 
     fun setNewPositionName(value: String) {
+        val inferredType = inferInstrumentType(value)
         _uiState.update {
             it.copy(
                 newPositionName = value,
-                newPositionType = inferInstrumentType(value),
+                newPositionType = inferredType,
+                selectedFundamentals = if (inferredType == "stocks") it.selectedFundamentals else null,
             )
         }
-        tickerQueryFlow.tryEmit(value.trim())
+        formTickerQueryFlow.tryEmit(value.trim())
     }
 
-    fun selectTickerSuggestion(symbol: String) {
+    fun setGlobalSearchText(value: String) {
+        _uiState.update { it.copy(globalSearchText = value) }
+        globalTickerQueryFlow.tryEmit(value.trim())
+    }
+
+    fun clearGlobalSearch() {
+        _uiState.update { it.copy(globalSearchText = "", globalTickerSuggestions = emptyList()) }
+    }
+
+    fun selectTickerSuggestion(symbol: String, fromGlobalSearch: Boolean = false) {
         _uiState.update {
             it.copy(
                 newPositionName = symbol.uppercase(Locale.ROOT),
                 tickerSuggestions = emptyList(),
+                globalSearchText = if (fromGlobalSearch) symbol.uppercase(Locale.ROOT) else it.globalSearchText,
+                globalTickerSuggestions = if (fromGlobalSearch) emptyList() else it.globalTickerSuggestions,
+                newPositionType = "stocks",
+                showCreatePositionForm = true,
             )
         }
-        fetchB3StockQuote()
+        fetchB3StockQuoteAndFundamentals()
     }
 
     fun setNewPositionPrincipalText(value: String) {
@@ -385,6 +474,20 @@ class InvestmentsViewModel @Inject constructor(
 
     fun setNewPositionAnnualRateText(value: String) {
         _uiState.update { it.copy(newPositionAnnualRateText = value.filter { c -> c.isDigit() || c == '.' || c == ',' }) }
+    }
+
+    fun setQuantityText(value: String) {
+        _uiState.update { it.copy(quantityText = value.filter { c -> c.isDigit() || c == '.' || c == ',' }) }
+        recalculatePrincipalFromStocks()
+    }
+
+    fun setAveragePriceText(value: String) {
+        _uiState.update { it.copy(averagePriceText = value.filter { c -> c.isDigit() || c == '.' || c == ',' }) }
+        recalculatePrincipalFromStocks()
+    }
+
+    fun setTargetPriceText(value: String) {
+        _uiState.update { it.copy(targetPriceText = value.filter { c -> c.isDigit() || c == '.' || c == ',' }) }
     }
 
     fun createPosition() {
@@ -406,6 +509,14 @@ class InvestmentsViewModel @Inject constructor(
         }
         val rateBps = (annualPct * 100.0).toInt()
         val inferredType = inferInstrumentType(name)
+        if (inferredType == "stocks") {
+            val qty = s.quantityText.replace(",", ".").toDoubleOrNull()
+            val avg = s.averagePriceText.replace(",", ".").toDoubleOrNull()
+            if (qty == null || qty <= 0 || avg == null || avg <= 0) {
+                _uiState.update { it.copy(errorMessage = appContext.getString(R.string.investments_error_stock_quantity_price)) }
+                return
+            }
+        }
         viewModelScope.launch {
             _uiState.update { it.copy(isSavingPosition = true, errorMessage = null) }
             runCatching {
@@ -451,6 +562,57 @@ class InvestmentsViewModel @Inject constructor(
     private fun extractTickerFromText(text: String): String? {
         val matcher = TickerPattern.matcher(text.uppercase(Locale.ROOT))
         return if (matcher.find()) matcher.group(1) else null
+    }
+
+    private fun recalculatePrincipalFromStocks() {
+        val s = _uiState.value
+        if (inferInstrumentType(s.newPositionName) != "stocks") return
+        val qty = s.quantityText.replace(",", ".").toDoubleOrNull()
+        val avg = s.averagePriceText.replace(",", ".").toDoubleOrNull()
+        if (qty == null || avg == null || qty <= 0 || avg <= 0) return
+        val total = qty * avg
+        val brl = String.format(Locale.US, "%.2f", total).replace('.', ',')
+        _uiState.update { it.copy(newPositionPrincipalText = brl) }
+    }
+
+    private fun applyFundamentals(f: EquityFundamentalsDto) {
+        _uiState.update {
+            it.copy(
+                selectedFundamentals = FundamentalPreviewUi(
+                    symbol = f.symbol,
+                    dy = f.dividendYield,
+                    pl = f.pl,
+                    pvp = f.pvp,
+                    source = f.source,
+                )
+            )
+        }
+        val dyNumber = f.dividendYield
+            ?.replace("%", "")
+            ?.replace(",", ".")
+            ?.trim()
+            ?.toDoubleOrNull()
+        if (dyNumber != null && dyNumber > 0.0) {
+            _uiState.update {
+                it.copy(
+                    newPositionAnnualRateText = String.format(Locale.US, "%.2f", dyNumber).replace('.', ',')
+                )
+            }
+        }
+    }
+
+    private fun fetchB3StockQuoteAndFundamentals() {
+        fetchB3StockQuote()
+        val symbol = extractTickerFromText(_uiState.value.newPositionName.trim()) ?: return
+        viewModelScope.launch {
+            runCatching { api.getEquityFundamentals(symbol.uppercase(Locale.ROOT)) }
+                .onSuccess { payload ->
+                    applyFundamentals(payload)
+                }
+                .onFailure {
+                    _uiState.update { st -> st.copy(selectedFundamentals = null) }
+                }
+        }
     }
 
     private fun inferInstrumentType(text: String): String {

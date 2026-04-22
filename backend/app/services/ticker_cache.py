@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from threading import Lock
+from typing import Any
 
 from app.services.market_data_router import market_data_router
 
@@ -10,7 +11,7 @@ from app.services.market_data_router import market_data_router
 @dataclass
 class _TickerCacheState:
     loaded_at: datetime | None = None
-    by_prefix: dict[str, list[dict[str, str]]] | None = None
+    by_prefix: dict[str, list[dict[str, Any]]] | None = None
 
 
 class TickerCacheService:
@@ -34,7 +35,7 @@ class TickerCacheService:
                 self._state.by_prefix[prefix] = market_data_router.search_tickers(prefix, limit=20)
             self._state.loaded_at = datetime.now(timezone.utc)
 
-    def search(self, query: str, *, limit: int = 12) -> list[dict[str, str]]:
+    def search(self, query: str, *, limit: int = 12) -> list[dict[str, Any]]:
         q = (query or "").strip().lower()
         if len(q) < 2:
             return []

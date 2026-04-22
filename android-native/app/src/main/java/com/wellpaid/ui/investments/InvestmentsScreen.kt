@@ -178,6 +178,43 @@ fun InvestmentsScreen(
                 )
             }
             Spacer(Modifier.height(12.dp))
+            OutlinedTextField(
+                value = state.globalSearchText,
+                onValueChange = { viewModel.setGlobalSearchText(it) },
+                label = { Text(stringResource(R.string.investments_global_search_label)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            if (state.isSearchingGlobalTickers || state.globalTickerSuggestions.isNotEmpty()) {
+                Spacer(Modifier.height(6.dp))
+            }
+            if (state.isSearchingGlobalTickers) {
+                Text(
+                    text = stringResource(R.string.investments_loading_button),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(alpha = 0.9f),
+                )
+            } else {
+                state.globalTickerSuggestions.forEach { suggestion ->
+                    TextButton(
+                        onClick = { viewModel.selectTickerSuggestion(suggestion.symbol, fromGlobalSearch = true) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            Text(
+                                text = "${suggestion.symbol} · ${suggestion.name}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.White,
+                            )
+                            Text(
+                                text = "${instrumentLabelForKey(suggestion.instrumentType)} · ${suggestion.source.uppercase(Locale.ROOT)}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White.copy(alpha = 0.76f),
+                            )
+                        }
+                    }
+                }
+            }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -258,8 +295,16 @@ fun InvestmentsScreen(
                     state.tickerSuggestions.forEach { suggestion ->
                         TextButton(
                             onClick = { viewModel.selectTickerSuggestion(suggestion.symbol) },
+                            modifier = Modifier.fillMaxWidth(),
                         ) {
-                            Text("${suggestion.symbol} · ${suggestion.name}")
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                Text("${suggestion.symbol} · ${suggestion.name}")
+                                Text(
+                                    text = "${instrumentLabelForKey(suggestion.instrumentType)} · ${suggestion.source.uppercase(Locale.ROOT)}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                         }
                     }
                 }
@@ -310,6 +355,44 @@ fun InvestmentsScreen(
                     placeholder = stringResource(R.string.emergency_monthly_placeholder),
                 )
                 Spacer(Modifier.height(8.dp))
+                if (state.newPositionType == "stocks") {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        OutlinedTextField(
+                            value = state.quantityText,
+                            onValueChange = { viewModel.setQuantityText(it) },
+                            label = { Text(stringResource(R.string.investments_field_quantity)) },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                        )
+                        OutlinedTextField(
+                            value = state.averagePriceText,
+                            onValueChange = { viewModel.setAveragePriceText(it) },
+                            label = { Text(stringResource(R.string.investments_field_average_price)) },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = state.targetPriceText,
+                        onValueChange = { viewModel.setTargetPriceText(it) },
+                        label = { Text(stringResource(R.string.investments_field_target_price)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    state.selectedFundamentals?.let { f ->
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            text = "DY ${f.dy ?: "—"} · P/L ${f.pl ?: "—"} · P/VP ${f.pvp ?: "—"}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
+                }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -373,6 +456,7 @@ fun InvestmentsScreen(
             InvestmentPositionCard(
                 name = position.name,
                 line = line,
+                instrumentType = position.instrumentType,
                 onDetails = { viewModel.openPositionDetails(position.id) },
                 onTopUp = { viewModel.startTopUpFromPosition(position.id) },
                 onDelete = { viewModel.deletePosition(position.id) },
@@ -626,6 +710,7 @@ private fun InvestmentPositionCompactRow(
 private fun InvestmentPositionCard(
     name: String,
     line: String,
+    instrumentType: String,
     onDetails: () -> Unit,
     onTopUp: () -> Unit,
     onDelete: () -> Unit,
@@ -654,6 +739,13 @@ private fun InvestmentPositionCard(
             text = line,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = instrumentLabelForKey(instrumentType),
+            style = MaterialTheme.typography.labelSmall,
+            color = WellPaidNavy.copy(alpha = 0.78f),
+            fontWeight = FontWeight.SemiBold,
         )
         Row(
             modifier = Modifier.fillMaxWidth(),

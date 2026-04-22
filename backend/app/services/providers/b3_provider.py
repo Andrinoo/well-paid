@@ -55,7 +55,15 @@ class B3Provider:
             if not symbol:
                 continue
             name = str(row.get("name") or row.get("companyName") or symbol).strip()
-            out.append({"symbol": symbol, "name": name})
+            out.append(
+                {
+                    "symbol": symbol,
+                    "name": name,
+                    "instrument_type": "stocks",
+                    "source": self.source,
+                    "confidence": 0.96,
+                }
+            )
         return out
 
     def quote(self, symbol: str) -> dict[str, Any] | None:

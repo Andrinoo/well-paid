@@ -122,7 +122,16 @@ def search_tickers(
     limit: Annotated[int, Query(ge=1, le=50)] = 12,
 ) -> list[TickerSearchItemOut]:
     rows = ticker_cache_service.search(q, limit=limit)
-    return [TickerSearchItemOut(symbol=r["symbol"], name=r["name"]) for r in rows]
+    return [
+        TickerSearchItemOut(
+            symbol=r["symbol"],
+            name=r["name"],
+            instrument_type=str(r.get("instrument_type") or "stocks"),
+            source=str(r.get("source") or "unknown"),
+            confidence=r.get("confidence"),
+        )
+        for r in rows
+    ]
 
 
 @router.get("/macro/snapshot", response_model=MacroSnapshotOut)

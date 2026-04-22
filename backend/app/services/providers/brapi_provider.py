@@ -14,7 +14,19 @@ class BrapiProvider:
     source: str = "brapi"
 
     def search_tickers(self, query: str, limit: int = 12) -> list[dict[str, str]]:
-        return search_tickers_brapi(query=query, limit=limit)
+        rows = search_tickers_brapi(query=query, limit=limit)
+        out: list[dict[str, str]] = []
+        for row in rows:
+            out.append(
+                {
+                    "symbol": str(row.get("symbol") or "").upper(),
+                    "name": str(row.get("name") or row.get("symbol") or "").strip(),
+                    "instrument_type": "stocks",
+                    "source": self.source,
+                    "confidence": 0.80,
+                }
+            )
+        return out
 
     def quote(self, symbol: str) -> dict[str, object] | None:
         raw = fetch_stock_quote_brapi(symbol)

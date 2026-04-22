@@ -2,6 +2,7 @@
 <resources>
     <string name="app_name">Well Paid</string>
     <string name="common_close">Close</string>
+    <string name="common_clear">Clear</string>
     <string name="common_ok">OK</string>
     <string name="common_cancel">Cancel</string>
     <string name="common_continue">Continue</string>
@@ -726,6 +727,11 @@
     <string name="investments_bucket_stocks">Stocks (B3)</string>
     <string name="investments_apply_market_rate">Use market rate (CDI)</string>
     <string name="investments_fetch_b3_quote">B3 quote</string>
+    <string name="investments_global_search_label">Search asset/ticker (e.g. PETR, CDB, CDI)</string>
+    <string name="investments_field_quantity">Quantity</string>
+    <string name="investments_field_average_price">Average price (R$)</string>
+    <string name="investments_field_target_price">Target price (optional)</string>
+    <string name="investments_error_stock_quantity_price">For stocks, enter quantity and average price.</string>
     <string name="investments_market_rate_not_applicable">Automatic market rate is available for CDI, CDB, or general fixed income.</string>
     <string name="investments_error_ticker">Enter a ticker in the name field (e.g. PETR4) before requesting a quote.</string>
     <string name="investments_stock_quote">Quote: R$ %1$s</string>

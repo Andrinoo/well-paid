@@ -69,6 +69,9 @@ class StockQuoteOut(BaseModel):
 class TickerSearchItemOut(BaseModel):
     symbol: str
     name: str
+    instrument_type: str = "stocks"
+    source: str = "unknown"
+    confidence: float | None = Field(default=None, ge=0, le=1)
 
 
 class StockHistoryPointOut(BaseModel):
