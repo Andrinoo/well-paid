@@ -236,26 +236,6 @@ fun InvestmentsScreen(
                     )
                     .padding(12.dp),
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    listOf("cdi", "cdb", "fixed_income", "tesouro", "stocks").forEach { type ->
-                        FilterChip(
-                            selected = state.newPositionType == type,
-                            onClick = { viewModel.setNewPositionType(type) },
-                            label = {
-                                Text(
-                                    text = instrumentLabelForKey(type),
-                                    maxLines = 1,
-                                )
-                            },
-                        )
-                    }
-                }
-                Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
                     value = state.newPositionName,
                     onValueChange = { viewModel.setNewPositionName(it) },
@@ -263,25 +243,26 @@ fun InvestmentsScreen(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
-                if (state.newPositionType == "stocks") {
+                val detectedTicker = detectTickerFromText(state.newPositionName)
+                if (state.isSearchingTickers || state.tickerSuggestions.isNotEmpty()) {
                     Spacer(Modifier.height(6.dp))
-                    if (state.isSearchingTickers) {
-                        Text(
-                            text = stringResource(R.string.investments_loading_button),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    } else {
-                        state.tickerSuggestions.forEach { suggestion ->
-                            TextButton(
-                                onClick = { viewModel.selectTickerSuggestion(suggestion.symbol) },
-                            ) {
-                                Text("${suggestion.symbol} · ${suggestion.name}")
-                            }
+                }
+                if (state.isSearchingTickers) {
+                    Text(
+                        text = stringResource(R.string.investments_loading_button),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    state.tickerSuggestions.forEach { suggestion ->
+                        TextButton(
+                            onClick = { viewModel.selectTickerSuggestion(suggestion.symbol) },
+                        ) {
+                            Text("${suggestion.symbol} · ${suggestion.name}")
                         }
                     }
                 }
-                if (state.newPositionType == "stocks") {
+                if (!detectedTicker.isNullOrBlank()) {
                     Spacer(Modifier.height(4.dp))
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -331,7 +312,7 @@ fun InvestmentsScreen(
                         singleLine = true,
                         modifier = Modifier.weight(1f),
                     )
-                    if (state.newPositionType != "stocks") {
+                    if (detectedTicker.isNullOrBlank()) {
                         TextButton(
                             onClick = { viewModel.applyMarketRateToForm() },
                             enabled = !state.isLoadingSuggestedRates && !state.isSavingPosition,
@@ -788,6 +769,11 @@ private fun instrumentLabelForKey(
         "stocks" -> stringResource(R.string.investments_bucket_stocks)
         else -> fallback ?: key.uppercase(Locale.ROOT)
     }
+}
+
+private fun detectTickerFromText(text: String): String? {
+    val rx = Regex("([A-Za-z]{4}\\d{1,2})")
+    return rx.find(text)?.groupValues?.getOrNull(1)?.uppercase(Locale.ROOT)
 }
 
 @Composable

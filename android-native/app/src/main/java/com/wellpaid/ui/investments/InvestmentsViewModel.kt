@@ -83,8 +83,7 @@ class InvestmentsViewModel @Inject constructor(
                 .debounce(350)
                 .distinctUntilChanged()
                 .collectLatest { query ->
-                    val current = _uiState.value
-                    if (current.newPositionType != "stocks" || query.length < 2) {
+                    if (query.length < 2) {
                         _uiState.update {
                             it.copy(
                                 tickerSuggestions = emptyList(),
@@ -153,6 +152,7 @@ class InvestmentsViewModel @Inject constructor(
                 showCreatePositionForm = true,
                 quoteInfoMessage = null,
                 tickerSuggestions = emptyList(),
+                newPositionType = "fixed_income",
             )
         }
     }
@@ -161,7 +161,7 @@ class InvestmentsViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 showCreatePositionForm = false,
-                newPositionType = "cdi",
+                newPositionType = "fixed_income",
                 newPositionName = "",
                 newPositionPrincipalText = "",
                 newPositionAnnualRateText = "",
@@ -259,11 +259,12 @@ class InvestmentsViewModel @Inject constructor(
      */
     fun applyMarketRateToForm() {
         val s = _uiState.value
+        val inferredType = inferInstrumentType(s.newPositionName)
         viewModelScope.launch {
             _uiState.update { it.copy(isLoadingSuggestedRates = true, errorMessage = null) }
             runCatching { api.getSuggestedRates() }
                 .onSuccess { rates ->
-                    val pct = when (s.newPositionType.lowercase(Locale.ROOT)) {
+                    val pct = when (inferredType.lowercase(Locale.ROOT)) {
                         "cdi" -> rates.cdiAnnualPercent
                         "cdb" -> rates.cdbAnnualPercent
                         "tesouro", "fixed_income" -> rates.fixedIncomeAnnualPercent
@@ -342,7 +343,12 @@ class InvestmentsViewModel @Inject constructor(
     }
 
     fun setNewPositionName(value: String) {
-        _uiState.update { it.copy(newPositionName = value) }
+        _uiState.update {
+            it.copy(
+                newPositionName = value,
+                newPositionType = inferInstrumentType(value),
+            )
+        }
         tickerQueryFlow.tryEmit(value.trim())
     }
 
@@ -382,12 +388,13 @@ class InvestmentsViewModel @Inject constructor(
             return
         }
         val rateBps = (annualPct * 100.0).toInt()
+        val inferredType = inferInstrumentType(name)
         viewModelScope.launch {
             _uiState.update { it.copy(isSavingPosition = true, errorMessage = null) }
             runCatching {
                 api.createPosition(
                     InvestmentPositionCreateDto(
-                        instrumentType = s.newPositionType,
+                        instrumentType = inferredType,
                         name = name,
                         principalCents = principal,
                         annualRateBps = rateBps,
@@ -427,6 +434,15 @@ class InvestmentsViewModel @Inject constructor(
     private fun extractTickerFromText(text: String): String? {
         val matcher = TickerPattern.matcher(text.uppercase(Locale.ROOT))
         return if (matcher.find()) matcher.group(1) else null
+    }
+
+    private fun inferInstrumentType(text: String): String {
+        val raw = text.trim().lowercase(Locale.ROOT)
+        if (extractTickerFromText(text) != null) return "stocks"
+        if ("cdb" in raw) return "cdb"
+        if ("cdi" in raw) return "cdi"
+        if ("tesouro" in raw || "ipca" in raw || "selic" in raw) return "tesouro"
+        return "fixed_income"
     }
 
     private fun loadHistoryForSymbol(symbol: String, range: String) {
