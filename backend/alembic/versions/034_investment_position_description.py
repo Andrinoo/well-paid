@@ -1,6 +1,6 @@
 """add description to investment positions
 
-Revision ID: 034_investment_position_description
+Revision ID: 034
 Revises: 030_investment_positions
 Create Date: 2026-04-22 15:30:00
 """
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = "034_investment_position_description"
-down_revision = "030_investment_positions"
+revision = "034"
+down_revision = "030"
 branch_labels = None
 depends_on = None
 
