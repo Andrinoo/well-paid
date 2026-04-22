@@ -38,7 +38,6 @@ import com.wellpaid.data.UiPreferencesRepository
 import com.wellpaid.ui.SecureWindowPolicyEffect
 import com.wellpaid.ui.emergency.EmergencyPlanDetailScreen
 import com.wellpaid.ui.emergency.EmergencyPlanMonthBreakdownScreen
-import com.wellpaid.ui.emergency.EmergencyPlanStatusScreen
 import com.wellpaid.ui.emergency.EmergencyReservePlanFormScreen
 import com.wellpaid.ui.login.LoginScreen
 import com.wellpaid.ui.main.MainShellScreen
@@ -434,29 +433,10 @@ fun WellPaidNavHost(
                         onPlanDeletedNavigateBack = {
                             refreshEmergencyAndPop()
                         },
-                        onOpenPlanStatus = {
-                            navController.navigate(NavRoutes.emergencyPlanStatus(planId))
-                        },
                         onOpenMonthlyProgress = {
                             navController.navigate(NavRoutes.emergencyPlanMonthBreakdown(planId))
                         },
                         viewModel = hiltViewModel(mainEntry),
-                    )
-                }
-                composable(
-                    route = NavRoutes.EmergencyPlanStatusRoute,
-                    arguments = listOf(
-                        navArgument("planId") { type = NavType.StringType },
-                    ),
-                ) { statusEntry ->
-                    val statusPlanId = statusEntry.arguments?.getString("planId") ?: return@composable
-                    val mainEntryStatus = remember(navController) {
-                        navController.getBackStackEntry(NavRoutes.Main)
-                    }
-                    EmergencyPlanStatusScreen(
-                        planId = statusPlanId,
-                        onNavigateBack = { navController.popBackStack() },
-                        viewModel = hiltViewModel(mainEntryStatus),
                     )
                 }
                 composable(

@@ -52,6 +52,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
 import com.wellpaid.R
 import com.wellpaid.ui.components.WellPaidPrimaryAddRow
+import com.wellpaid.ui.components.WellPaidPullToRefreshBox
 import com.wellpaid.ui.theme.WellPaidNavy
 import com.wellpaid.ui.theme.WellPaidMaxContentWidth
 import com.wellpaid.ui.theme.wellPaidMaxContentWidth
@@ -80,12 +81,16 @@ fun GoalsListContent(
         }
     }
 
-    Column(
+    val pullRefreshing = state.isLoading && state.goals.isNotEmpty()
+    WellPaidPullToRefreshBox(
+        refreshing = pullRefreshing,
+        onRefresh = { viewModel.refresh() },
         modifier = modifier
             .fillMaxSize()
             .fillMaxWidth()
             .wellPaidMaxContentWidth(WellPaidMaxContentWidth),
     ) {
+        Column(Modifier.fillMaxSize()) {
         WellPaidPrimaryAddRow(
             label = stringResource(R.string.goals_primary_add),
             leadingIcon = Icons.Filled.Flag,
@@ -148,6 +153,7 @@ fun GoalsListContent(
                     )
                 }
             }
+        }
         }
     }
 }

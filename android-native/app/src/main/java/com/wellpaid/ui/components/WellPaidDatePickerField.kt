@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.pager.PageSize
@@ -101,6 +102,8 @@ fun WellPaidDatePickerField(
     shape: RoundedCornerShape = RoundedCornerShape(12.dp),
     /** Reduz altura vertical do campo (ecrãs densos, ex. detalhe reserva). */
     dense: Boolean = false,
+    /** Ainda mais compacto que [dense] (rótulo curto no ecrã de detalhe). */
+    extraCompact: Boolean = false,
 ) {
     val locale = LocalConfiguration.current.locales[0] ?: Locale.getDefault()
     var open by remember { mutableStateOf(false) }
@@ -112,9 +115,14 @@ fun WellPaidDatePickerField(
         readOnly = true,
         enabled = enabled,
         label = label,
-        textStyle = if (dense) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodyLarge,
+        textStyle = when {
+            extraCompact -> MaterialTheme.typography.bodySmall
+            dense -> MaterialTheme.typography.bodyMedium
+            else -> MaterialTheme.typography.bodyLarge
+        },
         modifier = modifier
             .fillMaxWidth()
+            .then(if (extraCompact) Modifier.heightIn(max = 52.dp) else Modifier)
             .clickable(
                 enabled = enabled,
                 indication = null,

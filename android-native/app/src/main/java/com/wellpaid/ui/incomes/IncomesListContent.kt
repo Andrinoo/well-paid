@@ -2,6 +2,7 @@ package com.wellpaid.ui.incomes
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -39,6 +40,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
 import com.wellpaid.R
 import com.wellpaid.ui.components.WellPaidPrimaryAddRow
+import com.wellpaid.ui.components.WellPaidPullToRefreshBox
 import com.wellpaid.ui.theme.WellPaidMaxContentWidth
 import com.wellpaid.ui.theme.wellPaidMaxContentWidth
 import com.wellpaid.core.model.income.IncomeDto
@@ -70,12 +72,16 @@ fun IncomesListContent(
         }
     }
 
-    Column(
+    val pullRefreshing = state.isLoading && state.incomes.isNotEmpty()
+    WellPaidPullToRefreshBox(
+        refreshing = pullRefreshing,
+        onRefresh = { viewModel.refresh(loadCategoriesToo = false) },
         modifier = modifier
             .fillMaxSize()
             .fillMaxWidth()
             .wellPaidMaxContentWidth(WellPaidMaxContentWidth),
     ) {
+        Column(Modifier.fillMaxSize()) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -185,6 +191,7 @@ fun IncomesListContent(
                     HorizontalDivider()
                 }
             }
+        }
         }
     }
 }

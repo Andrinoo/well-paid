@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -18,12 +19,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.NightsStay
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -32,18 +34,13 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TooltipBox
-import androidx.compose.material3.TooltipDefaults
-import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -65,6 +62,7 @@ import com.wellpaid.R
 import com.wellpaid.core.model.emergency.EmergencyReserveDto
 import com.wellpaid.core.model.emergency.EmergencyReservePlanDto
 import com.wellpaid.ui.components.WellPaidMoneyDigitKeypadField
+import com.wellpaid.ui.components.WellPaidPullToRefreshBox
 import com.wellpaid.ui.theme.WellPaidGold
 import com.wellpaid.ui.theme.WellPaidMaxContentWidth
 import com.wellpaid.ui.theme.WellPaidNavy
@@ -74,7 +72,6 @@ import com.wellpaid.ui.theme.DiscreetBalanceValue
 import com.wellpaid.util.formatBrlFromCents
 import com.wellpaid.util.centsToBrlInput
 import com.wellpaid.util.formatIsoDateToBr
-import kotlin.math.abs
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -92,6 +89,10 @@ fun EmergencyReserveContent(
         mainRouteEntry.savedStateHandle.getStateFlow("emergency_reserve_dirty", 0L)
     }
     val emergencyDirty by dirtyFlow.collectAsStateWithLifecycle()
+    val tipsOpenFlow = remember(mainRouteEntry) {
+        mainRouteEntry.savedStateHandle.getStateFlow("emergency_open_policy_tips", 0L)
+    }
+    val tipsOpenSignal by tipsOpenFlow.collectAsStateWithLifecycle()
     var showPolicyTipsDialog by remember { mutableStateOf(false) }
     var globalMetaExpanded by remember { mutableStateOf(false) }
     LaunchedEffect(emergencyDirty) {
@@ -99,39 +100,21 @@ fun EmergencyReserveContent(
             viewModel.refresh()
         }
     }
+    LaunchedEffect(tipsOpenSignal) {
+        if (tipsOpenSignal != 0L) {
+            showPolicyTipsDialog = true
+        }
+    }
+    val pullRefreshing = state.isLoading && state.reserve != null
 
-    Column(
+    WellPaidPullToRefreshBox(
+        refreshing = pullRefreshing,
+        onRefresh = { viewModel.refresh() },
         modifier = modifier
             .fillMaxSize()
             .fillMaxWidth()
             .wellPaidMaxContentWidth(WellPaidMaxContentWidth),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            TooltipBox(
-                    positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-                    tooltip = {
-                        PlainTooltip {
-                            Text(stringResource(R.string.emergency_tips_policy_tooltip))
-                        }
-                    },
-                    state = rememberTooltipState(),
-                ) {
-                    IconButton(onClick = { showPolicyTipsDialog = true }) {
-                        Icon(
-                            Icons.Filled.Info,
-                            contentDescription = stringResource(R.string.emergency_info_icon_a11y),
-                        )
-                    }
-                }
-            IconButton(onClick = { viewModel.refresh() }, enabled = !state.isLoading) {
-                Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.home_refresh))
-            }
-        }
-
         if (state.isLoading && state.reserve == null) {
             Row(
                 modifier = Modifier
@@ -141,7 +124,7 @@ fun EmergencyReserveContent(
             ) {
                 CircularProgressIndicator()
             }
-            return
+            return@WellPaidPullToRefreshBox
         }
 
         Column(
@@ -423,63 +406,110 @@ private fun EmergencyReservePlanCompactCard(
             pct,
         )
     } else {
-        val paceShort = when (plan.paceStatus) {
-            "below" -> stringResource(
-                R.string.emergency_plan_card_compact_pace_delta,
-                formatBrlFromCents(abs(plan.paceDeltaCents)),
-            )
-            "above" -> stringResource(
-                R.string.emergency_plan_card_compact_pace_delta,
-                formatBrlFromCents(abs(plan.paceDeltaCents)),
-            )
-            "on_track" -> stringResource(R.string.emergency_pace_on_track)
-            else -> stringResource(R.string.emergency_pace_unknown)
-        }
-        stringResource(
-            R.string.emergency_plan_card_compact_balance_pace,
-            formatBrlFromCents(plan.balanceCents),
-            paceShort,
-        )
+        formatBrlFromCents(plan.balanceCents)
     }
-    val detailColor =
-        if (plan.paceStatus == "below" && (targetCents == null || targetCents <= 0)) {
-            MaterialTheme.colorScheme.error
-        } else {
-            WellPaidNavy
+    val showBelowPace = plan.paceStatus == "below"
+    val timelineLine = buildString {
+        plan.targetEndDate?.takeIf { it.isNotBlank() }?.let {
+            append("→ ")
+            append(formatIsoDateToBr(it))
         }
+        plan.monthsRemaining?.takeIf { it >= 0 }?.let { m ->
+            if (isNotEmpty()) append(" · ")
+            append(stringResource(R.string.emergency_plan_summary_months_remaining, m))
+        }
+    }
 
-    Column(
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
             .clickable(
                 enabled = enabled,
                 onClick = onOpen,
-            )
-            .padding(horizontal = 10.dp, vertical = 8.dp),
+            ),
+        shape = RoundedCornerShape(14.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
-        Text(
-            text = plan.title.ifBlank { stringResource(R.string.emergency_plan_untitled) },
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
-            color = WellPaidNavy,
-            maxLines = 1,
-        )
-        Spacer(Modifier.height(4.dp))
-        Text(
-            text = compactLine,
-            style = MaterialTheme.typography.labelSmall,
-            color = detailColor,
-            maxLines = 2,
-        )
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = stringResource(R.string.emergency_plan_open_detail),
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = WellPaidNavy,
-        )
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(22.dp))
+                    .background(WellPaidGold.copy(alpha = 0.20f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Flag,
+                    contentDescription = null,
+                    tint = WellPaidNavy,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = plan.title.ifBlank { stringResource(R.string.emergency_plan_untitled) },
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = WellPaidNavy,
+                        maxLines = 1,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = compactLine,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = WellPaidNavy,
+                    maxLines = 1,
+                )
+                if (timelineLine.isNotBlank()) {
+                    Spacer(Modifier.height(2.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.DateRange,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(14.dp),
+                        )
+                        Text(
+                            text = timelineLine.replace("→ ", ""),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                        )
+                    }
+                }
+                if (showBelowPace) {
+                    Spacer(Modifier.height(7.dp))
+                    Text(
+                        text = stringResource(R.string.emergency_pace_below),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.45f))
+                            .padding(horizontal = 8.dp, vertical = 3.dp),
+                    )
+                }
+            }
+        }
     }
 }
 

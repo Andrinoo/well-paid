@@ -43,6 +43,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wellpaid.R
 import com.wellpaid.core.model.receivable.ReceivableDto
+import com.wellpaid.ui.components.WellPaidPullToRefreshBox
 import com.wellpaid.ui.theme.wellPaidTopAppBarColors
 import com.wellpaid.util.formatBrlFromCents
 import com.wellpaid.util.formatIsoDateToBr
@@ -58,6 +59,7 @@ fun ReceivablesScreen(
     var settleTarget by remember { mutableStateOf<ReceivableDto?>(null) }
     var createIncome by remember { mutableStateOf(false) }
     var categoryId by remember { mutableStateOf<String?>(null) }
+    val pullRefreshing = state.isLoading && (state.asCreditor.isNotEmpty() || state.asDebtor.isNotEmpty())
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -95,10 +97,16 @@ fun ReceivablesScreen(
             return@Scaffold
         }
 
+        WellPaidPullToRefreshBox(
+            refreshing = pullRefreshing,
+            onRefresh = { viewModel.refresh() },
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(inner),
+        ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(inner)
                 .padding(horizontal = 16.dp),
         ) {
             state.errorMessage?.let { err ->
@@ -159,6 +167,7 @@ fun ReceivablesScreen(
                     }
                 }
             }
+        }
         }
     }
 

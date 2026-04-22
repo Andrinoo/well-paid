@@ -594,6 +594,7 @@ class EmergencyReserveViewModel @Inject constructor(
     fun saveEditingPlan() {
         val s = _uiState.value
         val planId = s.editingPlanId ?: return
+        val existingPlan = s.plans.firstOrNull { it.id == planId }
         val title = s.editingPlanTitleText.trim()
         if (title.isEmpty()) {
             _uiState.update {
@@ -602,6 +603,7 @@ class EmergencyReserveViewModel @Inject constructor(
             return
         }
         val cents = parseBrlToCents(s.editingPlanMonthlyText)?.takeIf { it > 0 }
+            ?: existingPlan?.monthlyTargetCents?.takeIf { it > 0 }
         if (cents == null) {
             _uiState.update {
                 it.copy(errorMessage = appContext.getString(R.string.emergency_error_target))

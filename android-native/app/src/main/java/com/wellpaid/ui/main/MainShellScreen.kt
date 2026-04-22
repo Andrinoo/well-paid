@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -221,6 +222,21 @@ fun MainShellScreen(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = stringResource(R.string.main_back_to_home),
                             )
+                        }
+                    },
+                    actions = {
+                        if (selectedTab == 4) {
+                            IconButton(
+                                onClick = {
+                                    mainRouteEntry.savedStateHandle["emergency_open_policy_tips"] =
+                                        System.currentTimeMillis()
+                                },
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Info,
+                                    contentDescription = stringResource(R.string.emergency_info_icon_a11y),
+                                )
+                            }
                         }
                     },
                 )

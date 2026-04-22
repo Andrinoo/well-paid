@@ -3,11 +3,14 @@ package com.wellpaid.ui.emergency
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -39,6 +42,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wellpaid.R
@@ -56,7 +60,6 @@ fun EmergencyPlanDetailScreen(
     planId: String,
     onNavigateBack: () -> Unit,
     onPlanDeletedNavigateBack: () -> Unit,
-    onOpenPlanStatus: () -> Unit,
     onOpenMonthlyProgress: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: EmergencyReserveViewModel,
@@ -143,93 +146,86 @@ fun EmergencyPlanDetailScreen(
                 }
             }
 
-            plan?.let {
-                OutlinedButton(
-                    onClick = onOpenPlanStatus,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, WellPaidGold),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = WellPaidNavy),
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = stringResource(R.string.emergency_plan_open_status),
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                            contentDescription = null,
-                        )
-                    }
-                }
-                Spacer(Modifier.height(10.dp))
-            }
-
             Text(
                 text = stringResource(R.string.emergency_plan_detail_contribution_section),
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = WellPaidNavy,
             )
-            Spacer(Modifier.height(6.dp))
-            WellPaidMoneyDigitKeypadField(
-                valueText = state.selectedPlanContributionText,
-                onValueTextChange = { viewModel.setSelectedPlanContributionText(it) },
+            Spacer(Modifier.height(4.dp))
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !state.isSaving && state.selectedPlanId == planId,
-                label = { Text(stringResource(R.string.emergency_selected_plan_contribution_label)) },
-                placeholder = stringResource(R.string.emergency_monthly_placeholder),
-                dense = true,
-            )
-            Spacer(Modifier.height(6.dp))
-            Button(
-                onClick = { viewModel.saveSelectedPlanContribution() },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !state.isSaving && state.selectedPlanId == planId,
-                shape = RoundedCornerShape(24.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = WellPaidGold,
-                    contentColor = WellPaidNavy,
-                ),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Text(
-                    text = if (state.isSaving) {
-                        stringResource(R.string.emergency_saving)
-                    } else {
-                        stringResource(R.string.emergency_register_selected_contribution)
+                WellPaidMoneyDigitKeypadField(
+                    valueText = state.selectedPlanContributionText,
+                    onValueTextChange = { viewModel.setSelectedPlanContributionText(it) },
+                    modifier = Modifier.weight(1f),
+                    enabled = !state.isSaving && state.selectedPlanId == planId,
+                    label = {
+                        Text(
+                            text = stringResource(R.string.emergency_detail_contribution_amount_label),
+                            style = MaterialTheme.typography.labelSmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                     },
-                    fontWeight = FontWeight.SemiBold,
+                    placeholder = stringResource(R.string.emergency_monthly_placeholder),
+                    dense = true,
+                    extraCompact = true,
                 )
+                Button(
+                    onClick = { viewModel.saveSelectedPlanContribution() },
+                    modifier = Modifier
+                        .heightIn(min = 44.dp, max = 52.dp)
+                        .defaultMinSize(minWidth = 72.dp),
+                    enabled = !state.isSaving && state.selectedPlanId == planId,
+                    shape = RoundedCornerShape(14.dp),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = WellPaidGold,
+                        contentColor = WellPaidNavy,
+                    ),
+                ) {
+                    Text(
+                        text = if (state.isSaving) {
+                            stringResource(R.string.emergency_saving)
+                        } else {
+                            stringResource(R.string.emergency_register_cta_compact)
+                        },
+                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.labelMedium.copy(lineHeight = 16.sp),
+                        maxLines = 1,
+                    )
+                }
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(8.dp))
             HorizontalDivider()
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(6.dp))
 
             Text(
                 text = stringResource(R.string.emergency_plan_detail_edit_section),
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = WellPaidNavy,
             )
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(4.dp))
             EmergencyPlanEditFields(
                 state = state,
                 hideEmergencyTargetEnd = hideTargetEnd,
                 enabled = !state.isUpdatingPlan,
                 viewModel = viewModel,
+                compactLayout = true,
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(6.dp))
             Button(
                 onClick = { viewModel.saveEditingPlan() },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !state.isUpdatingPlan && state.editingPlanId == planId,
-                shape = RoundedCornerShape(24.dp),
+                shape = RoundedCornerShape(18.dp),
+                contentPadding = PaddingValues(vertical = 10.dp, horizontal = 16.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = WellPaidGold,
                     contentColor = WellPaidNavy,
@@ -242,12 +238,13 @@ fun EmergencyPlanDetailScreen(
                         stringResource(R.string.emergency_plan_save)
                     },
                     fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.titleSmall,
                 )
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(8.dp))
             HorizontalDivider()
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(6.dp))
 
             OutlinedButton(
                 onClick = onOpenMonthlyProgress,
@@ -255,6 +252,7 @@ fun EmergencyPlanDetailScreen(
                 shape = RoundedCornerShape(12.dp),
                 border = BorderStroke(1.dp, WellPaidGold),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = WellPaidNavy),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -263,7 +261,7 @@ fun EmergencyPlanDetailScreen(
                 ) {
                     Text(
                         text = stringResource(R.string.emergency_plan_detail_breakdown_section),
-                        style = MaterialTheme.typography.titleSmall,
+                        style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.SemiBold,
                     )
                     Icon(
@@ -272,7 +270,7 @@ fun EmergencyPlanDetailScreen(
                     )
                 }
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(8.dp))
         }
     }
 

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Backspace
@@ -91,6 +92,8 @@ fun WellPaidMoneyDigitKeypadField(
     onDone: () -> Unit = {},
     onKeypadOpenChange: (Boolean) -> Unit = {},
     dense: Boolean = false,
+    /** Campo mais baixo (rótulo curto + texto menor; ex. detalhe reserva em duas colunas). */
+    extraCompact: Boolean = false,
 ) {
     var keypadOpen by remember { mutableStateOf(false) }
     var digits by remember(valueText) { mutableStateOf(digitsFromValueText(valueText)) }
@@ -145,9 +148,14 @@ fun WellPaidMoneyDigitKeypadField(
             shape = shape,
             colors = colors,
             singleLine = true,
-            textStyle = if (dense) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodyLarge,
+            textStyle = when {
+                extraCompact -> MaterialTheme.typography.bodySmall
+                dense -> MaterialTheme.typography.bodyMedium
+                else -> MaterialTheme.typography.bodyLarge
+            },
             modifier = Modifier
                 .fillMaxWidth()
+                .then(if (extraCompact) Modifier.heightIn(max = 52.dp) else Modifier)
                 .onFocusChanged { st ->
                     if (st.isFocused && enabled && !keypadOpen) {
                         if (keypadHapticsEnabled) {
