@@ -79,6 +79,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wellpaid.R
 import com.wellpaid.core.model.investment.InvestmentBucketDto
+import com.wellpaid.core.model.investment.InvestmentAssetType
 import com.wellpaid.core.model.investment.InvestmentPositionDto
 import com.wellpaid.core.model.investment.StockHistoryPointDto
 import com.wellpaid.ui.components.WellPaidMoneyDigitKeypadField
@@ -186,6 +187,14 @@ fun InvestmentsScreen(
                         color = MaterialTheme.colorScheme.error,
                     )
                 }
+                state.infoMessage?.let { msg ->
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = msg,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = WellPaidNavy,
+                    )
+                }
                 if (state.showStockJoinScreen) {
                     InvestmentsStockJoinScreen(
                         state = state,
@@ -193,7 +202,6 @@ fun InvestmentsScreen(
                         onModeByValueChange = { viewModel.setStockJoinModeByValue(it) },
                         onQuantityChange = { viewModel.setQuantityText(it) },
                         onValueChange = { viewModel.setStockJoinValueText(it) },
-                        onAveragePriceChange = { viewModel.setAveragePriceText(it) },
                     )
                 } else {
                     InvestmentsFixedIncomeJoinScreen(
@@ -254,6 +262,14 @@ fun InvestmentsScreen(
                 color = MaterialTheme.colorScheme.error,
             )
         }
+        state.infoMessage?.let { msg ->
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = msg,
+                style = MaterialTheme.typography.bodySmall,
+                color = WellPaidNavy,
+            )
+        }
 
         if (state.showSearchResultsScreen) {
             InvestmentsSearchScreen(
@@ -274,7 +290,7 @@ fun InvestmentsScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(WellPaidNavyDeep, RoundedCornerShape(12.dp))
-                .padding(horizontal = 10.dp, vertical = 8.dp),
+                .padding(horizontal = 10.dp, vertical = 6.dp),
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -293,7 +309,7 @@ fun InvestmentsScreen(
                     fontWeight = FontWeight.SemiBold,
                 )
             }
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(4.dp))
             Text(
                 text = formatBrlFromCents(overview?.totalAllocatedCents ?: 0),
                 style = MaterialTheme.typography.titleLarge,
@@ -317,7 +333,7 @@ fun InvestmentsScreen(
                 )
             }
             if (overview?.ratesFallbackUsed == true) {
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(3.dp))
                 Text(
                     text = stringResource(R.string.investments_rates_estimated_badge),
                     style = MaterialTheme.typography.labelSmall,
@@ -325,13 +341,19 @@ fun InvestmentsScreen(
                     fontWeight = FontWeight.SemiBold,
                 )
             }
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(5.dp))
             OutlinedTextField(
                 value = state.globalSearchText,
                 onValueChange = { viewModel.setGlobalSearchText(it) },
-                placeholder = { Text(stringResource(R.string.investments_global_search_label)) },
+                placeholder = {
+                    Text(
+                        text = stringResource(R.string.investments_global_search_label),
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
+                textStyle = MaterialTheme.typography.labelMedium,
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = WellPaidCreamMuted,
                     unfocusedContainerColor = WellPaidCreamMuted,
@@ -344,7 +366,7 @@ fun InvestmentsScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 4.dp),
+                    .padding(top = 2.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -906,9 +928,42 @@ private fun InvestmentPositionCard(
     fundamentals: FundamentalPreviewUi?,
     onDetails: () -> Unit,
 ) {
-    val onGold = WellPaidNavy
+    val instrumentKey = InvestmentAssetType.fromRaw(position.instrumentType).key
+    val cardBackground = when (instrumentKey) {
+        "stock" -> WellPaidGold
+        "fii" -> WellPaidNavy
+        "etf" -> Color(0xFF0F4C5C)
+        "bdr" -> Color(0xFF5A3E2B)
+        else -> Color(0xFF2F3E5C)
+    }
+    val onCardColor = if (instrumentKey == "stock") WellPaidNavy else Color.White
+    val titleHighlightColor = when (instrumentKey) {
+        "stock" -> WellPaidNavyDeep
+        "fii" -> WellPaidGold
+        "etf" -> Color(0xFF7AE0F8)
+        "bdr" -> Color(0xFFFFD27A)
+        else -> WellPaidGold
+    }
+    val iconContainerColor = if (instrumentKey == "stock") WellPaidNavy else Color.White.copy(alpha = 0.2f)
+    val iconTint = if (instrumentKey == "stock") WellPaidGold else Color.White
+    val borderColor = titleHighlightColor.copy(alpha = if (instrumentKey == "stock") 0.55f else 0.48f)
+    val instrumentLabel = when (instrumentKey) {
+        "fii" -> stringResource(R.string.investments_instrument_fii)
+        "etf" -> stringResource(R.string.investments_instrument_etf)
+        "bdr" -> stringResource(R.string.investments_instrument_bdr)
+        "stock" -> stringResource(R.string.investments_instrument_stock)
+        else -> stringResource(R.string.investments_instrument_equity)
+    }
+    val leadingIcon = when (instrumentKey) {
+        "fii" -> Icons.Filled.PieChart
+        "etf" -> Icons.AutoMirrored.Filled.ShowChart
+        "bdr" -> Icons.Filled.TrackChanges
+        else -> Icons.Filled.BarChart
+    }
     val principal = formatBrlFromCents(position.principalCents)
     val metricOr = { s: String? -> if (s.isNullOrBlank()) "—" else s }
+    val pvp = metricOr(fundamentals?.pvp)
+    val dailyLiquidity = metricOr(fundamentals?.dailyLiquidity)
     val pl = metricOr(fundamentals?.pl)
     val roe = metricOr(fundamentals?.roe)
     val dy = metricOr(fundamentals?.dy)
@@ -930,13 +985,13 @@ private fun InvestmentPositionCard(
             ),
         shape = cardShape,
         color = Color.Transparent,
-        border = BorderStroke(1.dp, WellPaidGold.copy(alpha = 0.55f)),
+        border = BorderStroke(1.dp, borderColor),
         shadowElevation = 0.dp,
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(WellPaidGold, cardShape)
+                .background(cardBackground, cardShape)
                 .clickable(onClick = onDetails)
                 .padding(horizontal = 12.dp, vertical = 10.dp),
         ) {
@@ -947,14 +1002,14 @@ private fun InvestmentPositionCard(
                 Box(
                     modifier = Modifier
                         .size(44.dp)
-                        .background(onGold, RoundedCornerShape(10.dp)),
+                        .background(iconContainerColor, RoundedCornerShape(10.dp)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.BarChart,
+                        imageVector = leadingIcon,
                         contentDescription = null,
                         modifier = Modifier.size(24.dp),
-                        tint = WellPaidGold,
+                        tint = iconTint,
                     )
                 }
                 Spacer(Modifier.width(10.dp))
@@ -963,7 +1018,15 @@ private fun InvestmentPositionCard(
                         text = position.name,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = onGold,
+                        color = titleHighlightColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(Modifier.height(3.dp))
+                    Text(
+                        text = instrumentLabel,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = titleHighlightColor.copy(alpha = 0.9f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -971,7 +1034,7 @@ private fun InvestmentPositionCard(
                     Text(
                         text = stringResource(R.string.investments_position_card_value_label),
                         style = MaterialTheme.typography.labelSmall,
-                        color = onGold.copy(alpha = 0.8f),
+                        color = onCardColor.copy(alpha = 0.8f),
                         maxLines = 1,
                     )
                     Spacer(Modifier.height(1.dp))
@@ -979,7 +1042,7 @@ private fun InvestmentPositionCard(
                         text = principal,
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        color = onGold,
+                        color = onCardColor,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -987,72 +1050,61 @@ private fun InvestmentPositionCard(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = stringResource(R.string.investments_view_details),
-                    tint = onGold.copy(alpha = 0.5f),
+                    tint = onCardColor.copy(alpha = 0.5f),
                     modifier = Modifier.padding(start = 4.dp),
                 )
             }
             Spacer(Modifier.height(6.dp))
             HorizontalDivider(
                 thickness = 0.5.dp,
-                color = onGold.copy(alpha = 0.2f),
+                color = onCardColor.copy(alpha = 0.2f),
             )
             Spacer(Modifier.height(1.dp))
-            PositionFundamentalRow(
-                icon = Icons.Filled.BarChart,
-                label = stringResource(R.string.investments_metric_pl),
-                value = pl,
-                iconBoxColor = iconCellBg,
-                contentColor = onGold,
-                showDivider = true,
-            )
-            PositionFundamentalRow(
-                icon = Icons.Filled.TrackChanges,
-                label = stringResource(R.string.investments_metric_roe),
-                value = roe,
-                iconBoxColor = iconCellBg,
-                contentColor = onGold,
-                showDivider = true,
-            )
-            PositionFundamentalRow(
-                icon = Icons.Filled.MonetizationOn,
-                label = stringResource(R.string.investments_metric_dy),
-                value = dy,
-                iconBoxColor = iconCellBg,
-                contentColor = onGold,
-                showDivider = true,
-            )
-            PositionFundamentalRow(
-                icon = Icons.AutoMirrored.Filled.ShowChart,
-                label = stringResource(R.string.investments_metric_ev_ebitda),
-                value = evEbitda,
-                iconBoxColor = iconCellBg,
-                contentColor = onGold,
-                showDivider = true,
-            )
-            PositionFundamentalRow(
-                icon = Icons.Filled.PieChart,
-                label = stringResource(R.string.investments_position_fundamental_net_margin),
-                value = netMargin,
-                iconBoxColor = iconCellBg,
-                contentColor = onGold,
-                showDivider = true,
-            )
-            PositionFundamentalRow(
-                icon = Icons.Filled.Balance,
-                label = stringResource(R.string.investments_position_fundamental_net_debt),
-                value = netDebtEbitda,
-                iconBoxColor = iconCellBg,
-                contentColor = onGold,
-                showDivider = true,
-            )
-            PositionFundamentalRow(
-                icon = Icons.Filled.Receipt,
-                label = stringResource(R.string.investments_metric_eps),
-                value = lpa,
-                iconBoxColor = iconCellBg,
-                contentColor = onGold,
-                showDivider = false,
-            )
+            val metrics = when (instrumentKey) {
+                "fii" -> listOf(
+                    Triple(Icons.Filled.MonetizationOn, stringResource(R.string.investments_metric_dy), dy),
+                    Triple(Icons.Filled.BarChart, stringResource(R.string.investments_metric_pvp), pvp),
+                    Triple(Icons.Filled.TrackChanges, stringResource(R.string.investments_metric_daily_liquidity), dailyLiquidity),
+                    Triple(Icons.AutoMirrored.Filled.ShowChart, stringResource(R.string.investments_metric_pl), pl),
+                    Triple(Icons.AutoMirrored.Filled.ShowChart, stringResource(R.string.investments_metric_ev_ebitda), evEbitda),
+                    Triple(Icons.Filled.Balance, stringResource(R.string.investments_position_fundamental_net_debt), netDebtEbitda),
+                )
+                "etf" -> listOf(
+                    Triple(Icons.Filled.BarChart, stringResource(R.string.investments_metric_pvp), pvp),
+                    Triple(Icons.Filled.MonetizationOn, stringResource(R.string.investments_metric_dy), dy),
+                    Triple(Icons.AutoMirrored.Filled.ShowChart, stringResource(R.string.investments_metric_pl), pl),
+                    Triple(Icons.AutoMirrored.Filled.ShowChart, stringResource(R.string.investments_metric_ev_ebitda), evEbitda),
+                )
+                else -> listOf(
+                    Triple(Icons.Filled.BarChart, stringResource(R.string.investments_metric_pl), pl),
+                    Triple(Icons.Filled.TrackChanges, stringResource(R.string.investments_metric_roe), roe),
+                    Triple(Icons.Filled.MonetizationOn, stringResource(R.string.investments_metric_dy), dy),
+                    Triple(Icons.AutoMirrored.Filled.ShowChart, stringResource(R.string.investments_metric_ev_ebitda), evEbitda),
+                    Triple(Icons.Filled.PieChart, stringResource(R.string.investments_position_fundamental_net_margin), netMargin),
+                    Triple(Icons.Filled.Balance, stringResource(R.string.investments_position_fundamental_net_debt), netDebtEbitda),
+                    Triple(Icons.Filled.Receipt, stringResource(R.string.investments_metric_eps), lpa),
+                )
+            }
+            val targetMetricRows = 7 // Keep all cards same size as stock-ticker cards.
+            for (index in 0 until targetMetricRows) {
+                if (index < metrics.size) {
+                    val metric = metrics[index]
+                    PositionFundamentalRow(
+                        icon = metric.first,
+                        label = metric.second,
+                        value = metric.third,
+                        iconBoxColor = iconCellBg,
+                        contentColor = onCardColor,
+                        showDivider = index < targetMetricRows - 1,
+                    )
+                } else {
+                    PositionFundamentalRowPlaceholder(
+                        iconBoxColor = iconCellBg,
+                        dividerColor = onCardColor.copy(alpha = 0.12f),
+                        showDivider = index < targetMetricRows - 1,
+                    )
+                }
+            }
         }
     }
 }
@@ -1107,6 +1159,37 @@ private fun PositionFundamentalRow(
             HorizontalDivider(
                 thickness = 0.5.dp,
                 color = contentColor.copy(alpha = 0.12f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun PositionFundamentalRowPlaceholder(
+    iconBoxColor: Color,
+    dividerColor: Color,
+    showDivider: Boolean,
+) {
+    Column(Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 3.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(30.dp)
+                    .background(iconBoxColor, RoundedCornerShape(7.dp)),
+            )
+            Spacer(Modifier.width(8.dp))
+            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.width(24.dp))
+        }
+        if (showDivider) {
+            HorizontalDivider(
+                thickness = 0.5.dp,
+                color = dividerColor,
             )
         }
     }

@@ -157,6 +157,7 @@ fun MainShellScreen(
 
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     var shortcutsExpanded by rememberSaveable { mutableStateOf(false) }
+    var selectedQuickShortcut by rememberSaveable { mutableIntStateOf(-1) }
 
     fun navigateToExpensesPending() {
         mainRouteEntry.savedStateHandle["pending_expense_status"] = "pending"
@@ -203,7 +204,7 @@ fun MainShellScreen(
                     else -> stringResource(R.string.app_name)
                 }
                 CenterAlignedTopAppBar(
-                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.primary,
                         titleContentColor = Color.White,
                         navigationIconContentColor = Color.White,
@@ -259,64 +260,94 @@ fun MainShellScreen(
             ) {
                 Column(Modifier.navigationBarsPadding()) {
                     if (shortcutsExpanded) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 12.dp, vertical = 4.dp),
-                            horizontalArrangement = Arrangement.SpaceEvenly,
-                            verticalAlignment = Alignment.CenterVertically,
+                        NavigationBar(
+                            containerColor = Color.Transparent,
+                            tonalElevation = 0.dp,
                         ) {
-                            TextButton(onClick = {
-                                navigateToExpensesPending()
-                                shortcutsExpanded = false
-                            }) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            NavigationBarItem(
+                                selected = selectedQuickShortcut == 0,
+                                onClick = {
+                                    selectedQuickShortcut = 0
+                                    navigateToExpensesPending()
+                                    shortcutsExpanded = false
+                                },
+                                icon = {
                                     Icon(
-                                        Icons.Filled.CreditCard,
+                                        imageVector = Icons.Filled.CreditCard,
                                         contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
                                     )
-                                    Spacer(Modifier.height(2.dp))
+                                },
+                                label = {
                                     Text(
                                         stringResource(R.string.home_shortcut_pending_pay),
                                         style = MaterialTheme.typography.labelSmall,
                                     )
-                                }
-                            }
-                            TextButton(onClick = {
-                                shortcutsExpanded = false
-                                onOpenShoppingLists()
-                            }) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                },
+                                alwaysShowLabel = true,
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                                    indicatorColor = WellPaidGold.copy(alpha = 0.38f),
+                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                ),
+                            )
+                            NavigationBarItem(
+                                selected = selectedQuickShortcut == 1,
+                                onClick = {
+                                    selectedQuickShortcut = 1
+                                    shortcutsExpanded = false
+                                    onOpenShoppingLists()
+                                },
+                                icon = {
                                     Icon(
-                                        Icons.Filled.ShoppingCart,
+                                        imageVector = Icons.Filled.ShoppingCart,
                                         contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
                                     )
-                                    Spacer(Modifier.height(2.dp))
+                                },
+                                label = {
                                     Text(
                                         stringResource(R.string.home_shortcut_shopping_lists),
                                         style = MaterialTheme.typography.labelSmall,
                                     )
-                                }
-                            }
-                            TextButton(onClick = {
-                                shortcutsExpanded = false
-                                onOpenInvestments()
-                            }) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                },
+                                alwaysShowLabel = true,
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                                    indicatorColor = WellPaidGold.copy(alpha = 0.38f),
+                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                ),
+                            )
+                            NavigationBarItem(
+                                selected = selectedQuickShortcut == 2,
+                                onClick = {
+                                    selectedQuickShortcut = 2
+                                    shortcutsExpanded = false
+                                    onOpenInvestments()
+                                },
+                                icon = {
                                     Icon(
-                                        Icons.Filled.Savings,
+                                        imageVector = Icons.Filled.Savings,
                                         contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
                                     )
-                                    Spacer(Modifier.height(2.dp))
+                                },
+                                label = {
                                     Text(
                                         stringResource(R.string.home_shortcut_investments),
                                         style = MaterialTheme.typography.labelSmall,
                                     )
-                                }
-                            }
+                                },
+                                alwaysShowLabel = true,
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                                    indicatorColor = WellPaidGold.copy(alpha = 0.38f),
+                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                ),
+                            )
                         }
                         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                             IconButton(onClick = { shortcutsExpanded = false }) {
