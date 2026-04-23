@@ -7,6 +7,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.domain.asset_types import normalize_asset_type
 from app.core.schema_introspection import session_has_table
 from app.models.investment_position import InvestmentPosition
 from app.models.equity_fundamentals_history import EquityFundamentalsHistory
@@ -156,7 +157,7 @@ def list_positions_for_user(db: Session, user_id) -> list[InvestmentPositionOut]
     return [
         InvestmentPositionOut(
             id=str(r.id),
-            instrument_type=r.instrument_type,
+            instrument_type=normalize_asset_type(r.instrument_type, default="fixed_income"),
             name=r.name,
             description=r.description,
             principal_cents=int(r.principal_cents),
@@ -173,7 +174,7 @@ def create_position_for_user(db: Session, user_id, body: InvestmentPositionCreat
         raise ValueError("investments_positions_unavailable")
     row = InvestmentPosition(
         owner_user_id=user_id,
-        instrument_type=body.instrument_type.strip().lower(),
+        instrument_type=normalize_asset_type(body.instrument_type, default="fixed_income"),
         name=body.name.strip(),
         description=(body.description or "").strip() or None,
         principal_cents=body.principal_cents,
@@ -186,7 +187,7 @@ def create_position_for_user(db: Session, user_id, body: InvestmentPositionCreat
     db.refresh(row)
     return InvestmentPositionOut(
         id=str(row.id),
-        instrument_type=row.instrument_type,
+        instrument_type=normalize_asset_type(row.instrument_type, default="fixed_income"),
         name=row.name,
         description=row.description,
         principal_cents=int(row.principal_cents),
@@ -226,7 +227,7 @@ def add_principal_to_position_for_user(
     db.refresh(row)
     return InvestmentPositionOut(
         id=str(row.id),
-        instrument_type=row.instrument_type,
+        instrument_type=normalize_asset_type(row.instrument_type, default="fixed_income"),
         name=row.name,
         description=row.description,
         principal_cents=int(row.principal_cents),

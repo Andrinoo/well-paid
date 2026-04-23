@@ -4,6 +4,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
+from app.domain.asset_types import normalize_asset_type
 from app.services.providers.b3_provider import B3Provider
 from app.services.providers.brapi_provider import BrapiProvider
 from app.services.investment_brapi import (
@@ -40,7 +41,7 @@ class MarketDataRouterService:
 
     def search_tickers(self, query: str, limit: int = 12) -> list[dict[str, str]]:
         q = (query or "").strip().upper()
-        if len(q) < 2:
+        if len(q) < 3:
             return []
         synthetic = self._synthetic_fixed_income_rows(q)
         raw_rows = self.b3.search_tickers(query=q, limit=max(40, limit))
@@ -52,16 +53,32 @@ class MarketDataRouterService:
         ticker = self._normalize_ticker(symbol)
         quote = self.b3.quote(ticker)
         if quote and not quote.get("error"):
+            quote["fallback_used"] = False
+            quote["provider_strategy"] = "hybrid"
+            quote["stale"] = False
             return quote
-        return self.brapi.quote(ticker)
+        fallback_quote = self.brapi.quote(ticker)
+        if fallback_quote is not None:
+            fallback_quote["fallback_used"] = True
+            fallback_quote["provider_strategy"] = "hybrid"
+            fallback_quote["stale"] = bool(fallback_quote.get("error"))
+        return fallback_quote
 
     def history(self, symbol: str, range_key: str) -> dict[str, Any] | None:
         ticker = self._normalize_ticker(symbol)
         rk = self._normalize_range(range_key)
         data = self.b3.history(ticker, rk)
         if data and data.get("points"):
+            data["fallback_used"] = False
+            data["provider_strategy"] = "hybrid"
+            data["stale"] = False
             return data
-        return self.brapi.history(ticker, rk)
+        fallback_data = self.brapi.history(ticker, rk)
+        if fallback_data is not None:
+            fallback_data["fallback_used"] = True
+            fallback_data["provider_strategy"] = "hybrid"
+            fallback_data["stale"] = bool(fallback_data.get("error"))
+        return fallback_data
 
     def macro_snapshot(self) -> dict[str, Any]:
         return self.sgs.macro_snapshot()
@@ -96,8 +113,15 @@ class MarketDataRouterService:
             raise ValueError("window_invalid")
         top = self.b3.top_movers(window=w, limit=limit)
         if top:
+            for row in top:
+                row["fallback_used"] = False
+                row["provider_strategy"] = "hybrid"
             return top
-        return self.brapi.top_movers(window=w, limit=limit)
+        fallback_rows = self.brapi.top_movers(window=w, limit=limit)
+        for row in fallback_rows:
+            row["fallback_used"] = True
+            row["provider_strategy"] = "hybrid"
+        return fallback_rows
 
     def _rank_and_trim_search_rows(
         self,
@@ -120,7 +144,11 @@ class MarketDataRouterService:
                 {
                     "symbol": symbol,
                     "name": str(row.get("name") or symbol).strip(),
-                    "instrument_type": str(row.get("instrument_type") or "stocks"),
+                    "instrument_type": self._infer_asset_type(
+                        symbol=symbol,
+                        name=str(row.get("name") or symbol).strip(),
+                        raw_type=str(row.get("instrument_type") or "stock"),
+                    ),
                     "source": str(row.get("source") or "unknown"),
                     "confidence": float(row.get("confidence") or 0.7),
                 }
@@ -171,7 +199,7 @@ class MarketDataRouterService:
                 {
                     "symbol": "TESOURO",
                     "name": "Tesouro Direto",
-                    "instrument_type": "tesouro",
+                    "instrument_type": "treasury",
                     "source": "wellpaid",
                     "confidence": 0.96,
                 }
@@ -187,6 +215,24 @@ class MarketDataRouterService:
                 }
             )
         return rows
+
+    def _infer_asset_type(self, *, symbol: str, name: str, raw_type: str) -> str:
+        normalized = normalize_asset_type(raw_type, default="stock")
+        if normalized != "stock":
+            return normalized
+
+        upper_symbol = symbol.upper()
+        upper_name = name.upper()
+        # BDRs are usually 4 letters + 34/35/39 suffix.
+        if upper_symbol.endswith(("34", "35", "39")):
+            return "bdr"
+        # FII/ETF shares often end with 11, we disambiguate by text hints.
+        if upper_symbol.endswith("11"):
+            if any(token in upper_name for token in ("ETF", "INDICE", "ÍNDICE")):
+                return "etf"
+            if any(token in upper_name for token in ("FII", "FUNDO IMOBILI", "IMOBILIARIO", "IMOBILIÁRIO")):
+                return "fii"
+        return "stock"
 
 
 market_data_router = MarketDataRouterService()

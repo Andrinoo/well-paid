@@ -71,7 +71,10 @@ fun InvestmentsStockJoinScreen(
         ) {
             Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
                 Text(
-                    text = stringResource(R.string.investments_bucket_stocks),
+                    text = investmentInstrumentLabel(
+                        key = state.newPositionType,
+                        fallback = stringResource(R.string.investments_bucket_stocks),
+                    ),
                     style = MaterialTheme.typography.labelSmall,
                     color = Color.White.copy(alpha = 0.75f),
                     fontWeight = FontWeight.Medium,

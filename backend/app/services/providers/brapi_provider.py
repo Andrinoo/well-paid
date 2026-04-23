@@ -28,7 +28,7 @@ class BrapiProvider:
                 {
                     "symbol": str(row.get("symbol") or "").upper(),
                     "name": str(row.get("name") or row.get("symbol") or "").strip(),
-                    "instrument_type": "stocks",
+                    "instrument_type": "stock",
                     "source": self.source,
                     "confidence": 0.80,
                 }

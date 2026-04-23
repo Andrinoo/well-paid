@@ -71,13 +71,16 @@ class StockQuoteOut(BaseModel):
     as_of: str | None = None
     source: str = "brapi"
     confidence: float | None = Field(default=None, ge=0, le=1)
+    fallback_used: bool = False
+    provider_strategy: str = "single"
+    stale: bool = False
     error: str | None = None
 
 
 class TickerSearchItemOut(BaseModel):
     symbol: str
     name: str
-    instrument_type: str = "stocks"
+    instrument_type: str = "stock"
     source: str = "unknown"
     confidence: float | None = Field(default=None, ge=0, le=1)
 
@@ -93,6 +96,9 @@ class StockHistoryOut(BaseModel):
     points: list[StockHistoryPointOut] = Field(default_factory=list)
     source: str = "brapi"
     confidence: float | None = Field(default=None, ge=0, le=1)
+    fallback_used: bool = False
+    provider_strategy: str = "single"
+    stale: bool = False
     error: str | None = None
 
 
@@ -145,3 +151,5 @@ class TopMoverItemOut(BaseModel):
     window: str
     source: str = "brapi"
     confidence: float | None = Field(default=None, ge=0, le=1)
+    fallback_used: bool = False
+    provider_strategy: str = "single"

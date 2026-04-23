@@ -59,7 +59,7 @@ class B3Provider:
                 {
                     "symbol": symbol,
                     "name": name,
-                    "instrument_type": "stocks",
+                    "instrument_type": "stock",
                     "source": self.source,
                     "confidence": 0.96,
                 }

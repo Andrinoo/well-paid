@@ -14,8 +14,8 @@ fun investmentInstrumentLabel(
         "cdi" -> stringResource(R.string.investments_bucket_cdi)
         "cdb" -> stringResource(R.string.investments_bucket_cdb)
         "fixed_income" -> stringResource(R.string.investments_bucket_fixed_income)
-        "tesouro" -> stringResource(R.string.investments_bucket_tesouro)
-        "stocks" -> stringResource(R.string.investments_bucket_stocks)
+        "tesouro", "treasury" -> stringResource(R.string.investments_bucket_tesouro)
+        "stocks", "stock", "fii", "bdr", "etf" -> stringResource(R.string.investments_bucket_stocks)
         else -> fallback ?: key.uppercase(Locale.ROOT)
     }
 }

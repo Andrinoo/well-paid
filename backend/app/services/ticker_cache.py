@@ -39,7 +39,7 @@ class TickerCacheService:
 
     def search(self, query: str, *, limit: int = 12) -> list[dict[str, Any]]:
         q = (query or "").strip().lower()
-        if len(q) < 2:
+        if len(q) < 3:
             return []
         with self._lock:
             if self._is_fresh() and q in self._state.by_prefix:

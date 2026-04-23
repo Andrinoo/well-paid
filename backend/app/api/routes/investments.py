@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.core.limiter import limiter
+from app.domain.asset_types import normalize_asset_type
 from app.models.user import User
 from app.schemas.investments import (
     EquityFundamentalsOut,
@@ -87,6 +88,9 @@ def read_stock_quote(
         as_of=raw.get("as_of"),
         source=str(raw.get("source") or "brapi"),
         confidence=raw.get("confidence"),
+        fallback_used=bool(raw.get("fallback_used", False)),
+        provider_strategy=str(raw.get("provider_strategy") or "single"),
+        stale=bool(raw.get("stale", False)),
         error=None,
     )
 
@@ -115,6 +119,9 @@ def read_stock_quote_history(
         points=list(raw.get("points") or []),
         source=str(raw.get("source") or "brapi"),
         confidence=raw.get("confidence"),
+        fallback_used=bool(raw.get("fallback_used", False)),
+        provider_strategy=str(raw.get("provider_strategy") or "single"),
+        stale=bool(raw.get("stale", False)),
         error=raw.get("error"),
     )
 
@@ -124,7 +131,7 @@ def read_stock_quote_history(
 def search_tickers(
     request: Request,
     user: Annotated[User, Depends(get_current_user)],
-    q: Annotated[str, Query(min_length=2, max_length=24)],
+    q: Annotated[str, Query(min_length=3, max_length=24)],
     limit: Annotated[int, Query(ge=1, le=50)] = 12,
 ) -> list[TickerSearchItemOut]:
     rows = ticker_cache_service.search(q, limit=limit)
@@ -132,7 +139,7 @@ def search_tickers(
         TickerSearchItemOut(
             symbol=r["symbol"],
             name=r["name"],
-            instrument_type=str(r.get("instrument_type") or "stocks"),
+            instrument_type=normalize_asset_type(str(r.get("instrument_type") or "stock"), default="stock"),
             source=str(r.get("source") or "unknown"),
             confidence=r.get("confidence"),
         )
@@ -166,6 +173,8 @@ def read_top_movers(
             window=str(r.get("window") or window),
             source=str(r.get("source") or "unknown"),
             confidence=r.get("confidence"),
+            fallback_used=bool(r.get("fallback_used", False)),
+            provider_strategy=str(r.get("provider_strategy") or "single"),
         )
         for r in rows
     ]

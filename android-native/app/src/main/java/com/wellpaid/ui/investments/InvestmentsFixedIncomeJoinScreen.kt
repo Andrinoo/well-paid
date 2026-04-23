@@ -42,7 +42,10 @@ fun InvestmentsFixedIncomeJoinScreen(
             color = WellPaidNavy,
             fontWeight = FontWeight.SemiBold,
         )
-        Text("${state.fixedIncomeType.uppercase()} · ${state.newPositionName}", color = WellPaidNavy)
+        Text(
+            "${investmentInstrumentLabel(state.fixedIncomeType, state.fixedIncomeType.uppercase())} · ${state.newPositionName}",
+            color = WellPaidNavy,
+        )
         OutlinedTextField(
             value = state.fixedIncomeDescription,
             onValueChange = onDescriptionChange,

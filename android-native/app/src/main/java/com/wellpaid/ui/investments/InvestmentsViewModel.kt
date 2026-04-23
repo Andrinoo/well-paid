@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.wellpaid.R
 import com.wellpaid.core.model.investment.InvestmentEvolutionPointDto
 import com.wellpaid.core.model.investment.EquityFundamentalsDto
+import com.wellpaid.core.model.investment.InvestmentAssetType
 import com.wellpaid.core.model.investment.InvestmentPositionAddPrincipalDto
 import com.wellpaid.core.model.investment.InvestmentPositionCreateDto
 import com.wellpaid.core.model.investment.InvestmentPositionDto
@@ -36,10 +37,21 @@ import javax.inject.Inject
 private val TickerPattern = Pattern.compile("([A-Za-z]{4}\\d{1,2})")
 val InvestmentHistoryRanges = listOf("5m", "30m", "60m", "3h", "12h", "1d", "1w", "1m", "3m", "6m", "1y")
 
+private fun normalizeAssetTypeKey(raw: String?): String {
+    return InvestmentAssetType.fromRaw(raw).key
+}
+
+private fun isEquityLikeAsset(raw: String?): Boolean {
+    return when (normalizeAssetTypeKey(raw)) {
+        "stock", "fii", "bdr", "etf" -> true
+        else -> false
+    }
+}
+
 data class TickerSuggestionUi(
     val symbol: String,
     val name: String,
-    val instrumentType: String = "stocks",
+    val instrumentType: String = "stock",
     val source: String = "unknown",
     val confidence: Double? = null,
 )
@@ -133,6 +145,9 @@ class InvestmentsViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context,
     private val api: InvestmentsApi,
 ) : ViewModel() {
+    private val searchMinLength = 3
+    private var formSearchRequestSeq: Long = 0
+    private var globalSearchRequestSeq: Long = 0
     private val _uiState = MutableStateFlow(InvestmentsUiState())
     val uiState: StateFlow<InvestmentsUiState> = _uiState.asStateFlow()
     private val formTickerQueryFlow = MutableSharedFlow<String>(extraBufferCapacity = 1)
@@ -147,10 +162,10 @@ class InvestmentsViewModel @Inject constructor(
     private fun observeFormTickerSearch() {
         viewModelScope.launch {
             formTickerQueryFlow
-                .debounce(350)
+                .debounce(600)
                 .distinctUntilChanged()
                 .collectLatest { query ->
-                    if (query.length < 2) {
+                    if (query.length < searchMinLength) {
                         _uiState.update {
                             it.copy(
                                 tickerSuggestions = emptyList(),
@@ -159,9 +174,11 @@ class InvestmentsViewModel @Inject constructor(
                         }
                         return@collectLatest
                     }
+                    val requestId = ++formSearchRequestSeq
                     _uiState.update { it.copy(isSearchingTickers = true) }
                     runCatching { api.searchTickers(query = query, limit = 5) }
                         .onSuccess { rows ->
+                            if (requestId != formSearchRequestSeq) return@onSuccess
                             _uiState.update {
                                 it.copy(
                                     isSearchingTickers = false,
@@ -178,6 +195,7 @@ class InvestmentsViewModel @Inject constructor(
                             }
                         }
                         .onFailure {
+                            if (requestId != formSearchRequestSeq) return@onFailure
                             _uiState.update {
                                 it.copy(
                                     isSearchingTickers = false,
@@ -192,7 +210,7 @@ class InvestmentsViewModel @Inject constructor(
     private fun observeGlobalTickerSearch() {
         viewModelScope.launch {
             globalTickerQueryFlow
-                .debounce(300)
+                .debounce(600)
                 .distinctUntilChanged()
                 .collectLatest { query ->
                     if (!_uiState.value.familySearchEnabled) {
@@ -205,7 +223,7 @@ class InvestmentsViewModel @Inject constructor(
                         }
                         return@collectLatest
                     }
-                    if (query.length < 2) {
+                    if (query.length < searchMinLength) {
                         _uiState.update {
                             it.copy(
                                 globalTickerSuggestions = emptyList(),
@@ -215,9 +233,11 @@ class InvestmentsViewModel @Inject constructor(
                         }
                         return@collectLatest
                     }
+                    val requestId = ++globalSearchRequestSeq
                     _uiState.update { it.copy(isSearchingGlobalTickers = true, showSearchResultsScreen = true) }
                     runCatching { api.searchTickers(query = query, limit = 5) }
                         .onSuccess { rows ->
+                            if (requestId != globalSearchRequestSeq) return@onSuccess
                             _uiState.update {
                                 it.copy(
                                     isSearchingGlobalTickers = false,
@@ -234,6 +254,7 @@ class InvestmentsViewModel @Inject constructor(
                             }
                         }
                         .onFailure {
+                            if (requestId != globalSearchRequestSeq) return@onFailure
                             _uiState.update {
                                 it.copy(
                                     isSearchingGlobalTickers = false,
@@ -291,7 +312,7 @@ class InvestmentsViewModel @Inject constructor(
 
     private fun preloadCardFundamentals(positions: List<InvestmentPositionDto>) {
         val stockPositions = positions
-            .filter { it.instrumentType == "stocks" }
+            .filter { normalizeAssetTypeKey(it.instrumentType) == "stock" }
             .mapNotNull { p ->
                 val symbol = extractTickerFromText(p.name)?.uppercase(Locale.ROOT) ?: return@mapNotNull null
                 p.id to symbol
@@ -351,7 +372,7 @@ class InvestmentsViewModel @Inject constructor(
                 tickerSuggestions = emptyList(),
             )
         }
-        if (value == "stocks") {
+        if (isEquityLikeAsset(value)) {
             formTickerQueryFlow.tryEmit(_uiState.value.newPositionName.trim())
         }
     }
@@ -382,7 +403,7 @@ class InvestmentsViewModel @Inject constructor(
                 )
             }
         }
-        if (selected != null && selected.instrumentType == "stocks") {
+        if (selected != null && isEquityLikeAsset(selected.instrumentType)) {
             val sym = extractTickerFromText(selected.name)
             if (!sym.isNullOrBlank()) {
                 viewModelScope.launch {
@@ -450,7 +471,7 @@ class InvestmentsViewModel @Inject constructor(
                 isLoadingAporteFundamentals = false,
             )
         }
-        if (p.instrumentType != "stocks") return
+        if (normalizeAssetTypeKey(p.instrumentType) != "stock") return
         val sym = extractTickerFromText(p.name) ?: return
         viewModelScope.launch {
             _uiState.update { it.copy(isLoadingAporteFundamentals = true) }
@@ -590,7 +611,7 @@ class InvestmentsViewModel @Inject constructor(
                         }
                     }
                     _uiState.update {
-                        val shouldAutofillAverage = it.newPositionType == "stocks" &&
+                        val shouldAutofillAverage = normalizeAssetTypeKey(it.newPositionType) == "stock" &&
                             (it.averagePriceText.isBlank() || (it.averagePriceText.replace(",", ".").toDoubleOrNull() ?: 0.0) <= 0.0)
                         val averageFromQuote = if (q.lastPrice > 0) {
                             String.format(Locale.US, "%.2f", q.lastPrice).replace('.', ',')
@@ -608,7 +629,7 @@ class InvestmentsViewModel @Inject constructor(
                     if (q.lastPrice > 0) {
                         recalculatePrincipalFromStocks()
                     }
-                    if (state.newPositionType == "stocks") {
+                    if (normalizeAssetTypeKey(state.newPositionType) == "stock") {
                         loadHistoryForSymbol(sym.uppercase(Locale.ROOT), state.selectedHistoryRange)
                     }
                 }
@@ -629,7 +650,7 @@ class InvestmentsViewModel @Inject constructor(
             it.copy(
                 newPositionName = value,
                 newPositionType = inferredType,
-                selectedFundamentals = if (inferredType == "stocks") it.selectedFundamentals else null,
+                selectedFundamentals = if (normalizeAssetTypeKey(inferredType) == "stock") it.selectedFundamentals else null,
             )
         }
         formTickerQueryFlow.tryEmit(value.trim())
@@ -649,7 +670,7 @@ class InvestmentsViewModel @Inject constructor(
                 )
             }
         }
-        if (trimmed.length >= 2) {
+        if (trimmed.length >= searchMinLength) {
             loadTopMoversIfNeeded()
         }
         if (!_uiState.value.familySearchEnabled) {
@@ -695,7 +716,7 @@ class InvestmentsViewModel @Inject constructor(
         }
         if (enabled) {
             val q = _uiState.value.globalSearchText.trim()
-            if (q.length >= 2) {
+            if (q.length >= searchMinLength) {
                 globalTickerQueryFlow.tryEmit(q)
             }
         }
@@ -704,10 +725,11 @@ class InvestmentsViewModel @Inject constructor(
     fun selectTickerSuggestion(symbol: String, fromGlobalSearch: Boolean = false) {
         val selected = _uiState.value.globalTickerSuggestions.firstOrNull { it.symbol == symbol }
             ?: _uiState.value.tickerSuggestions.firstOrNull { it.symbol == symbol }
-        val instrument = selected?.instrumentType ?: "stocks"
-        if (instrument != "stocks") {
-            openFixedIncomeJoin(symbol = symbol, instrumentType = instrument)
-            return
+        val instrument = normalizeAssetTypeKey(selected?.instrumentType ?: inferInstrumentType(symbol))
+        when (instrument) {
+            "stock", "fii", "bdr", "etf" -> openStockJoin(symbol = symbol, instrumentType = instrument)
+            "treasury", "cdi", "cdb", "fixed_income" -> openFixedIncomeJoin(symbol = symbol, instrumentType = instrument)
+            else -> openFixedIncomeJoin(symbol = symbol, instrumentType = "fixed_income")
         }
         _uiState.update {
             it.copy(
@@ -715,14 +737,11 @@ class InvestmentsViewModel @Inject constructor(
                 tickerSuggestions = emptyList(),
                 globalSearchText = if (fromGlobalSearch) symbol.uppercase(Locale.ROOT) else it.globalSearchText,
                 globalTickerSuggestions = if (fromGlobalSearch) emptyList() else it.globalTickerSuggestions,
-                newPositionType = "stocks",
+                newPositionType = instrument,
                 showCreatePositionForm = true,
                 showSearchResultsScreen = false,
-                showStockJoinScreen = true,
-                showFixedIncomeJoinScreen = false,
             )
         }
-        fetchB3StockQuoteAndFundamentals()
     }
 
     private fun loadTopMoversIfNeeded() {
@@ -785,7 +804,7 @@ class InvestmentsViewModel @Inject constructor(
     private fun applyWholeShareRuleFromValue() {
         val s = _uiState.value
         if (!s.stockJoinModeByValue) return
-        if (inferInstrumentType(s.newPositionName) != "stocks") return
+        if (!isEquityLikeAsset(inferInstrumentType(s.newPositionName))) return
         val price = s.averagePriceText.replace(",", ".").toDoubleOrNull()
             ?: s.quoteInfoMessage?.let { extractPriceFromQuoteMessage(it) }
         val value = s.newPositionPrincipalText.replace(",", ".").toDoubleOrNull()
@@ -813,7 +832,7 @@ class InvestmentsViewModel @Inject constructor(
     fun createPosition() {
         val s = _uiState.value
         val inferredType = inferInstrumentType(s.newPositionName.trim())
-        val name = if (inferredType == "stocks") {
+        val name = if (isEquityLikeAsset(inferredType)) {
             (extractTickerFromText(s.newPositionName) ?: s.newPositionName).trim().uppercase(Locale.ROOT)
         } else {
             s.newPositionName.trim()
@@ -833,7 +852,7 @@ class InvestmentsViewModel @Inject constructor(
             return
         }
         val rateBps = (annualPct * 100.0).toInt()
-        if (inferredType == "stocks") {
+        if (isEquityLikeAsset(inferredType)) {
             val qty = s.quantityText.replace(",", ".").toDoubleOrNull()
             val avg = s.averagePriceText.replace(",", ".").toDoubleOrNull()
             if (qty == null || qty <= 0 || avg == null || avg <= 0) {
@@ -848,7 +867,7 @@ class InvestmentsViewModel @Inject constructor(
                     InvestmentPositionCreateDto(
                         instrumentType = inferredType,
                         name = name,
-                        description = if (inferredType == "stocks") s.stockJoinDescription.trim().ifBlank { null } else s.fixedIncomeDescription.trim().ifBlank { null },
+                        description = if (isEquityLikeAsset(inferredType)) s.stockJoinDescription.trim().ifBlank { null } else s.fixedIncomeDescription.trim().ifBlank { null },
                         principalCents = principal,
                         annualRateBps = rateBps,
                     )
@@ -895,7 +914,7 @@ class InvestmentsViewModel @Inject constructor(
 
     private fun recalculatePrincipalFromStocks() {
         val s = _uiState.value
-        if (inferInstrumentType(s.newPositionName) != "stocks") return
+        if (!isEquityLikeAsset(inferInstrumentType(s.newPositionName))) return
         val qty = s.quantityText.replace(",", ".").toDoubleOrNull()
         val avg = s.averagePriceText.replace(",", ".").toDoubleOrNull()
         if (qty == null || avg == null || qty <= 0 || avg <= 0) return
@@ -955,11 +974,11 @@ class InvestmentsViewModel @Inject constructor(
         }
     }
 
-    fun openStockJoin(symbol: String) {
+    fun openStockJoin(symbol: String, instrumentType: String = "stock") {
         _uiState.update {
             it.copy(
                 newPositionName = symbol.uppercase(Locale.ROOT),
-                newPositionType = "stocks",
+                newPositionType = normalizeAssetTypeKey(instrumentType),
                 showStockJoinScreen = true,
                 showFixedIncomeJoinScreen = false,
                 showSearchResultsScreen = false,
@@ -998,10 +1017,15 @@ class InvestmentsViewModel @Inject constructor(
 
     private fun inferInstrumentType(text: String): String {
         val raw = text.trim().lowercase(Locale.ROOT)
-        if (extractTickerFromText(text) != null) return "stocks"
+        if (extractTickerFromText(text) != null) {
+            val ticker = extractTickerFromText(text)?.uppercase(Locale.ROOT).orEmpty()
+            if (ticker.endsWith("34") || ticker.endsWith("35") || ticker.endsWith("39")) return "bdr"
+            if (ticker.endsWith("11")) return "fii"
+            return "stock"
+        }
         if ("cdb" in raw) return "cdb"
         if ("cdi" in raw) return "cdi"
-        if ("tesouro" in raw || "ipca" in raw || "selic" in raw) return "tesouro"
+        if ("tesouro" in raw || "ipca" in raw || "selic" in raw) return "treasury"
         return "fixed_income"
     }
 

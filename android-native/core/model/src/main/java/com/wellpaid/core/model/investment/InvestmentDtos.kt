@@ -76,6 +76,9 @@ data class StockQuoteDto(
     @SerialName("as_of") val asOf: String? = null,
     val source: String = "brapi",
     val confidence: Double? = null,
+    @SerialName("fallback_used") val fallbackUsed: Boolean = false,
+    @SerialName("provider_strategy") val providerStrategy: String = "single",
+    val stale: Boolean = false,
     val error: String? = null,
 )
 
@@ -83,7 +86,7 @@ data class StockQuoteDto(
 data class TickerSearchItemDto(
     val symbol: String,
     val name: String,
-    @SerialName("instrument_type") val instrumentType: String = "stocks",
+    @SerialName("instrument_type") val instrumentType: String = "stock",
     val source: String = "unknown",
     val confidence: Double? = null,
 )
@@ -101,6 +104,9 @@ data class StockHistoryDto(
     val points: List<StockHistoryPointDto> = emptyList(),
     val source: String = "brapi",
     val confidence: Double? = null,
+    @SerialName("fallback_used") val fallbackUsed: Boolean = false,
+    @SerialName("provider_strategy") val providerStrategy: String = "single",
+    val stale: Boolean = false,
     val error: String? = null,
 )
 
@@ -138,4 +144,6 @@ data class TopMoverItemDto(
     val window: String,
     val source: String = "brapi",
     val confidence: Double? = null,
+    @SerialName("fallback_used") val fallbackUsed: Boolean = false,
+    @SerialName("provider_strategy") val providerStrategy: String = "single",
 )

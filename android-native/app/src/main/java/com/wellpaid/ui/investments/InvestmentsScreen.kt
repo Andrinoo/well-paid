@@ -477,7 +477,7 @@ fun InvestmentsScreen(
                     placeholder = stringResource(R.string.emergency_monthly_placeholder),
                 )
                 Spacer(Modifier.height(8.dp))
-                if (state.newPositionType == "stocks") {
+                if (state.newPositionType in listOf("stock", "stocks", "fii", "bdr", "etf")) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
