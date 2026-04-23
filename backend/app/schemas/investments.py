@@ -106,6 +106,10 @@ class MacroSnapshotOut(BaseModel):
 
 class EquityFundamentalsOut(BaseModel):
     symbol: str
+    company_name: str | None = Field(
+        default=None,
+        description="Razão social / nome de mercado (BRAPI ou Fundamentus).",
+    )
     pl: str | None = None
     pvp: str | None = None
     dividend_yield: str | None = None

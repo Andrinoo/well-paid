@@ -6,6 +6,7 @@ from typing import Any
 
 from app.services.providers.b3_provider import B3Provider
 from app.services.providers.brapi_provider import BrapiProvider
+from app.services.investment_brapi import fetch_stock_quote_snapshot_brapi
 from app.services.providers.fundamentus_provider import FundamentusProvider
 from app.services.providers.sgs_provider import SgsProvider
 
@@ -64,7 +65,16 @@ class MarketDataRouterService:
 
     def fundamentals(self, symbol: str) -> dict[str, Any] | None:
         ticker = self._normalize_ticker(symbol)
-        return self.fundamentus.fundamentals(ticker)
+        data = self.fundamentus.fundamentals(ticker)
+        if data is None:
+            return None
+        # Nome comercial: preferir BRAPI (shortName/longName), fallback Fundamentus ("Empresa").
+        snap = fetch_stock_quote_snapshot_brapi(ticker)
+        if snap:
+            name = str(snap.get("name") or "").strip()
+            if name:
+                data["company_name"] = name
+        return data
 
     def top_movers(self, window: str, limit: int = 10) -> list[dict[str, Any]]:
         w = (window or "").strip().lower()

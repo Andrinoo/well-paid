@@ -61,8 +61,10 @@ class FundamentusProvider:
         eps = extract_any("LPA")
         if not any([pl, pvp, dy, roe, ev_ebitda, net_margin, net_debt_ebitda, eps]):
             return None
+        company_name = extract("Empresa")
         return {
             "symbol": ticker,
+            "company_name": company_name,
             "pl": pl,
             "pvp": pvp,
             "dividend_yield": dy,

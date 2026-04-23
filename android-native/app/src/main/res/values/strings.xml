@@ -767,6 +767,9 @@
     <string name="investments_view_details">Details</string>
     <string name="investments_top_up">Top up</string>
     <string name="investments_position_card_value_label">Position value</string>
+    <string name="investments_position_card_subtitle">From: %1$s | e.g. %2$s</string>
+    <string name="investments_position_fundamental_net_margin">Net margin</string>
+    <string name="investments_position_fundamental_net_debt">Net debt / EBITDA</string>
     <string name="investments_position_card_maturity">Matures %1$s</string>
     <string name="investments_annual_rate_short">p.a.</string>
     <string name="emergency_info_icon_a11y">Open policy and practical tips</string>

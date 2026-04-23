@@ -116,6 +116,7 @@ data class MacroSnapshotDto(
 @Serializable
 data class EquityFundamentalsDto(
     val symbol: String,
+    @SerialName("company_name") val companyName: String? = null,
     val pl: String? = null,
     val pvp: String? = null,
     @SerialName("dividend_yield") val dividendYield: String? = null,

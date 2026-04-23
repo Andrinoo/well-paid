@@ -204,6 +204,7 @@ def read_equity_fundamentals(
     persist_equity_fundamentals_snapshot(db, data)
     return EquityFundamentalsOut(
         symbol=str(data.get("symbol") or symbol.strip().upper()),
+        company_name=data.get("company_name"),
         pl=data.get("pl"),
         pvp=data.get("pvp"),
         dividend_yield=data.get("dividend_yield"),

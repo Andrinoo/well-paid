@@ -46,6 +46,7 @@ data class TickerSuggestionUi(
 
 data class FundamentalPreviewUi(
     val symbol: String,
+    val companyName: String? = null,
     val dy: String? = null,
     val pl: String? = null,
     val pvp: String? = null,
@@ -910,6 +911,7 @@ class InvestmentsViewModel @Inject constructor(
 
     private fun fundamentalPreviewFromDto(f: EquityFundamentalsDto) = FundamentalPreviewUi(
         symbol = f.symbol,
+        companyName = f.companyName,
         dy = f.dividendYield,
         pl = f.pl,
         pvp = f.pvp,

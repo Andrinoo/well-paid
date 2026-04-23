@@ -30,8 +30,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.ShowChart
+import androidx.compose.material.icons.filled.Balance
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.MonetizationOn
+import androidx.compose.material.icons.filled.PieChart
+import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.Savings
+import androidx.compose.material.icons.filled.TrackChanges
+import androidx.compose.material.icons.outlined.AccountBalance
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -39,6 +47,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -55,7 +64,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
@@ -558,8 +569,6 @@ fun InvestmentsScreen(
             positions = state.positions,
             fundamentalsByPositionId = state.positionCardFundamentals,
             onDetails = { id -> viewModel.openPositionDetails(id) },
-            onTopUp = { id -> onOpenAporte(id) },
-            onDelete = { id -> viewModel.deletePosition(id) },
         )
         if (state.positions.isNotEmpty()) {
             Spacer(Modifier.height(8.dp))
@@ -782,8 +791,6 @@ private fun InvestmentPositionsCarousel(
     positions: List<InvestmentPositionDto>,
     fundamentalsByPositionId: Map<String, FundamentalPreviewUi>,
     onDetails: (String) -> Unit,
-    onTopUp: (String) -> Unit,
-    onDelete: (String) -> Unit,
 ) {
     if (positions.isEmpty()) return
     val startPage = remember(positions.size) {
@@ -799,18 +806,16 @@ private fun InvestmentPositionsCarousel(
     HorizontalPager(
         state = pagerState,
         modifier = Modifier.fillMaxWidth(),
-        pageSpacing = 10.dp,
-        contentPadding = PaddingValues(horizontal = 4.dp),
+        pageSpacing = 0.dp,
+        contentPadding = PaddingValues(horizontal = 0.dp),
     ) { page ->
         val index = if (positions.size <= 1) 0 else page % positions.size
         val position = positions[index]
-        Box(modifier = Modifier.fillMaxWidth(0.9f)) {
+        Box(modifier = Modifier.fillMaxWidth()) {
             InvestmentPositionCard(
                 position = position,
                 fundamentals = fundamentalsByPositionId[position.id],
                 onDetails = { onDetails(position.id) },
-                onTopUp = { onTopUp(position.id) },
-                onDelete = { onDelete(position.id) },
             )
         }
     }
@@ -877,210 +882,235 @@ private fun InvestmentPositionCard(
     position: InvestmentPositionDto,
     fundamentals: FundamentalPreviewUi?,
     onDetails: () -> Unit,
-    onTopUp: () -> Unit,
-    onDelete: () -> Unit,
 ) {
-    val instrument = investmentInstrumentLabel(position.instrumentType)
+    val onGold = WellPaidNavy
     val principal = formatBrlFromCents(position.principalCents)
-    val dy = fundamentals?.dy ?: "—"
-    val pl = fundamentals?.pl ?: "—"
-    val roe = fundamentals?.roe ?: "—"
-    val evEbitda = fundamentals?.evEbitda ?: "—"
-    val netMargin = fundamentals?.netMargin ?: "—"
-    val netDebtEbitda = fundamentals?.netDebtEbitda ?: "—"
-    val eps = fundamentals?.eps ?: "—"
+    val exchange = if (position.instrumentType.equals("stocks", ignoreCase = true)) "B3" else "—"
+    val exampleName = fundamentals?.companyName?.trim()?.takeIf { it.isNotEmpty() }
+        ?: position.description?.trim()?.takeIf { it.isNotEmpty() }
+        ?: "—"
+    val metricOr = { s: String? -> if (s.isNullOrBlank()) "—" else s }
+    val pl = metricOr(fundamentals?.pl)
+    val roe = metricOr(fundamentals?.roe)
+    val dy = metricOr(fundamentals?.dy)
+    val evEbitda = metricOr(fundamentals?.evEbitda)
+    val netMargin = metricOr(fundamentals?.netMargin)
+    val netDebtEbitda = metricOr(fundamentals?.netDebtEbitda)
+    val lpa = metricOr(fundamentals?.eps)
+    val cardShape = RoundedCornerShape(14.dp)
+    val iconCellBg = Color.White.copy(alpha = 0.28f)
 
     Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        color = WellPaidCardWhite,
-        border = BorderStroke(1.dp, WellPaidGold.copy(alpha = 0.4f)),
-        shadowElevation = 1.dp,
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 8.dp,
+                shape = cardShape,
+                ambientColor = WellPaidNavy.copy(alpha = 0.32f),
+                spotColor = WellPaidNavy.copy(alpha = 0.32f),
+            ),
+        shape = cardShape,
+        color = Color.Transparent,
+        border = BorderStroke(1.dp, WellPaidGold.copy(alpha = 0.55f)),
+        shadowElevation = 0.dp,
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(148.dp),
+                .background(WellPaidGold, cardShape)
+                .clickable(onClick = onDetails)
+                .padding(horizontal = 12.dp, vertical = 10.dp),
         ) {
-            Box(
-                modifier = Modifier
-                    .width(2.dp)
-                    .fillMaxHeight()
-                    .background(
-                        color = WellPaidGold,
-                        shape = RoundedCornerShape(
-                            topStart = 14.dp,
-                            bottomStart = 14.dp,
-                        ),
-                    ),
-            )
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top,
             ) {
-                Column(
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(onClick = onDetails),
+                        .size(44.dp)
+                        .background(onGold, RoundedCornerShape(10.dp)),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        Text(
-                            text = position.name,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = WellPaidNavy,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(end = 4.dp),
-                        )
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(
-                                onClick = onTopUp,
-                                modifier = Modifier.size(26.dp),
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.Savings,
-                                    contentDescription = stringResource(R.string.investments_top_up),
-                                    tint = WellPaidGold,
-                                    modifier = Modifier.size(17.dp),
-                                )
-                            }
-                            IconButton(
-                                onClick = onDelete,
-                                modifier = Modifier.size(26.dp),
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.Delete,
-                                    contentDescription = stringResource(R.string.investments_delete_position),
-                                    tint = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.size(17.dp),
-                                )
-                            }
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                contentDescription = stringResource(R.string.investments_view_details),
-                                tint = WellPaidNavy.copy(alpha = 0.4f),
-                            )
-                        }
-                    }
-                    Spacer(Modifier.height(5.dp))
-                    Surface(
-                        shape = RoundedCornerShape(7.dp),
-                        color = WellPaidCreamMuted.copy(alpha = 0.65f),
-                        border = BorderStroke(1.dp, WellPaidGold.copy(alpha = 0.28f)),
-                    ) {
-                        Text(
-                            text = instrument,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = WellPaidNavy.copy(alpha = 0.9f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                        )
-                    }
-                    Spacer(Modifier.height(8.dp))
+                    Icon(
+                        imageVector = Icons.Filled.BarChart,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = WellPaidGold,
+                    )
+                }
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = position.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = onGold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(Modifier.height(4.dp))
                     Text(
                         text = stringResource(R.string.investments_position_card_value_label),
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = onGold.copy(alpha = 0.8f),
+                        maxLines = 1,
                     )
                     Spacer(Modifier.height(1.dp))
                     Text(
                         text = principal,
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        color = WellPaidNavy,
+                        color = onGold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    Spacer(Modifier.height(6.dp))
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        FundamentalMiniChip(
-                            label = stringResource(R.string.investments_metric_dy),
-                            value = dy,
-                            modifier = Modifier.weight(1f),
-                        )
-                        FundamentalMiniChip(
-                            label = stringResource(R.string.investments_metric_pl),
-                            value = pl,
-                            modifier = Modifier.weight(1f),
-                        )
-                        FundamentalMiniChip(
-                            label = stringResource(R.string.investments_metric_roe),
-                            value = roe,
-                            modifier = Modifier.weight(1f),
-                        )
-                        FundamentalMiniChip(
-                            label = stringResource(R.string.investments_metric_ev_ebitda),
-                            value = evEbitda,
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
                     Spacer(Modifier.height(4.dp))
                     Row(
+                        verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        modifier = Modifier.fillMaxWidth(),
                     ) {
-                        FundamentalMiniChip(
-                            label = stringResource(R.string.investments_metric_net_margin),
-                            value = netMargin,
-                            modifier = Modifier.weight(1.1f),
+                        Icon(
+                            imageVector = Icons.Outlined.AccountBalance,
+                            contentDescription = null,
+                            modifier = Modifier.size(15.dp),
+                            tint = onGold.copy(alpha = 0.9f),
                         )
-                        FundamentalMiniChip(
-                            label = stringResource(R.string.investments_metric_net_debt_ebitda),
-                            value = netDebtEbitda,
-                            modifier = Modifier.weight(1.25f),
-                        )
-                        FundamentalMiniChip(
-                            label = stringResource(R.string.investments_metric_eps),
-                            value = eps,
-                            modifier = Modifier.weight(0.65f),
+                        Text(
+                            text = stringResource(
+                                R.string.investments_position_card_subtitle,
+                                exchange,
+                                exampleName,
+                            ),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = onGold.copy(alpha = 0.88f),
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
                 }
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = stringResource(R.string.investments_view_details),
+                    tint = onGold.copy(alpha = 0.5f),
+                    modifier = Modifier.padding(start = 4.dp),
+                )
             }
+            Spacer(Modifier.height(10.dp))
+            HorizontalDivider(
+                thickness = 0.5.dp,
+                color = onGold.copy(alpha = 0.2f),
+            )
+            Spacer(Modifier.height(2.dp))
+            PositionFundamentalRow(
+                icon = Icons.Filled.BarChart,
+                label = stringResource(R.string.investments_metric_pl),
+                value = pl,
+                iconBoxColor = iconCellBg,
+                contentColor = onGold,
+                showDivider = true,
+            )
+            PositionFundamentalRow(
+                icon = Icons.Filled.TrackChanges,
+                label = stringResource(R.string.investments_metric_roe),
+                value = roe,
+                iconBoxColor = iconCellBg,
+                contentColor = onGold,
+                showDivider = true,
+            )
+            PositionFundamentalRow(
+                icon = Icons.Filled.MonetizationOn,
+                label = stringResource(R.string.investments_metric_dy),
+                value = dy,
+                iconBoxColor = iconCellBg,
+                contentColor = onGold,
+                showDivider = true,
+            )
+            PositionFundamentalRow(
+                icon = Icons.AutoMirrored.Filled.ShowChart,
+                label = stringResource(R.string.investments_metric_ev_ebitda),
+                value = evEbitda,
+                iconBoxColor = iconCellBg,
+                contentColor = onGold,
+                showDivider = true,
+            )
+            PositionFundamentalRow(
+                icon = Icons.Filled.PieChart,
+                label = stringResource(R.string.investments_position_fundamental_net_margin),
+                value = netMargin,
+                iconBoxColor = iconCellBg,
+                contentColor = onGold,
+                showDivider = true,
+            )
+            PositionFundamentalRow(
+                icon = Icons.Filled.Balance,
+                label = stringResource(R.string.investments_position_fundamental_net_debt),
+                value = netDebtEbitda,
+                iconBoxColor = iconCellBg,
+                contentColor = onGold,
+                showDivider = true,
+            )
+            PositionFundamentalRow(
+                icon = Icons.Filled.Receipt,
+                label = stringResource(R.string.investments_metric_eps),
+                value = lpa,
+                iconBoxColor = iconCellBg,
+                contentColor = onGold,
+                showDivider = false,
+            )
         }
     }
 }
 
 @Composable
-private fun FundamentalMiniChip(
+private fun PositionFundamentalRow(
+    icon: ImageVector,
     label: String,
     value: String,
-    modifier: Modifier = Modifier,
+    iconBoxColor: Color,
+    contentColor: Color,
+    showDivider: Boolean,
 ) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(8.dp),
-        color = WellPaidNavyDeep,
-        border = BorderStroke(1.dp, WellPaidGold.copy(alpha = 0.35f)),
-    ) {
-        Column(modifier = Modifier.padding(horizontal = 5.dp, vertical = 4.dp)) {
+    Column(Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 5.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(30.dp)
+                    .background(iconBoxColor, RoundedCornerShape(7.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(17.dp),
+                    tint = contentColor,
+                )
+            }
+            Spacer(Modifier.width(8.dp))
             Text(
                 text = label,
-                style = MaterialTheme.typography.labelSmall,
-                color = WellPaidGold.copy(alpha = 0.92f),
+                style = MaterialTheme.typography.bodyMedium,
+                color = contentColor,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
             )
             Text(
                 text = value,
-                style = MaterialTheme.typography.labelMedium,
-                color = WellPaidGold,
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = contentColor,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        if (showDivider) {
+            HorizontalDivider(
+                thickness = 0.5.dp,
+                color = contentColor.copy(alpha = 0.12f),
             )
         }
     }
@@ -1117,6 +1147,15 @@ private fun InvestmentPositionDetailsSheet(
             fontWeight = FontWeight.SemiBold,
             color = WellPaidNavy,
         )
+        fundamentals?.companyName?.trim()?.takeIf { it.isNotEmpty() }?.let { company ->
+            Text(
+                text = company,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
         Text(
             text = line,
             style = MaterialTheme.typography.bodyMedium,
