@@ -120,6 +120,10 @@ data class EquityFundamentalsDto(
     val pvp: String? = null,
     @SerialName("dividend_yield") val dividendYield: String? = null,
     val roe: String? = null,
+    @SerialName("ev_ebitda") val evEbitda: String? = null,
+    @SerialName("net_margin") val netMargin: String? = null,
+    @SerialName("net_debt_ebitda") val netDebtEbitda: String? = null,
+    val eps: String? = null,
     val source: String = "fundamentus",
     val confidence: Double? = null,
 )

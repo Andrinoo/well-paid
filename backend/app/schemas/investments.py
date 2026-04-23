@@ -110,6 +110,10 @@ class EquityFundamentalsOut(BaseModel):
     pvp: str | None = None
     dividend_yield: str | None = None
     roe: str | None = None
+    ev_ebitda: str | None = None
+    net_margin: str | None = None
+    net_debt_ebitda: str | None = None
+    eps: str | None = None
     source: str = "fundamentus"
     confidence: float | None = Field(default=None, ge=0, le=1)
 

@@ -39,11 +39,27 @@ class FundamentusProvider:
             value = re.sub(r"<[^>]+>", "", m.group(1)).strip()
             return value or None
 
+        def extract_any(*labels: str) -> str | None:
+            for lb in labels:
+                found = extract(lb)
+                if found:
+                    return found
+            return None
+
         pl = extract("P/L")
         pvp = extract("P/VP")
         dy = extract("Div. Yield")
         roe = extract("ROE")
-        if not any([pl, pvp, dy, roe]):
+        ev_ebitda = extract_any("EV/EBITDA", "EV / EBITDA")
+        net_margin = extract_any("Marg. Líquida", "Margem Líquida")
+        net_debt_ebitda = extract_any(
+            "Dív. Líquida/EBITDA",
+            "Dív Líquida/EBITDA",
+            "Div. Líquida/EBITDA",
+            "Dívida Líquida/EBITDA",
+        )
+        eps = extract_any("LPA")
+        if not any([pl, pvp, dy, roe, ev_ebitda, net_margin, net_debt_ebitda, eps]):
             return None
         return {
             "symbol": ticker,
@@ -51,6 +67,10 @@ class FundamentusProvider:
             "pvp": pvp,
             "dividend_yield": dy,
             "roe": roe,
+            "ev_ebitda": ev_ebitda,
+            "net_margin": net_margin,
+            "net_debt_ebitda": net_debt_ebitda,
+            "eps": eps,
             "source": self.source,
             "confidence": 0.65,
         }

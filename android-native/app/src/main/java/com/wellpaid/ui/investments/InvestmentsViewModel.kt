@@ -50,6 +50,10 @@ data class FundamentalPreviewUi(
     val pl: String? = null,
     val pvp: String? = null,
     val roe: String? = null,
+    val evEbitda: String? = null,
+    val netMargin: String? = null,
+    val netDebtEbitda: String? = null,
+    val eps: String? = null,
     val source: String = "fundamentus",
 )
 
@@ -113,6 +117,7 @@ data class InvestmentsUiState(
     val quoteConfidence: Double? = null,
     val errorMessage: String? = null,
     val positionDetailsFundamentals: FundamentalPreviewUi? = null,
+    val positionCardFundamentals: Map<String, FundamentalPreviewUi> = emptyMap(),
     val isLoadingPositionDetailsFundamentals: Boolean = false,
     val aporteAmountText: String = "",
     val aporteFundamentals: FundamentalPreviewUi? = null,
@@ -257,15 +262,20 @@ class InvestmentsViewModel @Inject constructor(
             val macroResult = runCatching { api.getMacroSnapshot() }
             overviewResult
                 .onSuccess { payload ->
+                    val positions = positionsResult.getOrElse { emptyList() }
                     _uiState.update {
                         it.copy(
                             isLoading = false,
                             overview = payload,
-                            positions = positionsResult.getOrElse { emptyList() },
+                            positions = positions,
                             macroSnapshot = macroResult.getOrNull(),
+                            positionCardFundamentals = it.positionCardFundamentals.filterKeys { id ->
+                                positions.any { p -> p.id == id }
+                            },
                             errorMessage = null,
                         )
                     }
+                    preloadCardFundamentals(positions)
                 }
                 .onFailure { t ->
                     _uiState.update {
@@ -275,6 +285,29 @@ class InvestmentsViewModel @Inject constructor(
                         )
                     }
                 }
+        }
+    }
+
+    private fun preloadCardFundamentals(positions: List<InvestmentPositionDto>) {
+        val stockPositions = positions
+            .filter { it.instrumentType == "stocks" }
+            .mapNotNull { p ->
+                val symbol = extractTickerFromText(p.name)?.uppercase(Locale.ROOT) ?: return@mapNotNull null
+                p.id to symbol
+            }
+            .take(14)
+        if (stockPositions.isEmpty()) return
+        stockPositions.forEach { (positionId, symbol) ->
+            viewModelScope.launch {
+                runCatching { api.getEquityFundamentals(symbol) }
+                    .onSuccess { dto ->
+                        _uiState.update { st ->
+                            st.copy(
+                                positionCardFundamentals = st.positionCardFundamentals + (positionId to fundamentalPreviewFromDto(dto)),
+                            )
+                        }
+                    }
+            }
         }
     }
 
@@ -881,6 +914,10 @@ class InvestmentsViewModel @Inject constructor(
         pl = f.pl,
         pvp = f.pvp,
         roe = f.roe,
+        evEbitda = f.evEbitda,
+        netMargin = f.netMargin,
+        netDebtEbitda = f.netDebtEbitda,
+        eps = f.eps,
         source = f.source,
     )
 

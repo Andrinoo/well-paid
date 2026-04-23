@@ -203,6 +203,10 @@ def read_equity_fundamentals(
         pvp=data.get("pvp"),
         dividend_yield=data.get("dividend_yield"),
         roe=data.get("roe"),
+        ev_ebitda=data.get("ev_ebitda"),
+        net_margin=data.get("net_margin"),
+        net_debt_ebitda=data.get("net_debt_ebitda"),
+        eps=data.get("eps"),
         source=str(data.get("source") or "fundamentus"),
         confidence=data.get("confidence"),
     )

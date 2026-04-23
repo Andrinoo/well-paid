@@ -220,8 +220,13 @@ private fun StockJoinFundamentalsRow(fundamentals: FundamentalPreviewUi) {
             )
             StockJoinMetricCell(
                 modifier = Modifier.weight(1f),
-                label = stringResource(R.string.investments_metric_pvp),
-                value = fundamentals.pvp ?: "—",
+                label = stringResource(R.string.investments_metric_roe),
+                value = fundamentals.roe ?: "—",
+            )
+            StockJoinMetricCell(
+                modifier = Modifier.weight(1f),
+                label = stringResource(R.string.investments_metric_ev_ebitda),
+                value = fundamentals.evEbitda ?: "—",
             )
         }
         Row(
@@ -230,8 +235,18 @@ private fun StockJoinFundamentalsRow(fundamentals: FundamentalPreviewUi) {
         ) {
             StockJoinMetricCell(
                 modifier = Modifier.weight(1f),
-                label = stringResource(R.string.investments_metric_roe),
-                value = fundamentals.roe ?: "—",
+                label = stringResource(R.string.investments_metric_net_margin),
+                value = fundamentals.netMargin ?: "—",
+            )
+            StockJoinMetricCell(
+                modifier = Modifier.weight(1f),
+                label = stringResource(R.string.investments_metric_net_debt_ebitda),
+                value = fundamentals.netDebtEbitda ?: "—",
+            )
+            StockJoinMetricCell(
+                modifier = Modifier.weight(1f),
+                label = stringResource(R.string.investments_metric_eps),
+                value = fundamentals.eps ?: "—",
             )
         }
     }

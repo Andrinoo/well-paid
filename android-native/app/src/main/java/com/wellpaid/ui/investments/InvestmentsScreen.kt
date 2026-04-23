@@ -1,29 +1,35 @@
 package com.wellpaid.ui.investments
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material3.Button
@@ -38,6 +44,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -45,21 +52,25 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wellpaid.R
 import com.wellpaid.core.model.investment.InvestmentBucketDto
+import com.wellpaid.core.model.investment.InvestmentPositionDto
 import com.wellpaid.core.model.investment.StockHistoryPointDto
 import com.wellpaid.ui.components.WellPaidMoneyDigitKeypadField
 import com.wellpaid.ui.components.WellPaidPullToRefreshBox
 import com.wellpaid.ui.theme.WellPaidCream
 import com.wellpaid.ui.theme.WellPaidCreamMuted
+import com.wellpaid.ui.theme.WellPaidCardWhite
 import com.wellpaid.ui.theme.WellPaidGold
 import com.wellpaid.ui.theme.WellPaidPositive
 import com.wellpaid.ui.theme.WellPaidExpenseLine
@@ -481,9 +492,11 @@ fun InvestmentsScreen(
                     state.selectedFundamentals?.let { f ->
                         Spacer(Modifier.height(6.dp))
                         Text(
-                            text = "DY ${f.dy ?: "—"} · P/L ${f.pl ?: "—"} · P/VP ${f.pvp ?: "—"}",
+                            text = fundamentalsSummaryLine(f),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
                     Spacer(Modifier.height(8.dp))
@@ -541,20 +554,14 @@ fun InvestmentsScreen(
             Spacer(Modifier.height(8.dp))
         }
 
-        state.positions.forEach { position ->
-            val line = stringResource(
-                R.string.investments_position_line,
-                investmentInstrumentLabel(position.instrumentType),
-                formatBrlFromCents(position.principalCents),
-                position.annualRateBps / 100f,
-            )
-            InvestmentPositionCard(
-                name = position.name,
-                line = line,
-                onDetails = { viewModel.openPositionDetails(position.id) },
-                onTopUp = { onOpenAporte(position.id) },
-                onDelete = { viewModel.deletePosition(position.id) },
-            )
+        InvestmentPositionsCarousel(
+            positions = state.positions,
+            fundamentalsByPositionId = state.positionCardFundamentals,
+            onDetails = { id -> viewModel.openPositionDetails(id) },
+            onTopUp = { id -> onOpenAporte(id) },
+            onDelete = { id -> viewModel.deletePosition(id) },
+        )
+        if (state.positions.isNotEmpty()) {
             Spacer(Modifier.height(8.dp))
         }
 
@@ -771,6 +778,45 @@ private fun InvestmentEvolutionChart(
 }
 
 @Composable
+private fun InvestmentPositionsCarousel(
+    positions: List<InvestmentPositionDto>,
+    fundamentalsByPositionId: Map<String, FundamentalPreviewUi>,
+    onDetails: (String) -> Unit,
+    onTopUp: (String) -> Unit,
+    onDelete: (String) -> Unit,
+) {
+    if (positions.isEmpty()) return
+    val startPage = remember(positions.size) {
+        if (positions.size <= 1) 0 else {
+            val mid = Int.MAX_VALUE / 2
+            mid - (mid % positions.size)
+        }
+    }
+    val pagerState = rememberPagerState(
+        initialPage = startPage,
+        pageCount = { if (positions.size <= 1) 1 else Int.MAX_VALUE },
+    )
+    HorizontalPager(
+        state = pagerState,
+        modifier = Modifier.fillMaxWidth(),
+        pageSpacing = 10.dp,
+        contentPadding = PaddingValues(horizontal = 4.dp),
+    ) { page ->
+        val index = if (positions.size <= 1) 0 else page % positions.size
+        val position = positions[index]
+        Box(modifier = Modifier.fillMaxWidth(0.9f)) {
+            InvestmentPositionCard(
+                position = position,
+                fundamentals = fundamentalsByPositionId[position.id],
+                onDetails = { onDetails(position.id) },
+                onTopUp = { onTopUp(position.id) },
+                onDelete = { onDelete(position.id) },
+            )
+        }
+    }
+}
+
+@Composable
 private fun InvestmentPositionCompactRow(
     name: String,
     line: String,
@@ -828,68 +874,214 @@ private fun InvestmentPositionCompactRow(
 
 @Composable
 private fun InvestmentPositionCard(
-    name: String,
-    line: String,
+    position: InvestmentPositionDto,
+    fundamentals: FundamentalPreviewUi?,
     onDetails: () -> Unit,
     onTopUp: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                color = WellPaidCreamMuted.copy(alpha = 0.56f),
-                shape = RoundedCornerShape(12.dp),
-            )
-            .border(
-                width = 1.dp,
-                color = WellPaidGold.copy(alpha = 0.38f),
-                shape = RoundedCornerShape(12.dp),
-            )
-            .padding(12.dp),
+    val instrument = investmentInstrumentLabel(position.instrumentType)
+    val principal = formatBrlFromCents(position.principalCents)
+    val dy = fundamentals?.dy ?: "—"
+    val pl = fundamentals?.pl ?: "—"
+    val roe = fundamentals?.roe ?: "—"
+    val evEbitda = fundamentals?.evEbitda ?: "—"
+    val netMargin = fundamentals?.netMargin ?: "—"
+    val netDebtEbitda = fundamentals?.netDebtEbitda ?: "—"
+    val eps = fundamentals?.eps ?: "—"
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        color = WellPaidCardWhite,
+        border = BorderStroke(1.dp, WellPaidGold.copy(alpha = 0.4f)),
+        shadowElevation = 1.dp,
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onDetails),
+                .height(148.dp),
         ) {
-            Text(
-                text = name,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = WellPaidNavy,
+            Box(
+                modifier = Modifier
+                    .width(2.dp)
+                    .fillMaxHeight()
+                    .background(
+                        color = WellPaidGold,
+                        shape = RoundedCornerShape(
+                            topStart = 14.dp,
+                            bottomStart = 14.dp,
+                        ),
+                    ),
             )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = line,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(onClick = onDetails),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text(
+                            text = position.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = WellPaidNavy,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(end = 4.dp),
+                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(
+                                onClick = onTopUp,
+                                modifier = Modifier.size(26.dp),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Savings,
+                                    contentDescription = stringResource(R.string.investments_top_up),
+                                    tint = WellPaidGold,
+                                    modifier = Modifier.size(17.dp),
+                                )
+                            }
+                            IconButton(
+                                onClick = onDelete,
+                                modifier = Modifier.size(26.dp),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Delete,
+                                    contentDescription = stringResource(R.string.investments_delete_position),
+                                    tint = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(17.dp),
+                                )
+                            }
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = stringResource(R.string.investments_view_details),
+                                tint = WellPaidNavy.copy(alpha = 0.4f),
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(5.dp))
+                    Surface(
+                        shape = RoundedCornerShape(7.dp),
+                        color = WellPaidCreamMuted.copy(alpha = 0.65f),
+                        border = BorderStroke(1.dp, WellPaidGold.copy(alpha = 0.28f)),
+                    ) {
+                        Text(
+                            text = instrument,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = WellPaidNavy.copy(alpha = 0.9f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(R.string.investments_position_card_value_label),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(1.dp))
+                    Text(
+                        text = principal,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = WellPaidNavy,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        FundamentalMiniChip(
+                            label = stringResource(R.string.investments_metric_dy),
+                            value = dy,
+                            modifier = Modifier.weight(1f),
+                        )
+                        FundamentalMiniChip(
+                            label = stringResource(R.string.investments_metric_pl),
+                            value = pl,
+                            modifier = Modifier.weight(1f),
+                        )
+                        FundamentalMiniChip(
+                            label = stringResource(R.string.investments_metric_roe),
+                            value = roe,
+                            modifier = Modifier.weight(1f),
+                        )
+                        FundamentalMiniChip(
+                            label = stringResource(R.string.investments_metric_ev_ebitda),
+                            value = evEbitda,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        FundamentalMiniChip(
+                            label = stringResource(R.string.investments_metric_net_margin),
+                            value = netMargin,
+                            modifier = Modifier.weight(1.1f),
+                        )
+                        FundamentalMiniChip(
+                            label = stringResource(R.string.investments_metric_net_debt_ebitda),
+                            value = netDebtEbitda,
+                            modifier = Modifier.weight(1.25f),
+                        )
+                        FundamentalMiniChip(
+                            label = stringResource(R.string.investments_metric_eps),
+                            value = eps,
+                            modifier = Modifier.weight(0.65f),
+                        )
+                    }
+                }
+            }
         }
-        Spacer(Modifier.height(8.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            FilledTonalButton(
-                onClick = onTopUp,
-                modifier = Modifier.weight(1f),
-            ) {
-                Text(
-                    stringResource(R.string.investments_top_up),
-                    maxLines = 1,
-                )
-            }
-            IconButton(
-                onClick = onDelete,
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Delete,
-                    contentDescription = stringResource(R.string.investments_delete_position),
-                    tint = MaterialTheme.colorScheme.error,
-                )
-            }
+    }
+}
+
+@Composable
+private fun FundamentalMiniChip(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(8.dp),
+        color = WellPaidNavyDeep,
+        border = BorderStroke(1.dp, WellPaidGold.copy(alpha = 0.35f)),
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 5.dp, vertical = 4.dp)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = WellPaidGold.copy(alpha = 0.92f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.labelMedium,
+                color = WellPaidGold,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }
@@ -945,9 +1137,11 @@ private fun InvestmentPositionDetailsSheet(
                     color = WellPaidNavy.copy(alpha = 0.88f),
                 )
                 Text(
-                    text = "DY ${f.dy ?: "—"} · P/L ${f.pl ?: "—"} · P/VP ${f.pvp ?: "—"} · ROE ${f.roe ?: "—"}",
+                    text = fundamentalsSummaryLine(f),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     text = "Fonte: ${f.source.uppercase(Locale.ROOT)}",
@@ -1008,6 +1202,23 @@ private fun InvestmentPositionDetailsSheet(
             Text(stringResource(R.string.common_close))
         }
     }
+}
+
+private fun formatMaturityForPositionCard(raw: String?): String? {
+    if (raw.isNullOrBlank()) return null
+    return runCatching {
+        val s = raw.trim()
+        if (s.length < 10) return null
+        val date = java.time.LocalDate.parse(s.take(10))
+        date.format(
+            DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
+                .withLocale(Locale.getDefault()),
+        )
+    }.getOrNull()
+}
+
+private fun fundamentalsSummaryLine(f: FundamentalPreviewUi): String {
+    return "DY ${f.dy ?: "—"} · P/L ${f.pl ?: "—"} · ROE ${f.roe ?: "—"} · EV/EBITDA ${f.evEbitda ?: "—"} · Mrg. liq. ${f.netMargin ?: "—"} · Div. liq./EBITDA ${f.netDebtEbitda ?: "—"} · LPA ${f.eps ?: "—"}"
 }
 
 private fun formatAsOfForDisplay(iso: String?): String {

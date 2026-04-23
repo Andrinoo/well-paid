@@ -214,14 +214,39 @@ private fun AporteFundamentalsSummary(fundamentals: FundamentalPreviewUi) {
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             AporteMinStat(
-                stringResource(R.string.investments_metric_pvp),
-                fundamentals.pvp,
-                Modifier.weight(1f),
-            )
-            AporteMinStat(
                 stringResource(R.string.investments_metric_roe),
                 fundamentals.roe,
                 Modifier.weight(1f),
+            )
+            AporteMinStat(
+                stringResource(R.string.investments_metric_ev_ebitda),
+                fundamentals.evEbitda,
+                Modifier.weight(1f),
+            )
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            AporteMinStat(
+                stringResource(R.string.investments_metric_net_margin),
+                fundamentals.netMargin,
+                Modifier.weight(1f),
+            )
+            AporteMinStat(
+                stringResource(R.string.investments_metric_net_debt_ebitda),
+                fundamentals.netDebtEbitda,
+                Modifier.weight(1f),
+            )
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            AporteMinStat(
+                stringResource(R.string.investments_metric_eps),
+                fundamentals.eps,
+                Modifier.weight(0.6f),
             )
         }
     }
