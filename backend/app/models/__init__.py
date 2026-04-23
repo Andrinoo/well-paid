@@ -18,6 +18,7 @@ from app.models.emergency_reserve import (
     EmergencyReservePlan,
 )
 from app.models.investment_position import InvestmentPosition
+from app.models.equity_fundamentals_history import EquityFundamentalsHistory
 from app.models.goal import Goal
 from app.models.goal_contribution import GoalContribution
 from app.models.email_verification_token import EmailVerificationToken
@@ -54,6 +55,7 @@ __all__ = [
     "EmergencyReserveContribution",
     "EmergencyReserveContributionItem",
     "InvestmentPosition",
+    "EquityFundamentalsHistory",
     "ShoppingList",
     "ShoppingListItem",
 ]

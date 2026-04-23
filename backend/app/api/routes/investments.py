@@ -10,6 +10,7 @@ from app.core.limiter import limiter
 from app.models.user import User
 from app.schemas.investments import (
     EquityFundamentalsOut,
+    EquityFundamentalsHistoryPointOut,
     InvestmentEvolutionPointOut,
     InvestmentOverviewOut,
     InvestmentPositionAddPrincipal,
@@ -30,7 +31,9 @@ from app.services.investments import (
     delete_position_for_user,
     get_investment_evolution_for_user,
     get_investment_overview_for_user,
+    list_equity_fundamentals_history_for_symbol,
     list_positions_for_user,
+    persist_equity_fundamentals_snapshot,
 )
 from app.services.ticker_cache import ticker_cache_service
 
@@ -189,6 +192,7 @@ def read_macro_snapshot(
 def read_equity_fundamentals(
     request: Request,
     user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
     symbol: Annotated[str, Query(min_length=1, max_length=12, description="Ticker B3, ex. PETR4")],
 ) -> EquityFundamentalsOut:
     try:
@@ -197,6 +201,7 @@ def read_equity_fundamentals(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ticker inválido")
     if data is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fundamentos indisponíveis")
+    persist_equity_fundamentals_snapshot(db, data)
     return EquityFundamentalsOut(
         symbol=str(data.get("symbol") or symbol.strip().upper()),
         pl=data.get("pl"),
@@ -210,6 +215,35 @@ def read_equity_fundamentals(
         source=str(data.get("source") or "fundamentus"),
         confidence=data.get("confidence"),
     )
+
+
+@router.get("/fundamentals/history", response_model=list[EquityFundamentalsHistoryPointOut])
+@limiter.limit("30/minute")
+def read_equity_fundamentals_history(
+    request: Request,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+    symbol: Annotated[str, Query(min_length=1, max_length=12, description="Ticker B3, ex. PETR4")],
+    days: Annotated[int, Query(ge=1, le=3650, description="Janela de histórico em dias")] = 180,
+    limit: Annotated[int, Query(ge=1, le=1000, description="Máximo de pontos retornados")] = 180,
+) -> list[EquityFundamentalsHistoryPointOut]:
+    try:
+        return list_equity_fundamentals_history_for_symbol(
+            db,
+            symbol=symbol,
+            days=days,
+            limit=limit,
+        )
+    except ValueError as exc:
+        if str(exc) == "equity_fundamentals_history_unavailable":
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=(
+                    "Histórico de fundamentos indisponível: execute "
+                    "python -m alembic upgrade head"
+                ),
+            ) from exc
+        raise
 
 
 @router.get("/overview", response_model=InvestmentOverviewOut)

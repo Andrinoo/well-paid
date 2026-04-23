@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
@@ -9,7 +9,9 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.schema_introspection import session_has_table
 from app.models.investment_position import InvestmentPosition
+from app.models.equity_fundamentals_history import EquityFundamentalsHistory
 from app.schemas.investments import (
+    EquityFundamentalsHistoryPointOut,
     InvestmentBucketOut,
     InvestmentEvolutionPointOut,
     InvestmentOverviewOut,
@@ -251,3 +253,69 @@ def delete_position_for_user(db: Session, user_id, position_id: str) -> bool:
     )
     db.commit()
     return bool(result.rowcount and result.rowcount > 0)
+
+
+def persist_equity_fundamentals_snapshot(db: Session, payload: dict) -> None:
+    if not session_has_table(db, "equity_fundamentals_history"):
+        return
+    symbol = str(payload.get("symbol") or "").strip().upper()
+    if not symbol:
+        return
+    row = EquityFundamentalsHistory(
+        symbol=symbol,
+        pl=payload.get("pl"),
+        pvp=payload.get("pvp"),
+        dividend_yield=payload.get("dividend_yield"),
+        roe=payload.get("roe"),
+        ev_ebitda=payload.get("ev_ebitda"),
+        net_margin=payload.get("net_margin"),
+        net_debt_ebitda=payload.get("net_debt_ebitda"),
+        eps=payload.get("eps"),
+        source=str(payload.get("source") or "fundamentus"),
+        confidence=payload.get("confidence"),
+    )
+    db.add(row)
+    db.commit()
+
+
+def list_equity_fundamentals_history_for_symbol(
+    db: Session,
+    symbol: str,
+    *,
+    days: int = 180,
+    limit: int = 180,
+) -> list[EquityFundamentalsHistoryPointOut]:
+    if not session_has_table(db, "equity_fundamentals_history"):
+        raise ValueError("equity_fundamentals_history_unavailable")
+    sym = (symbol or "").strip().upper()
+    if not sym:
+        return []
+    days_window = max(1, min(int(days), 3650))
+    limit_rows = max(1, min(int(limit), 1000))
+    since = datetime.now(timezone.utc) - timedelta(days=days_window)
+    rows = db.scalars(
+        select(EquityFundamentalsHistory)
+        .where(
+            EquityFundamentalsHistory.symbol == sym,
+            EquityFundamentalsHistory.collected_at >= since,
+        )
+        .order_by(EquityFundamentalsHistory.collected_at.desc())
+        .limit(limit_rows)
+    ).all()
+    return [
+        EquityFundamentalsHistoryPointOut(
+            symbol=r.symbol,
+            pl=r.pl,
+            pvp=r.pvp,
+            dividend_yield=r.dividend_yield,
+            roe=r.roe,
+            ev_ebitda=r.ev_ebitda,
+            net_margin=r.net_margin,
+            net_debt_ebitda=r.net_debt_ebitda,
+            eps=r.eps,
+            source=r.source,
+            confidence=r.confidence,
+            collected_at=r.collected_at.isoformat() if r.collected_at else "",
+        )
+        for r in rows
+    ]
