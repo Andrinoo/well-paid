@@ -65,9 +65,14 @@ data class FundamentalPreviewUi(
     val symbol: String,
     val companyName: String? = null,
     val dy: String? = null,
+    val dy12m: String? = null,
     val pl: String? = null,
     val pvp: String? = null,
     val dailyLiquidity: String? = null,
+    val vacancyFinancial: String? = null,
+    val contractTermWault: String? = null,
+    val atypicalContractsRatio: String? = null,
+    val top5TenantsConcentration: String? = null,
     val roe: String? = null,
     val evEbitda: String? = null,
     val netMargin: String? = null,
@@ -1064,9 +1069,14 @@ class InvestmentsViewModel @Inject constructor(
         symbol = f.symbol,
         companyName = f.companyName,
         dy = f.dividendYield,
+        dy12m = f.dividendYield12m,
         pl = f.pl,
         pvp = f.pvp,
         dailyLiquidity = f.dailyLiquidity,
+        vacancyFinancial = f.vacancyFinancial,
+        contractTermWault = f.contractTermWault,
+        atypicalContractsRatio = f.atypicalContractsRatio,
+        top5TenantsConcentration = f.top5TenantsConcentration,
         roe = f.roe,
         evEbitda = f.evEbitda,
         netMargin = f.netMargin,
@@ -1079,7 +1089,7 @@ class InvestmentsViewModel @Inject constructor(
         _uiState.update {
             it.copy(selectedFundamentals = fundamentalPreviewFromDto(f))
         }
-        val dyNumber = f.dividendYield
+        val dyNumber = (f.dividendYield12m ?: f.dividendYield)
             ?.replace("%", "")
             ?.replace(",", ".")
             ?.trim()

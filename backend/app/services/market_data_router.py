@@ -96,7 +96,13 @@ class MarketDataRouterService:
                 "company_name": brapi_ks.get("company_name"),
                 "pl": None,
                 "pvp": brapi_ks.get("pvp"),
+                "daily_liquidity": brapi_ks.get("daily_liquidity"),
                 "dividend_yield": brapi_ks.get("dividend_yield"),
+                "dividend_yield_12m": brapi_ks.get("dividend_yield_12m"),
+                "vacancy_financial": brapi_ks.get("vacancy_financial"),
+                "contract_term_wault": brapi_ks.get("contract_term_wault"),
+                "atypical_contracts_ratio": brapi_ks.get("atypical_contracts_ratio"),
+                "top5_tenants_concentration": brapi_ks.get("top5_tenants_concentration"),
                 "roe": None,
                 "ev_ebitda": brapi_ks.get("ev_ebitda"),
                 "net_margin": None,
@@ -114,8 +120,20 @@ class MarketDataRouterService:
                 data["net_debt_ebitda"] = brapi_ks["net_debt_ebitda"]
             if brapi_ks.get("pvp"):
                 data["pvp"] = brapi_ks["pvp"]
+            if brapi_ks.get("daily_liquidity"):
+                data["daily_liquidity"] = brapi_ks["daily_liquidity"]
             if brapi_ks.get("dividend_yield"):
                 data["dividend_yield"] = brapi_ks["dividend_yield"]
+            if brapi_ks.get("dividend_yield_12m"):
+                data["dividend_yield_12m"] = brapi_ks["dividend_yield_12m"]
+            if brapi_ks.get("vacancy_financial"):
+                data["vacancy_financial"] = brapi_ks["vacancy_financial"]
+            if brapi_ks.get("contract_term_wault"):
+                data["contract_term_wault"] = brapi_ks["contract_term_wault"]
+            if brapi_ks.get("atypical_contracts_ratio"):
+                data["atypical_contracts_ratio"] = brapi_ks["atypical_contracts_ratio"]
+            if brapi_ks.get("top5_tenants_concentration"):
+                data["top5_tenants_concentration"] = brapi_ks["top5_tenants_concentration"]
             n = (brapi_ks.get("company_name") or "").strip()
             if n:
                 data["company_name"] = n

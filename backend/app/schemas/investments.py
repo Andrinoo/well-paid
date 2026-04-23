@@ -118,7 +118,13 @@ class EquityFundamentalsOut(BaseModel):
     )
     pl: str | None = None
     pvp: str | None = None
+    daily_liquidity: str | None = None
     dividend_yield: str | None = None
+    dividend_yield_12m: str | None = None
+    vacancy_financial: str | None = None
+    contract_term_wault: str | None = None
+    atypical_contracts_ratio: str | None = None
+    top5_tenants_concentration: str | None = None
     roe: str | None = None
     ev_ebitda: str | None = None
     net_margin: str | None = None
@@ -126,6 +132,16 @@ class EquityFundamentalsOut(BaseModel):
     eps: str | None = None
     source: str = "fundamentus"
     confidence: float | None = Field(default=None, ge=0, le=1)
+
+
+class EquityFundamentalsDiagnosticsOut(BaseModel):
+    symbol: str
+    source: str = "fundamentus"
+    fields: dict[str, str | None] = Field(default_factory=dict)
+    present_fields: list[str] = Field(default_factory=list)
+    missing_fields: list[str] = Field(default_factory=list)
+    present_count: int = 0
+    missing_count: int = 0
 
 
 class EquityFundamentalsHistoryPointOut(BaseModel):

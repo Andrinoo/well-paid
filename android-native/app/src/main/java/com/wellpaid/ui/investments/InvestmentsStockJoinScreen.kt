@@ -48,7 +48,6 @@ fun InvestmentsStockJoinScreen(
     onModeByValueChange: (Boolean) -> Unit,
     onQuantityChange: (String) -> Unit,
     onValueChange: (String) -> Unit,
-    onAveragePriceChange: (String) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -94,6 +93,10 @@ fun InvestmentsStockJoinScreen(
 
         val hasMarketBlock = state.quoteInfoMessage != null || state.selectedFundamentals != null
         if (hasMarketBlock) {
+            val quoteMeta = state.quoteInfoMessage
+                ?.substringAfter("·", missingDelimiterValue = "")
+                ?.trim()
+                ?.takeIf { it.isNotBlank() }
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -108,19 +111,46 @@ fun InvestmentsStockJoinScreen(
                     fontWeight = FontWeight.SemiBold,
                     color = WellPaidNavy.copy(alpha = 0.88f),
                 )
-                state.quoteInfoMessage?.let { quote ->
-                    Text(
-                        text = quote,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = WellPaidPositive,
-                        fontWeight = FontWeight.Medium,
-                    )
-                }
-                state.selectedFundamentals?.let { f ->
-                    StockJoinFundamentalsRow(
-                        assetType = state.newPositionType,
-                        fundamentals = f,
-                    )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.Top,
+                ) {
+                    Column(
+                        modifier = Modifier.weight(0.9f),
+                        verticalArrangement = Arrangement.spacedBy(3.dp),
+                    ) {
+                        Text(
+                            text = "Cotação",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = WellPaidNavy.copy(alpha = 0.88f),
+                            fontWeight = FontWeight.Medium,
+                        )
+                        state.quoteLastPrice?.takeIf { it > 0.0 }?.let { price ->
+                            val priceLabel = String.format(java.util.Locale.US, "%.2f", price).replace('.', ',')
+                            Text(
+                                text = "R$ $priceLabel",
+                                style = MaterialTheme.typography.headlineMedium,
+                                color = WellPaidPositive,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                        quoteMeta?.let { meta ->
+                            Text(
+                                text = meta,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = WellPaidNavy.copy(alpha = 0.72f),
+                            )
+                        }
+                    }
+                    state.selectedFundamentals?.let { f ->
+                        Column(modifier = Modifier.weight(1.8f)) {
+                            StockJoinFundamentalsRow(
+                                assetType = state.newPositionType,
+                                fundamentals = f,
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -146,13 +176,6 @@ fun InvestmentsStockJoinScreen(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 shape = JoinFieldCorner,
-            )
-            WellPaidMoneyDigitKeypadField(
-                valueText = state.averagePriceText,
-                onValueTextChange = onAveragePriceChange,
-                enabled = !state.isSavingPosition,
-                label = { Text(stringResource(R.string.investments_field_average_price)) },
-                modifier = Modifier.fillMaxWidth(),
             )
             Surface(
                 modifier = Modifier.fillMaxWidth(),
@@ -255,8 +278,29 @@ private fun metricsForAssetType(
     fundamentals: FundamentalPreviewUi,
 ): List<JoinMetric> {
     val dy = JoinMetric(stringResource(R.string.investments_metric_dy), fundamentals.dy ?: "—")
+    val dy12m = JoinMetric(stringResource(R.string.investments_metric_dy_12m), fundamentals.dy12m ?: fundamentals.dy ?: "—")
     val pvp = JoinMetric(stringResource(R.string.investments_metric_pvp), fundamentals.pvp ?: "—")
     val pl = JoinMetric(stringResource(R.string.investments_metric_pl), fundamentals.pl ?: "—")
+    val dailyLiquidity = JoinMetric(
+        stringResource(R.string.investments_metric_daily_liquidity),
+        fundamentals.dailyLiquidity ?: "—",
+    )
+    val vacancyFinancial = JoinMetric(
+        stringResource(R.string.investments_metric_vacancy_financial),
+        fundamentals.vacancyFinancial ?: "—",
+    )
+    val contractTermWault = JoinMetric(
+        stringResource(R.string.investments_metric_contract_term_wault),
+        fundamentals.contractTermWault ?: "—",
+    )
+    val atypicalContractsRatio = JoinMetric(
+        stringResource(R.string.investments_metric_atypical_contracts),
+        fundamentals.atypicalContractsRatio ?: "—",
+    )
+    val top5TenantsConcentration = JoinMetric(
+        stringResource(R.string.investments_metric_top5_tenants),
+        fundamentals.top5TenantsConcentration ?: "—",
+    )
     val roe = JoinMetric(stringResource(R.string.investments_metric_roe), fundamentals.roe ?: "—")
     val ev = JoinMetric(stringResource(R.string.investments_metric_ev_ebitda), fundamentals.evEbitda ?: "—")
     val netMargin = JoinMetric(stringResource(R.string.investments_metric_net_margin), fundamentals.netMargin ?: "—")
@@ -265,7 +309,15 @@ private fun metricsForAssetType(
 
     return when (assetType.lowercase()) {
         // FIIs: show income/asset-value indicators first.
-        "fii" -> listOf(dy, pvp, pl, ev, netMargin, netDebt)
+        "fii" -> listOf(
+            dy12m,
+            pvp,
+            dailyLiquidity,
+            vacancyFinancial,
+            contractTermWault,
+            atypicalContractsRatio,
+            top5TenantsConcentration,
+        )
         // ETFs usually have limited fundamentals from free providers.
         "etf" -> listOf(pvp, dy, pl, ev)
         // BDRs behave similar to equities, keep equity set with P/VP visible.

@@ -59,7 +59,26 @@ class FundamentusProvider:
 
         pl = extract("P/L")
         pvp = extract("P/VP")
+        daily_liquidity = extract_any("Liq.2meses", "Liq. 2 meses", "Liquidez Média Diária")
         dy = extract("Div. Yield")
+        dy_12m = extract_any("Div.Yield", "Div. Yield")
+        vacancy_financial = extract_any("Vacância Financeira", "Vacância Financ.")
+        contract_term_wault = extract_any(
+            "Prazo médio contratos",
+            "Prazo médio dos contratos",
+            "Prazo Médio dos Contratos",
+            "WAULT",
+        )
+        atypical_contracts_ratio = extract_any(
+            "% de contratos atípicos",
+            "Contratos Atípicos",
+            "% Contratos Atípicos",
+        )
+        top5_tenants_concentration = extract_any(
+            "% top 5 inquilinos",
+            "Top 5 inquilinos",
+            "Concentração top 5 inquilinos",
+        )
         roe = extract("ROE")
         ev_ebitda = extract_any("EV/EBITDA", "EV / EBITDA")
         net_margin = extract_any("Marg. Líquida", "Margem Líquida")
@@ -70,7 +89,24 @@ class FundamentusProvider:
             "Dívida Líquida/EBITDA",
         )
         eps = extract_any("LPA")
-        if not any([pl, pvp, dy, roe, ev_ebitda, net_margin, net_debt_ebitda, eps]):
+        if not any(
+            [
+                pl,
+                pvp,
+                daily_liquidity,
+                dy,
+                dy_12m,
+                vacancy_financial,
+                contract_term_wault,
+                atypical_contracts_ratio,
+                top5_tenants_concentration,
+                roe,
+                ev_ebitda,
+                net_margin,
+                net_debt_ebitda,
+                eps,
+            ]
+        ):
             return None
         company_name = extract("Empresa")
         return {
@@ -78,7 +114,13 @@ class FundamentusProvider:
             "company_name": company_name,
             "pl": pl,
             "pvp": pvp,
+            "daily_liquidity": daily_liquidity,
             "dividend_yield": dy,
+            "dividend_yield_12m": dy_12m,
+            "vacancy_financial": vacancy_financial,
+            "contract_term_wault": contract_term_wault,
+            "atypical_contracts_ratio": atypical_contracts_ratio,
+            "top5_tenants_concentration": top5_tenants_concentration,
             "roe": roe,
             "ev_ebitda": ev_ebitda,
             "net_margin": net_margin,

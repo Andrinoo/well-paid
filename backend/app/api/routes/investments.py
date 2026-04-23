@@ -11,6 +11,7 @@ from app.domain.asset_types import normalize_asset_type
 from app.models.user import User
 from app.schemas.investments import (
     EquityFundamentalsOut,
+    EquityFundamentalsDiagnosticsOut,
     EquityFundamentalsHistoryPointOut,
     InvestmentEvolutionPointOut,
     InvestmentOverviewOut,
@@ -216,7 +217,13 @@ def read_equity_fundamentals(
         company_name=data.get("company_name"),
         pl=data.get("pl"),
         pvp=data.get("pvp"),
+        daily_liquidity=data.get("daily_liquidity"),
         dividend_yield=data.get("dividend_yield"),
+        dividend_yield_12m=data.get("dividend_yield_12m"),
+        vacancy_financial=data.get("vacancy_financial"),
+        contract_term_wault=data.get("contract_term_wault"),
+        atypical_contracts_ratio=data.get("atypical_contracts_ratio"),
+        top5_tenants_concentration=data.get("top5_tenants_concentration"),
         roe=data.get("roe"),
         ev_ebitda=data.get("ev_ebitda"),
         net_margin=data.get("net_margin"),
@@ -224,6 +231,42 @@ def read_equity_fundamentals(
         eps=data.get("eps"),
         source=str(data.get("source") or "fundamentus"),
         confidence=data.get("confidence"),
+    )
+
+
+@router.get("/fundamentals/diagnostics", response_model=EquityFundamentalsDiagnosticsOut)
+@limiter.limit("30/minute")
+def read_equity_fundamentals_diagnostics(
+    request: Request,
+    user: Annotated[User, Depends(get_current_user)],
+    symbol: Annotated[str, Query(min_length=1, max_length=12, description="Ticker B3, ex. HGLG11")],
+) -> EquityFundamentalsDiagnosticsOut:
+    try:
+        data = market_data_router.fundamentals(symbol)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ticker inválido")
+    if data is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fundamentos indisponíveis")
+
+    tracked_fields = {
+        "dividend_yield_12m": data.get("dividend_yield_12m"),
+        "pvp": data.get("pvp"),
+        "daily_liquidity": data.get("daily_liquidity"),
+        "vacancy_financial": data.get("vacancy_financial"),
+        "contract_term_wault": data.get("contract_term_wault"),
+        "atypical_contracts_ratio": data.get("atypical_contracts_ratio"),
+        "top5_tenants_concentration": data.get("top5_tenants_concentration"),
+    }
+    present_fields = [k for k, v in tracked_fields.items() if v not in (None, "")]
+    missing_fields = [k for k, v in tracked_fields.items() if v in (None, "")]
+    return EquityFundamentalsDiagnosticsOut(
+        symbol=str(data.get("symbol") or symbol.strip().upper()),
+        source=str(data.get("source") or "fundamentus"),
+        fields=tracked_fields,
+        present_fields=present_fields,
+        missing_fields=missing_fields,
+        present_count=len(present_fields),
+        missing_count=len(missing_fields),
     )
 
 
