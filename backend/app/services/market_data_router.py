@@ -6,7 +6,10 @@ from typing import Any
 
 from app.services.providers.b3_provider import B3Provider
 from app.services.providers.brapi_provider import BrapiProvider
-from app.services.investment_brapi import fetch_stock_quote_snapshot_brapi
+from app.services.investment_brapi import (
+    fetch_brapi_key_statistics_enrichment,
+    fetch_stock_quote_snapshot_brapi,
+)
 from app.services.providers.fundamentus_provider import FundamentusProvider
 from app.services.providers.sgs_provider import SgsProvider
 
@@ -68,12 +71,21 @@ class MarketDataRouterService:
         data = self.fundamentus.fundamentals(ticker)
         if data is None:
             return None
-        # Nome comercial: preferir BRAPI (shortName/longName), fallback Fundamentus ("Empresa").
-        snap = fetch_stock_quote_snapshot_brapi(ticker)
-        if snap:
-            name = str(snap.get("name") or "").strip()
-            if name:
-                data["company_name"] = name
+        # EV/EBITDA: preferir BRAPI (enterpriseToEbitda, JSON) sobre regex Fundamentus.
+        brapi_ks = fetch_brapi_key_statistics_enrichment(ticker)
+        if brapi_ks:
+            if brapi_ks.get("ev_ebitda"):
+                data["ev_ebitda"] = brapi_ks["ev_ebitda"]
+            n = (brapi_ks.get("company_name") or "").strip()
+            if n:
+                data["company_name"] = n
+        if not (data.get("company_name") or "").strip():
+            # Nome: snapshot simples se o módulo key stats não devolveu nome.
+            snap = fetch_stock_quote_snapshot_brapi(ticker)
+            if snap:
+                name = str(snap.get("name") or "").strip()
+                if name:
+                    data["company_name"] = name
         return data
 
     def top_movers(self, window: str, limit: int = 10) -> list[dict[str, Any]]:

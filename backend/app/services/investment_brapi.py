@@ -16,6 +16,66 @@ _BRAPI_BASE = "https://brapi.dev/api"
 _USER_AGENT = "WellPaid/1.0 brapi-quote"
 
 
+def _format_pt_decimal2(value: Any) -> str | None:
+    """Número API → string com vírgula (ex. EV/EBITDA), ou None se inválido."""
+    if value is None:
+        return None
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return None
+    s = f"{v:.2f}".replace(".", ",")
+    return s
+
+
+def fetch_brapi_key_statistics_enrichment(symbol: str) -> dict[str, Any] | None:
+    """
+    Uma chamada: GET /quote/{SYM}?modules=defaultKeyStatistics
+
+    - enterpriseToEbitda (Yahoo) ≈ rácio EV/EBITDA, sem parsing HTML.
+    - Nome: shortName / longName no mesmo payload.
+
+    Retorno: {"ev_ebitda": str | None, "company_name": str | None} ou None se HTTP/JSON inválido.
+    """
+    s = (symbol or "").strip().upper()
+    if not s or len(s) > 12:
+        return None
+    token = (get_settings().brapi_api_key or "").strip()
+    params: dict[str, str] = {"modules": "defaultKeyStatistics"}
+    if token:
+        params["token"] = token
+    try:
+        with httpx.Client(timeout=14.0, headers={"User-Agent": _USER_AGENT}) as client:
+            r = client.get(f"{_BRAPI_BASE}/quote/{s}", params=params)
+    except Exception:
+        logger.exception("BRAPI key statistics request failed for %s", s)
+        return None
+    if r.status_code != 200:
+        logger.warning("BRAPI key statistics HTTP %s for %s", r.status_code, s)
+        return None
+    try:
+        data = r.json()
+    except Exception:
+        return None
+    results = data.get("results") or []
+    if not results or not isinstance(results[0], dict):
+        return None
+    row = results[0]
+    name = str(
+        row.get("longName") or row.get("shortName") or row.get("name") or ""
+    ).strip()
+    dks = row.get("defaultKeyStatistics")
+    ev: str | None = None
+    if isinstance(dks, dict):
+        ev = _format_pt_decimal2(dks.get("enterpriseToEbitda"))
+    if not name and not ev:
+        return None
+    return {
+        "ev_ebitda": ev,
+        "company_name": name or None,
+    }
+
+
 def fetch_stock_quote_brapi(symbol: str) -> dict[str, Any] | None:
     """
     Retorna { last_price, as_of, raw_error } ou None se falha de rede/HTTP.
