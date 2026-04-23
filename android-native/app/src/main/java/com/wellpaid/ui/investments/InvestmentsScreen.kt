@@ -20,7 +20,9 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -39,7 +41,6 @@ import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.TrackChanges
-import androidx.compose.material.icons.outlined.AccountBalance
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -52,6 +53,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -61,10 +63,12 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -265,33 +269,34 @@ fun InvestmentsScreen(
                 onBack = { viewModel.closeSearchResults() },
             )
         } else {
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(4.dp))
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(WellPaidNavyDeep, RoundedCornerShape(16.dp))
-                .padding(14.dp),
+                .background(WellPaidNavyDeep, RoundedCornerShape(12.dp))
+                .padding(horizontal = 10.dp, vertical = 8.dp),
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 Icon(
                     imageVector = Icons.Filled.Savings,
                     contentDescription = null,
+                    modifier = Modifier.size(20.dp),
                     tint = WellPaidGold,
                 )
                 Text(
                     text = stringResource(R.string.investments_summary_title),
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.labelLarge,
                     color = Color.White,
                     fontWeight = FontWeight.SemiBold,
                 )
             }
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(6.dp))
             Text(
                 text = formatBrlFromCents(overview?.totalAllocatedCents ?: 0),
-                style = MaterialTheme.typography.headlineSmall,
+                style = MaterialTheme.typography.titleLarge,
                 color = WellPaidGold,
                 fontWeight = FontWeight.Bold,
             )
@@ -304,7 +309,7 @@ fun InvestmentsScreen(
                 color = Color.White.copy(alpha = 0.8f),
             )
             state.macroSnapshot?.let { macro ->
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(2.dp))
                 Text(
                     text = "CDI ${macro.cdi ?: "—"} · SELIC ${macro.selic ?: "—"} · IPCA ${macro.ipca ?: "—"}",
                     style = MaterialTheme.typography.labelSmall,
@@ -312,7 +317,7 @@ fun InvestmentsScreen(
                 )
             }
             if (overview?.ratesFallbackUsed == true) {
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(4.dp))
                 Text(
                     text = stringResource(R.string.investments_rates_estimated_badge),
                     style = MaterialTheme.typography.labelSmall,
@@ -320,7 +325,7 @@ fun InvestmentsScreen(
                     fontWeight = FontWeight.SemiBold,
                 )
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(8.dp))
             OutlinedTextField(
                 value = state.globalSearchText,
                 onValueChange = { viewModel.setGlobalSearchText(it) },
@@ -339,13 +344,13 @@ fun InvestmentsScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 6.dp),
+                    .padding(top = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = stringResource(R.string.investments_family_search_toggle),
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MaterialTheme.typography.labelSmall,
                     color = Color.White.copy(alpha = 0.9f),
                 )
                 Switch(
@@ -355,12 +360,12 @@ fun InvestmentsScreen(
             }
             Text(
                 text = stringResource(R.string.investments_global_search_helper),
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.labelSmall,
                 color = Color.White.copy(alpha = 0.75f),
             )
         }
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(8.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -592,39 +597,52 @@ fun InvestmentsScreen(
     state.selectedPositionId?.let { selectedId ->
         val selected = state.positions.firstOrNull { it.id == selectedId }
         if (selected != null) {
-            ModalBottomSheet(
-                onDismissRequest = { viewModel.closePositionDetails() },
-            ) {
-                InvestmentPositionDetailsSheet(
-                    name = selected.name,
-                    line = stringResource(
-                        R.string.investments_position_line,
-                        investmentInstrumentLabel(selected.instrumentType),
-                        formatBrlFromCents(selected.principalCents),
-                        selected.annualRateBps / 100f,
-                    ),
-                    fundamentals = state.positionDetailsFundamentals,
-                    isLoadingFundamentals = state.isLoadingPositionDetailsFundamentals,
-                    onTopUp = {
-                        val id = selected.id
-                        viewModel.closePositionDetails()
-                        onOpenAporte(id)
-                    },
-                    onDelete = {
-                        viewModel.deletePosition(selected.id)
-                        viewModel.closePositionDetails()
-                    },
-                    historyPoints = state.selectedPositionHistory,
-                    historyRange = state.selectedHistoryRange,
-                    historySymbol = state.selectedPositionHistorySymbol,
-                    historySource = state.selectedPositionHistorySource,
-                    historyConfidence = state.selectedPositionHistoryConfidence,
-                    isLoadingHistory = state.isLoadingHistory,
-                    historyErrorMessage = state.historyErrorMessage,
-                    buckets = overview?.buckets.orEmpty(),
-                    onSelectRange = { viewModel.setHistoryRange(it) },
-                    onClose = { viewModel.closePositionDetails() },
+            key(selectedId) {
+                val positionSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+                val positionSheetTopFlat = RoundedCornerShape(
+                    topStart = 0.dp,
+                    topEnd = 0.dp,
+                    bottomStart = 20.dp,
+                    bottomEnd = 20.dp,
                 )
+                ModalBottomSheet(
+                    onDismissRequest = { viewModel.closePositionDetails() },
+                    sheetState = positionSheetState,
+                    shape = positionSheetTopFlat,
+                    containerColor = WellPaidCream,
+                    dragHandle = null,
+                ) {
+                    InvestmentPositionDetailsSheet(
+                        name = selected.name,
+                        line = stringResource(
+                            R.string.investments_position_line,
+                            investmentInstrumentLabel(selected.instrumentType),
+                            formatBrlFromCents(selected.principalCents),
+                            selected.annualRateBps / 100f,
+                        ),
+                        fundamentals = state.positionDetailsFundamentals,
+                        isLoadingFundamentals = state.isLoadingPositionDetailsFundamentals,
+                        onTopUp = {
+                            val id = selected.id
+                            viewModel.closePositionDetails()
+                            onOpenAporte(id)
+                        },
+                        onDelete = {
+                            viewModel.deletePosition(selected.id)
+                            viewModel.closePositionDetails()
+                        },
+                        historyPoints = state.selectedPositionHistory,
+                        historyRange = state.selectedHistoryRange,
+                        historySymbol = state.selectedPositionHistorySymbol,
+                        historySource = state.selectedPositionHistorySource,
+                        historyConfidence = state.selectedPositionHistoryConfidence,
+                        isLoadingHistory = state.isLoadingHistory,
+                        historyErrorMessage = state.historyErrorMessage,
+                        buckets = overview?.buckets.orEmpty(),
+                        onSelectRange = { viewModel.setHistoryRange(it) },
+                        onClose = { viewModel.closePositionDetails() },
+                    )
+                }
             }
         }
     }
@@ -651,14 +669,14 @@ private fun InvestmentEvolutionChart(
         modifier = modifier
             .background(
                 color = WellPaidCreamMuted.copy(alpha = 0.54f),
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(10.dp),
             )
             .border(
                 width = 1.dp,
                 color = WellPaidGold.copy(alpha = 0.35f),
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(10.dp),
             )
-            .padding(12.dp),
+            .padding(horizontal = 8.dp, vertical = 6.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -685,7 +703,7 @@ private fun InvestmentEvolutionChart(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(4.dp))
         if (isLoading) {
             Text(
                 text = stringResource(R.string.investments_loading_button),
@@ -712,11 +730,11 @@ private fun InvestmentEvolutionChart(
                 color = WellPaidNavy,
                 fontWeight = FontWeight.Bold,
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(4.dp))
             Canvas(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(100.dp),
+                    .height(72.dp),
             ) {
                 val width = size.width
                 val height = size.height
@@ -769,7 +787,7 @@ private fun InvestmentEvolutionChart(
         }
 
         if (buckets.isNotEmpty()) {
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(6.dp))
             buckets.forEach { bucket ->
                 Text(
                     text = stringResource(
@@ -778,7 +796,7 @@ private fun InvestmentEvolutionChart(
                         formatBrlFromCents(bucket.yieldCents),
                         bucket.yieldPctMonth,
                     ),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -885,10 +903,6 @@ private fun InvestmentPositionCard(
 ) {
     val onGold = WellPaidNavy
     val principal = formatBrlFromCents(position.principalCents)
-    val exchange = if (position.instrumentType.equals("stocks", ignoreCase = true)) "B3" else "—"
-    val exampleName = fundamentals?.companyName?.trim()?.takeIf { it.isNotEmpty() }
-        ?: position.description?.trim()?.takeIf { it.isNotEmpty() }
-        ?: "—"
     val metricOr = { s: String? -> if (s.isNullOrBlank()) "—" else s }
     val pl = metricOr(fundamentals?.pl)
     val roe = metricOr(fundamentals?.roe)
@@ -964,29 +978,6 @@ private fun InvestmentPositionCard(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    Spacer(Modifier.height(4.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.AccountBalance,
-                            contentDescription = null,
-                            modifier = Modifier.size(15.dp),
-                            tint = onGold.copy(alpha = 0.9f),
-                        )
-                        Text(
-                            text = stringResource(
-                                R.string.investments_position_card_subtitle,
-                                exchange,
-                                exampleName,
-                            ),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = onGold.copy(alpha = 0.88f),
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
                 }
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
@@ -995,12 +986,12 @@ private fun InvestmentPositionCard(
                     modifier = Modifier.padding(start = 4.dp),
                 )
             }
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(6.dp))
             HorizontalDivider(
                 thickness = 0.5.dp,
                 color = onGold.copy(alpha = 0.2f),
             )
-            Spacer(Modifier.height(2.dp))
+            Spacer(Modifier.height(1.dp))
             PositionFundamentalRow(
                 icon = Icons.Filled.BarChart,
                 label = stringResource(R.string.investments_metric_pl),
@@ -1074,7 +1065,7 @@ private fun PositionFundamentalRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 5.dp),
+                .padding(vertical = 3.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
@@ -1135,11 +1126,19 @@ private fun InvestmentPositionDetailsSheet(
     onDelete: () -> Unit,
     onClose: () -> Unit,
 ) {
+    val config = LocalConfiguration.current
+    val maxBodyHeight = kotlin.math.min(
+        (config.screenHeightDp * 0.92f).toInt(),
+        700,
+    ).dp
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+            .heightIn(max = maxBodyHeight)
+            .verticalScroll(rememberScrollState())
+            .navigationBarsPadding()
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Text(
             text = name,
@@ -1147,7 +1146,9 @@ private fun InvestmentPositionDetailsSheet(
             fontWeight = FontWeight.SemiBold,
             color = WellPaidNavy,
         )
-        fundamentals?.companyName?.trim()?.takeIf { it.isNotEmpty() }?.let { company ->
+        fundamentals?.companyName?.trim()?.takeIf { cn ->
+            cn.isNotEmpty() && !cn.equals(name, ignoreCase = true)
+        }?.let { company ->
             Text(
                 text = company,
                 style = MaterialTheme.typography.bodyMedium,
