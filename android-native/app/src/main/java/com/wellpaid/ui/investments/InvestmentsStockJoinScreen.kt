@@ -271,7 +271,6 @@ private fun metricsForAssetType(
         // BDRs behave similar to equities, keep equity set with P/VP visible.
         "bdr", "stock", "stocks" -> listOf(dy, pl, pvp, roe, ev, netMargin, netDebt, eps)
         else -> listOf(dy, pl, pvp, roe, ev, netMargin, netDebt, eps)
-        }
     }
 }
 
