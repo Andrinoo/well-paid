@@ -106,6 +106,17 @@ def fetch_brapi_key_statistics_enrichment(symbol: str) -> dict[str, Any] | None:
                 dy = _format_pt_decimal2(dy_val * 100.0 if dy_val <= 1 else dy_val)
         except (TypeError, ValueError):
             dy = None
+    # Some instruments (especially FIIs/ETFs/BDRs) expose these fields at root level.
+    if pvp is None:
+        pvp = _format_pt_decimal2(row.get("priceToBook"))
+    if dy is None:
+        try:
+            root_dy = row.get("dividendYield")
+            if root_dy is not None:
+                root_dy_val = float(root_dy)
+                dy = _format_pt_decimal2(root_dy_val * 100.0 if root_dy_val <= 1 else root_dy_val)
+        except (TypeError, ValueError):
+            dy = None
 
     if not name and not ev and not net_debt_e and not pvp and not dy:
         return None

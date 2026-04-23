@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import re
+import html as html_lib
 from dataclasses import dataclass
 from typing import Any
 
@@ -31,13 +32,23 @@ class FundamentusProvider:
         html = r.text or ""
         # Parsing simples para evitar dependência extra:
         def extract(label: str) -> str | None:
-            # Busca célula textual seguida do próximo valor na tabela.
-            pattern = rf"{re.escape(label)}.*?<td[^>]*>(.*?)</td>"
-            m = re.search(pattern, html, flags=re.IGNORECASE | re.DOTALL)
-            if not m:
-                return None
-            value = re.sub(r"<[^>]+>", "", m.group(1)).strip()
-            return value or None
+            # Fundamentus muda bastante a estrutura (td/span/classes). Tentamos formatos comuns.
+            escaped = re.escape(label)
+            patterns = [
+                rf"<td[^>]*>\s*{escaped}\s*</td>\s*<td[^>]*>(.*?)</td>",
+                rf"<span[^>]*class=[\"'][^\"']*txt[^\"']*[\"'][^>]*>\s*{escaped}\s*</span>.*?<span[^>]*class=[\"'][^\"']*data[^\"']*[\"'][^>]*>(.*?)</span>",
+                rf"<span[^>]*class=[\"'][^\"']*txt[^\"']*[\"'][^>]*>\s*{escaped}\s*</span>.*?<span[^>]*>(.*?)</span>",
+                rf"{escaped}.*?<td[^>]*class=[\"'][^\"']*data[^\"']*[\"'][^>]*>(.*?)</td>",
+            ]
+            for pattern in patterns:
+                m = re.search(pattern, html, flags=re.IGNORECASE | re.DOTALL)
+                if not m:
+                    continue
+                raw = re.sub(r"<[^>]+>", "", m.group(1))
+                raw = html_lib.unescape(raw).replace("\xa0", " ").strip()
+                if raw:
+                    return raw
+            return None
 
         def extract_any(*labels: str) -> str | None:
             for lb in labels:
