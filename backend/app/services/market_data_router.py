@@ -17,6 +17,13 @@ from app.services.providers.sgs_provider import SgsProvider
 _TICKER_RX = re.compile(r"^[A-Z]{4}\d{1,2}$")
 _TICKER_FAMILY_RX = re.compile(r"^([A-Z]{4})(\d{1,2})?$")
 _ALLOWED_RANGES = {"5m", "30m", "60m", "3h", "12h", "1d", "1w", "1m", "3m", "6m", "1y", "2y", "3y"}
+_RANGE_ALIASES = {
+    "3mo": "3m",
+    "6mo": "6m",
+    "12m": "1y",
+    "24m": "2y",
+    "36m": "3y",
+}
 _ALLOWED_MOVER_WINDOWS = {"hour", "day", "week"}
 
 
@@ -35,6 +42,7 @@ class MarketDataRouterService:
 
     def _normalize_range(self, range_key: str) -> str:
         key = (range_key or "").strip().lower()
+        key = _RANGE_ALIASES.get(key, key)
         if key not in _ALLOWED_RANGES:
             raise ValueError("range_invalid")
         return key

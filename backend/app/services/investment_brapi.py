@@ -301,9 +301,11 @@ def fetch_stock_history_brapi(symbol: str, range_key: str) -> dict[str, Any] | N
         return None
     brapi_range, interval = _map_range_to_brapi(range_key)
     interval_candidates = [interval]
-    if brapi_range in {"1y", "2y"} and interval != "1wk":
+    # BRAPI can reject some range/interval combinations with HTTP 400.
+    # For medium/long windows, progressively widen the granularity.
+    if brapi_range in {"3mo", "6mo", "1y", "2y", "3y"} and "1wk" not in interval_candidates:
         interval_candidates.append("1wk")
-    if brapi_range in {"1y", "2y", "3y"} and "1mo" not in interval_candidates:
+    if brapi_range in {"3mo", "6mo", "1y", "2y", "3y"} and "1mo" not in interval_candidates:
         interval_candidates.append("1mo")
     # Preserve order but avoid duplicates.
     interval_candidates = list(dict.fromkeys(interval_candidates))
