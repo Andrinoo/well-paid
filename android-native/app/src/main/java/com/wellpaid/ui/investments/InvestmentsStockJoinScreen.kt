@@ -39,6 +39,7 @@ import com.wellpaid.ui.theme.WellPaidPositive
 private val JoinCardCorner = RoundedCornerShape(14.dp)
 private val JoinHeroCorner = RoundedCornerShape(16.dp)
 private val JoinFieldCorner = RoundedCornerShape(12.dp)
+private data class JoinMetric(val label: String, val value: String)
 
 @Composable
 fun InvestmentsStockJoinScreen(
@@ -115,7 +116,12 @@ fun InvestmentsStockJoinScreen(
                         fontWeight = FontWeight.Medium,
                     )
                 }
-                state.selectedFundamentals?.let { f -> StockJoinFundamentalsRow(fundamentals = f) }
+                state.selectedFundamentals?.let { f ->
+                    StockJoinFundamentalsRow(
+                        assetType = state.newPositionType,
+                        fundamentals = f,
+                    )
+                }
             }
         }
 
@@ -205,52 +211,66 @@ fun InvestmentsStockJoinScreen(
 }
 
 @Composable
-private fun StockJoinFundamentalsRow(fundamentals: FundamentalPreviewUi) {
+private fun StockJoinFundamentalsRow(
+    assetType: String,
+    fundamentals: FundamentalPreviewUi,
+) {
+    val metrics = metricsForAssetType(assetType, fundamentals)
+    val firstRow = metrics.take(4)
+    val secondRow = metrics.drop(4).take(4)
+
     Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            StockJoinMetricCell(
-                modifier = Modifier.weight(1f),
-                label = stringResource(R.string.investments_metric_dy),
-                value = fundamentals.dy ?: "—",
-            )
-            StockJoinMetricCell(
-                modifier = Modifier.weight(1f),
-                label = stringResource(R.string.investments_metric_pl),
-                value = fundamentals.pl ?: "—",
-            )
-            StockJoinMetricCell(
-                modifier = Modifier.weight(1f),
-                label = stringResource(R.string.investments_metric_roe),
-                value = fundamentals.roe ?: "—",
-            )
-            StockJoinMetricCell(
-                modifier = Modifier.weight(1f),
-                label = stringResource(R.string.investments_metric_ev_ebitda),
-                value = fundamentals.evEbitda ?: "—",
-            )
+            firstRow.forEach { metric ->
+                StockJoinMetricCell(
+                    modifier = Modifier.weight(1f),
+                    label = metric.label,
+                    value = metric.value,
+                )
+            }
         }
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            StockJoinMetricCell(
-                modifier = Modifier.weight(1f),
-                label = stringResource(R.string.investments_metric_net_margin),
-                value = fundamentals.netMargin ?: "—",
-            )
-            StockJoinMetricCell(
-                modifier = Modifier.weight(1f),
-                label = stringResource(R.string.investments_metric_net_debt_ebitda),
-                value = fundamentals.netDebtEbitda ?: "—",
-            )
-            StockJoinMetricCell(
-                modifier = Modifier.weight(1f),
-                label = stringResource(R.string.investments_metric_eps),
-                value = fundamentals.eps ?: "—",
-            )
+        if (secondRow.isNotEmpty()) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                secondRow.forEach { metric ->
+                    StockJoinMetricCell(
+                        modifier = Modifier.weight(1f),
+                        label = metric.label,
+                        value = metric.value,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun metricsForAssetType(
+    assetType: String,
+    fundamentals: FundamentalPreviewUi,
+): List<JoinMetric> {
+    val dy = JoinMetric(stringResource(R.string.investments_metric_dy), fundamentals.dy ?: "—")
+    val pvp = JoinMetric(stringResource(R.string.investments_metric_pvp), fundamentals.pvp ?: "—")
+    val pl = JoinMetric(stringResource(R.string.investments_metric_pl), fundamentals.pl ?: "—")
+    val roe = JoinMetric(stringResource(R.string.investments_metric_roe), fundamentals.roe ?: "—")
+    val ev = JoinMetric(stringResource(R.string.investments_metric_ev_ebitda), fundamentals.evEbitda ?: "—")
+    val netMargin = JoinMetric(stringResource(R.string.investments_metric_net_margin), fundamentals.netMargin ?: "—")
+    val netDebt = JoinMetric(stringResource(R.string.investments_metric_net_debt_ebitda), fundamentals.netDebtEbitda ?: "—")
+    val eps = JoinMetric(stringResource(R.string.investments_metric_eps), fundamentals.eps ?: "—")
+
+    return when (assetType.lowercase()) {
+        // FIIs: show income/asset-value indicators first.
+        "fii" -> listOf(dy, pvp, pl, ev, netMargin, netDebt)
+        // ETFs usually have limited fundamentals from free providers.
+        "etf" -> listOf(pvp, dy, pl, ev)
+        // BDRs behave similar to equities, keep equity set with P/VP visible.
+        "bdr", "stock", "stocks" -> listOf(dy, pl, pvp, roe, ev, netMargin, netDebt, eps)
+        else -> listOf(dy, pl, pvp, roe, ev, netMargin, netDebt, eps)
         }
     }
 }

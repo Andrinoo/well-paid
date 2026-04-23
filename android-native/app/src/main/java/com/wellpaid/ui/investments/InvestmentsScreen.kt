@@ -386,7 +386,12 @@ fun InvestmentsScreen(
         }
         Spacer(Modifier.height(8.dp))
 
-        if (state.showCreatePositionForm) {
+        if (
+            state.showCreatePositionForm &&
+            !state.showStockJoinScreen &&
+            !state.showFixedIncomeJoinScreen &&
+            !state.showSearchResultsScreen
+        ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
