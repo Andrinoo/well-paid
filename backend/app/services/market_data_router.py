@@ -86,15 +86,36 @@ class MarketDataRouterService:
     def fundamentals(self, symbol: str) -> dict[str, Any] | None:
         ticker = self._normalize_ticker(symbol)
         data = self.fundamentus.fundamentals(ticker)
-        if data is None:
-            return None
-        # EV/EBITDA: preferir BRAPI (enterpriseToEbitda, JSON) sobre regex Fundamentus.
         brapi_ks = fetch_brapi_key_statistics_enrichment(ticker)
+        if data is None:
+            if not brapi_ks:
+                return None
+            # Minimal fallback payload when Fundamentus is unavailable.
+            data = {
+                "symbol": ticker,
+                "company_name": brapi_ks.get("company_name"),
+                "pl": None,
+                "pvp": brapi_ks.get("pvp"),
+                "dividend_yield": brapi_ks.get("dividend_yield"),
+                "roe": None,
+                "ev_ebitda": brapi_ks.get("ev_ebitda"),
+                "net_margin": None,
+                "net_debt_ebitda": brapi_ks.get("net_debt_ebitda"),
+                "eps": None,
+                "source": "brapi",
+                "confidence": 0.72,
+            }
+            return data
+        # EV/EBITDA/PVP/DY: prefer BRAPI values when available.
         if brapi_ks:
             if brapi_ks.get("ev_ebitda"):
                 data["ev_ebitda"] = brapi_ks["ev_ebitda"]
             if brapi_ks.get("net_debt_ebitda"):
                 data["net_debt_ebitda"] = brapi_ks["net_debt_ebitda"]
+            if brapi_ks.get("pvp"):
+                data["pvp"] = brapi_ks["pvp"]
+            if brapi_ks.get("dividend_yield"):
+                data["dividend_yield"] = brapi_ks["dividend_yield"]
             n = (brapi_ks.get("company_name") or "").strip()
             if n:
                 data["company_name"] = n

@@ -63,7 +63,7 @@ def fetch_brapi_key_statistics_enrichment(symbol: str) -> dict[str, Any] | None:
         return None
     token = (get_settings().brapi_api_key or "").strip()
     params: dict[str, str] = {
-        "modules": "defaultKeyStatistics,financialData",
+        "modules": "defaultKeyStatistics,financialData,summaryDetail",
     }
     if token:
         params["token"] = token
@@ -93,11 +93,27 @@ def fetch_brapi_key_statistics_enrichment(symbol: str) -> dict[str, Any] | None:
         ev = _format_pt_decimal2(dks.get("enterpriseToEbitda"))
     fin = row.get("financialData")
     net_debt_e: str | None = _net_debt_to_ebitda_from_financial_data(fin)
-    if not name and not ev and not net_debt_e:
+    sd = row.get("summaryDetail")
+    pvp: str | None = None
+    dy: str | None = None
+    if isinstance(sd, dict):
+        pvp = _format_pt_decimal2(sd.get("priceToBook"))
+        # Convert ratio to percentage when BRAPI returns 0.x.
+        raw_dy = sd.get("dividendYield")
+        try:
+            if raw_dy is not None:
+                dy_val = float(raw_dy)
+                dy = _format_pt_decimal2(dy_val * 100.0 if dy_val <= 1 else dy_val)
+        except (TypeError, ValueError):
+            dy = None
+
+    if not name and not ev and not net_debt_e and not pvp and not dy:
         return None
     return {
         "ev_ebitda": ev,
         "net_debt_ebitda": net_debt_e,
+        "pvp": pvp,
+        "dividend_yield": dy,
         "company_name": name or None,
     }
 

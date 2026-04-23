@@ -19,10 +19,12 @@ import com.wellpaid.util.FastApiErrorMapper
 import com.wellpaid.util.parseBrlToCents
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
@@ -35,6 +37,7 @@ import java.util.regex.Pattern
 import javax.inject.Inject
 
 private val TickerPattern = Pattern.compile("([A-Za-z]{4}\\d{1,2})")
+private val StrictTickerPattern = Pattern.compile("^[A-Za-z]{4}\\d{1,2}$")
 val InvestmentHistoryRanges = listOf("5m", "30m", "60m", "3h", "12h", "1d", "1w", "1m", "3m", "6m", "1y")
 
 private fun normalizeAssetTypeKey(raw: String?): String {
@@ -146,8 +149,10 @@ class InvestmentsViewModel @Inject constructor(
     private val api: InvestmentsApi,
 ) : ViewModel() {
     private val searchMinLength = 3
+    private val autoOpenDelayMs = 700L
     private var formSearchRequestSeq: Long = 0
     private var globalSearchRequestSeq: Long = 0
+    private var globalAutoOpenJob: Job? = null
     private val _uiState = MutableStateFlow(InvestmentsUiState())
     val uiState: StateFlow<InvestmentsUiState> = _uiState.asStateFlow()
     private val formTickerQueryFlow = MutableSharedFlow<String>(extraBufferCapacity = 1)
@@ -629,7 +634,7 @@ class InvestmentsViewModel @Inject constructor(
                     if (q.lastPrice > 0) {
                         recalculatePrincipalFromStocks()
                     }
-                    if (normalizeAssetTypeKey(state.newPositionType) == "stock") {
+                    if (isEquityLikeAsset(state.newPositionType)) {
                         loadHistoryForSymbol(sym.uppercase(Locale.ROOT), state.selectedHistoryRange)
                     }
                 }
@@ -650,7 +655,7 @@ class InvestmentsViewModel @Inject constructor(
             it.copy(
                 newPositionName = value,
                 newPositionType = inferredType,
-                selectedFundamentals = if (normalizeAssetTypeKey(inferredType) == "stock") it.selectedFundamentals else null,
+                selectedFundamentals = if (isEquityLikeAsset(inferredType)) it.selectedFundamentals else null,
             )
         }
         formTickerQueryFlow.tryEmit(value.trim())
@@ -658,6 +663,7 @@ class InvestmentsViewModel @Inject constructor(
 
     fun setGlobalSearchText(value: String) {
         val trimmed = value.trim()
+        globalAutoOpenJob?.cancel()
         _uiState.update { it.copy(globalSearchText = value) }
         if (_uiState.value.familySearchEnabled) {
             globalTickerQueryFlow.tryEmit(trimmed)
@@ -674,24 +680,34 @@ class InvestmentsViewModel @Inject constructor(
             loadTopMoversIfNeeded()
         }
         if (!_uiState.value.familySearchEnabled) {
-            val maybeTicker = extractTickerFromText(trimmed)
-            if (!maybeTicker.isNullOrBlank() && maybeTicker.length >= 5) {
-                openStockJoin(maybeTicker)
-                return
-            }
-            val upper = trimmed.uppercase(Locale.ROOT)
-            if (upper == "CDB" || upper == "CDI" || upper.contains("RENDA FIXA")) {
-                val type = when {
-                    upper.contains("CDB") -> "cdb"
-                    upper.contains("CDI") -> "cdi"
-                    else -> "fixed_income"
+            if (trimmed.length >= searchMinLength) {
+                globalAutoOpenJob = viewModelScope.launch {
+                    // Wait a short idle window to avoid opening on partial typing (e.g. FIIP1 before FIIP11).
+                    delay(autoOpenDelayMs)
+                    if (_uiState.value.globalSearchText.trim() != trimmed) return@launch
+                    val upper = trimmed.uppercase(Locale.ROOT)
+                    if (StrictTickerPattern.matcher(upper).matches()) {
+                        val inferred = inferInstrumentType(upper)
+                        if (isEquityLikeAsset(inferred)) {
+                            openStockJoin(upper, inferred)
+                            return@launch
+                        }
+                    }
+                    if (upper == "CDB" || upper == "CDI" || upper.contains("RENDA FIXA")) {
+                        val type = when {
+                            upper.contains("CDB") -> "cdb"
+                            upper.contains("CDI") -> "cdi"
+                            else -> "fixed_income"
+                        }
+                        openFixedIncomeJoin(symbol = upper, instrumentType = type)
+                    }
                 }
-                openFixedIncomeJoin(symbol = upper, instrumentType = type)
             }
         }
     }
 
     fun clearGlobalSearch() {
+        globalAutoOpenJob?.cancel()
         _uiState.update {
             it.copy(
                 globalSearchText = "",
