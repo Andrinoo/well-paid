@@ -76,6 +76,8 @@ class MarketDataRouterService:
         if brapi_ks:
             if brapi_ks.get("ev_ebitda"):
                 data["ev_ebitda"] = brapi_ks["ev_ebitda"]
+            if brapi_ks.get("net_debt_ebitda"):
+                data["net_debt_ebitda"] = brapi_ks["net_debt_ebitda"]
             n = (brapi_ks.get("company_name") or "").strip()
             if n:
                 data["company_name"] = n

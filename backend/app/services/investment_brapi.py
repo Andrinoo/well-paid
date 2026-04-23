@@ -28,30 +28,53 @@ def _format_pt_decimal2(value: Any) -> str | None:
     return s
 
 
+def _net_debt_to_ebitda_from_financial_data(fin: Any) -> str | None:
+    """
+    Dívida líquida / EBITDA ≈ (totalDebt - totalCash) / ebitda (Yahoo financialData).
+    O Fundamentus muitas vezes não publica a linha «Dív. Líquida/EBITDA» no HTML.
+    """
+    if not isinstance(fin, dict):
+        return None
+    try:
+        total_debt = float(fin.get("totalDebt") or 0)
+        total_cash = float(fin.get("totalCash") or 0)
+        ebitda = float(fin.get("ebitda") or 0)
+    except (TypeError, ValueError):
+        return None
+    if ebitda <= 0:
+        return None
+    net_debt = total_debt - total_cash
+    ratio = net_debt / ebitda
+    return _format_pt_decimal2(ratio)
+
+
 def fetch_brapi_key_statistics_enrichment(symbol: str) -> dict[str, Any] | None:
     """
-    Uma chamada: GET /quote/{SYM}?modules=defaultKeyStatistics
+    Uma chamada: GET /quote/{SYM}?modules=defaultKeyStatistics,financialData
 
-    - enterpriseToEbitda (Yahoo) ≈ rácio EV/EBITDA, sem parsing HTML.
-    - Nome: shortName / longName no mesmo payload.
+    - defaultKeyStatistics.enterpriseToEbitda → EV/EBITDA
+    - financialData (totalDebt, totalCash, ebitda) → dív. líq. / EBITDA
+    - Nome: longName / shortName
 
-    Retorno: {"ev_ebitda": str | None, "company_name": str | None} ou None se HTTP/JSON inválido.
+    Retorno: ev_ebitda, net_debt_ebitda, company_name; None se a resposta for inútil.
     """
     s = (symbol or "").strip().upper()
     if not s or len(s) > 12:
         return None
     token = (get_settings().brapi_api_key or "").strip()
-    params: dict[str, str] = {"modules": "defaultKeyStatistics"}
+    params: dict[str, str] = {
+        "modules": "defaultKeyStatistics,financialData",
+    }
     if token:
         params["token"] = token
     try:
-        with httpx.Client(timeout=14.0, headers={"User-Agent": _USER_AGENT}) as client:
+        with httpx.Client(timeout=16.0, headers={"User-Agent": _USER_AGENT}) as client:
             r = client.get(f"{_BRAPI_BASE}/quote/{s}", params=params)
     except Exception:
-        logger.exception("BRAPI key statistics request failed for %s", s)
+        logger.exception("BRAPI fundamental modules request failed for %s", s)
         return None
     if r.status_code != 200:
-        logger.warning("BRAPI key statistics HTTP %s for %s", r.status_code, s)
+        logger.warning("BRAPI fundamental modules HTTP %s for %s", r.status_code, s)
         return None
     try:
         data = r.json()
@@ -68,10 +91,13 @@ def fetch_brapi_key_statistics_enrichment(symbol: str) -> dict[str, Any] | None:
     ev: str | None = None
     if isinstance(dks, dict):
         ev = _format_pt_decimal2(dks.get("enterpriseToEbitda"))
-    if not name and not ev:
+    fin = row.get("financialData")
+    net_debt_e: str | None = _net_debt_to_ebitda_from_financial_data(fin)
+    if not name and not ev and not net_debt_e:
         return None
     return {
         "ev_ebitda": ev,
+        "net_debt_ebitda": net_debt_e,
         "company_name": name or None,
     }
 
