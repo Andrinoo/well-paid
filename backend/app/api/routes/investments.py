@@ -12,6 +12,7 @@ from app.schemas.investments import (
     EquityFundamentalsOut,
     InvestmentEvolutionPointOut,
     InvestmentOverviewOut,
+    InvestmentPositionAddPrincipal,
     InvestmentPositionCreate,
     InvestmentPositionOut,
     InvestmentSuggestedRatesOut,
@@ -24,6 +25,7 @@ from app.schemas.investments import (
 from app.services.investment_market_rates import get_suggested_annual_rates
 from app.services.market_data_router import market_data_router
 from app.services.investments import (
+    add_principal_to_position_for_user,
     create_position_for_user,
     delete_position_for_user,
     get_investment_evolution_for_user,
@@ -271,6 +273,37 @@ def create_investment_position(
                 ),
             ) from exc
         raise
+
+
+@router.patch("/positions/{position_id}", response_model=InvestmentPositionOut)
+@limiter.limit("30/minute")
+def patch_investment_position_add_principal(
+    request: Request,
+    position_id: str,
+    body: InvestmentPositionAddPrincipal,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> InvestmentPositionOut:
+    try:
+        out = add_principal_to_position_for_user(
+            db,
+            user.id,
+            position_id,
+            body.add_principal_cents,
+        )
+    except ValueError as exc:
+        if str(exc) == "investments_positions_unavailable":
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=(
+                    "Posições de investimento indisponíveis: execute "
+                    "python -m alembic upgrade head"
+                ),
+            ) from exc
+        raise
+    if out is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Posição não encontrada")
+    return out
 
 
 @router.delete("/positions/{position_id}", status_code=status.HTTP_204_NO_CONTENT)

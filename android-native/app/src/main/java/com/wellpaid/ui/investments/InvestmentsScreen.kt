@@ -3,6 +3,7 @@ package com.wellpaid.ui.investments
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
@@ -13,6 +14,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -28,6 +31,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -57,12 +61,17 @@ import com.wellpaid.ui.components.WellPaidPullToRefreshBox
 import com.wellpaid.ui.theme.WellPaidCream
 import com.wellpaid.ui.theme.WellPaidCreamMuted
 import com.wellpaid.ui.theme.WellPaidGold
+import com.wellpaid.ui.theme.WellPaidPositive
+import com.wellpaid.ui.theme.WellPaidExpenseLine
 import com.wellpaid.ui.theme.WellPaidNavy
 import com.wellpaid.ui.theme.WellPaidNavyDeep
 import com.wellpaid.ui.theme.WellPaidMaxContentWidth
 import com.wellpaid.ui.theme.wellPaidMaxContentWidth
 import com.wellpaid.ui.theme.wellPaidTopAppBarColors
 import com.wellpaid.util.formatBrlFromCents
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import java.util.Locale
 import kotlin.math.max
 
@@ -70,6 +79,7 @@ import kotlin.math.max
 @Composable
 fun InvestmentsScreen(
     onNavigateBack: () -> Unit,
+    onOpenAporte: (String) -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: InvestmentsViewModel = hiltViewModel(),
 ) {
@@ -128,6 +138,80 @@ fun InvestmentsScreen(
             .imePadding()
             .padding(innerPadding),
     ) {
+    if (state.showStockJoinScreen || state.showFixedIncomeJoinScreen) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .wellPaidMaxContentWidth(WellPaidMaxContentWidth)
+                .padding(horizontal = 12.dp, vertical = 0.dp),
+        ) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(vertical = 8.dp),
+            ) {
+                state.errorMessage?.let { msg ->
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = msg,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+                if (state.showStockJoinScreen) {
+                    InvestmentsStockJoinScreen(
+                        state = state,
+                        onDescriptionChange = { viewModel.setStockJoinDescription(it) },
+                        onModeByValueChange = { viewModel.setStockJoinModeByValue(it) },
+                        onQuantityChange = { viewModel.setQuantityText(it) },
+                        onValueChange = { viewModel.setStockJoinValueText(it) },
+                        onAveragePriceChange = { viewModel.setAveragePriceText(it) },
+                    )
+                } else {
+                    InvestmentsFixedIncomeJoinScreen(
+                        state = state,
+                        onDescriptionChange = { viewModel.setFixedIncomeDescription(it) },
+                        onPrincipalChange = { viewModel.setNewPositionPrincipalText(it) },
+                        onRateChange = { viewModel.setNewPositionAnnualRateText(it) },
+                    )
+                }
+            }
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp, bottom = 10.dp),
+            ) {
+                Button(
+                    onClick = { viewModel.createPosition() },
+                    enabled = !state.isSavingPosition,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .defaultMinSize(minHeight = 48.dp),
+                    shape = RoundedCornerShape(20.dp),
+                ) {
+                    Text(
+                        text = if (state.isSavingPosition) {
+                            stringResource(R.string.investments_saving_position)
+                        } else {
+                            stringResource(R.string.investments_save_position)
+                        },
+                    )
+                }
+                TextButton(
+                    onClick = {
+                        if (state.showStockJoinScreen) {
+                            viewModel.closeStockJoin()
+                        } else {
+                            viewModel.closeFixedIncomeJoin()
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text(stringResource(R.string.common_close)) }
+            }
+        }
+    } else {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -145,27 +229,7 @@ fun InvestmentsScreen(
             )
         }
 
-        if (state.showStockJoinScreen) {
-            InvestmentsStockJoinScreen(
-                state = state,
-                onDescriptionChange = { viewModel.setStockJoinDescription(it) },
-                onModeByValueChange = { viewModel.setStockJoinModeByValue(it) },
-                onQuantityChange = { viewModel.setQuantityText(it) },
-                onValueChange = { viewModel.setStockJoinValueText(it) },
-                onAveragePriceChange = { viewModel.setAveragePriceText(it) },
-                onSave = { viewModel.createPosition() },
-                onBack = { viewModel.closeStockJoin() },
-            )
-        } else if (state.showFixedIncomeJoinScreen) {
-            InvestmentsFixedIncomeJoinScreen(
-                state = state,
-                onDescriptionChange = { viewModel.setFixedIncomeDescription(it) },
-                onPrincipalChange = { viewModel.setNewPositionPrincipalText(it) },
-                onRateChange = { viewModel.setNewPositionAnnualRateText(it) },
-                onSave = { viewModel.createPosition() },
-                onBack = { viewModel.closeFixedIncomeJoin() },
-            )
-        } else if (state.showSearchResultsScreen) {
+        if (state.showSearchResultsScreen) {
             InvestmentsSearchScreen(
                 query = state.globalSearchText,
                 suggestions = state.globalTickerSuggestions,
@@ -331,7 +395,7 @@ fun InvestmentsScreen(
                             Column(modifier = Modifier.fillMaxWidth()) {
                                 Text("${suggestion.symbol} · ${suggestion.name}")
                                 Text(
-                                    text = "${instrumentLabelForKey(suggestion.instrumentType)} · ${suggestion.source.uppercase(Locale.ROOT)}",
+                                    text = "${investmentInstrumentLabel(suggestion.instrumentType)} · ${suggestion.source.uppercase(Locale.ROOT)}",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -480,16 +544,15 @@ fun InvestmentsScreen(
         state.positions.forEach { position ->
             val line = stringResource(
                 R.string.investments_position_line,
-                instrumentLabelForKey(position.instrumentType),
+                investmentInstrumentLabel(position.instrumentType),
                 formatBrlFromCents(position.principalCents),
                 position.annualRateBps / 100f,
             )
             InvestmentPositionCard(
                 name = position.name,
                 line = line,
-                instrumentType = position.instrumentType,
                 onDetails = { viewModel.openPositionDetails(position.id) },
-                onTopUp = { viewModel.startTopUpFromPosition(position.id) },
+                onTopUp = { onOpenAporte(position.id) },
                 onDelete = { viewModel.deletePosition(position.id) },
             )
             Spacer(Modifier.height(8.dp))
@@ -509,6 +572,7 @@ fun InvestmentsScreen(
         }
     }
     }
+    }
     state.selectedPositionId?.let { selectedId ->
         val selected = state.positions.firstOrNull { it.id == selectedId }
         if (selected != null) {
@@ -519,11 +583,17 @@ fun InvestmentsScreen(
                     name = selected.name,
                     line = stringResource(
                         R.string.investments_position_line,
-                        instrumentLabelForKey(selected.instrumentType),
+                        investmentInstrumentLabel(selected.instrumentType),
                         formatBrlFromCents(selected.principalCents),
                         selected.annualRateBps / 100f,
                     ),
-                    onTopUp = { viewModel.startTopUpFromPosition(selected.id) },
+                    fundamentals = state.positionDetailsFundamentals,
+                    isLoadingFundamentals = state.isLoadingPositionDetailsFundamentals,
+                    onTopUp = {
+                        val id = selected.id
+                        viewModel.closePositionDetails()
+                        onOpenAporte(id)
+                    },
                     onDelete = {
                         viewModel.deletePosition(selected.id)
                         viewModel.closePositionDetails()
@@ -614,7 +684,7 @@ private fun InvestmentEvolutionChart(
             )
         } else {
             Text(
-                text = selectedPoint?.asOf ?: "—",
+                text = formatAsOfForDisplay(selectedPoint?.asOf),
                 style = MaterialTheme.typography.labelMedium,
                 color = WellPaidNavy,
                 fontWeight = FontWeight.SemiBold,
@@ -630,7 +700,7 @@ private fun InvestmentEvolutionChart(
             Canvas(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(140.dp),
+                    .height(100.dp),
             ) {
                 val width = size.width
                 val height = size.height
@@ -651,18 +721,31 @@ private fun InvestmentEvolutionChart(
                     val normalized = (point.close - minClose).toFloat() / valueRange
                     val barHeight = (normalized * (height - 6f)).coerceAtLeast(8f)
                     val top = height - barHeight
+                    val prevClose = points.getOrNull(index - 1)?.close
+                    val baseColor = when {
+                        index == 0 || prevClose == null -> WellPaidGold
+                        point.close > (prevClose ?: 0.0) -> WellPaidPositive
+                        point.close < (prevClose ?: 0.0) -> WellPaidExpenseLine
+                        else -> WellPaidNavy
+                    }
+                    var bar = baseColor
+                    if (index == selectedIndex) {
+                        bar = bar.copy(alpha = (bar.alpha * 0.6f + 0.4f).coerceIn(0.5f, 1f))
+                    } else {
+                        bar = bar.copy(alpha = 0.72f)
+                    }
                     drawRoundRect(
-                        color = WellPaidGold.copy(alpha = if (index == selectedIndex) 0.96f else 0.72f),
+                        color = bar,
                         topLeft = androidx.compose.ui.geometry.Offset(x - (barWidth / 2f), top),
                         size = androidx.compose.ui.geometry.Size(barWidth, barHeight),
-                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(8f, 8f),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(6f, 6f),
                     )
                     if (index == selectedIndex) {
                         drawRoundRect(
-                            color = Color.White.copy(alpha = 0.95f),
+                            color = Color.White.copy(alpha = 0.9f),
                             topLeft = androidx.compose.ui.geometry.Offset(x - (barWidth / 2f), top),
-                            size = androidx.compose.ui.geometry.Size(barWidth, 3f),
-                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(6f, 6f),
+                            size = androidx.compose.ui.geometry.Size(barWidth, 2.5f),
+                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(4f, 4f),
                         )
                     }
                 }
@@ -707,11 +790,14 @@ private fun InvestmentPositionCompactRow(
                 color = WellPaidGold.copy(alpha = 0.35f),
                 shape = RoundedCornerShape(10.dp),
             )
-            .padding(horizontal = 10.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+            .padding(horizontal = 8.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(modifier = Modifier.weight(1f)) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .clickable(onClick = onDetails),
+        ) {
             Text(
                 text = name,
                 style = MaterialTheme.typography.labelLarge,
@@ -726,8 +812,10 @@ private fun InvestmentPositionCompactRow(
                 maxLines = 1,
             )
         }
-        TextButton(onClick = onDetails) { Text(stringResource(R.string.investments_view_details)) }
-        TextButton(onClick = onTopUp) { Text(stringResource(R.string.investments_top_up)) }
+        FilledTonalButton(
+            onClick = onTopUp,
+            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+        ) { Text(stringResource(R.string.investments_top_up), maxLines = 1) }
         IconButton(onClick = onDelete) {
             Icon(
                 imageVector = Icons.Filled.Delete,
@@ -742,7 +830,6 @@ private fun InvestmentPositionCompactRow(
 private fun InvestmentPositionCard(
     name: String,
     line: String,
-    instrumentType: String,
     onDetails: () -> Unit,
     onTopUp: () -> Unit,
     onDelete: () -> Unit,
@@ -761,31 +848,48 @@ private fun InvestmentPositionCard(
             )
             .padding(12.dp),
     ) {
-        Text(
-            text = name,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
-            color = WellPaidNavy,
-        )
-        Text(
-            text = line,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.height(4.dp))
-        Text(
-            text = instrumentLabelForKey(instrumentType),
-            style = MaterialTheme.typography.labelSmall,
-            color = WellPaidNavy.copy(alpha = 0.78f),
-            fontWeight = FontWeight.SemiBold,
-        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onDetails),
+        ) {
+            Text(
+                text = name,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = WellPaidNavy,
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = line,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Spacer(Modifier.height(8.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            TextButton(onClick = onDetails) { Text(stringResource(R.string.investments_view_details)) }
-            TextButton(onClick = onTopUp) { Text(stringResource(R.string.investments_top_up)) }
-            TextButton(onClick = onDelete) { Text(stringResource(R.string.investments_delete_position)) }
+            FilledTonalButton(
+                onClick = onTopUp,
+                modifier = Modifier.weight(1f),
+            ) {
+                Text(
+                    stringResource(R.string.investments_top_up),
+                    maxLines = 1,
+                )
+            }
+            IconButton(
+                onClick = onDelete,
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Delete,
+                    contentDescription = stringResource(R.string.investments_delete_position),
+                    tint = MaterialTheme.colorScheme.error,
+                )
+            }
         }
     }
 }
@@ -794,6 +898,8 @@ private fun InvestmentPositionCard(
 private fun InvestmentPositionDetailsSheet(
     name: String,
     line: String,
+    fundamentals: FundamentalPreviewUi?,
+    isLoadingFundamentals: Boolean,
     historyPoints: List<StockHistoryPointDto>,
     historyRange: String,
     historySymbol: String?,
@@ -824,6 +930,32 @@ private fun InvestmentPositionDetailsSheet(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        if (isLoadingFundamentals) {
+            Text(
+                text = stringResource(R.string.investments_loading_button),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else {
+            fundamentals?.let { f ->
+                Text(
+                    text = stringResource(R.string.investments_stock_join_section_market),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = WellPaidNavy.copy(alpha = 0.88f),
+                )
+                Text(
+                    text = "DY ${f.dy ?: "—"} · P/L ${f.pl ?: "—"} · P/VP ${f.pvp ?: "—"} · ROE ${f.roe ?: "—"}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = "Fonte: ${f.source.uppercase(Locale.ROOT)}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
         Text(
             text = stringResource(R.string.investments_evolution_title),
             style = MaterialTheme.typography.titleSmall,
@@ -857,24 +989,20 @@ private fun InvestmentPositionDetailsSheet(
         )
         Row(
             modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Button(
+            FilledTonalButton(
                 onClick = onTopUp,
                 modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = WellPaidNavy,
-                    contentColor = Color.White,
-                ),
-            ) { Text(stringResource(R.string.investments_top_up)) }
-            Button(
-                onClick = onDelete,
-                modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                ),
-            ) { Text(stringResource(R.string.investments_delete_position)) }
+            ) { Text(stringResource(R.string.investments_top_up), maxLines = 1) }
+            IconButton(onClick = onDelete) {
+                Icon(
+                    imageVector = Icons.Filled.Delete,
+                    contentDescription = stringResource(R.string.investments_delete_position),
+                    tint = MaterialTheme.colorScheme.error,
+                )
+            }
         }
         TextButton(onClick = onClose, modifier = Modifier.align(Alignment.End)) {
             Text(stringResource(R.string.common_close))
@@ -882,18 +1010,25 @@ private fun InvestmentPositionDetailsSheet(
     }
 }
 
-@Composable
-private fun instrumentLabelForKey(
-    key: String,
-    fallback: String? = null,
-): String {
-    return when (key.lowercase(Locale.ROOT)) {
-        "cdi" -> stringResource(R.string.investments_bucket_cdi)
-        "cdb" -> stringResource(R.string.investments_bucket_cdb)
-        "fixed_income" -> stringResource(R.string.investments_bucket_fixed_income)
-        "tesouro" -> stringResource(R.string.investments_bucket_tesouro)
-        "stocks" -> stringResource(R.string.investments_bucket_stocks)
-        else -> fallback ?: key.uppercase(Locale.ROOT)
+private fun formatAsOfForDisplay(iso: String?): String {
+    if (iso.isNullOrBlank()) return "—"
+    return try {
+        val parsed = java.time.OffsetDateTime.parse(
+            iso,
+            java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME,
+        )
+        parsed.atZoneSameInstant(ZoneId.systemDefault()).format(
+            DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT, FormatStyle.SHORT),
+        )
+    } catch (_: Exception) {
+        try {
+            val ins = java.time.Instant.parse(iso)
+            ins.atZone(ZoneId.systemDefault()).format(
+                DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT, FormatStyle.SHORT),
+            )
+        } catch (_: Exception) {
+            iso
+        }
     }
 }
 

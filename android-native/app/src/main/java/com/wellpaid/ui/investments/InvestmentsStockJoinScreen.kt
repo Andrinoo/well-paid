@@ -7,19 +7,16 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,19 +48,17 @@ fun InvestmentsStockJoinScreen(
     onQuantityChange: (String) -> Unit,
     onValueChange: (String) -> Unit,
     onAveragePriceChange: (String) -> Unit,
-    onSave: () -> Unit,
-    onBack: () -> Unit,
 ) {
     Column(
         modifier = Modifier
-            .fillMaxSize()
+            .fillMaxWidth()
             .background(WellPaidCream)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+            .padding(bottom = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
             text = stringResource(R.string.investments_stock_join_title),
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.titleSmall,
             color = WellPaidNavy,
             fontWeight = FontWeight.SemiBold,
         )
@@ -72,19 +67,19 @@ fun InvestmentsStockJoinScreen(
             modifier = Modifier.fillMaxWidth(),
             shape = JoinHeroCorner,
             color = WellPaidNavy,
-            shadowElevation = 2.dp,
+            shadowElevation = 1.dp,
         ) {
-            Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+            Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
                 Text(
                     text = stringResource(R.string.investments_bucket_stocks),
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MaterialTheme.typography.labelSmall,
                     color = Color.White.copy(alpha = 0.75f),
                     fontWeight = FontWeight.Medium,
                 )
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(4.dp))
                 Text(
                     text = state.newPositionName,
-                    style = MaterialTheme.typography.headlineSmall,
+                    style = MaterialTheme.typography.titleLarge,
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
                     maxLines = 2,
@@ -100,8 +95,8 @@ fun InvestmentsStockJoinScreen(
                     .fillMaxWidth()
                     .background(WellPaidCreamMuted.copy(alpha = 0.72f), JoinCardCorner)
                     .border(1.dp, WellPaidGold.copy(alpha = 0.38f), JoinCardCorner)
-                    .padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+                    .padding(10.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Text(
                     text = stringResource(R.string.investments_stock_join_section_market),
@@ -126,8 +121,8 @@ fun InvestmentsStockJoinScreen(
                 .fillMaxWidth()
                 .background(WellPaidCardWhite, JoinCardCorner)
                 .border(1.dp, WellPaidGold.copy(alpha = 0.38f), JoinCardCorner)
-                .padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
                 text = stringResource(R.string.investments_stock_join_section_form),
@@ -200,43 +195,45 @@ fun InvestmentsStockJoinScreen(
                 text = alert,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.tertiary,
-                modifier = Modifier.padding(horizontal = 4.dp),
+                modifier = Modifier.padding(horizontal = 2.dp),
             )
         }
-
-        Spacer(Modifier.height(2.dp))
-        Button(
-            onClick = onSave,
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
-        ) {
-            Text(stringResource(R.string.investments_save_position))
-        }
-        TextButton(onClick = onBack) { Text(stringResource(R.string.common_close)) }
     }
 }
 
 @Composable
 private fun StockJoinFundamentalsRow(fundamentals: FundamentalPreviewUi) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        StockJoinMetricCell(
-            modifier = Modifier.weight(1f),
-            label = stringResource(R.string.investments_metric_dy),
-            value = fundamentals.dy ?: "—",
-        )
-        StockJoinMetricCell(
-            modifier = Modifier.weight(1f),
-            label = stringResource(R.string.investments_metric_pl),
-            value = fundamentals.pl ?: "—",
-        )
-        StockJoinMetricCell(
-            modifier = Modifier.weight(1f),
-            label = stringResource(R.string.investments_metric_pvp),
-            value = fundamentals.pvp ?: "—",
-        )
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            StockJoinMetricCell(
+                modifier = Modifier.weight(1f),
+                label = stringResource(R.string.investments_metric_dy),
+                value = fundamentals.dy ?: "—",
+            )
+            StockJoinMetricCell(
+                modifier = Modifier.weight(1f),
+                label = stringResource(R.string.investments_metric_pl),
+                value = fundamentals.pl ?: "—",
+            )
+            StockJoinMetricCell(
+                modifier = Modifier.weight(1f),
+                label = stringResource(R.string.investments_metric_pvp),
+                value = fundamentals.pvp ?: "—",
+            )
+        }
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            StockJoinMetricCell(
+                modifier = Modifier.weight(1f),
+                label = stringResource(R.string.investments_metric_roe),
+                value = fundamentals.roe ?: "—",
+            )
+        }
     }
 }
 

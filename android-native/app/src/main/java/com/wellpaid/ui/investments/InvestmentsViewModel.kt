@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.wellpaid.R
 import com.wellpaid.core.model.investment.InvestmentEvolutionPointDto
 import com.wellpaid.core.model.investment.EquityFundamentalsDto
+import com.wellpaid.core.model.investment.InvestmentPositionAddPrincipalDto
 import com.wellpaid.core.model.investment.InvestmentPositionCreateDto
 import com.wellpaid.core.model.investment.InvestmentPositionDto
 import com.wellpaid.core.model.investment.InvestmentOverviewDto
@@ -48,6 +49,7 @@ data class FundamentalPreviewUi(
     val dy: String? = null,
     val pl: String? = null,
     val pvp: String? = null,
+    val roe: String? = null,
     val source: String = "fundamentus",
 )
 
@@ -110,6 +112,13 @@ data class InvestmentsUiState(
     val quoteSourceLabel: String? = null,
     val quoteConfidence: Double? = null,
     val errorMessage: String? = null,
+    val positionDetailsFundamentals: FundamentalPreviewUi? = null,
+    val isLoadingPositionDetailsFundamentals: Boolean = false,
+    val aporteAmountText: String = "",
+    val aporteFundamentals: FundamentalPreviewUi? = null,
+    val isLoadingAporteFundamentals: Boolean = false,
+    val isSubmittingAporte: Boolean = false,
+    val aporteErrorMessage: String? = null,
 )
 
 @HiltViewModel
@@ -323,6 +332,8 @@ class InvestmentsViewModel @Inject constructor(
             it.copy(
                 selectedPositionId = positionId,
                 historyErrorMessage = null,
+                positionDetailsFundamentals = null,
+                isLoadingPositionDetailsFundamentals = false,
             )
         }
         val symbol = extractTickerFromText(selected?.name.orEmpty())
@@ -337,6 +348,31 @@ class InvestmentsViewModel @Inject constructor(
                 )
             }
         }
+        if (selected != null && selected.instrumentType == "stocks") {
+            val sym = extractTickerFromText(selected.name)
+            if (!sym.isNullOrBlank()) {
+                viewModelScope.launch {
+                    _uiState.update { it.copy(isLoadingPositionDetailsFundamentals = true) }
+                    runCatching { api.getEquityFundamentals(sym.uppercase(Locale.ROOT)) }
+                        .onSuccess { f ->
+                            _uiState.update {
+                                it.copy(
+                                    positionDetailsFundamentals = fundamentalPreviewFromDto(f),
+                                    isLoadingPositionDetailsFundamentals = false,
+                                )
+                            }
+                        }
+                        .onFailure {
+                            _uiState.update {
+                                it.copy(
+                                    positionDetailsFundamentals = null,
+                                    isLoadingPositionDetailsFundamentals = false,
+                                )
+                            }
+                        }
+                }
+            }
+        }
     }
 
     fun closePositionDetails() {
@@ -349,6 +385,8 @@ class InvestmentsViewModel @Inject constructor(
                 selectedPositionHistoryConfidence = null,
                 isLoadingHistory = false,
                 historyErrorMessage = null,
+                positionDetailsFundamentals = null,
+                isLoadingPositionDetailsFundamentals = false,
             )
         }
     }
@@ -363,23 +401,84 @@ class InvestmentsViewModel @Inject constructor(
         }
     }
 
-    fun startTopUpFromPosition(positionId: String) {
+    fun setAporteAmountText(value: String) {
+        _uiState.update { it.copy(aporteAmountText = value) }
+    }
+
+    fun initAporteForPosition(positionId: String) {
         val p = _uiState.value.positions.firstOrNull { it.id == positionId } ?: return
         _uiState.update {
             it.copy(
-                selectedPositionId = null,
-                showCreatePositionForm = true,
-                newPositionType = p.instrumentType,
-                newPositionName = p.name,
-                newPositionPrincipalText = "",
-                newPositionAnnualRateText = String.format(
-                    Locale.US,
-                    "%.2f",
-                    p.annualRateBps / 100.0,
-                ).replace('.', ','),
-                quoteInfoMessage = null,
-                errorMessage = null,
+                aporteAmountText = "",
+                aporteErrorMessage = null,
+                aporteFundamentals = null,
+                isSubmittingAporte = false,
+                isLoadingAporteFundamentals = false,
             )
+        }
+        if (p.instrumentType != "stocks") return
+        val sym = extractTickerFromText(p.name) ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingAporteFundamentals = true) }
+            runCatching { api.getEquityFundamentals(sym.uppercase(Locale.ROOT)) }
+                .onSuccess { f ->
+                    _uiState.update {
+                        it.copy(
+                            aporteFundamentals = fundamentalPreviewFromDto(f),
+                            isLoadingAporteFundamentals = false,
+                        )
+                    }
+                }
+                .onFailure {
+                    _uiState.update { it.copy(aporteFundamentals = null, isLoadingAporteFundamentals = false) }
+                }
+        }
+    }
+
+    fun clearAporteState() {
+        _uiState.update {
+            it.copy(
+                aporteAmountText = "",
+                aporteFundamentals = null,
+                aporteErrorMessage = null,
+                isSubmittingAporte = false,
+                isLoadingAporteFundamentals = false,
+            )
+        }
+    }
+
+    fun submitAporte(positionId: String, onSuccess: () -> Unit) {
+        val principal = parseBrlToCents(_uiState.value.aporteAmountText) ?: run {
+            _uiState.update { it.copy(aporteErrorMessage = appContext.getString(R.string.investments_error_principal)) }
+            return
+        }
+        if (principal <= 0) {
+            _uiState.update { it.copy(aporteErrorMessage = appContext.getString(R.string.investments_error_principal)) }
+            return
+        }
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSubmittingAporte = true, aporteErrorMessage = null) }
+            runCatching {
+                api.addPrincipalToPosition(
+                    positionId,
+                    InvestmentPositionAddPrincipalDto(addPrincipalCents = principal),
+                )
+            }.onSuccess {
+                clearAporteState()
+                refresh()
+                _uiState.update { it.copy(isSubmittingAporte = false) }
+                onSuccess()
+            }.onFailure { t ->
+                _uiState.update {
+                    it.copy(
+                        isSubmittingAporte = false,
+                        aporteErrorMessage = when ((t as? HttpException)?.code()) {
+                            401, 403 -> appContext.getString(R.string.investments_error_session_expired)
+                            else -> FastApiErrorMapper.message(appContext, t)
+                        },
+                    )
+                }
+            }
         }
     }
 
@@ -776,17 +875,18 @@ class InvestmentsViewModel @Inject constructor(
         return m.groupValues[1].replace(",", ".").toDoubleOrNull()
     }
 
+    private fun fundamentalPreviewFromDto(f: EquityFundamentalsDto) = FundamentalPreviewUi(
+        symbol = f.symbol,
+        dy = f.dividendYield,
+        pl = f.pl,
+        pvp = f.pvp,
+        roe = f.roe,
+        source = f.source,
+    )
+
     private fun applyFundamentals(f: EquityFundamentalsDto) {
         _uiState.update {
-            it.copy(
-                selectedFundamentals = FundamentalPreviewUi(
-                    symbol = f.symbol,
-                    dy = f.dividendYield,
-                    pl = f.pl,
-                    pvp = f.pvp,
-                    source = f.source,
-                )
-            )
+            it.copy(selectedFundamentals = fundamentalPreviewFromDto(f))
         }
         val dyNumber = f.dividendYield
             ?.replace("%", "")

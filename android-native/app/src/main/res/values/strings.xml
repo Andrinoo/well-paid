@@ -746,6 +746,10 @@
     <string name="investments_metric_dy">DY</string>
     <string name="investments_metric_pl">P/L</string>
     <string name="investments_metric_pvp">P/VP</string>
+    <string name="investments_metric_roe">ROE</string>
+    <string name="investments_aporte_title">Add to position</string>
+    <string name="investments_aporte_field_amount">Top-up amount (R$)</string>
+    <string name="investments_aporte_confirm">Confirm top-up</string>
     <string name="investments_fixed_income_join_title">Join fixed income position</string>
     <string name="investments_mode_by_value">Inform by value</string>
     <string name="investments_whole_share_adjusted">Adjusted to %1$d whole shares (%2$s).</string>

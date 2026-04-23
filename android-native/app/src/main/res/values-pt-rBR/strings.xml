@@ -722,6 +722,10 @@
     <string name="investments_metric_dy">DY</string>
     <string name="investments_metric_pl">P/L</string>
     <string name="investments_metric_pvp">P/VP</string>
+    <string name="investments_metric_roe">ROE</string>
+    <string name="investments_aporte_title">Aportar</string>
+    <string name="investments_aporte_field_amount">Valor do aporte (R$)</string>
+    <string name="investments_aporte_confirm">Confirmar aporte</string>
     <string name="investments_fixed_income_join_title">Nova posição em renda fixa</string>
     <string name="investments_mode_by_value">Informar por valor</string>
     <string name="investments_whole_share_adjusted">Ajustado para %1$d cotas inteiras (%2$s).</string>

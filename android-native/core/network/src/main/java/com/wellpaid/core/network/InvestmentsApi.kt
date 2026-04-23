@@ -12,9 +12,11 @@ import com.wellpaid.core.model.investment.StockQuoteDto
 import com.wellpaid.core.model.investment.TickerSearchItemDto
 import com.wellpaid.core.model.investment.TopMoverItemDto
 import retrofit2.Response
+import com.wellpaid.core.model.investment.InvestmentPositionAddPrincipalDto
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.PATCH
 import retrofit2.http.Query
 import retrofit2.http.POST
 import retrofit2.http.Path
@@ -65,6 +67,12 @@ interface InvestmentsApi {
 
     @POST("investments/positions")
     suspend fun createPosition(@Body body: InvestmentPositionCreateDto): InvestmentPositionDto
+
+    @PATCH("investments/positions/{positionId}")
+    suspend fun addPrincipalToPosition(
+        @Path("positionId") positionId: String,
+        @Body body: InvestmentPositionAddPrincipalDto,
+    ): InvestmentPositionDto
 
     @DELETE("investments/positions/{positionId}")
     suspend fun deletePosition(@Path("positionId") positionId: String): Response<Void>

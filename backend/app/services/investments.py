@@ -194,6 +194,46 @@ def create_position_for_user(db: Session, user_id, body: InvestmentPositionCreat
     )
 
 
+def add_principal_to_position_for_user(
+    db: Session,
+    user_id,
+    position_id: str,
+    add_cents: int,
+) -> InvestmentPositionOut | None:
+    if not session_has_table(db, "investment_positions"):
+        raise ValueError("investments_positions_unavailable")
+    if add_cents <= 0:
+        return None
+    try:
+        import uuid
+
+        pid = uuid.UUID(position_id)
+    except Exception:
+        return None
+    row = db.scalars(
+        select(InvestmentPosition).where(
+            InvestmentPosition.id == pid,
+            InvestmentPosition.owner_user_id == user_id,
+        )
+    ).first()
+    if row is None:
+        return None
+    new_total = int(row.principal_cents) + int(add_cents)
+    row.principal_cents = new_total
+    db.commit()
+    db.refresh(row)
+    return InvestmentPositionOut(
+        id=str(row.id),
+        instrument_type=row.instrument_type,
+        name=row.name,
+        description=row.description,
+        principal_cents=int(row.principal_cents),
+        annual_rate_bps=int(row.annual_rate_bps),
+        maturity_date=row.maturity_date,
+        is_liquid=bool(row.is_liquid),
+    )
+
+
 def delete_position_for_user(db: Session, user_id, position_id: str) -> bool:
     if not session_has_table(db, "investment_positions"):
         return False

@@ -48,6 +48,12 @@ class InvestmentPositionOut(BaseModel):
     is_liquid: bool = True
 
 
+class InvestmentPositionAddPrincipal(BaseModel):
+    """Aporta (soma) capital à posição existente, sem criar nova linha."""
+
+    add_principal_cents: int = Field(gt=0, le=1_000_000_000_000)  # até ~10 mil milhões R$
+
+
 class InvestmentSuggestedRatesOut(BaseModel):
     """Taxas anuais sugeridas a partir do CDI (BACEN SGS) e fatores de configuração."""
 

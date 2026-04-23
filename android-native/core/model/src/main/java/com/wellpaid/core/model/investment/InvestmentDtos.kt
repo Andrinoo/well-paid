@@ -55,6 +55,11 @@ data class InvestmentPositionCreateDto(
 )
 
 @Serializable
+data class InvestmentPositionAddPrincipalDto(
+    @SerialName("add_principal_cents") val addPrincipalCents: Int,
+)
+
+@Serializable
 data class InvestmentSuggestedRatesDto(
     @SerialName("cdi_annual_percent") val cdiAnnualPercent: Double,
     @SerialName("cdb_annual_percent") val cdbAnnualPercent: Double,

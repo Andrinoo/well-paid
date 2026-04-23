@@ -75,6 +75,11 @@ object NavRoutes {
     /** Tela MVP de investimentos. */
     const val Investments = "investments"
 
+    private const val INVESTMENT_APORTE = "investment_aporte"
+    const val InvestmentAporteRoute = "$INVESTMENT_APORTE/{positionId}"
+
+    fun investmentAporte(positionId: String): String = "$INVESTMENT_APORTE/$positionId"
+
     /** Criar plano de reserva de emergência (fora do shell). */
     const val EmergencyReserveNew = "emergency_reserve_new"
 

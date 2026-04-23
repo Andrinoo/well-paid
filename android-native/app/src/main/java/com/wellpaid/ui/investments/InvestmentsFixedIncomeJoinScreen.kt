@@ -4,15 +4,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.text.KeyboardOptions
@@ -31,14 +28,12 @@ fun InvestmentsFixedIncomeJoinScreen(
     onDescriptionChange: (String) -> Unit,
     onPrincipalChange: (String) -> Unit,
     onRateChange: (String) -> Unit,
-    onSave: () -> Unit,
-    onBack: () -> Unit,
 ) {
     Column(
         modifier = Modifier
-            .fillMaxSize()
+            .fillMaxWidth()
             .background(WellPaidCream)
-            .padding(12.dp),
+            .padding(bottom = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
@@ -70,11 +65,6 @@ fun InvestmentsFixedIncomeJoinScreen(
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         )
-        Spacer(Modifier.height(4.dp))
-        Button(onClick = onSave, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.investments_save_position))
-        }
-        TextButton(onClick = onBack) { Text(stringResource(R.string.common_close)) }
     }
 }
 

@@ -33,6 +33,7 @@ import com.wellpaid.ui.expenses.InstallmentPlanScreen
 import com.wellpaid.ui.goals.GoalDetailScreen
 import com.wellpaid.ui.goals.GoalFormScreen
 import com.wellpaid.ui.incomes.IncomeFormScreen
+import com.wellpaid.ui.investments.InvestmentsAporteScreen
 import com.wellpaid.ui.investments.InvestmentsScreen
 import com.wellpaid.data.UiPreferencesRepository
 import com.wellpaid.ui.SecureWindowPolicyEffect
@@ -405,7 +406,33 @@ fun WellPaidNavHost(
                     ReceivablesScreen(onNavigateBack = { navController.popBackStack() })
                 }
                 composable(NavRoutes.Investments) {
-                    InvestmentsScreen(onNavigateBack = { navController.popBackStack() })
+                    InvestmentsScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                        onOpenAporte = { id ->
+                            navController.navigate(NavRoutes.investmentAporte(id))
+                        },
+                    )
+                }
+                composable(
+                    route = NavRoutes.InvestmentAporteRoute,
+                    arguments = listOf(
+                        navArgument("positionId") { type = NavType.StringType },
+                    ),
+                ) { aporteEntry ->
+                    val posId = aporteEntry.arguments?.getString("positionId") ?: return@composable
+                    val investEntry = remember {
+                        runCatching { navController.getBackStackEntry(NavRoutes.Investments) }.getOrNull()
+                    }
+                    InvestmentsAporteScreen(
+                        positionId = posId,
+                        onNavigateBack = { navController.popBackStack() },
+                        onAporteSuccess = { navController.popBackStack() },
+                        viewModel = if (investEntry != null) {
+                            hiltViewModel(investEntry)
+                        } else {
+                            hiltViewModel()
+                        },
+                    )
                 }
                 composable(NavRoutes.EmergencyReserveNew) {
                     val mainEntry = remember(navController) {
