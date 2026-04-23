@@ -289,6 +289,8 @@ def _map_range_to_brapi(range_key: str) -> tuple[str, str]:
         "3m": ("3mo", "1d"),
         "6m": ("6mo", "1d"),
         "1y": ("1y", "1d"),
+        "2y": ("2y", "1wk"),
+        "3y": ("3y", "1mo"),
     }
     return mapping.get(key, ("3mo", "1d"))
 
@@ -298,44 +300,73 @@ def fetch_stock_history_brapi(symbol: str, range_key: str) -> dict[str, Any] | N
     if not s:
         return None
     brapi_range, interval = _map_range_to_brapi(range_key)
+    interval_candidates = [interval]
+    if brapi_range in {"1y", "2y"} and interval != "1wk":
+        interval_candidates.append("1wk")
+    if brapi_range in {"1y", "2y", "3y"} and "1mo" not in interval_candidates:
+        interval_candidates.append("1mo")
+    # Preserve order but avoid duplicates.
+    interval_candidates = list(dict.fromkeys(interval_candidates))
     token = (get_settings().brapi_api_key or "").strip()
-    params: dict[str, str] = {"range": brapi_range, "interval": interval}
-    if token:
-        params["token"] = token
-    try:
-        with httpx.Client(timeout=14.0, headers={"User-Agent": _USER_AGENT}) as client:
-            r = client.get(f"{_BRAPI_BASE}/quote/{s}", params=params)
-    except Exception:
-        logger.exception("BRAPI history failed for %s", s)
-        return None
-    if r.status_code != 200:
-        logger.warning("BRAPI history HTTP %s for %s", r.status_code, s)
-        return {"symbol": s, "range": range_key, "points": [], "raw_error": f"http_{r.status_code}"}
-    try:
-        data = r.json()
-    except Exception:
-        return None
-    rows = data.get("results") or []
-    if not rows:
-        return {"symbol": s, "range": range_key, "points": [], "raw_error": "empty_results"}
-    row = rows[0] if isinstance(rows[0], dict) else {}
-    history = row.get("historicalDataPrice") or []
-    points: list[dict[str, Any]] = []
-    for item in history:
-        if not isinstance(item, dict):
-            continue
-        close_raw = item.get("close")
-        ts_raw = item.get("date")
-        try:
-            close = float(close_raw)
-            if close <= 0:
-                continue
-        except (TypeError, ValueError):
-            continue
-        as_of = None
-        if isinstance(ts_raw, (int, float)):
-            as_of = datetime.fromtimestamp(float(ts_raw), tz=timezone.utc).isoformat()
-        elif ts_raw is not None:
-            as_of = str(ts_raw)
-        points.append({"close": close, "as_of": as_of})
-    return {"symbol": s, "range": range_key, "points": points, "raw_error": None}
+    last_http_error: int | None = None
+    with httpx.Client(timeout=14.0, headers={"User-Agent": _USER_AGENT}) as client:
+        for interval_try in interval_candidates:
+            params: dict[str, str] = {"range": brapi_range, "interval": interval_try}
+            if token:
+                params["token"] = token
+            try:
+                r = client.get(f"{_BRAPI_BASE}/quote/{s}", params=params)
+            except Exception:
+                logger.exception("BRAPI history failed for %s", s)
+                return None
+            if r.status_code != 200:
+                last_http_error = r.status_code
+                # Retry only for BRAPI bad request due to incompatible range/interval pair.
+                if r.status_code == 400 and interval_try != interval_candidates[-1]:
+                    logger.warning(
+                        "BRAPI history HTTP 400 for %s (range=%s interval=%s), retrying",
+                        s,
+                        brapi_range,
+                        interval_try,
+                    )
+                    continue
+                logger.warning("BRAPI history HTTP %s for %s", r.status_code, s)
+                return {"symbol": s, "range": range_key, "points": [], "raw_error": f"http_{r.status_code}"}
+            try:
+                data = r.json()
+            except Exception:
+                return None
+            rows = data.get("results") or []
+            if not rows:
+                return {"symbol": s, "range": range_key, "points": [], "raw_error": "empty_results"}
+            row = rows[0] if isinstance(rows[0], dict) else {}
+            history = row.get("historicalDataPrice") or []
+            points: list[dict[str, Any]] = []
+            for item in history:
+                if not isinstance(item, dict):
+                    continue
+                close_raw = item.get("close")
+                ts_raw = item.get("date")
+                try:
+                    close = float(close_raw)
+                    if close <= 0:
+                        continue
+                except (TypeError, ValueError):
+                    continue
+                as_of = None
+                if isinstance(ts_raw, (int, float)):
+                    as_of = datetime.fromtimestamp(float(ts_raw), tz=timezone.utc).isoformat()
+                elif ts_raw is not None:
+                    as_of = str(ts_raw)
+                points.append({"close": close, "as_of": as_of})
+            if interval_try != interval:
+                logger.info(
+                    "BRAPI history fallback interval applied for %s (range=%s base_interval=%s used_interval=%s points=%s)",
+                    s,
+                    brapi_range,
+                    interval,
+                    interval_try,
+                    len(points),
+                )
+            return {"symbol": s, "range": range_key, "points": points, "raw_error": None}
+    return {"symbol": s, "range": range_key, "points": [], "raw_error": f"http_{last_http_error or 500}"}

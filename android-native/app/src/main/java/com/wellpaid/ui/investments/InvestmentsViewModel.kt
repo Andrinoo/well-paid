@@ -20,6 +20,8 @@ import com.wellpaid.util.parseBrlToCents
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -38,7 +40,7 @@ import javax.inject.Inject
 
 private val TickerPattern = Pattern.compile("([A-Za-z]{4}\\d{1,2})")
 private val StrictTickerPattern = Pattern.compile("^[A-Za-z]{4}\\d{1,2}$")
-val InvestmentHistoryRanges = listOf("5m", "30m", "60m", "3h", "12h", "1d", "1w", "1m", "3m", "6m", "1y")
+val InvestmentHistoryRanges = listOf("5m", "30m", "60m", "3h", "12h", "1d", "1w", "1m", "3m", "6m", "1y", "2y", "3y")
 
 private fun normalizeAssetTypeKey(raw: String?): String {
     return InvestmentAssetType.fromRaw(raw).key
@@ -65,6 +67,7 @@ data class FundamentalPreviewUi(
     val dy: String? = null,
     val pl: String? = null,
     val pvp: String? = null,
+    val dailyLiquidity: String? = null,
     val roe: String? = null,
     val evEbitda: String? = null,
     val netMargin: String? = null,
@@ -101,6 +104,7 @@ data class InvestmentsUiState(
     val stockJoinDescription: String = "",
     val stockJoinModeByValue: Boolean = true,
     val stockJoinAdjustedAlert: String? = null,
+    val stockJoinNeedsSaveConfirmation: Boolean = false,
     val fixedIncomeDescription: String = "",
     val fixedIncomeType: String = "fixed_income",
     val showStockJoinScreen: Boolean = false,
@@ -131,6 +135,8 @@ data class InvestmentsUiState(
     val quoteInfoMessage: String? = null,
     val quoteSourceLabel: String? = null,
     val quoteConfidence: Double? = null,
+    val quoteLastPrice: Double? = null,
+    val infoMessage: String? = null,
     val errorMessage: String? = null,
     val positionDetailsFundamentals: FundamentalPreviewUi? = null,
     val positionCardFundamentals: Map<String, FundamentalPreviewUi> = emptyMap(),
@@ -284,9 +290,12 @@ class InvestmentsViewModel @Inject constructor(
     fun refresh() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            val overviewResult = runCatching { api.getOverview() }
-            val positionsResult = runCatching { api.listPositions() }
-            val macroResult = runCatching { api.getMacroSnapshot() }
+            val (overviewResult, positionsResult, macroResult) = coroutineScope {
+                val overviewDeferred = async { runCatching { api.getOverview() } }
+                val positionsDeferred = async { runCatching { api.listPositions() } }
+                val macroDeferred = async { runCatching { api.getMacroSnapshot() } }
+                Triple(overviewDeferred.await(), positionsDeferred.await(), macroDeferred.await())
+            }
             overviewResult
                 .onSuccess { payload ->
                     val positions = positionsResult.getOrElse { emptyList() }
@@ -317,12 +326,13 @@ class InvestmentsViewModel @Inject constructor(
 
     private fun preloadCardFundamentals(positions: List<InvestmentPositionDto>) {
         val stockPositions = positions
-            .filter { normalizeAssetTypeKey(it.instrumentType) == "stock" }
+            .filter { isEquityLikeAsset(it.instrumentType) }
             .mapNotNull { p ->
                 val symbol = extractTickerFromText(p.name)?.uppercase(Locale.ROOT) ?: return@mapNotNull null
                 p.id to symbol
             }
-            .take(14)
+            .filter { (positionId, _) -> !_uiState.value.positionCardFundamentals.containsKey(positionId) }
+            .take(6)
         if (stockPositions.isEmpty()) return
         stockPositions.forEach { (positionId, symbol) ->
             viewModelScope.launch {
@@ -354,6 +364,8 @@ class InvestmentsViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 showCreatePositionForm = false,
+                showStockJoinScreen = false,
+                showFixedIncomeJoinScreen = false,
                 newPositionType = "fixed_income",
                 newPositionName = "",
                 quantityText = "",
@@ -616,7 +628,7 @@ class InvestmentsViewModel @Inject constructor(
                         }
                     }
                     _uiState.update {
-                        val shouldAutofillAverage = normalizeAssetTypeKey(it.newPositionType) == "stock" &&
+                        val shouldAutofillAverage = isEquityLikeAsset(it.newPositionType) &&
                             (it.averagePriceText.isBlank() || (it.averagePriceText.replace(",", ".").toDoubleOrNull() ?: 0.0) <= 0.0)
                         val averageFromQuote = if (q.lastPrice > 0) {
                             String.format(Locale.US, "%.2f", q.lastPrice).replace('.', ',')
@@ -628,6 +640,7 @@ class InvestmentsViewModel @Inject constructor(
                             quoteInfoMessage = line,
                             quoteSourceLabel = q.source,
                             quoteConfidence = q.confidence,
+                            quoteLastPrice = q.lastPrice.takeIf { p -> p > 0.0 },
                             averagePriceText = if (shouldAutofillAverage && averageFromQuote != null) averageFromQuote else it.averagePriceText,
                         )
                     }
@@ -718,7 +731,13 @@ class InvestmentsViewModel @Inject constructor(
     }
 
     fun closeSearchResults() {
-        _uiState.update { it.copy(showSearchResultsScreen = false) }
+        _uiState.update {
+            it.copy(
+                showSearchResultsScreen = false,
+                showCreatePositionForm = false,
+                errorMessage = null,
+            )
+        }
     }
 
     fun setFamilySearchEnabled(enabled: Boolean) {
@@ -789,7 +808,20 @@ class InvestmentsViewModel @Inject constructor(
     }
 
     fun setStockJoinModeByValue(enabled: Boolean) {
-        _uiState.update { it.copy(stockJoinModeByValue = enabled, stockJoinAdjustedAlert = null) }
+        _uiState.update {
+            it.copy(
+                stockJoinModeByValue = enabled,
+                stockJoinAdjustedAlert = null,
+                stockJoinNeedsSaveConfirmation = false,
+                errorMessage = null,
+                infoMessage = null,
+            )
+        }
+        if (enabled) {
+            applyWholeShareRuleFromValue()
+        } else {
+            recalculatePrincipalFromStocks()
+        }
     }
 
     fun setNewPositionAnnualRateText(value: String) {
@@ -798,12 +830,27 @@ class InvestmentsViewModel @Inject constructor(
 
     fun setQuantityText(value: String) {
         val clean = value.filter { c -> c.isDigit() }
-        _uiState.update { it.copy(quantityText = clean, stockJoinAdjustedAlert = null) }
+        _uiState.update {
+            it.copy(
+                quantityText = clean,
+                stockJoinAdjustedAlert = null,
+                stockJoinNeedsSaveConfirmation = false,
+                errorMessage = null,
+                infoMessage = null,
+            )
+        }
         recalculatePrincipalFromStocks()
     }
 
     fun setAveragePriceText(value: String) {
-        _uiState.update { it.copy(averagePriceText = value.filter { c -> c.isDigit() || c == '.' || c == ',' }) }
+        _uiState.update {
+            it.copy(
+                averagePriceText = value.filter { c -> c.isDigit() || c == '.' || c == ',' },
+                stockJoinNeedsSaveConfirmation = false,
+                errorMessage = null,
+                infoMessage = null,
+            )
+        }
         recalculatePrincipalFromStocks()
     }
 
@@ -813,7 +860,14 @@ class InvestmentsViewModel @Inject constructor(
 
     fun setStockJoinValueText(value: String) {
         val clean = value.filter { c -> c.isDigit() || c == '.' || c == ',' }
-        _uiState.update { it.copy(newPositionPrincipalText = clean) }
+        _uiState.update {
+            it.copy(
+                newPositionPrincipalText = clean,
+                stockJoinNeedsSaveConfirmation = false,
+                errorMessage = null,
+                infoMessage = null,
+            )
+        }
         applyWholeShareRuleFromValue()
     }
 
@@ -821,12 +875,22 @@ class InvestmentsViewModel @Inject constructor(
         val s = _uiState.value
         if (!s.stockJoinModeByValue) return
         if (!isEquityLikeAsset(inferInstrumentType(s.newPositionName))) return
-        val price = s.averagePriceText.replace(",", ".").toDoubleOrNull()
+        val price = s.quoteLastPrice
+            ?: s.averagePriceText.replace(",", ".").toDoubleOrNull()
             ?: s.quoteInfoMessage?.let { extractPriceFromQuoteMessage(it) }
         val value = s.newPositionPrincipalText.replace(",", ".").toDoubleOrNull()
         if (price == null || price <= 0.0 || value == null || value <= 0.0) return
         val shares = kotlin.math.floor(value / price).toInt()
-        if (shares <= 0) return
+        if (shares <= 0) {
+            _uiState.update {
+                it.copy(
+                    quantityText = "",
+                    stockJoinAdjustedAlert = null,
+                    stockJoinNeedsSaveConfirmation = false,
+                )
+            }
+            return
+        }
         val adjustedValue = shares * price
         val adjustedText = String.format(Locale.US, "%.2f", adjustedValue).replace('.', ',')
         val originalRounded = String.format(Locale.US, "%.2f", value)
@@ -841,6 +905,7 @@ class InvestmentsViewModel @Inject constructor(
                 quantityText = shares.toString(),
                 newPositionPrincipalText = adjustedText,
                 stockJoinAdjustedAlert = alert,
+                stockJoinNeedsSaveConfirmation = false,
             )
         }
     }
@@ -869,15 +934,58 @@ class InvestmentsViewModel @Inject constructor(
         }
         val rateBps = (annualPct * 100.0).toInt()
         if (isEquityLikeAsset(inferredType)) {
-            val qty = s.quantityText.replace(",", ".").toDoubleOrNull()
-            val avg = s.averagePriceText.replace(",", ".").toDoubleOrNull()
+            val qty = s.quantityText.toIntOrNull()
+            val avg = s.quoteLastPrice
+                ?: s.averagePriceText.replace(",", ".").toDoubleOrNull()
             if (qty == null || qty <= 0 || avg == null || avg <= 0) {
                 _uiState.update { it.copy(errorMessage = appContext.getString(R.string.investments_error_stock_quantity_price)) }
                 return
             }
+            val minLotCents = (avg * 100.0).toInt()
+            if (principal < minLotCents) {
+                _uiState.update {
+                    it.copy(
+                        errorMessage = appContext.getString(
+                            R.string.investments_error_minimum_share_value,
+                            String.format(Locale.US, "%.2f", avg).replace('.', ','),
+                        ),
+                        infoMessage = null,
+                    )
+                }
+                return
+            }
+            val maxWholeSharesByValue = kotlin.math.floor(principal.toDouble() / minLotCents.toDouble()).toInt().coerceAtLeast(0)
+            if (maxWholeSharesByValue <= 0) {
+                _uiState.update {
+                    it.copy(errorMessage = appContext.getString(R.string.investments_error_stock_quantity_price), infoMessage = null)
+                }
+                return
+            }
+            if (qty > maxWholeSharesByValue) {
+                val adjustedPrincipalCents = maxWholeSharesByValue * minLotCents
+                val adjustedText = String.format(Locale.US, "%.2f", adjustedPrincipalCents / 100.0).replace('.', ',')
+                _uiState.update {
+                    it.copy(
+                        quantityText = maxWholeSharesByValue.toString(),
+                        newPositionPrincipalText = adjustedText,
+                        stockJoinNeedsSaveConfirmation = true,
+                        stockJoinAdjustedAlert = appContext.getString(
+                            R.string.investments_whole_share_adjusted_confirm,
+                            maxWholeSharesByValue,
+                            adjustedText,
+                        ),
+                        errorMessage = null,
+                        infoMessage = appContext.getString(R.string.investments_info_tap_save_again),
+                    )
+                }
+                return
+            }
+            if (s.stockJoinNeedsSaveConfirmation) {
+                _uiState.update { it.copy(stockJoinNeedsSaveConfirmation = false, infoMessage = null) }
+            }
         }
         viewModelScope.launch {
-            _uiState.update { it.copy(isSavingPosition = true, errorMessage = null) }
+            _uiState.update { it.copy(isSavingPosition = true, errorMessage = null, infoMessage = null) }
             runCatching {
                 api.createPosition(
                     InvestmentPositionCreateDto(
@@ -891,6 +999,12 @@ class InvestmentsViewModel @Inject constructor(
             }.onSuccess {
                 closeCreatePositionForm()
                 refresh()
+                _uiState.update {
+                    it.copy(
+                        infoMessage = appContext.getString(R.string.investments_success_position_saved),
+                        errorMessage = null,
+                    )
+                }
             }.onFailure { t ->
                 val mappedMessage = when ((t as? HttpException)?.code()) {
                     401, 403 -> appContext.getString(R.string.investments_error_session_expired)
@@ -900,6 +1014,7 @@ class InvestmentsViewModel @Inject constructor(
                     it.copy(
                         isSavingPosition = false,
                         errorMessage = mappedMessage,
+                        infoMessage = null,
                     )
                 }
             }
@@ -932,7 +1047,8 @@ class InvestmentsViewModel @Inject constructor(
         val s = _uiState.value
         if (!isEquityLikeAsset(inferInstrumentType(s.newPositionName))) return
         val qty = s.quantityText.replace(",", ".").toDoubleOrNull()
-        val avg = s.averagePriceText.replace(",", ".").toDoubleOrNull()
+        val avg = s.quoteLastPrice
+            ?: s.averagePriceText.replace(",", ".").toDoubleOrNull()
         if (qty == null || avg == null || qty <= 0 || avg <= 0) return
         val total = qty * avg
         val brl = String.format(Locale.US, "%.2f", total).replace('.', ',')
@@ -950,6 +1066,7 @@ class InvestmentsViewModel @Inject constructor(
         dy = f.dividendYield,
         pl = f.pl,
         pvp = f.pvp,
+        dailyLiquidity = f.dailyLiquidity,
         roe = f.roe,
         evEbitda = f.evEbitda,
         netMargin = f.netMargin,
@@ -999,13 +1116,25 @@ class InvestmentsViewModel @Inject constructor(
                 showFixedIncomeJoinScreen = false,
                 showSearchResultsScreen = false,
                 showCreatePositionForm = true,
+                infoMessage = null,
+                errorMessage = null,
             )
         }
         fetchB3StockQuoteAndFundamentals()
     }
 
     fun closeStockJoin() {
-        _uiState.update { it.copy(showStockJoinScreen = false, stockJoinAdjustedAlert = null) }
+        _uiState.update {
+            it.copy(
+                showStockJoinScreen = false,
+                showCreatePositionForm = false,
+                stockJoinAdjustedAlert = null,
+                stockJoinNeedsSaveConfirmation = false,
+                quoteLastPrice = null,
+                errorMessage = null,
+                infoMessage = null,
+            )
+        }
     }
 
     fun openFixedIncomeJoin(symbol: String, instrumentType: String) {
@@ -1018,13 +1147,22 @@ class InvestmentsViewModel @Inject constructor(
                 showStockJoinScreen = false,
                 showSearchResultsScreen = false,
                 showCreatePositionForm = true,
+                infoMessage = null,
+                errorMessage = null,
             )
         }
         applyMarketRateToForm()
     }
 
     fun closeFixedIncomeJoin() {
-        _uiState.update { it.copy(showFixedIncomeJoinScreen = false) }
+        _uiState.update {
+            it.copy(
+                showFixedIncomeJoinScreen = false,
+                showCreatePositionForm = false,
+                errorMessage = null,
+                infoMessage = null,
+            )
+        }
     }
 
     fun setFixedIncomeDescription(value: String) {

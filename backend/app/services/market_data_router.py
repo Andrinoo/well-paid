@@ -16,7 +16,7 @@ from app.services.providers.sgs_provider import SgsProvider
 
 _TICKER_RX = re.compile(r"^[A-Z]{4}\d{1,2}$")
 _TICKER_FAMILY_RX = re.compile(r"^([A-Z]{4})(\d{1,2})?$")
-_ALLOWED_RANGES = {"5m", "30m", "60m", "3h", "12h", "1d", "1w", "1m", "3m", "6m", "1y"}
+_ALLOWED_RANGES = {"5m", "30m", "60m", "3h", "12h", "1d", "1w", "1m", "3m", "6m", "1y", "2y", "3y"}
 _ALLOWED_MOVER_WINDOWS = {"hour", "day", "week"}
 
 

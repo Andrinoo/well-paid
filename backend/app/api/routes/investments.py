@@ -101,7 +101,7 @@ def read_stock_quote_history(
     request: Request,
     user: Annotated[User, Depends(get_current_user)],
     symbol: Annotated[str, Query(min_length=1, max_length=12, description="Ticker B3, ex. PETR4")],
-    range: Annotated[str, Query(min_length=2, max_length=8, description="5m,30m,60m,3h,12h,1d,1w,1m,3m,6m,1y")] = "1m",
+    range: Annotated[str, Query(min_length=2, max_length=8, description="5m,30m,60m,3h,12h,1d,1w,1m,3m,6m,1y,2y,3y")] = "1m",
 ) -> StockHistoryOut:
     try:
         raw = market_data_router.history(symbol=symbol, range_key=range)
