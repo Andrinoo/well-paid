@@ -6,6 +6,10 @@ import retrofit2.http.GET
 import retrofit2.http.Query
 
 interface DashboardApi {
+    /**
+     * Futuro: endpoint agregado (overview + user + anúncios) reduz round-trips na Home.
+     * Hoje: [com.wellpaid.data.HomeDashboardCacheRepository] + requisições em paralelo no [com.wellpaid.ui.home.HomeViewModel].
+     */
     @GET("dashboard/overview")
     suspend fun overview(
         @Query("year") year: Int,

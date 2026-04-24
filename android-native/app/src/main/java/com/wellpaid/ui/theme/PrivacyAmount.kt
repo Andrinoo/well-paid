@@ -12,15 +12,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import com.wellpaid.R
 import com.wellpaid.util.formatBrlFromCents
 
 /** When `true`, only **balance** amounts use [DiscreetBalanceValue] (tap to reveal). */
 val LocalPrivacyHideBalance = staticCompositionLocalOf { false }
+private const val HiddenAmountPlaceholder = "---"
+
+fun formatBrlFromCentsRespectPrivacy(
+    cents: Int,
+    hideBalance: Boolean,
+): String = if (hideBalance) HiddenAmountPlaceholder else formatBrlFromCents(cents)
 
 @Composable
 fun DiscreetBalanceValue(
@@ -36,9 +40,9 @@ fun DiscreetBalanceValue(
         onDispose { revealed = false }
     }
     val display = when {
-        !hideBalance -> formatBrlFromCents(cents)
-        revealed -> formatBrlFromCents(cents)
-        else -> stringResource(R.string.privacy_amount_masked)
+        !hideBalance -> formatBrlFromCentsRespectPrivacy(cents, hideBalance = false)
+        revealed -> formatBrlFromCentsRespectPrivacy(cents, hideBalance = false)
+        else -> HiddenAmountPlaceholder
     }
     Text(
         text = display,

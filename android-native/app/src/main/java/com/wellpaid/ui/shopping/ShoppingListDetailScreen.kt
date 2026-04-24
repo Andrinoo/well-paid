@@ -9,8 +9,10 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -67,10 +69,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.pluralStringResource
@@ -78,6 +83,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -104,6 +110,9 @@ import com.wellpaid.util.parseBrlToCents
 import kotlinx.coroutines.delay
 import java.time.LocalDate
 import java.util.Locale
+
+/** Altura comum dos campos quantidade + preço na linha do item (~40dp + 10%). */
+private val ShoppingItemRowFieldsHeight = 44.dp
 
 private fun ShoppingListDetailDto.sumLineCents(): Int = items.sumOf { row ->
     val u = row.lineAmountCents ?: return@sumOf 0
@@ -448,6 +457,12 @@ fun ShoppingListDetailScreen(
                                 isSaving = state.isSaving,
                                 onEdit = { editItem = line },
                                 onRemove = { showRemoveItem = line },
+                                onCommitQuantity = { qty ->
+                                    viewModel.patchItem(
+                                        itemId = line.id,
+                                        quantity = qty,
+                                    )
+                                },
                                 onCommitCost = { cents, clear ->
                                     viewModel.patchItem(
                                         itemId = line.id,
@@ -684,11 +699,114 @@ private fun CompletedSummary(
 }
 
 @Composable
+private fun ItemLineQtyField(
+    line: ShoppingListItemDto,
+    canEdit: Boolean,
+    isSaving: Boolean,
+    onCommitQuantity: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val focusManager = LocalFocusManager.current
+    var focused by remember { mutableStateOf(false) }
+    var localText by remember(line.id) { mutableStateOf(line.quantity.toString()) }
+    LaunchedEffect(line.id, line.quantity) {
+        if (!focused) {
+            localText = line.quantity.toString()
+        }
+    }
+
+    fun commitIfChanged() {
+        val digits = localText.filter { it.isDigit() }
+        if (digits.isEmpty()) {
+            localText = line.quantity.toString()
+            return
+        }
+        val q = digits.toIntOrNull()?.coerceIn(1, 9999) ?: run {
+            localText = line.quantity.toString()
+            return
+        }
+        if (q != line.quantity) {
+            onCommitQuantity(q)
+        }
+    }
+
+    if (!canEdit) {
+        Surface(
+            modifier = modifier,
+            shape = RoundedCornerShape(6.dp),
+            color = WellPaidNavy.copy(alpha = 0.08f),
+        ) {
+            Text(
+                text = line.quantity.toString(),
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontSize = 11.sp,
+                    lineHeight = 15.4.sp,
+                    textAlign = TextAlign.Center,
+                ),
+                color = WellPaidNavy.copy(alpha = 0.85f),
+                maxLines = 1,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp, vertical = 6.dp),
+            )
+        }
+        return
+    }
+
+    OutlinedTextField(
+        value = localText,
+        onValueChange = { raw ->
+            if (!isSaving) {
+                localText = raw.filter { ch -> ch.isDigit() }.take(4)
+            }
+        },
+        modifier = modifier
+            .defaultMinSize(minHeight = ShoppingItemRowFieldsHeight)
+            .onFocusChanged { fc ->
+                focused = fc.isFocused
+                if (!fc.isFocused) {
+                    commitIfChanged()
+                }
+            },
+        enabled = !isSaving,
+        singleLine = true,
+        textStyle = MaterialTheme.typography.labelSmall.copy(
+            fontSize = 11.sp,
+            lineHeight = 15.4.sp,
+            textAlign = TextAlign.Center,
+        ),
+        shape = RoundedCornerShape(6.dp),
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Number,
+            imeAction = ImeAction.Done,
+        ),
+        keyboardActions = KeyboardActions(
+            onDone = {
+                commitIfChanged()
+                focusManager.clearFocus()
+            },
+        ),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedTextColor = WellPaidNavy,
+            unfocusedTextColor = WellPaidNavy,
+            focusedContainerColor = WellPaidCreamMuted,
+            unfocusedContainerColor = WellPaidCreamMuted,
+            disabledTextColor = WellPaidNavy.copy(alpha = 0.55f),
+            disabledContainerColor = WellPaidCreamMuted,
+            focusedBorderColor = WellPaidNavy.copy(alpha = 0.45f),
+            unfocusedBorderColor = WellPaidNavy.copy(alpha = 0.22f),
+            disabledBorderColor = WellPaidNavy.copy(alpha = 0.15f),
+        ),
+    )
+}
+
+@Composable
 private fun ItemLineCostField(
     line: ShoppingListItemDto,
     canEdit: Boolean,
     isSaving: Boolean,
     onCommitCost: (cents: Int?, clearLineAmount: Boolean) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     var keypadOpen by remember { mutableStateOf(false) }
     var localAmountText by remember(line.id) {
@@ -718,18 +836,22 @@ private fun ItemLineCostField(
 
     if (!canEdit) {
         Surface(
+            modifier = modifier,
             shape = RoundedCornerShape(6.dp),
             color = WellPaidNavy.copy(alpha = 0.08f),
         ) {
             Text(
                 text = line.lineAmountCents?.let { formatBrlFromCents(it) } ?: "—",
-                style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp),
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontSize = 11.sp,
+                    lineHeight = 15.4.sp,
+                ),
                 color = WellPaidNavy.copy(alpha = 0.85f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
-                    .padding(horizontal = 6.dp, vertical = 4.dp)
-                    .widthIn(max = 86.dp),
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp, vertical = 6.dp),
             )
         }
         return
@@ -745,15 +867,14 @@ private fun ItemLineCostField(
         prefix = {
             Text(
                 text = currencyPrefix,
-                style = MaterialTheme.typography.labelMedium.copy(fontSize = 12.sp),
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                 color = WellPaidNavy.copy(alpha = 0.62f),
             )
         },
         placeholder = "0,00",
-        modifier = Modifier
-            // Largura para valores típicos de varejo (ex.: 125,50); prefixo R$/$
-            .widthIn(min = 76.dp, max = 88.dp)
-            .defaultMinSize(minHeight = 40.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .defaultMinSize(minHeight = ShoppingItemRowFieldsHeight),
         shape = RoundedCornerShape(6.dp),
         colors = OutlinedTextFieldDefaults.colors(
             focusedTextColor = WellPaidNavy,
@@ -765,6 +886,11 @@ private fun ItemLineCostField(
             focusedBorderColor = WellPaidNavy.copy(alpha = 0.45f),
             unfocusedBorderColor = WellPaidNavy.copy(alpha = 0.22f),
             disabledBorderColor = WellPaidNavy.copy(alpha = 0.15f),
+        ),
+        fieldTextStyle = MaterialTheme.typography.labelSmall.copy(
+            fontSize = 11.sp,
+            lineHeight = 15.4.sp,
+            textAlign = TextAlign.End,
         ),
         onKeypadOpenChange = { open -> keypadOpen = open },
         onDone = {
@@ -780,52 +906,80 @@ private fun ItemLineCard(
     isSaving: Boolean,
     onEdit: () -> Unit,
     onRemove: () -> Unit,
+    onCommitQuantity: (Int) -> Unit,
     onCommitCost: (cents: Int?, clearLineAmount: Boolean) -> Unit,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 4.dp),
         shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(containerColor = WellPaidCreamMuted),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 10.dp, vertical = 6.dp),
+                .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(
-                text = line.label,
+            val unitCents = line.lineAmountCents
+            val showLineSubtotal = unitCents != null && unitCents > 0 && line.quantity > 0
+            Column(
                 modifier = Modifier
                     .weight(1f)
                     .padding(end = 4.dp),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = WellPaidNavy,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Surface(
-                shape = RoundedCornerShape(6.dp),
-                color = WellPaidNavy.copy(alpha = 0.08f),
             ) {
                 Text(
-                    text = line.quantity.toString(),
-                    style = MaterialTheme.typography.labelMedium,
-                    fontSize = 12.sp,
+                    text = line.label,
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        lineHeight = 20.sp,
+                    ),
+                    fontWeight = FontWeight.SemiBold,
                     color = WellPaidNavy,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (showLineSubtotal) {
+                    val subtotal = (unitCents.toLong() * line.quantity)
+                        .toInt()
+                        .coerceAtLeast(0)
+                    Text(
+                        text = formatBrlFromCents(subtotal),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = WellPaidNavy.copy(alpha = 0.5f),
+                        maxLines = 1,
+                        modifier = Modifier.padding(top = 2.dp),
+                    )
+                }
+            }
+            Row(
+                modifier = Modifier
+                    .weight(0.92f)
+                    .height(ShoppingItemRowFieldsHeight),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                ItemLineQtyField(
+                    line = line,
+                    canEdit = canEdit,
+                    isSaving = isSaving,
+                    onCommitQuantity = onCommitQuantity,
                     modifier = Modifier
-                        .padding(horizontal = 7.dp, vertical = 3.dp)
-                        .widthIn(min = 22.dp),
+                        .weight(0.35f)
+                        .fillMaxHeight(),
+                )
+                ItemLineCostField(
+                    line = line,
+                    canEdit = canEdit,
+                    isSaving = isSaving,
+                    onCommitCost = onCommitCost,
+                    modifier = Modifier
+                        .weight(0.65f)
+                        .fillMaxHeight(),
                 )
             }
-            ItemLineCostField(
-                line = line,
-                canEdit = canEdit,
-                isSaving = isSaving,
-                onCommitCost = onCommitCost,
-            )
             if (canEdit) {
                 Box {
                     IconButton(

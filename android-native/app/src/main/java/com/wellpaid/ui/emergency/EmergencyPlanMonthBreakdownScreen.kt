@@ -29,11 +29,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wellpaid.R
+import com.wellpaid.ui.theme.LocalPrivacyHideBalance
 import com.wellpaid.ui.theme.WellPaidMaxContentWidth
 import com.wellpaid.ui.theme.WellPaidNavy
+import com.wellpaid.ui.theme.formatBrlFromCentsRespectPrivacy
 import com.wellpaid.ui.theme.wellPaidMaxContentWidth
 import com.wellpaid.ui.theme.wellPaidTopAppBarColors
-import com.wellpaid.util.formatBrlFromCents
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,6 +43,7 @@ fun EmergencyPlanMonthBreakdownScreen(
     onNavigateBack: () -> Unit,
     viewModel: EmergencyReserveViewModel,
 ) {
+    val hideBalance = LocalPrivacyHideBalance.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(planId) {
@@ -124,8 +126,8 @@ fun EmergencyPlanMonthBreakdownScreen(
                                 Text(
                                     text = stringResource(
                                         R.string.emergency_plan_month_row_expected_deposited,
-                                        formatBrlFromCents(row.expectedCents),
-                                        formatBrlFromCents(row.depositedCents),
+                                        formatBrlFromCentsRespectPrivacy(row.expectedCents, hideBalance),
+                                        formatBrlFromCentsRespectPrivacy(row.depositedCents, hideBalance),
                                     ),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -133,7 +135,7 @@ fun EmergencyPlanMonthBreakdownScreen(
                                 Text(
                                     text = stringResource(
                                         R.string.emergency_plan_month_row_cumulative_delta,
-                                        formatBrlFromCents(row.cumulativeDeltaCents),
+                                        formatBrlFromCentsRespectPrivacy(row.cumulativeDeltaCents, hideBalance),
                                     ),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = WellPaidNavy,

@@ -542,7 +542,7 @@
         <item quantity="other">%d items in total</item>
     </plurals>
 
-    <string name="privacy_amount_masked">R$ ••••</string>
+    <string name="privacy_amount_masked">---</string>
     <string name="security_title">Security &amp; privacy</string>
     <string name="settings_security_section">Security</string>
     <string name="settings_open_security">Security &amp; privacy</string>

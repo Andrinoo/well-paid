@@ -22,7 +22,7 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -196,7 +196,7 @@ fun ReceivablesScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .menuAnchor(
-                                        MenuAnchorType.PrimaryNotEditable,
+                                        ExposedDropdownMenuAnchorType.PrimaryNotEditable,
                                         enabled = true,
                                     ),
                                 readOnly = true,

@@ -41,6 +41,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -94,6 +95,8 @@ fun WellPaidMoneyDigitKeypadField(
     dense: Boolean = false,
     /** Campo mais baixo (rótulo curto + texto menor; ex. detalhe reserva em duas colunas). */
     extraCompact: Boolean = false,
+    /** Sobrescreve o estilo do texto do valor (ex.: linha compacta em lista de compras). */
+    fieldTextStyle: TextStyle? = null,
 ) {
     var keypadOpen by remember { mutableStateOf(false) }
     var digits by remember(valueText) { mutableStateOf(digitsFromValueText(valueText)) }
@@ -148,7 +151,7 @@ fun WellPaidMoneyDigitKeypadField(
             shape = shape,
             colors = colors,
             singleLine = true,
-            textStyle = when {
+            textStyle = fieldTextStyle ?: when {
                 extraCompact -> MaterialTheme.typography.bodySmall
                 dense -> MaterialTheme.typography.bodyMedium
                 else -> MaterialTheme.typography.bodyLarge

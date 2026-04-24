@@ -6,6 +6,7 @@ import com.wellpaid.core.model.auth.LogoutRequestDto
 import com.wellpaid.core.model.auth.TokenStorage
 import com.wellpaid.core.network.auth.AuthApi
 import com.wellpaid.data.FamilyMeRepository
+import com.wellpaid.data.HomeDashboardCacheRepository
 import com.wellpaid.data.MainPrefetchTiming
 import com.wellpaid.security.AppSecurityManager
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -22,6 +23,7 @@ class MainShellViewModel @Inject constructor(
     private val familyMeRepository: FamilyMeRepository,
     private val appSecurityManager: AppSecurityManager,
     private val prefetchTiming: MainPrefetchTiming,
+    private val homeDashboardCache: HomeDashboardCacheRepository,
 ) : ViewModel() {
 
     private val loggedOut = Channel<Unit>(Channel.BUFFERED)
@@ -38,6 +40,7 @@ class MainShellViewModel @Inject constructor(
         viewModelScope.launch {
             val refresh = tokenStorage.getRefreshToken()
             tokenStorage.clear()
+            homeDashboardCache.clear()
             familyMeRepository.clear()
             appSecurityManager.onLoggedOut()
             loggedOut.send(Unit)

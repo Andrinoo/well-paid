@@ -15,6 +15,7 @@ import com.wellpaid.core.model.shopping.ShoppingListPatchDto
 import com.wellpaid.core.network.CategoriesApi
 import com.wellpaid.core.network.ShoppingListsApi
 import com.wellpaid.core.network.shoppingListItemPatchJson
+import com.wellpaid.data.SEARCH_DEBOUNCE_MS
 import com.wellpaid.data.UiPreferencesRepository
 import com.wellpaid.util.FastApiErrorMapper
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -119,7 +120,7 @@ class ShoppingListDetailViewModel @Inject constructor(
         }
         val id = groceryPriceSearchNonce.incrementAndGet()
         groceryPriceSearchJob = viewModelScope.launch {
-            delay(280)
+            delay(SEARCH_DEBOUNCE_MS)
             coroutineContext.ensureActive()
             if (id != groceryPriceSearchNonce.get()) return@launch
             _uiState.update { it.copy(groceryPriceSearchLoading = true) }

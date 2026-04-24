@@ -39,7 +39,6 @@ import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -85,6 +84,7 @@ import com.wellpaid.ui.theme.WellPaidMotion
 import com.wellpaid.ui.theme.wellPaidMaxContentWidth
 import com.wellpaid.ui.theme.DiscreetBalanceValue
 import androidx.compose.animation.core.tween
+import com.wellpaid.ui.components.WellPaidBrandCircularProgress
 import com.wellpaid.util.formatBrlFromCents
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
@@ -265,14 +265,9 @@ fun HomeDashboardContent(
 
         Box(Modifier.weight(1f).fillMaxWidth()) {
             if (state.isLoading && state.overview == null) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .wellPaidMaxContentWidth(WellPaidMaxContentWidth),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CircularProgressIndicator()
-                }
+                HomeDashboardLoadingSkeleton(
+                    modifier = Modifier.fillMaxSize(),
+                )
             } else {
                 Box(
                     modifier = Modifier
@@ -462,7 +457,7 @@ fun HomeDashboardContent(
                                                                     horizontalArrangement = Arrangement.Center,
                                                                     verticalAlignment = Alignment.CenterVertically,
                                                                 ) {
-                                                                    CircularProgressIndicator()
+                                                                    WellPaidBrandCircularProgress()
                                                                 }
                                                             } else {
                                                                 Text(

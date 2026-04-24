@@ -2,15 +2,16 @@ package com.wellpaid.navigation
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -70,14 +71,7 @@ fun WellPaidNavHost(
         }
     }
 
-    when (val route = startRoute) {
-        null -> {
-            Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
-        }
-        else -> {
-            val refreshExpensesAndPop: () -> Unit = {
+    val refreshExpensesAndPop: () -> Unit = {
                 runCatching {
                     navController.getBackStackEntry(NavRoutes.Main).savedStateHandle["expense_list_dirty"] =
                         System.currentTimeMillis()
@@ -153,8 +147,20 @@ fun WellPaidNavHost(
                 CompositionLocalProvider(LocalPrivacyHideBalance provides hidePrivacy) {
                     NavHost(
                         navController = navController,
-                        startDestination = route,
+                        startDestination = startRoute,
                         modifier = Modifier.fillMaxSize(),
+                        enterTransition = {
+                            fadeIn(animationSpec = tween(200))
+                        },
+                        exitTransition = {
+                            fadeOut(animationSpec = tween(160))
+                        },
+                        popEnterTransition = {
+                            fadeIn(animationSpec = tween(200))
+                        },
+                        popExitTransition = {
+                            fadeOut(animationSpec = tween(160))
+                        },
                     ) {
                 composable(NavRoutes.Login) {
                     LoginScreen(
@@ -544,7 +550,7 @@ fun WellPaidNavHost(
                         },
                     )
                 }
-                    }
+                }
                 }
                 if (showAppLock) {
                     AppLockScreen(
@@ -553,8 +559,6 @@ fun WellPaidNavHost(
                     )
                 }
             }
-        }
-    }
 }
 
 private fun isPublicAuthRoute(route: String?): Boolean {

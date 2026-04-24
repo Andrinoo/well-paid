@@ -27,7 +27,7 @@ import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
+import com.wellpaid.ui.components.WellPaidBrandCircularProgress
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -204,7 +204,7 @@ fun ExpensesListContent(
                     .then(tabSwipe),
                 horizontalArrangement = Arrangement.Center,
             ) {
-                CircularProgressIndicator(color = WellPaidNavy)
+                WellPaidBrandCircularProgress()
             }
         } else {
             val pullRefreshing = state.isLoading && state.expenses.isNotEmpty()

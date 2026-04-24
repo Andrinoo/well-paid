@@ -16,7 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Payments
-import androidx.compose.material3.CircularProgressIndicator
+import com.wellpaid.ui.components.WellPaidBrandCircularProgress
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -162,7 +162,7 @@ fun IncomesListContent(
                     .then(tabSwipe),
                 horizontalArrangement = Arrangement.Center,
             ) {
-                CircularProgressIndicator()
+                WellPaidBrandCircularProgress()
             }
         } else {
             val rows = state.filteredIncomes

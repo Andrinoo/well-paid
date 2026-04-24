@@ -541,7 +541,7 @@
         <item quantity="other">%d itens no total</item>
     </plurals>
 
-    <string name="privacy_amount_masked">R$ ????</string>
+    <string name="privacy_amount_masked">---</string>
     <string name="security_title">Segurança e privacidade</string>
     <string name="settings_security_section">Segurança</string>
     <string name="settings_open_security">Segurança e privacidade</string>

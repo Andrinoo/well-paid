@@ -16,6 +16,7 @@ import com.wellpaid.core.network.UserApi
 import com.wellpaid.util.FastApiErrorMapper
 import com.wellpaid.util.greetingFirstNameFromAccessToken
 import com.wellpaid.util.looksLikeUuid
+import com.wellpaid.data.HomeDashboardCacheRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -71,12 +72,31 @@ class HomeViewModel @Inject constructor(
     private val announcementsApi: AnnouncementsApi,
     private val userApi: UserApi,
     private val tokenStorage: TokenStorage,
+    private val homeDashboardCache: HomeDashboardCacheRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     init {
+        if (!tokenStorage.getAccessToken().isNullOrBlank()) {
+            val p = _uiState.value.period
+            homeDashboardCache.readIfMatchingPeriod(p)?.let { snap ->
+                _uiState.update {
+                    it.copy(
+                        isLoading = true,
+                        period = YearMonth.of(snap.periodYear, snap.periodMonth),
+                        overview = snap.overview,
+                        cashflow = snap.cashflow,
+                        userFirstName = snap.userFirstName,
+                        cashflowDynamic = snap.cashflowDynamic,
+                        cashflowForecastMonths = snap.cashflowForecastMonths,
+                        errorMessage = null,
+                        cashflowError = null,
+                    )
+                }
+            }
+        }
         refresh()
     }
 
@@ -169,11 +189,14 @@ class HomeViewModel @Inject constructor(
             val firstName = fromApi?.takeIf { it.isNotBlank() }
                 ?: fromJwt?.takeIf { it.isNotBlank() }
                 ?: _uiState.value.userFirstName?.takeUnless { it.looksLikeUuid() }
+            val newOverview = overviewResult.getOrNull()
+            val newCashflow = cashflowResult.getOrNull()
+            val settingsBefore = _uiState.value
             _uiState.update {
                 it.copy(
                     isLoading = false,
-                    overview = overviewResult.getOrNull(),
-                    cashflow = cashflowResult.getOrNull(),
+                    overview = newOverview,
+                    cashflow = newCashflow,
                     userFirstName = firstName,
                     errorMessage = overviewResult.exceptionOrNull()?.let { e ->
                         FastApiErrorMapper.message(appContext, e)
@@ -185,6 +208,16 @@ class HomeViewModel @Inject constructor(
                     announcementsError = placementAnnouncementsError(placementResults),
                     recadosBadgeCount = recadosBadgeCount,
                     recadosBadgeKind = recadosBadgeKind,
+                )
+            }
+            if (newOverview != null) {
+                homeDashboardCache.persist(
+                    period,
+                    newOverview,
+                    newCashflow,
+                    firstName,
+                    settingsBefore.cashflowDynamic,
+                    settingsBefore.cashflowForecastMonths,
                 )
             }
         }

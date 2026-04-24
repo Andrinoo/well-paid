@@ -34,9 +34,10 @@ import com.wellpaid.R
 import com.wellpaid.core.model.emergency.EmergencyReservePlanDto
 import com.wellpaid.ui.theme.WellPaidMaxContentWidth
 import com.wellpaid.ui.theme.WellPaidNavy
+import com.wellpaid.ui.theme.LocalPrivacyHideBalance
+import com.wellpaid.ui.theme.formatBrlFromCentsRespectPrivacy
 import com.wellpaid.ui.theme.wellPaidMaxContentWidth
 import com.wellpaid.ui.theme.wellPaidTopAppBarColors
-import com.wellpaid.util.formatBrlFromCents
 import com.wellpaid.util.formatIsoDateToBr
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -46,6 +47,7 @@ fun EmergencyPlanStatusScreen(
     onNavigateBack: () -> Unit,
     viewModel: EmergencyReserveViewModel,
 ) {
+    val hideBalance = LocalPrivacyHideBalance.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val plan: EmergencyReservePlanDto? = state.plans.firstOrNull { it.id == planId }
     var fetchTried by remember(planId) { mutableStateOf(false) }
@@ -99,7 +101,10 @@ fun EmergencyPlanStatusScreen(
                 )
                 return@Column
             }
-            EmergencyPlanStatusSummaryBody(plan = plan)
+            EmergencyPlanStatusSummaryBody(
+                plan = plan,
+                hideBalance = hideBalance,
+            )
             Spacer(Modifier.height(16.dp))
             HorizontalDivider()
             Spacer(Modifier.height(12.dp))
@@ -122,7 +127,7 @@ fun EmergencyPlanStatusScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    text = formatBrlFromCents(t),
+                    text = formatBrlFromCentsRespectPrivacy(t, hideBalance),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
                     color = WellPaidNavy,
@@ -133,7 +138,10 @@ fun EmergencyPlanStatusScreen(
 }
 
 @Composable
-private fun EmergencyPlanStatusSummaryBody(plan: EmergencyReservePlanDto) {
+private fun EmergencyPlanStatusSummaryBody(
+    plan: EmergencyReservePlanDto,
+    hideBalance: Boolean,
+) {
     val paceLabel = when (plan.paceStatus) {
         "below" -> stringResource(R.string.emergency_pace_below)
         "above" -> stringResource(R.string.emergency_pace_above)
@@ -148,9 +156,9 @@ private fun EmergencyPlanStatusSummaryBody(plan: EmergencyReservePlanDto) {
     val line1 = buildString {
         append(statusStr)
         append(" · ")
-        append(formatBrlFromCents(plan.balanceCents))
+        append(formatBrlFromCentsRespectPrivacy(plan.balanceCents, hideBalance))
         append(" · ")
-        append(formatBrlFromCents(plan.monthlyTargetCents))
+        append(formatBrlFromCentsRespectPrivacy(plan.monthlyTargetCents, hideBalance))
         append("/mo")
         plan.targetEndDate?.takeIf { it.isNotBlank() }?.let {
             append(" · → ")
@@ -173,7 +181,7 @@ private fun EmergencyPlanStatusSummaryBody(plan: EmergencyReservePlanDto) {
             text = stringResource(
                 R.string.emergency_pace_delta_line,
                 paceLabel,
-                formatBrlFromCents(plan.paceDeltaCents),
+                formatBrlFromCentsRespectPrivacy(plan.paceDeltaCents, hideBalance),
             ),
             style = MaterialTheme.typography.bodyMedium,
             color = if (plan.paceStatus == "below") {

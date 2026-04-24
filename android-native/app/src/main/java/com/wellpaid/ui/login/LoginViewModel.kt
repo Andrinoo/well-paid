@@ -10,7 +10,10 @@ import com.wellpaid.core.model.auth.LoginRequestDto
 import com.wellpaid.core.model.auth.RefreshRequestDto
 import com.wellpaid.core.model.auth.TokenPairDto
 import com.wellpaid.core.model.auth.TokenStorage
+import com.wellpaid.core.network.DashboardApi
+import com.wellpaid.core.network.UserApi
 import com.wellpaid.core.network.auth.AuthApi
+import com.wellpaid.data.HomeDashboardCacheRepository
 import com.wellpaid.security.BiometricLoginPayload
 import com.wellpaid.security.BiometricLoginVault
 import com.wellpaid.security.parseBiometricLoginPayload
@@ -34,6 +37,9 @@ class LoginViewModel @Inject constructor(
     private val authApi: AuthApi,
     private val tokenStorage: TokenStorage,
     private val biometricLoginVault: BiometricLoginVault,
+    private val homeDashboardCache: HomeDashboardCacheRepository,
+    private val dashboardApi: DashboardApi,
+    private val userApi: UserApi,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LoginUiState())
@@ -81,6 +87,7 @@ class LoginViewModel @Inject constructor(
                     authenticateWithBiometricPayload(payload)
                 }.onSuccess { pair ->
                     tokenStorage.setTokens(pair.accessToken, pair.refreshToken)
+                    runCatching { homeDashboardCache.warmAfterAuth(dashboardApi, userApi) }
                     refreshQuickLoginAvailability()
                     _uiState.update { it.copy(isLoading = false) }
                     _events.send(LoginEvent.NavigateToMain)
@@ -194,6 +201,7 @@ class LoginViewModel @Inject constructor(
                     clearRememberedCredentials()
                 }
                 tokenStorage.setTokens(pair.accessToken, pair.refreshToken)
+                runCatching { homeDashboardCache.warmAfterAuth(dashboardApi, userApi) }
                 _uiState.update { it.copy(isLoading = false) }
                 _events.send(LoginEvent.NavigateToMain)
             }.onFailure { t ->

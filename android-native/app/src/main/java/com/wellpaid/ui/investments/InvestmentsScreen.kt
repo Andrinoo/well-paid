@@ -93,9 +93,10 @@ import com.wellpaid.ui.theme.WellPaidExpenseLine
 import com.wellpaid.ui.theme.WellPaidNavy
 import com.wellpaid.ui.theme.WellPaidNavyDeep
 import com.wellpaid.ui.theme.WellPaidMaxContentWidth
+import com.wellpaid.ui.theme.LocalPrivacyHideBalance
+import com.wellpaid.ui.theme.formatBrlFromCentsRespectPrivacy
 import com.wellpaid.ui.theme.wellPaidMaxContentWidth
 import com.wellpaid.ui.theme.wellPaidTopAppBarColors
-import com.wellpaid.util.formatBrlFromCents
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -110,6 +111,7 @@ fun InvestmentsScreen(
     modifier: Modifier = Modifier,
     viewModel: InvestmentsViewModel = hiltViewModel(),
 ) {
+    val hideBalance = LocalPrivacyHideBalance.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val overview = state.overview
     val pullRefreshing = state.isLoading && (overview != null || state.positions.isNotEmpty())
@@ -311,7 +313,7 @@ fun InvestmentsScreen(
             }
             Spacer(Modifier.height(4.dp))
             Text(
-                text = formatBrlFromCents(overview?.totalAllocatedCents ?: 0),
+                text = formatBrlFromCentsRespectPrivacy(overview?.totalAllocatedCents ?: 0, hideBalance),
                 style = MaterialTheme.typography.titleLarge,
                 color = WellPaidGold,
                 fontWeight = FontWeight.Bold,
@@ -319,7 +321,7 @@ fun InvestmentsScreen(
             Text(
                 text = stringResource(
                     R.string.investments_summary_caption,
-                    formatBrlFromCents(overview?.totalYieldCents ?: 0),
+                    formatBrlFromCentsRespectPrivacy(overview?.totalYieldCents ?: 0, hideBalance),
                 ),
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.White.copy(alpha = 0.8f),
@@ -644,7 +646,7 @@ fun InvestmentsScreen(
                         line = stringResource(
                             R.string.investments_position_line,
                             investmentInstrumentLabel(selected.instrumentType),
-                            formatBrlFromCents(selected.principalCents),
+                            formatBrlFromCentsRespectPrivacy(selected.principalCents, hideBalance),
                             selected.annualRateBps / 100f,
                         ),
                         fundamentals = state.positionDetailsFundamentals,
@@ -688,6 +690,7 @@ private fun InvestmentEvolutionChart(
     confidence: Double?,
     modifier: Modifier = Modifier,
 ) {
+    val hideBalance = LocalPrivacyHideBalance.current
     val maxClose = max(1, points.maxOfOrNull { it.close }?.toInt() ?: 1)
     val minClose = points.minOfOrNull { it.close } ?: 0.0
     val selectedPoint = points.lastOrNull()
@@ -752,7 +755,7 @@ private fun InvestmentEvolutionChart(
             )
             Spacer(Modifier.height(2.dp))
             Text(
-                text = formatBrlFromCents(((selectedPoint?.close ?: 0.0) * 100).toInt()),
+                text = formatBrlFromCentsRespectPrivacy(((selectedPoint?.close ?: 0.0) * 100).toInt(), hideBalance),
                 style = MaterialTheme.typography.titleMedium,
                 color = WellPaidNavy,
                 fontWeight = FontWeight.Bold,
@@ -819,8 +822,8 @@ private fun InvestmentEvolutionChart(
                 Text(
                     text = stringResource(
                         R.string.investments_bucket_line_template,
-                        formatBrlFromCents(bucket.allocatedCents),
-                        formatBrlFromCents(bucket.yieldCents),
+                        formatBrlFromCentsRespectPrivacy(bucket.allocatedCents, hideBalance),
+                        formatBrlFromCentsRespectPrivacy(bucket.yieldCents, hideBalance),
                         bucket.yieldPctMonth,
                     ),
                     style = MaterialTheme.typography.labelSmall,
@@ -928,6 +931,7 @@ private fun InvestmentPositionCard(
     fundamentals: FundamentalPreviewUi?,
     onDetails: () -> Unit,
 ) {
+    val hideBalance = LocalPrivacyHideBalance.current
     val instrumentKey = InvestmentAssetType.fromRaw(position.instrumentType).key
     val cardBackground = when (instrumentKey) {
         "stock" -> WellPaidGold
@@ -960,7 +964,7 @@ private fun InvestmentPositionCard(
         "bdr" -> Icons.Filled.TrackChanges
         else -> Icons.Filled.BarChart
     }
-    val principal = formatBrlFromCents(position.principalCents)
+    val principal = formatBrlFromCentsRespectPrivacy(position.principalCents, hideBalance)
     val metricOr = { s: String? -> if (s.isNullOrBlank()) "—" else s }
     val pvp = metricOr(fundamentals?.pvp)
     val dailyLiquidity = metricOr(fundamentals?.dailyLiquidity)

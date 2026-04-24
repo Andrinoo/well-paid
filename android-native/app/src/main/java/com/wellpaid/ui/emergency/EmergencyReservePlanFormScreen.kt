@@ -49,11 +49,12 @@ import com.wellpaid.R
 import com.wellpaid.ui.components.WellPaidDatePickerField
 import com.wellpaid.ui.components.WellPaidMoneyDigitKeypadField
 import com.wellpaid.ui.theme.WellPaidCream
+import com.wellpaid.ui.theme.LocalPrivacyHideBalance
 import com.wellpaid.ui.theme.WellPaidMaxContentWidth
 import com.wellpaid.ui.theme.WellPaidNavy
+import com.wellpaid.ui.theme.formatBrlFromCentsRespectPrivacy
 import com.wellpaid.ui.theme.wellPaidMaxContentWidth
 import com.wellpaid.ui.theme.wellPaidTopAppBarColors
-import com.wellpaid.util.formatBrlFromCents
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,6 +64,7 @@ fun EmergencyReservePlanFormScreen(
     modifier: Modifier = Modifier,
     viewModel: EmergencyReserveViewModel,
 ) {
+    val hideBalance = LocalPrivacyHideBalance.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val hideTargetEnd by viewModel.hideEmergencyPlanTargetEnd.collectAsStateWithLifecycle()
     var moreOptionsExpanded by remember { mutableStateOf(false) }
@@ -225,7 +227,7 @@ fun EmergencyReservePlanFormScreen(
                 Text(
                     text = stringResource(
                         R.string.emergency_monthly_suggestion,
-                        formatBrlFromCents(rec),
+                        formatBrlFromCentsRespectPrivacy(rec, hideBalance),
                     ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -252,8 +254,8 @@ fun EmergencyReservePlanFormScreen(
                                 R.string.emergency_retroactive_plan_message,
                                 offer.monthsPassed,
                                 offer.monthsRemaining,
-                                formatBrlFromCents(offer.goalCentsForMessage),
-                                formatBrlFromCents(offer.adjustedMonthlyCents),
+                                formatBrlFromCentsRespectPrivacy(offer.goalCentsForMessage, hideBalance),
+                                formatBrlFromCentsRespectPrivacy(offer.adjustedMonthlyCents, hideBalance),
                             ),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSecondaryContainer,

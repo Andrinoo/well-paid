@@ -38,12 +38,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wellpaid.R
 import com.wellpaid.ui.components.WellPaidMoneyDigitKeypadField
 import com.wellpaid.ui.theme.WellPaidCream
+import com.wellpaid.ui.theme.LocalPrivacyHideBalance
 import com.wellpaid.ui.theme.WellPaidMaxContentWidth
 import com.wellpaid.ui.theme.WellPaidNavy
+import com.wellpaid.ui.theme.formatBrlFromCentsRespectPrivacy
 import com.wellpaid.ui.theme.wellPaidMaxContentWidth
 import com.wellpaid.ui.theme.wellPaidScreenHorizontalPadding
 import com.wellpaid.ui.theme.wellPaidTopAppBarColors
-import com.wellpaid.util.formatBrlFromCents
 import androidx.compose.material3.CenterAlignedTopAppBar
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -55,6 +56,7 @@ fun InvestmentsAporteScreen(
     modifier: Modifier = Modifier,
     viewModel: InvestmentsViewModel = hiltViewModel(),
 ) {
+    val hideBalance = LocalPrivacyHideBalance.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val position = state.positions.firstOrNull { it.id == positionId }
     val line = if (position != null) {
@@ -62,7 +64,7 @@ fun InvestmentsAporteScreen(
         stringResource(
             R.string.investments_position_line,
             label,
-            formatBrlFromCents(position.principalCents),
+            formatBrlFromCentsRespectPrivacy(position.principalCents, hideBalance),
             position.annualRateBps / 100f,
         )
     } else {

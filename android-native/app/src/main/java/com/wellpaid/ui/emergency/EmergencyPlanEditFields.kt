@@ -26,8 +26,9 @@ import androidx.compose.ui.unit.dp
 import com.wellpaid.R
 import com.wellpaid.ui.components.WellPaidDatePickerField
 import com.wellpaid.ui.components.WellPaidMoneyDigitKeypadField
+import com.wellpaid.ui.theme.LocalPrivacyHideBalance
 import com.wellpaid.ui.theme.WellPaidNavy
-import com.wellpaid.util.formatBrlFromCents
+import com.wellpaid.ui.theme.formatBrlFromCentsRespectPrivacy
 
 @Composable
 private fun PlanFieldLabel(
@@ -53,6 +54,7 @@ fun EmergencyPlanEditFields(
     /** Rótulos mais curtos, campos mais baixos (ecrã de detalhe do plano). */
     compactLayout: Boolean = false,
 ) {
+    val hideBalance = LocalPrivacyHideBalance.current
     val gap = if (compactLayout) 4.dp else 6.dp
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -216,7 +218,7 @@ fun EmergencyPlanEditFields(
             Text(
                 text = stringResource(
                     R.string.emergency_monthly_suggestion,
-                    formatBrlFromCents(rec),
+                    formatBrlFromCentsRespectPrivacy(rec, hideBalance),
                 ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -243,8 +245,8 @@ fun EmergencyPlanEditFields(
                             R.string.emergency_retroactive_plan_message,
                             offer.monthsPassed,
                             offer.monthsRemaining,
-                            formatBrlFromCents(offer.goalCentsForMessage),
-                            formatBrlFromCents(offer.adjustedMonthlyCents),
+                            formatBrlFromCentsRespectPrivacy(offer.goalCentsForMessage, hideBalance),
+                            formatBrlFromCentsRespectPrivacy(offer.adjustedMonthlyCents, hideBalance),
                         ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSecondaryContainer,

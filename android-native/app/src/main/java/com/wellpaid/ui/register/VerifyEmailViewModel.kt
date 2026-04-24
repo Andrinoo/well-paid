@@ -8,7 +8,10 @@ import com.wellpaid.R
 import com.wellpaid.core.model.auth.ResendVerificationRequestDto
 import com.wellpaid.core.model.auth.TokenStorage
 import com.wellpaid.core.model.auth.VerifyEmailRequestDto
+import com.wellpaid.core.network.DashboardApi
+import com.wellpaid.core.network.UserApi
 import com.wellpaid.core.network.auth.AuthApi
+import com.wellpaid.data.HomeDashboardCacheRepository
 import com.wellpaid.util.FastApiErrorMapper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -27,6 +30,9 @@ class VerifyEmailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val authApi: AuthApi,
     private val tokenStorage: TokenStorage,
+    private val homeDashboardCache: HomeDashboardCacheRepository,
+    private val dashboardApi: DashboardApi,
+    private val userApi: UserApi,
 ) : ViewModel() {
 
     private val initialEmail: String =
@@ -76,6 +82,7 @@ class VerifyEmailViewModel @Inject constructor(
             runCatching { authApi.verifyEmail(body) }
                 .onSuccess { pair ->
                     tokenStorage.setTokens(pair.accessToken, pair.refreshToken)
+                    runCatching { homeDashboardCache.warmAfterAuth(dashboardApi, userApi) }
                     _uiState.update { it.copy(isLoading = false) }
                     _events.send(VerifyEvent.NavigateToMain)
                 }

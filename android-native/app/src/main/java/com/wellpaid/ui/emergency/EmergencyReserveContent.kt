@@ -69,6 +69,8 @@ import com.wellpaid.ui.theme.WellPaidNavy
 import com.wellpaid.ui.theme.WellPaidNavyDeep
 import com.wellpaid.ui.theme.wellPaidMaxContentWidth
 import com.wellpaid.ui.theme.DiscreetBalanceValue
+import com.wellpaid.ui.theme.LocalPrivacyHideBalance
+import com.wellpaid.ui.theme.formatBrlFromCentsRespectPrivacy
 import com.wellpaid.util.formatBrlFromCents
 import com.wellpaid.util.centsToBrlInput
 import com.wellpaid.util.formatIsoDateToBr
@@ -334,6 +336,7 @@ private fun EmergencyReserveCompactHero(
     pctAnnual: Int,
     planCount: Int,
 ) {
+    val hideBalance = LocalPrivacyHideBalance.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -370,7 +373,7 @@ private fun EmergencyReserveCompactHero(
         Text(
             text = stringResource(
                 R.string.emergency_hero_subline,
-                formatBrlFromCents(r.monthlyTargetCents),
+                formatBrlFromCentsRespectPrivacy(r.monthlyTargetCents, hideBalance),
                 stringResource(R.string.emergency_hero_plans_count_short, planCount),
                 pctAnnual,
             ),
@@ -397,16 +400,17 @@ private fun EmergencyReservePlanCompactCard(
     enabled: Boolean,
     onOpen: () -> Unit,
 ) {
+    val hideBalance = LocalPrivacyHideBalance.current
     val targetCents = plan.targetCents
     val compactLine = if (targetCents != null && targetCents > 0) {
         val pct = ((plan.balanceCents * 100L) / targetCents).toInt().coerceIn(0, 999)
         stringResource(
             R.string.emergency_plan_card_compact_vs_target,
-            formatBrlFromCents(plan.balanceCents),
+            formatBrlFromCentsRespectPrivacy(plan.balanceCents, hideBalance),
             pct,
         )
     } else {
-        formatBrlFromCents(plan.balanceCents)
+        formatBrlFromCentsRespectPrivacy(plan.balanceCents, hideBalance)
     }
     val showBelowPace = plan.paceStatus == "below"
     val timelineLine = buildString {

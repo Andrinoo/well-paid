@@ -10,12 +10,16 @@ import javax.inject.Singleton
  */
 @Singleton
 class MainPrefetchTiming @Inject constructor() {
-    val expensesDelayMs: Long = 20L
-    val incomesDelayMs: Long = 45L
-    val goalsDelayMs: Long = 70L
-    val emergencyDelayMs: Long = 95L
-    val shoppingDelayMs: Long = 120L
+    /**
+     * Home não usa delay no `init` — a prioridade de rede é a primeira pintura.
+     * Demais abas abrem após atrasos maiores (menos contenda com overview/cashflow/announcements).
+     */
+    val expensesDelayMs: Long = 180L
+    val incomesDelayMs: Long = 280L
+    val goalsDelayMs: Long = 400L
+    val emergencyDelayMs: Long = 480L
+    val shoppingDelayMs: Long = 580L
 
-    /** [com.wellpaid.data.FamilyMeRepository] após o arranque do dashboard (user/overview). */
-    val familyAfterMainDelayMs: Long = 40L
+    /** [com.wellpaid.data.FamilyMeRepository] após o arranque do shell (janela pós-Home). */
+    val familyAfterMainDelayMs: Long = 120L
 }

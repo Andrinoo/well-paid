@@ -28,7 +28,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -620,7 +620,7 @@ fun ExpenseFormScreen(
                     OutlinedTextField(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = canEdit),
+                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = canEdit),
                         readOnly = true,
                         enabled = canEdit,
                         value = state.categories.find { it.id == state.categoryId }?.name.orEmpty(),
@@ -695,7 +695,7 @@ fun ExpenseFormScreen(
                             OutlinedTextField(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = canEdit),
+                                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = canEdit),
                                 readOnly = true,
                                 enabled = canEdit,
                                 value = selectedLabel,
