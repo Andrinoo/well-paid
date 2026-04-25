@@ -339,13 +339,14 @@ fun FamilyScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    if (inv.inviteSentEmail != null) {
+                    val inviteSentEmail = inv.inviteSentEmail
+                    if (inviteSentEmail != null) {
                         Spacer(Modifier.height(8.dp))
                         Text(
                             text = if (inv.inviteSent) {
-                                stringResource(R.string.family_invite_email_sent, inv.inviteSentEmail)
+                                stringResource(R.string.family_invite_email_sent, inviteSentEmail)
                             } else {
-                                stringResource(R.string.family_invite_email_not_sent, inv.inviteSentEmail)
+                                stringResource(R.string.family_invite_email_not_sent, inviteSentEmail)
                             },
                             style = MaterialTheme.typography.bodySmall,
                             color = if (inv.inviteSent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
