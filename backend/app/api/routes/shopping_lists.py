@@ -16,6 +16,7 @@ from app.core.config import get_settings
 from app.core.database import get_db
 from app.models.category import Category
 from app.models.expense import Expense
+from app.models.expense_share import ExpenseShare
 from app.models.shopping_list import ShoppingList
 from app.models.shopping_list_item import ShoppingListItem
 from app.models.user import User
@@ -33,6 +34,12 @@ from app.schemas.shopping_list import (
     ShoppingListSummaryResponse,
 )
 from app.services.expense_share import ExpenseShareValidationError, normalize_expense_share
+from app.services.expense_splits import (
+    build_two_party_shares,
+    mark_all_shares_paid_for_expense,
+    replace_expense_shares,
+    sync_expense_row_from_shares,
+)
 from app.services.family_scope import family_peer_user_ids
 from app.services.goal_product_search import (
     build_grocery_search_query,
@@ -536,6 +543,11 @@ def complete_shopping_list(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(err),
         ) from err
+    if is_s and sw is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Indica o membro da família com quem partilhas a despesa.",
+        )
 
     desc = _expense_description_for_list(row, body.expense_date)
     disc = int(body.discount_cents or 0)
@@ -568,6 +580,20 @@ def complete_shopping_list(
     )
     db.add(expense)
     db.flush()
+    if is_s and sw is not None:
+        share_rows = build_two_party_shares(
+            owner_id=user.id,
+            peer_id=sw,
+            amount_cents=total,
+            split_mode="percent",
+            owner_share_cents=None,
+            peer_share_cents=None,
+            owner_percent_bps=5000,
+            peer_percent_bps=5000,
+        )
+        replace_expense_shares(db, expense.id, share_rows)
+        shs = mark_all_shares_paid_for_expense(db, expense.id, now=now)
+        sync_expense_row_from_shares(expense, shs, now=now)
 
     row.status = STATUS_COMPLETED
     row.completed_at = now

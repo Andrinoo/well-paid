@@ -1,4 +1,5 @@
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -32,7 +33,41 @@ from app.services.ticker_cache import ticker_cache_service
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
-app = FastAPI(title="Well Paid API", version="0.1.0")
+def _log_smtp_status() -> None:
+    s = get_settings()
+    host = (s.smtp_host or "").strip()
+    if not host:
+        logger.warning(
+            "SMTP não configurado (SMTP_HOST vazio): POST /auth/forgot-password não envia e-mail. "
+            "Preenche SMTP_* e MAIL_FROM no .env, reinicia o Uvicorn. "
+            "Para testar sem mail: APP_ENV=development (dev_reset_token na resposta) ou regista primeiro o utilizador."
+        )
+        return
+    mf = (s.mail_from or s.smtp_user or "").strip()
+    if not mf:
+        logger.warning(
+            "SMTP_HOST definido mas falta MAIL_FROM (ou SMTP_USER): o envio de recuperação de senha será ignorado."
+        )
+    else:
+        logger.info("SMTP ativo: host=%s port=%s mail_from=%s", host, s.smtp_port, mf)
+
+
+def _warm_ticker_cache() -> None:
+    try:
+        ticker_cache_service.warm_up()
+        logger.info("Ticker cache warmed on startup.")
+    except Exception:
+        logger.exception("Failed to warm ticker cache on startup.")
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    _log_smtp_status()
+    _warm_ticker_cache()
+    yield
+
+
+app = FastAPI(title="Well Paid API", version="0.1.0", lifespan=lifespan)
 app.state.limiter = limiter
 
 
@@ -58,35 +93,6 @@ def root_post_rejected() -> None:
             "--dart-define=API_BASE_URL=…"
         ),
     )
-
-
-@app.on_event("startup")
-def _log_smtp_status() -> None:
-    s = get_settings()
-    host = (s.smtp_host or "").strip()
-    if not host:
-        logger.warning(
-            "SMTP não configurado (SMTP_HOST vazio): POST /auth/forgot-password não envia e-mail. "
-            "Preenche SMTP_* e MAIL_FROM no .env, reinicia o Uvicorn. "
-            "Para testar sem mail: APP_ENV=development (dev_reset_token na resposta) ou regista primeiro o utilizador."
-        )
-        return
-    mf = (s.mail_from or s.smtp_user or "").strip()
-    if not mf:
-        logger.warning(
-            "SMTP_HOST definido mas falta MAIL_FROM (ou SMTP_USER): o envio de recuperação de senha será ignorado."
-        )
-    else:
-        logger.info("SMTP ativo: host=%s port=%s mail_from=%s", host, s.smtp_port, mf)
-
-
-@app.on_event("startup")
-def _warm_ticker_cache() -> None:
-    try:
-        ticker_cache_service.warm_up()
-        logger.info("Ticker cache warmed on startup.")
-    except Exception:
-        logger.exception("Failed to warm ticker cache on startup.")
 
 
 def _rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:

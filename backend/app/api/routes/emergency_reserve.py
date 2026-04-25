@@ -61,20 +61,14 @@ def _tables_ready(db: Session) -> bool:
 
 
 def _require_owner_if_family_scope(db: Session, user_id) -> None:
-    member = db.execute(
-        select(FamilyMember.family_id, FamilyMember.role).where(FamilyMember.user_id == user_id)
-    ).one_or_none()
-    if member is None:
+    role = db.scalar(select(FamilyMember.role).where(FamilyMember.user_id == user_id))
+    if role is None:
         return
-    family_id, role = member
-    # Regra de edição restrita só quando há agregado familiar de facto (2+ membros).
-    has_shared_scope = db.scalar(
-        select(FamilyMember.id).where(FamilyMember.family_id == family_id).offset(1).limit(1)
-    ) is not None
-    # Modo família ainda não está maduro para bloquear operações por role na reserva.
-    # Mantemos a função para possível reativação futura, mas sem impedir alterações.
-    if has_shared_scope and not _is_owner_role(role):
-        return
+    if not _is_owner_role(role):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Apenas o titular da família pode alterar a reserva de emergência.",
+        )
 
 
 @router.get("/plans", response_model=list[EmergencyReservePlanItem])
