@@ -30,13 +30,27 @@ from app.schemas.goal import (
 )
 from app.services.family_scope import family_visibility_scope
 from app.services.goal_product_search import search_products_google_shopping
-from app.services.goal_reference_price import fetch_product_hints
+from app.services.goal_reference_price import fetch_product_hints, is_safe_public_http_url
 
 router = APIRouter(prefix="/goals", tags=["goals"])
 
 
 def _default_due_at() -> datetime:
     return datetime.now(UTC) + timedelta(days=90)
+
+
+def _safe_target_url_or_none(raw: str | None) -> str | None:
+    if raw is None:
+        return None
+    val = raw.strip()
+    if not val:
+        return None
+    if not is_safe_public_http_url(val):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="URL de produto inválida para pesquisa segura.",
+        )
+    return val
 
 
 def _record_goal_price_history(
@@ -121,6 +135,9 @@ def _to_response(row: Goal, viewer_id: uuid.UUID) -> GoalResponse:
         due_at=row.due_at,
         price_check_interval_hours=int(row.price_check_interval_hours or 12),
         last_price_track_at=row.last_price_track_at,
+        tracking_enabled=bool(row.tracking_enabled),
+        tracking_failures=int(row.tracking_failures or 0),
+        next_track_after=row.next_track_after,
         price_alternatives=alts,
     )
 
@@ -161,7 +178,7 @@ def create_goal(
         current_cents=body.current_cents,
         is_active=body.is_active,
         is_family=bool(body.is_family),
-        target_url=(body.target_url.strip() if body.target_url else None),
+        target_url=_safe_target_url_or_none(body.target_url),
         reference_product_name=body.reference_product_name,
         reference_price_cents=body.reference_price_cents,
         reference_currency=body.reference_currency or "BRL",
@@ -169,6 +186,7 @@ def create_goal(
         description=(body.description.strip() if body.description else None),
         due_at=(body.due_at or _default_due_at()),
         price_check_interval_hours=int(body.price_check_interval_hours or 12),
+        tracking_enabled=bool(body.tracking_enabled),
         reference_thumbnail_url=(
             body.reference_thumbnail_url.strip()
             if body.reference_thumbnail_url
@@ -198,7 +216,13 @@ def preview_goal_from_url(
 ) -> GoalPreviewFromUrlResponse:
     """Pré-visualiza nome/preço a partir de um URL (sem gravar meta)."""
     _ = user
-    hints = fetch_product_hints(body.url.strip())
+    safe_url = _safe_target_url_or_none(body.url)
+    if safe_url is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="URL inválida para pré-visualização.",
+        )
+    hints = fetch_product_hints(safe_url)
     pc = hints.get("reference_price_cents")
     pc_i = int(pc) if pc is not None else None
     return GoalPreviewFromUrlResponse(
@@ -278,14 +302,18 @@ def contribute_goal(
     note = body.note.strip() if body.note else None
     if note == "":
         note = None
+    amount = int(body.amount_cents)
     db.add(
         GoalContribution(
             goal_id=row.id,
-            amount_cents=int(body.amount_cents),
+            amount_cents=amount,
             note=note,
         )
     )
-    row.current_cents = int(row.current_cents) + int(body.amount_cents)
+    db.query(Goal).filter(Goal.id == row.id).update(
+        {Goal.current_cents: Goal.current_cents + amount},
+        synchronize_session=False,
+    )
     db.commit()
     db.refresh(row)
     return _to_response(row, user.id)
@@ -350,7 +378,13 @@ def refresh_goal_reference_price(
     settings = get_settings()
     hints: dict[str, Any]
     if row.target_url and str(row.target_url).strip():
-        hints = fetch_product_hints(row.target_url.strip())
+        safe_url = _safe_target_url_or_none(row.target_url)
+        if safe_url is None:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="URL inválida para atualização de preço.",
+            )
+        hints = fetch_product_hints(safe_url)
     else:
         if not (settings.serpapi_key or "").strip():
             raise HTTPException(
@@ -456,11 +490,15 @@ def update_goal(
     data = body.model_dump(exclude_unset=True)
     if "title" in data and data["title"] is not None:
         data["title"] = data["title"].strip()
+    # current_cents is managed by contribution flow to avoid accidental overwrites.
+    data.pop("current_cents", None)
     if "description" in data and isinstance(data["description"], str):
         data["description"] = data["description"].strip() or None
     if "price_check_interval_hours" in data and data["price_check_interval_hours"] is not None:
         data["price_check_interval_hours"] = int(data["price_check_interval_hours"])
     for k, v in data.items():
+        if k == "target_url":
+            v = _safe_target_url_or_none(v)
         setattr(row, k, v)
     if "reference_price_cents" in data and data.get("reference_price_cents") is not None:
         _record_goal_price_history(

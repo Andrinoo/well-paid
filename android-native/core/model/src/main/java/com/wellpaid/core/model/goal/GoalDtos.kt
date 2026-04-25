@@ -56,7 +56,7 @@ data class GoalCreateDto(
 data class GoalUpdateDto(
     val title: String,
     @SerialName("target_cents") val targetCents: Int,
-    @SerialName("current_cents") val currentCents: Int,
+    @SerialName("current_cents") val currentCents: Int? = null,
     @SerialName("is_active") val isActive: Boolean,
     @SerialName("target_url") val targetUrl: String? = null,
     @SerialName("reference_product_name") val referenceProductName: String? = null,

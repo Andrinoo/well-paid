@@ -26,6 +26,12 @@ class Announcement(Base):
     priority: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     cta_label: Mapped[str | None] = mapped_column(String(80), nullable=True)
     cta_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    dedupe_key: Mapped[str | None] = mapped_column(
+        String(120),
+        nullable=True,
+        unique=True,
+        index=True,
+    )
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     starts_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

@@ -3,16 +3,53 @@
 from __future__ import annotations
 
 import json
+import ipaddress
 import re
+import socket
 from datetime import datetime, timezone
 from html import unescape
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 
 _USER_AGENT = (
     "WellPaid/1.0 (+https://wellpaid.app) httpx; price-hint fetch (best-effort, not for commerce SLA)"
 )
+
+
+def is_safe_public_http_url(url: str) -> bool:
+    try:
+        parsed = urlparse(url.strip())
+    except Exception:
+        return False
+    if parsed.scheme not in {"http", "https"}:
+        return False
+    host = (parsed.hostname or "").strip().lower()
+    if not host:
+        return False
+    if host in {"localhost", "127.0.0.1", "::1"}:
+        return False
+    if host.endswith(".local") or host.endswith(".internal"):
+        return False
+    try:
+        ip = ipaddress.ip_address(host)
+        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_multicast:
+            return False
+    except ValueError:
+        try:
+            infos = socket.getaddrinfo(host, None)
+        except Exception:
+            return False
+        for info in infos:
+            addr = info[4][0]
+            try:
+                ip = ipaddress.ip_address(addr)
+            except ValueError:
+                continue
+            if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_multicast:
+                return False
+    return True
 
 
 def _meta_content(html: str, prop: str) -> str | None:
@@ -88,6 +125,8 @@ def fetch_product_hints(url: str, *, timeout_s: float = 12.0) -> dict[str, Any]:
         "price_alternatives": [],
         "price_source": "unavailable",
     }
+    if not is_safe_public_http_url(url):
+        return out
     try:
         with httpx.Client(
             follow_redirects=True,

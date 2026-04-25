@@ -469,7 +469,7 @@ class GoalFormViewModel @Inject constructor(
                         GoalUpdateDto(
                             title = title,
                             targetCents = target,
-                            currentCents = loaded.currentCents,
+                            currentCents = null,
                             isActive = s.isActive,
                             targetUrl = url,
                             referenceProductName = loaded.referenceProductName,

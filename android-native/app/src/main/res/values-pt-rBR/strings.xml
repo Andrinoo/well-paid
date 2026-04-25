@@ -333,7 +333,7 @@
     <string name="goal_detail_product_name">Nome detectado: %1$s</string>
     <string name="goal_detail_alternatives_count">%1$d preços alternativos</string>
     <string name="goal_detail_progress_label">%1$s de %2$s</string>
-    <string name="goal_readonly_family">Meta de outro membro da família ? só consulta.</string>
+    <string name="goal_readonly_family">Meta de outro membro da família — somente consulta.</string>
     <string name="goal_contribute_button">Registar contribuição</string>
     <string name="goal_contribute_title">Contribuir</string>
     <string name="goal_contribute_amount">Valor (R$)</string>
@@ -359,7 +359,7 @@
     <string name="goal_unified_search_prices">Pesquisar preços</string>
     <string name="goal_auto_product_search">Pesquisa de preços (Google Shopping)</string>
     <string name="goal_auto_product_search_hint">Desligue para só pesquisar quando precisar (poupa dados).</string>
-    <string name="goal_price_search_disabled">Ligue ?Pesquisa de preços (Google Shopping)? acima para pesquisar produtos.</string>
+    <string name="goal_price_search_disabled">Ative “Pesquisa de preços (Google Shopping)” acima para pesquisar produtos.</string>
     <string name="goal_field_target">Objetivo (valor total)</string>
     <string name="goal_field_initial">Valor já poupado (opcional)</string>
     <string name="goal_field_initial_hint">Opcional no registo. Use 0 ou deixe vazio.</string>
@@ -387,14 +387,14 @@
     <string name="goal_error_title">Indique um título.</string>
     <string name="goal_error_target">Indique um objetivo válido maior que zero.</string>
     <string name="goal_error_initial">Valor inicial inválido.</string>
-    <string name="goal_search_auto_hint">A pesquisa usa o título da meta (2+ letras) ou um URL (?q=?) no campo opcional. Até doze resultados abrem numa lista ? escolhe um para definir o nome da meta, o valor e o link. Sem navegador.</string>
+    <string name="goal_search_auto_hint">A pesquisa usa o título da meta (2+ letras) ou um URL (?q=...) no campo opcional. Até doze resultados abrem numa lista — escolha um para definir o nome da meta, o valor e o link. Sem navegador.</string>
     <string name="goal_search_refresh_suggestions">Pesquisar de novo</string>
     <string name="goal_search_results_title">Resultados da pesquisa</string>
     <string name="goal_search_results_sheet_subtitle">Escolhe um anúncio. O título da meta passa a ser o nome do produto e preenchemos valor e link.</string>
     <string name="goal_search_results_banner_title">%1$d resultados</string>
-    <string name="goal_search_results_banner_subtitle">Abre a lista para escolher ? a meta guardada usará esse nome exacto.</string>
+    <string name="goal_search_results_banner_subtitle">Abra a lista para escolher — a meta salva usará esse nome exato.</string>
     <string name="goal_search_products_by_title">Pesquisar de novo pelo título</string>
-    <string name="goal_searching_products">A pesquisar?</string>
+    <string name="goal_searching_products">Pesquisando…</string>
     <string name="goal_error_query_too_short">Escreva pelo menos 2 caracteres no título.</string>
     <string name="goal_error_query_title_or_search_url">Indique pelo menos 2 letras no título ou no campo opcional, ou cole um link https.</string>
     <string name="goal_fetch_target_from_link">Obter o valor da meta deste link</string>

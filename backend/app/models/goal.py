@@ -41,6 +41,19 @@ class Goal(Base, TimestampMixin):
         server_default=text("12"),
     )
     last_price_track_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    tracking_enabled: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=True,
+        server_default=text("true"),
+    )
+    tracking_failures: Mapped[int] = mapped_column(
+        BigInteger,
+        nullable=False,
+        default=0,
+        server_default=text("0"),
+    )
+    next_track_after: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     reference_thumbnail_url: Mapped[str | None] = mapped_column(
         String(2048), nullable=True
     )

@@ -39,6 +39,7 @@ class GoalCreate(BaseModel):
     description: str | None = Field(default=None, max_length=1000)
     due_at: datetime | None = None
     price_check_interval_hours: int = Field(default=12, ge=6, le=24)
+    tracking_enabled: bool = True
 
 
 class GoalUpdate(BaseModel):
@@ -56,6 +57,7 @@ class GoalUpdate(BaseModel):
     description: str | None = Field(default=None, max_length=1000)
     due_at: datetime | None = None
     price_check_interval_hours: int | None = Field(default=None, ge=6, le=24)
+    tracking_enabled: bool | None = None
 
 
 class GoalContribute(BaseModel):
@@ -97,6 +99,9 @@ class GoalResponse(BaseModel):
     due_at: datetime | None = None
     price_check_interval_hours: int = 12
     last_price_track_at: datetime | None = None
+    tracking_enabled: bool = True
+    tracking_failures: int = 0
+    next_track_after: datetime | None = None
     price_alternatives: list[dict] = Field(default_factory=list)
 
 

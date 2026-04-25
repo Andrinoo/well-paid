@@ -24,6 +24,7 @@ from app.schemas.announcement import (
 router = APIRouter(tags=["announcements"])
 
 _MAX_LIMIT = 100
+_UNSET = object()
 
 
 def _resolve_target_user_id(db: Session, email: str | None) -> uuid.UUID | None:
@@ -350,7 +351,7 @@ def patch_announcement(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Nenhum campo para atualizar",
         )
-    target_email_update: str | None | object = object()
+    target_email_update: str | None | object = _UNSET
     if "target_user_email" in changes:
         raw = changes.pop("target_user_email")
         if raw is None:
@@ -378,7 +379,7 @@ def patch_announcement(
     for key, value in changes.items():
         setattr(row, key, value)
 
-    if target_email_update is not object():
+    if target_email_update is not _UNSET:
         if target_email_update is None or target_email_update == "":
             row.target_user_id = None
         else:
