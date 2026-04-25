@@ -261,10 +261,7 @@ class HomePage extends ConsumerWidget {
               data: (d) => RefreshIndicator(
                 color: WellPaidColors.navy,
                 onRefresh: () async {
-                  ref.invalidate(dashboardOverviewProvider);
-                  ref.invalidate(dashboardCashflowProvider);
-                  await ref.read(dashboardOverviewProvider.future);
-                  await ref.read(dashboardCashflowProvider.future);
+                  await refreshDashboardData(ref.container);
                 },
                 child: DashboardScrollContent(data: d),
               ),

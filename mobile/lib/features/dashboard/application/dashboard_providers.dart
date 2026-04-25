@@ -82,3 +82,15 @@ final dashboardCashflowByRequestProvider = FutureProvider.autoDispose
   final repo = ref.watch(dashboardRepositoryProvider);
   return repo.fetchCashflow(request);
 });
+
+Future<int> refreshDashboardData(ProviderContainer container) async {
+  final sw = Stopwatch()..start();
+  container.invalidate(dashboardOverviewProvider);
+  container.invalidate(dashboardCashflowProvider);
+  await Future.wait([
+    container.read(dashboardOverviewProvider.future),
+    container.read(dashboardCashflowProvider.future),
+  ]);
+  sw.stop();
+  return sw.elapsedMilliseconds;
+}
