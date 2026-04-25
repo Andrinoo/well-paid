@@ -25,7 +25,7 @@ from app.schemas.goal import (
     GoalResponse,
     GoalUpdate,
 )
-from app.services.family_scope import family_peer_user_ids
+from app.services.family_scope import family_visibility_scope
 from app.services.goal_product_search import search_products_google_shopping
 from app.services.goal_reference_price import fetch_product_hints
 
@@ -39,10 +39,21 @@ def _owned_goal(db: Session, goal_id: uuid.UUID, owner_id: uuid.UUID) -> Goal | 
 def _visible_goal(
     db: Session, goal_id: uuid.UUID, viewer_id: uuid.UUID
 ) -> Goal | None:
-    peer_ids = family_peer_user_ids(db, viewer_id)
+    viewer = db.get(User, viewer_id)
+    if viewer is None:
+        return None
+    owner_ids, include_family = family_visibility_scope(db, viewer)
+    visibility_clause = (
+        Goal.owner_user_id.in_(owner_ids)
+        if not include_family
+        else (
+            (Goal.owner_user_id == viewer_id)
+            | ((Goal.owner_user_id.in_(owner_ids)) & (Goal.is_family.is_(True)))
+        )
+    )
     return (
         db.query(Goal)
-        .filter(Goal.id == goal_id, Goal.owner_user_id.in_(peer_ids))
+        .filter(Goal.id == goal_id, visibility_clause)
         .first()
     )
 
@@ -57,6 +68,7 @@ def _to_response(row: Goal, viewer_id: uuid.UUID) -> GoalResponse:
         target_cents=int(row.target_cents),
         current_cents=int(row.current_cents),
         is_active=row.is_active,
+        is_family=bool(row.is_family),
         created_at=row.created_at,
         updated_at=row.updated_at,
         target_url=row.target_url,
@@ -77,10 +89,18 @@ def list_goals(
     user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> list[GoalResponse]:
-    peer_ids = family_peer_user_ids(db, user.id)
+    owner_ids, include_family = family_visibility_scope(db, user)
+    visibility_clause = (
+        Goal.owner_user_id.in_(owner_ids)
+        if not include_family
+        else (
+            (Goal.owner_user_id == user.id)
+            | ((Goal.owner_user_id.in_(owner_ids)) & (Goal.is_family.is_(True)))
+        )
+    )
     rows = (
         db.query(Goal)
-        .filter(Goal.owner_user_id.in_(peer_ids))
+        .filter(visibility_clause)
         .order_by(Goal.is_active.desc(), Goal.updated_at.desc())
         .all()
     )
@@ -99,6 +119,7 @@ def create_goal(
         target_cents=body.target_cents,
         current_cents=body.current_cents,
         is_active=body.is_active,
+        is_family=bool(body.is_family),
         target_url=(body.target_url.strip() if body.target_url else None),
         reference_product_name=body.reference_product_name,
         reference_price_cents=body.reference_price_cents,

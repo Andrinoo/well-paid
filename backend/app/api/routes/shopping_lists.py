@@ -40,7 +40,7 @@ from app.services.expense_splits import (
     replace_expense_shares,
     sync_expense_row_from_shares,
 )
-from app.services.family_scope import family_peer_user_ids
+from app.services.family_scope import family_visibility_scope
 from app.services.goal_product_search import (
     build_grocery_search_query,
     search_products_google_shopping,
@@ -168,6 +168,7 @@ def _to_detail(row: ShoppingList, viewer_id: uuid.UUID) -> ShoppingListDetailRes
         id=row.id,
         owner_user_id=row.owner_user_id,
         is_mine=row.owner_user_id == viewer_id,
+        is_family=bool(row.is_family),
         title=row.title,
         store_name=row.store_name,
         status=row.status,
@@ -189,6 +190,7 @@ def _to_summary(
         id=row.id,
         owner_user_id=row.owner_user_id,
         is_mine=row.owner_user_id == viewer_id,
+        is_family=bool(row.is_family),
         title=row.title,
         store_name=row.store_name,
         status=row.status,
@@ -206,10 +208,18 @@ def list_shopping_lists(
     user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> list[ShoppingListSummaryResponse]:
-    peer_ids = family_peer_user_ids(db, user.id)
+    owner_ids, include_family = family_visibility_scope(db, user)
+    visibility_clause = (
+        ShoppingList.owner_user_id.in_(owner_ids)
+        if not include_family
+        else (
+            (ShoppingList.owner_user_id == user.id)
+            | ((ShoppingList.owner_user_id.in_(owner_ids)) & (ShoppingList.is_family.is_(True)))
+        )
+    )
     rows = db.scalars(
         select(ShoppingList)
-        .where(ShoppingList.owner_user_id.in_(peer_ids))
+        .where(visibility_clause)
         .order_by(ShoppingList.updated_at.desc())
     ).all()
     counts = _item_counts(db, [r.id for r in rows])
@@ -256,6 +266,7 @@ def create_shopping_list(
         owner_user_id=user.id,
         title=body.title,
         store_name=body.store_name,
+        is_family=bool(body.is_family),
         status=STATUS_DRAFT,
         completed_at=None,
         expense_id=None,
@@ -286,8 +297,10 @@ def get_shopping_list(
     )
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lista não encontrada")
-    peer_ids = family_peer_user_ids(db, user.id)
-    if row.owner_user_id not in peer_ids:
+    owner_ids, include_family = family_visibility_scope(db, user)
+    if row.owner_user_id == user.id:
+        return _to_detail(row, user.id)
+    if row.owner_user_id not in owner_ids or not include_family or not bool(row.is_family):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lista não encontrada")
     return _to_detail(row, user.id)
 
@@ -575,6 +588,7 @@ def complete_shopping_list(
         recurring_series_id=None,
         recurring_generated_until=None,
         is_shared=is_s,
+        is_family=bool(body.is_family),
         shared_with_user_id=sw,
         paid_at=paid_at,
     )
@@ -596,6 +610,7 @@ def complete_shopping_list(
         sync_expense_row_from_shares(expense, shs, now=now)
 
     row.status = STATUS_COMPLETED
+    row.is_family = bool(body.is_family)
     row.completed_at = now
     row.expense_id = expense.id
     row.total_cents = total

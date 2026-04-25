@@ -22,6 +22,7 @@ class ExpenseCreate(BaseModel):
     installment_total: int = Field(default=1, ge=1, le=999)
     recurring_frequency: str | None = Field(default=None, max_length=32)
     is_shared: bool = False
+    is_family: bool = False
     shared_with_user_id: uuid.UUID | None = None
     split_mode: SplitMode | None = None
     owner_share_cents: int | None = Field(default=None, ge=0)
@@ -67,6 +68,7 @@ class ExpenseUpdate(BaseModel):
     sync_status: int | None = Field(default=None, ge=0, le=2)
     recurring_frequency: str | None = Field(default=None, max_length=32)
     is_shared: bool | None = None
+    is_family: bool | None = None
     shared_with_user_id: uuid.UUID | None = None
     split_mode: SplitMode | None = None
     owner_share_cents: int | None = Field(default=None, ge=0)
@@ -115,6 +117,7 @@ class ExpenseResponse(BaseModel):
     recurring_series_id: uuid.UUID | None = None
     recurring_generated_until: date | None = None
     is_shared: bool = False
+    is_family: bool = False
     shared_with_user_id: uuid.UUID | None = None
     shared_with_label: str | None = Field(
         default=None,

@@ -256,6 +256,9 @@
     <string name="expense_toggle_due_sub">Contas a pagar / alertas no dashboard</string>
     <string name="expense_toggle_share">Partilhar na família</string>
     <string name="expense_toggle_share_sub">Junta-te a uma família (convite) para usar partilha.</string>
+    <string name="expense_toggle_family">Conta família</string>
+    <string name="expense_toggle_family_sub">Itens marcados aparecem no Modo Família para membros convidados.</string>
+    <string name="expense_family_badge">FAMÍLIA</string>
     <string name="expense_split_mode_amount">Dividir por valor</string>
     <string name="expense_split_use_percent">Dividir em %</string>
     <string name="expense_split_use_percent_sub">Predef.: valor; ligue para %.</string>
@@ -468,6 +471,11 @@
     <string name="settings_tile_screenshots_allowed_hint">Desligado: o sistema bloqueia captura e pré-visualização em apps recentes (como antes).</string>
     <string name="settings_tile_security">Segurança</string>
     <string name="settings_tile_family">Família</string>
+    <string name="settings_tile_family_mode">Modo família</string>
+    <string name="settings_tile_family_mode_hint">Mostrar só os teus dados e itens marcados como família.</string>
+    <string name="family_invite_email_label">E-mail do convite (opcional)</string>
+    <string name="family_invite_email_sent">Convite enviado para %1$s.</string>
+    <string name="family_invite_email_not_sent">Não foi possível enviar e-mail para %1$s. Partilha o código manualmente.</string>
     <string name="settings_tile_version">Versão</string>
     <string name="settings_version_section">Compilação</string>
     <string name="main_back_to_home">Voltar ao início</string>

@@ -25,6 +25,7 @@ class Goal(Base, TimestampMixin):
     target_cents: Mapped[int] = mapped_column(BigInteger, nullable=False)
     current_cents: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    is_family: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
     target_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
     reference_product_name: Mapped[str | None] = mapped_column(String(500), nullable=True)
     reference_price_cents: Mapped[int | None] = mapped_column(BigInteger, nullable=True)

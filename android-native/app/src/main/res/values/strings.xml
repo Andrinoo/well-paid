@@ -244,6 +244,9 @@
     <string name="expense_toggle_due_sub">Bills to pay / dashboard alerts</string>
     <string name="expense_toggle_share">Share with family</string>
     <string name="expense_toggle_share_sub">Join a family (invite) to use sharing.</string>
+    <string name="expense_toggle_family">Family account</string>
+    <string name="expense_toggle_family_sub">Marked items appear in Family Mode for invited members.</string>
+    <string name="expense_family_badge">FAMILY</string>
     <string name="expense_split_mode_amount">Split by amount</string>
     <string name="expense_split_use_percent">Split by %</string>
     <string name="expense_split_use_percent_sub">Off: amount. On: percentages.</string>
@@ -469,6 +472,11 @@
     <string name="settings_tile_screenshots_allowed_hint">When off, the system blocks screen capture and recent-apps preview for privacy (same as before).</string>
     <string name="settings_tile_security">Security</string>
     <string name="settings_tile_family">Family</string>
+    <string name="settings_tile_family_mode">Family mode</string>
+    <string name="settings_tile_family_mode_hint">Show only your data and tagged family items.</string>
+    <string name="family_invite_email_label">Invite e-mail (optional)</string>
+    <string name="family_invite_email_sent">Invite sent to %1$s.</string>
+    <string name="family_invite_email_not_sent">Could not send e-mail to %1$s. Share the code manually.</string>
     <string name="settings_tile_version">Version</string>
     <string name="settings_version_section">Build</string>
     <string name="main_back_to_home">Back to home</string>

@@ -1,6 +1,7 @@
 package com.wellpaid.ui.expenses
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -45,6 +46,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -535,6 +537,10 @@ private fun ExpenseListRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(
+                if (expense.isFamily) Color(0xFFFFF8E1) else Color.Transparent,
+            )
             .padding(horizontal = 10.dp, vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -588,6 +594,16 @@ private fun ExpenseListRow(
                         color = WellPaidNavy.copy(alpha = 0.5f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(top = 2.dp),
+                    )
+                }
+                if (expense.isFamily) {
+                    Text(
+                        text = stringResource(R.string.expense_family_badge),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontSize = 9.sp,
+                        color = Color(0xFF8A6D00),
+                        fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.padding(top = 2.dp),
                     )
                 }

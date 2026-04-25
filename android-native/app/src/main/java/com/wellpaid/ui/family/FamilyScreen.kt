@@ -1,5 +1,7 @@
 package com.wellpaid.ui.family
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -38,9 +40,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -63,12 +64,13 @@ fun FamilyScreen(
     val family by viewModel.family.collectAsStateWithLifecycle()
     val refreshing by viewModel.refreshing.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
-    val clipboard = LocalClipboardManager.current
+    val context = LocalContext.current
     val familyFullMessage = stringResource(R.string.family_error_full)
 
     var createName by remember { mutableStateOf("") }
     var joinToken by remember { mutableStateOf("") }
     var renameText by remember { mutableStateOf("") }
+    var inviteEmailText by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var errorText by remember { mutableStateOf<String?>(null) }
     var inviteResult by remember { mutableStateOf<FamilyInviteCreatedDto?>(null) }
@@ -261,6 +263,15 @@ fun FamilyScreen(
                         Text(stringResource(R.string.family_rename_save))
                     }
                     Spacer(Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = inviteEmailText,
+                        onValueChange = { inviteEmailText = it },
+                        label = { Text(stringResource(R.string.family_invite_email_label)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !busy,
+                        singleLine = true,
+                    )
+                    Spacer(Modifier.height(8.dp))
                     Button(
                         onClick = {
                             if (!roomForInvite) {
@@ -270,7 +281,7 @@ fun FamilyScreen(
                             scope.launch {
                                 busy = true
                                 errorText = null
-                                val r = viewModel.createInvite()
+                                val r = viewModel.createInvite(inviteEmailText.trim().takeIf { it.isNotEmpty() })
                                 r.onSuccess { inviteResult = it }
                                 r.onFailure { errorText = it.message }
                                 busy = false
@@ -328,6 +339,18 @@ fun FamilyScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    if (inv.inviteSentEmail != null) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = if (inv.inviteSent) {
+                                stringResource(R.string.family_invite_email_sent, inv.inviteSentEmail)
+                            } else {
+                                stringResource(R.string.family_invite_email_not_sent, inv.inviteSentEmail)
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (inv.inviteSent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                        )
+                    }
                     Spacer(Modifier.height(8.dp))
                     Text(
                         text = inv.inviteUrl,
@@ -336,7 +359,10 @@ fun FamilyScreen(
                     Spacer(Modifier.height(8.dp))
                     TextButton(
                         onClick = {
-                            clipboard.setText(AnnotatedString(inv.token))
+                            val clipboard =
+                                context.getSystemService(ClipboardManager::class.java)
+                            val clip = ClipData.newPlainText("family_invite_token", inv.token)
+                            clipboard?.setPrimaryClip(clip)
                         },
                     ) {
                         Row(

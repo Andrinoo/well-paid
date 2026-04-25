@@ -502,6 +502,7 @@ def read_me(current: User = Depends(get_current_user)) -> UserMeResponse:
         email=current.email,
         full_name=current.full_name,
         display_name=current.display_name,
+        family_mode_enabled=bool(current.family_mode_enabled),
     )
 
 
@@ -514,6 +515,8 @@ def patch_me(
     if body.display_name is not None:
         s = body.display_name.strip()
         current.display_name = s if s else None
+    if body.family_mode_enabled is not None:
+        current.family_mode_enabled = bool(body.family_mode_enabled)
     db.add(current)
     db.commit()
     db.refresh(current)
@@ -521,6 +524,7 @@ def patch_me(
         email=current.email,
         full_name=current.full_name,
         display_name=current.display_name,
+        family_mode_enabled=bool(current.family_mode_enabled),
     )
 
 
@@ -534,6 +538,8 @@ def post_profile_display_name(
     if body.display_name is not None:
         s = body.display_name.strip()
         current.display_name = s if s else None
+    if body.family_mode_enabled is not None:
+        current.family_mode_enabled = bool(body.family_mode_enabled)
     db.add(current)
     db.commit()
     db.refresh(current)
@@ -541,4 +547,5 @@ def post_profile_display_name(
         email=current.email,
         full_name=current.full_name,
         display_name=current.display_name,
+        family_mode_enabled=bool(current.family_mode_enabled),
     )

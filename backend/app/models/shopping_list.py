@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, String
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -32,6 +32,7 @@ class ShoppingList(Base, TimestampMixin):
         nullable=True,
     )
     total_cents: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    is_family: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
 
     items: Mapped[list["ShoppingListItem"]] = relationship(
         "ShoppingListItem",

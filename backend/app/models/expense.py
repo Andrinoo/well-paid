@@ -42,6 +42,7 @@ class Expense(Base, TimestampMixin):
     recurring_generated_until: Mapped[date | None] = mapped_column(Date, nullable=True)
     split_mode: Mapped[str | None] = mapped_column(String(16), nullable=True)
     is_shared: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_family: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
     shared_with_user_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="SET NULL"),

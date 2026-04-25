@@ -10,6 +10,7 @@ class IncomeCreate(BaseModel):
     income_date: date
     income_category_id: uuid.UUID
     notes: str | None = Field(default=None, max_length=500)
+    is_family: bool = False
 
 
 class IncomeUpdate(BaseModel):
@@ -19,6 +20,7 @@ class IncomeUpdate(BaseModel):
     income_category_id: uuid.UUID | None = None
     notes: str | None = Field(default=None, max_length=500)
     sync_status: int | None = Field(default=None, ge=0, le=2)
+    is_family: bool | None = None
 
 
 class IncomeResponse(BaseModel):
@@ -35,5 +37,6 @@ class IncomeResponse(BaseModel):
     category_name: str
     notes: str | None
     sync_status: int
+    is_family: bool = False
     created_at: datetime
     updated_at: datetime

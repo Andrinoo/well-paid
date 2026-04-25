@@ -14,7 +14,7 @@ from app.models.income import Income
 from app.models.user import User
 from app.schemas.dashboard import DashboardCashflowResponse, ExpenseStatus, PeriodMonth
 from app.services.emergency_reserve import iter_months_inclusive
-from app.services.family_scope import family_peer_user_ids
+from app.services.family_scope import family_visibility_scope
 from app.services.recurrence import add_months
 
 
@@ -67,7 +67,23 @@ def get_dashboard_cashflow(
         if hist_start > hist_end:
             raise ValueError("cashflow_invalid_range")
 
-    peer_ids = family_peer_user_ids(db, user.id)
+    owner_ids, include_family = family_visibility_scope(db, user)
+    visible_income = (
+        Income.owner_user_id.in_(owner_ids)
+        if not include_family
+        else (
+            (Income.owner_user_id == user.id)
+            | ((Income.owner_user_id.in_(owner_ids)) & (Income.is_family.is_(True)))
+        )
+    )
+    visible_expense_owner = (
+        Expense.owner_user_id.in_(owner_ids)
+        if not include_family
+        else (
+            (Expense.owner_user_id == user.id)
+            | ((Expense.owner_user_id.in_(owner_ids)) & (Expense.is_family.is_(True)))
+        )
+    )
     visible = Expense.deleted_at.is_(None)
 
     month_keys = cashflow_month_keys(hist_start, hist_end, forecast_months)
@@ -90,7 +106,7 @@ def get_dashboard_cashflow(
         inc_bucket = cast(func.date_trunc("month", Income.income_date), Date)
         inc_rows = db.execute(
             select(inc_bucket, func.coalesce(func.sum(Income.amount_cents), 0)).where(
-                Income.owner_user_id.in_(peer_ids),
+                visible_income,
                 Income.income_date >= range_start,
                 Income.income_date <= range_end,
             ).group_by(inc_bucket)
@@ -108,7 +124,7 @@ def get_dashboard_cashflow(
     paid_bucket = cast(func.date_trunc("month", attribution), Date)
     paid_rows = db.execute(
         select(paid_bucket, func.coalesce(func.sum(Expense.amount_cents), 0)).where(
-            Expense.owner_user_id.in_(peer_ids),
+            visible_expense_owner,
             Expense.status == ExpenseStatus.PAID.value,
             visible,
             attribution >= range_start,
@@ -125,7 +141,7 @@ def get_dashboard_cashflow(
     pend_bucket = cast(func.date_trunc("month", Expense.expense_date), Date)
     pend_rows = db.execute(
         select(pend_bucket, func.coalesce(func.sum(Expense.amount_cents), 0)).where(
-            Expense.owner_user_id.in_(peer_ids),
+            visible_expense_owner,
             Expense.status == ExpenseStatus.PENDING.value,
             visible,
             Expense.expense_date >= range_start,

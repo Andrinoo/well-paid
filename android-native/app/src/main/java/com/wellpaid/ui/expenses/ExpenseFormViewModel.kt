@@ -62,6 +62,7 @@ data class ExpenseFormUiState(
     val recurringFrequency: String = "monthly",
     val alreadyPaid: Boolean = false,
     val hasDueDate: Boolean = false,
+    val isFamily: Boolean = false,
     val isShared: Boolean = false,
     /** Membro da família com quem partilhar; obrigatório para guardar se [isShared] (API exige peer). */
     val sharedWithUserId: String? = null,
@@ -149,6 +150,7 @@ class ExpenseFormViewModel @Inject constructor(
                                 hasDueDate = !e.dueDate.isNullOrBlank(),
                                 categoryId = e.categoryId,
                                 status = e.status,
+                                isFamily = e.isFamily,
                                 isShared = e.isShared,
                                 sharedWithUserId = e.sharedWithUserId,
                                 usePercentSplit = split.usePercentSplit,
@@ -253,6 +255,10 @@ class ExpenseFormViewModel @Inject constructor(
                 },
             )
         }
+    }
+
+    fun setFamily(value: Boolean) {
+        _uiState.update { it.copy(isFamily = value) }
     }
 
     fun setUsePercentSplit(value: Boolean) {
@@ -672,6 +678,7 @@ class ExpenseFormViewModel @Inject constructor(
                             status = if (s.alreadyPaid) "paid" else "pending",
                             installmentTotal = installmentOut,
                             recurringFrequency = recurringOut,
+                            isFamily = s.isFamily,
                             isShared = s.isShared,
                             sharedWithUserId = if (s.isShared) s.sharedWithUserId else null,
                             splitMode = when {
@@ -695,6 +702,7 @@ class ExpenseFormViewModel @Inject constructor(
                             dueDate = dueParsed?.format(DateTimeFormatter.ISO_LOCAL_DATE),
                             categoryId = cat,
                             status = s.status,
+                            isFamily = s.isFamily,
                             isShared = s.isShared,
                             sharedWithUserId = if (s.isShared) s.sharedWithUserId else null,
                             splitMode = when {

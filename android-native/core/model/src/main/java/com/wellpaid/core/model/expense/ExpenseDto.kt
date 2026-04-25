@@ -24,6 +24,7 @@ data class ExpenseDto(
     @SerialName("recurring_series_id") val recurringSeriesId: String? = null,
     @SerialName("recurring_generated_until") val recurringGeneratedUntil: String? = null,
     @SerialName("is_shared") val isShared: Boolean = false,
+    @SerialName("is_family") val isFamily: Boolean = false,
     @SerialName("shared_with_user_id") val sharedWithUserId: String? = null,
     @SerialName("shared_with_label") val sharedWithLabel: String? = null,
     @SerialName("created_at") val createdAt: String,

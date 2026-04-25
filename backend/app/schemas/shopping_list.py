@@ -10,6 +10,7 @@ from app.schemas.dashboard import ExpenseStatus
 class ShoppingListCreate(BaseModel):
     title: str | None = Field(default=None, max_length=200)
     store_name: str | None = Field(default=None, max_length=200)
+    is_family: bool = False
 
     @field_validator("title", "store_name", mode="before")
     @classmethod
@@ -25,6 +26,7 @@ class ShoppingListCreate(BaseModel):
 class ShoppingListPatch(BaseModel):
     title: str | None = Field(default=None, max_length=200)
     store_name: str | None = Field(default=None, max_length=200)
+    is_family: bool | None = None
     sync_total_from_line_items: bool | None = Field(
         default=None,
         description="Só em listas concluídas: recalcula total_cents e amount_cents da despesa a partir das linhas com preço.",
@@ -102,6 +104,7 @@ class ShoppingListSummaryResponse(BaseModel):
     title: str | None
     store_name: str | None
     status: str
+    is_family: bool = False
     completed_at: datetime | None
     expense_id: uuid.UUID | None
     total_cents: int | None
@@ -119,6 +122,7 @@ class ShoppingListDetailResponse(BaseModel):
     title: str | None
     store_name: str | None
     status: str
+    is_family: bool = False
     completed_at: datetime | None
     expense_id: uuid.UUID | None
     total_cents: int | None
@@ -149,6 +153,7 @@ class ShoppingListComplete(BaseModel):
         description="Desconto em centavos (opcional). Só com total_cents omitido; subtrai da soma das linhas.",
     )
     is_shared: bool = False
+    is_family: bool = False
     shared_with_user_id: uuid.UUID | None = None
 
     @field_validator("description", mode="before")

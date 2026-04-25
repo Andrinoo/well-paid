@@ -655,6 +655,31 @@ fun ExpenseFormScreen(
 
             val showShareControls = !viewModel.isEditMode || canEdit
             if (showShareControls) {
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.Top,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(R.string.expense_toggle_family),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = WellPaidNavy,
+                        )
+                        Text(
+                            text = stringResource(R.string.expense_toggle_family_sub),
+                            style = MaterialTheme.typography.labelSmall,
+                            lineHeight = 14.sp,
+                            color = WellPaidNavy.copy(alpha = 0.58f),
+                        )
+                    }
+                    Switch(
+                        checked = state.isFamily,
+                        onCheckedChange = { if (canEdit) viewModel.setFamily(it) },
+                        enabled = canEdit,
+                    )
+                }
                 if (canShareExpense) {
                     Spacer(Modifier.height(8.dp))
                     Row(

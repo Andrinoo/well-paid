@@ -27,7 +27,8 @@ class FamilyViewModel @Inject constructor(
 
     suspend fun renameFamily(name: String): Result<Unit> = familyMe.renameFamily(name)
 
-    suspend fun createInvite(): Result<FamilyInviteCreatedDto> = familyMe.createInvite()
+    suspend fun createInvite(inviteEmail: String? = null): Result<FamilyInviteCreatedDto> =
+        familyMe.createInvite(inviteEmail)
 
     suspend fun removeMember(userId: String): Result<Unit> = familyMe.removeMember(userId)
 

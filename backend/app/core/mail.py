@@ -322,3 +322,85 @@ def send_password_reset_email(to_email: str, raw_token: str) -> bool:
     except Exception as e:
         logger.exception("Falha ao enviar e-mail de recuperação: %s", e)
         return False
+
+
+def send_family_invite_email(
+    to_email: str,
+    *,
+    family_name: str,
+    invite_token: str,
+    invite_url: str,
+    expires_hours: int = 24,
+) -> bool:
+    settings = get_settings()
+    host = (settings.smtp_host or "").strip()
+    if not host:
+        return False
+    mail_from = (settings.mail_from or settings.smtp_user or "").strip()
+    if not mail_from:
+        logger.warning("SMTP configurado mas mail_from/smtp_user em falta; e-mail não enviado.")
+        return False
+
+    msg = EmailMessage()
+    msg["Subject"] = f"Well Paid — convite para família {family_name}"
+    msg["From"] = _brand_from_header(mail_from)
+    msg["To"] = to_email
+    msg.set_content(
+        (
+            f"Olá,\n\n"
+            f"Recebeste um convite para participar da família \"{family_name}\" no Well Paid.\n\n"
+            f"1) Abre o app e ativa \"Modo Família\" em Configurações.\n"
+            f"2) Vai em Família > Entrar com código.\n"
+            f"3) Usa este código:\n\n{invite_token}\n\n"
+            f"Também podes abrir este link direto:\n{invite_url}\n\n"
+            f"Este convite expira em {expires_hours} horas.\n\n"
+            f"— {_BRAND_MAIL_NAME}\n"
+        )
+    )
+    safe_family = html.escape(family_name, quote=True)
+    safe_token = html.escape(invite_token, quote=True)
+    safe_url = html.escape(invite_url, quote=True)
+    msg.add_alternative(
+        f"""\
+<!DOCTYPE html>
+<html lang="pt">
+<body style="font-family:Segoe UI,Roboto,Arial,sans-serif;background:#0b1020;color:#e5e7eb;padding:16px;">
+  <h2 style="margin-top:0;">Convite de família no Well Paid</h2>
+  <p>Recebeste um convite para participar da família <strong>{safe_family}</strong>.</p>
+  <p><strong>Como ativar:</strong></p>
+  <ol>
+    <li>Abre o app e ativa <strong>Modo Família</strong> em Configurações.</li>
+    <li>Entra na tela Família e usa <strong>Entrar com código</strong>.</li>
+    <li>Informa o código abaixo.</li>
+  </ol>
+  <p style="font-family:Consolas,monospace;font-size:18px;background:#111827;padding:10px;border-radius:8px;">{safe_token}</p>
+  <p>Ou abre o link: <a href="{safe_url}">{safe_url}</a></p>
+  <p style="color:#fbbf24;"><strong>Validade:</strong> 24 horas.</p>
+</body>
+</html>
+""",
+        subtype="html",
+    )
+    try:
+        context = ssl.create_default_context()
+        port = int(settings.smtp_port)
+        user = (settings.smtp_user or "").strip()
+        password = (settings.smtp_password or "").strip()
+        if port == 465:
+            with smtplib.SMTP_SSL(host, port, context=context, timeout=30) as server:
+                if user and password:
+                    server.login(user, password)
+                server.send_message(msg)
+        else:
+            with smtplib.SMTP(host, port, timeout=30) as server:
+                server.ehlo()
+                if server.has_extn("STARTTLS"):
+                    server.starttls(context=context)
+                    server.ehlo()
+                if user and password:
+                    server.login(user, password)
+                server.send_message(msg)
+        return True
+    except Exception as e:
+        logger.exception("Falha ao enviar e-mail de convite de família: %s", e)
+        return False

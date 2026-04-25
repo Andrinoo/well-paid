@@ -18,7 +18,7 @@ from app.models.income import Income
 from app.models.income_category import IncomeCategory
 from app.models.user import User
 from app.schemas.income import IncomeCreate, IncomeResponse, IncomeUpdate
-from app.services.family_scope import family_peer_user_ids
+from app.services.family_scope import family_visibility_scope
 
 router = APIRouter(prefix="/incomes", tags=["incomes"])
 
@@ -41,6 +41,7 @@ def _to_response(row: Income, viewer_id: uuid.UUID) -> IncomeResponse:
         category_name=row.income_category.name,
         notes=row.notes,
         sync_status=row.sync_status,
+        is_family=bool(row.is_family),
         created_at=row.created_at,
         updated_at=row.updated_at,
     )
@@ -56,16 +57,27 @@ def _get_owned(
     )
 
 
-def _get_visible_in_family(
+def _get_visible_for_viewer(
     db: Session, income_id: uuid.UUID, viewer_id: uuid.UUID
 ) -> Income | None:
-    peer_ids = family_peer_user_ids(db, viewer_id)
+    viewer = db.get(User, viewer_id)
+    if viewer is None:
+        return None
+    owner_ids, include_family = family_visibility_scope(db, viewer)
+    visibility_clause = (
+        Income.owner_user_id.in_(owner_ids)
+        if not include_family
+        else (
+            (Income.owner_user_id == viewer_id)
+            | ((Income.owner_user_id.in_(owner_ids)) & (Income.is_family.is_(True)))
+        )
+    )
     return db.scalar(
         select(Income)
         .options(joinedload(Income.income_category))
         .where(
             Income.id == income_id,
-            Income.owner_user_id.in_(peer_ids),
+            visibility_clause,
         )
     )
 
@@ -85,11 +97,18 @@ def list_incomes(
     year: Annotated[int | None, Query(ge=2000, le=2100)] = None,
     month: Annotated[int | None, Query(ge=1, le=12)] = None,
 ) -> list[IncomeResponse]:
-    peer_ids = family_peer_user_ids(db, user.id)
+    owner_ids, include_family = family_visibility_scope(db, user)
     stmt = (
         select(Income)
         .options(joinedload(Income.income_category))
-        .where(Income.owner_user_id.in_(peer_ids))
+        .where(
+            Income.owner_user_id.in_(owner_ids)
+            if not include_family
+            else (
+                (Income.owner_user_id == user.id)
+                | ((Income.owner_user_id.in_(owner_ids)) & (Income.is_family.is_(True)))
+            )
+        )
         .order_by(Income.income_date.desc(), Income.created_at.desc())
     )
     if year is not None and month is not None:
@@ -115,6 +134,7 @@ def create_income(
         income_category_id=body.income_category_id,
         notes=notes,
         sync_status=0,
+        is_family=bool(body.is_family),
     )
     db.add(row)
     try:
@@ -137,7 +157,7 @@ def get_income(
     user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> IncomeResponse:
-    row = _get_visible_in_family(db, income_id, user.id)
+    row = _get_visible_for_viewer(db, income_id, user.id)
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Provento não encontrado")
     return _to_response(row, user.id)

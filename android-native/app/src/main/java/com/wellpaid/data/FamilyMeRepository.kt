@@ -2,10 +2,12 @@ package com.wellpaid.data
 
 import android.content.Context
 import com.wellpaid.core.model.family.FamilyCreateDto
+import com.wellpaid.core.model.family.FamilyInviteCreateRequestDto
 import com.wellpaid.core.model.family.FamilyInviteCreatedDto
 import com.wellpaid.core.model.family.FamilyJoinRequestDto
 import com.wellpaid.core.model.family.FamilyMemberDto
 import com.wellpaid.core.model.family.FamilyOutDto
+import com.wellpaid.core.model.family.FamilyPendingInviteDto
 import com.wellpaid.core.model.family.FamilyUpdateDto
 import com.wellpaid.core.network.FamiliesApi
 import com.wellpaid.util.FastApiErrorMapper
@@ -74,8 +76,13 @@ class FamilyMeRepository @Inject constructor(
             refresh()
         }
 
-    suspend fun createInvite(): Result<FamilyInviteCreatedDto> =
-        apiCallData { familiesApi.createInvite() }
+    suspend fun createInvite(inviteEmail: String? = null): Result<FamilyInviteCreatedDto> =
+        apiCallData {
+            familiesApi.createInvite(FamilyInviteCreateRequestDto(inviteEmail?.trim()?.takeIf { it.isNotEmpty() }))
+        }
+
+    suspend fun listPendingInvites(): Result<List<FamilyPendingInviteDto>> =
+        apiCallData { familiesApi.listPendingInvites() }
 
     suspend fun removeMember(userId: String): Result<Unit> =
         apiCall {

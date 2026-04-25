@@ -41,7 +41,7 @@ from app.services.expense_splits import (
     share_resolved,
     sync_expense_row_from_shares,
 )
-from app.services.family_scope import family_peer_user_ids
+from app.services.family_scope import family_visibility_scope
 from app.services.family_financial_events import (
     record_cover_requested,
     record_owner_assumed_expense_line,
@@ -140,6 +140,7 @@ def _to_response(
         recurring_series_id=e.recurring_series_id,
         recurring_generated_until=e.recurring_generated_until,
         is_shared=e.is_shared,
+        is_family=bool(e.is_family),
         shared_with_user_id=e.shared_with_user_id,
         shared_with_label=_shared_with_label(e),
         created_at=e.created_at,
@@ -179,13 +180,24 @@ def _get_owned(
 def _get_visible_in_family(
     db: Session, expense_id: uuid.UUID, viewer_id: uuid.UUID
 ) -> Expense | None:
-    peer_ids = family_peer_user_ids(db, viewer_id)
+    viewer = db.get(User, viewer_id)
+    if viewer is None:
+        return None
+    owner_ids, include_family = family_visibility_scope(db, viewer)
+    visibility_clause = (
+        Expense.owner_user_id.in_(owner_ids)
+        if not include_family
+        else (
+            (Expense.owner_user_id == viewer_id)
+            | ((Expense.owner_user_id.in_(owner_ids)) & (Expense.is_family.is_(True)))
+        )
+    )
     return db.scalar(
         select(Expense)
         .options(*_expense_detail_loads())
         .where(
             Expense.id == expense_id,
-            Expense.owner_user_id.in_(peer_ids),
+            visibility_clause,
             Expense.deleted_at.is_(None),
         )
     )
@@ -270,6 +282,7 @@ def _ensure_recurring_generated(db: Session, owner_user_id: uuid.UUID, until: da
                     recurring_generated_until=None,
                     split_mode=a.split_mode,
                     is_shared=a.is_shared,
+                    is_family=a.is_family,
                     shared_with_user_id=a.shared_with_user_id,
                 )
             )
@@ -287,7 +300,8 @@ def _merge_projected_recurring_month(
     db: Session,
     *,
     viewer_id: uuid.UUID,
-    peer_ids: list[uuid.UUID],
+    owner_ids: list[uuid.UUID],
+    include_family: bool,
     year: int,
     month: int,
     db_rows: list[Expense],
@@ -303,7 +317,12 @@ def _merge_projected_recurring_month(
         select(Expense)
         .options(*_expense_detail_loads())
         .where(
-            Expense.owner_user_id.in_(peer_ids),
+            Expense.owner_user_id.in_(owner_ids)
+            if not include_family
+            else (
+                (Expense.owner_user_id == viewer_id)
+                | ((Expense.owner_user_id.in_(owner_ids)) & (Expense.is_family.is_(True)))
+            ),
             Expense.installment_total == 1,
             Expense.installment_number == 1,
             Expense.recurring_frequency == "monthly",
@@ -369,14 +388,19 @@ def list_expenses(
     if year is not None and month is not None:
         _, end_m = _month_bounds(year, month)
         until_h = max(until_h, end_m)
-    peer_ids = family_peer_user_ids(db, user.id)
-    for uid in peer_ids:
+    owner_ids, include_family = family_visibility_scope(db, user)
+    for uid in owner_ids:
         _ensure_recurring_generated(db, uid, until_h)
     stmt = (
         select(Expense)
         .options(*_expense_detail_loads())
         .where(
-            Expense.owner_user_id.in_(peer_ids),
+            Expense.owner_user_id.in_(owner_ids)
+            if not include_family
+            else (
+                (Expense.owner_user_id == user.id)
+                | ((Expense.owner_user_id.in_(owner_ids)) & (Expense.is_family.is_(True)))
+            ),
             Expense.deleted_at.is_(None),
         )
         .order_by(Expense.expense_date.desc(), Expense.created_at.desc())
@@ -401,7 +425,8 @@ def list_expenses(
         return _merge_projected_recurring_month(
             db,
             viewer_id=user.id,
-            peer_ids=peer_ids,
+            owner_ids=owner_ids,
+            include_family=include_family,
             year=year,
             month=month,
             db_rows=list(rows),
@@ -420,7 +445,8 @@ def list_expenses(
             for r in _merge_projected_recurring_month(
                 db,
                 viewer_id=user.id,
-                peer_ids=peer_ids,
+                owner_ids=owner_ids,
+                include_family=include_family,
                 year=cy,
                 month=cm,
                 db_rows=[],
@@ -508,6 +534,7 @@ def create_expense(
             recurring_generated_until=first_occurrence_date if body.recurring_frequency else None,
             split_mode=body.split_mode if is_s and sw else None,
             is_shared=is_s,
+            is_family=bool(body.is_family),
             shared_with_user_id=sw,
             paid_at=now_utc if row_status == ExpenseStatus.PAID.value else None,
         )
@@ -568,6 +595,7 @@ def create_expense(
             recurring_generated_until=None,
             split_mode=body.split_mode if is_s and sw else None,
             is_shared=is_s,
+            is_family=bool(body.is_family),
             shared_with_user_id=sw,
             paid_at=now_utc if row_status == ExpenseStatus.PAID.value else None,
         )
@@ -630,8 +658,8 @@ def get_expense(
 ) -> ExpenseResponse:
     e = _get_visible_in_family(db, expense_id, user.id)
     if e is None:
-        peer_ids = family_peer_user_ids(db, user.id)
-        for uid in peer_ids:
+        owner_ids, _ = family_visibility_scope(db, user)
+        for uid in owner_ids:
             hit = find_anchor_and_occurrence_for_projected_id(db, uid, expense_id)
             if hit is not None:
                 anchor, occ = hit
@@ -883,12 +911,12 @@ def pay_expense(
     body: ExpensePayRequest | None = None,
 ) -> ExpenseResponse:
     req = body or ExpensePayRequest()
-    peer_ids = family_peer_user_ids(db, user.id)
+    owner_ids, _ = family_visibility_scope(db, user)
     e = _get_owned(db, expense_id, user.id)
     if e is None:
         e = _get_visible_in_family(db, expense_id, user.id)
     if e is None:
-        for uid in peer_ids:
+        for uid in owner_ids:
             hit = find_anchor_and_occurrence_for_projected_id(db, uid, expense_id)
             if hit is not None:
                 e = materialize_recurring_occurrence(db, hit[0], hit[1])

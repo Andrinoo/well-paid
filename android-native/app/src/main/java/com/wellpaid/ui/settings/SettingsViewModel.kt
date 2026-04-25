@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wellpaid.core.model.auth.LogoutRequestDto
 import com.wellpaid.core.model.auth.UserMeDto
+import com.wellpaid.core.model.auth.UserProfilePatchDto
 import com.wellpaid.core.model.auth.TokenStorage
 import com.wellpaid.core.network.auth.AuthApi
 import com.wellpaid.core.network.UserApi
@@ -24,6 +25,7 @@ import javax.inject.Inject
 data class SettingsUiState(
     val userFirstName: String? = null,
     val userEmail: String? = null,
+    val familyModeEnabled: Boolean = false,
     val profileLoaded: Boolean = false,
 )
 
@@ -54,6 +56,7 @@ class SettingsViewModel @Inject constructor(
                         it.copy(
                             userFirstName = greetingFirstName(dto),
                             userEmail = dto.email,
+                            familyModeEnabled = dto.familyModeEnabled,
                             profileLoaded = true,
                         )
                     }
@@ -74,6 +77,22 @@ class SettingsViewModel @Inject constructor(
             if (!refresh.isNullOrBlank()) {
                 launch { runCatching { authApi.logout(LogoutRequestDto(refresh)) } }
             }
+        }
+    }
+
+    fun setFamilyModeEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            runCatching { userApi.patchProfile(UserProfilePatchDto(familyModeEnabled = enabled)) }
+                .onSuccess { dto ->
+                    _uiState.update {
+                        it.copy(
+                            familyModeEnabled = dto.familyModeEnabled,
+                            userFirstName = greetingFirstName(dto),
+                            userEmail = dto.email,
+                            profileLoaded = true,
+                        )
+                    }
+                }
         }
     }
 

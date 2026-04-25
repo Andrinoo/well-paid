@@ -40,6 +40,21 @@ class FamilyInviteCreateResponse(BaseModel):
     token: str
     expires_at: datetime
     invite_url: str
+    invite_sent_email: str | None = None
+    invite_sent: bool = False
+
+
+class FamilyInviteCreateRequest(BaseModel):
+    invite_email: str | None = Field(default=None, max_length=320)
+
+
+class FamilyPendingInviteOut(BaseModel):
+    invite_id: uuid.UUID
+    family_id: uuid.UUID
+    family_name: str
+    invite_email: str | None = None
+    expires_at: datetime
+    hours_remaining: int
 
 
 class FamilyJoinRequest(BaseModel):

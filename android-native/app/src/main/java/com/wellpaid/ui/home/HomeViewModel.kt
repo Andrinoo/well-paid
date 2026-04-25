@@ -16,6 +16,7 @@ import com.wellpaid.core.network.UserApi
 import com.wellpaid.util.FastApiErrorMapper
 import com.wellpaid.util.greetingFirstNameFromAccessToken
 import com.wellpaid.util.looksLikeUuid
+import com.wellpaid.data.FamilyMeRepository
 import com.wellpaid.data.HomeDashboardCacheRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -48,6 +49,7 @@ data class HomeUiState(
     val recadosBadgeCount: Int = 0,
     /** `warning` | `info` | `tip` | `material` — cor do badge pela prioridade visual. */
     val recadosBadgeKind: String = "info",
+    val familyInviteBadgeCount: Int = 0,
 )
 
 /** Com `dynamic=false`, a API exige janela explícita: 6 meses civis terminando no mês do dashboard. */
@@ -73,6 +75,7 @@ class HomeViewModel @Inject constructor(
     private val userApi: UserApi,
     private val tokenStorage: TokenStorage,
     private val homeDashboardCache: HomeDashboardCacheRepository,
+    private val familyMeRepository: FamilyMeRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -165,6 +168,7 @@ class HomeViewModel @Inject constructor(
             }
             val overviewResult = overviewDeferred.await()
             val cashflowResult = cashflowDeferred.await()
+            val inviteBadgeCount = familyMeRepository.listPendingInvites().getOrNull()?.size ?: 0
             val placementResults = listOf(
                 bannerPlacements.await(),
                 feedPlacements.await(),
@@ -181,9 +185,13 @@ class HomeViewModel @Inject constructor(
                 .take(5)
             val unreadRecados = mergedRecados.filter { it.userReadAt.isNullOrBlank() }
             val recadosBadgeCount = unreadRecados.size
-            val recadosBadgeKind = worstRecadosKindForBadge(
-                if (unreadRecados.isNotEmpty()) unreadRecados else mergedRecados,
-            )
+            val recadosBadgeKind = if (inviteBadgeCount > 0) {
+                "warning"
+            } else {
+                worstRecadosKindForBadge(
+                    if (unreadRecados.isNotEmpty()) unreadRecados else mergedRecados,
+                )
+            }
             val fromJwt =
                 if (fromApi.isNullOrBlank()) greetingFirstNameFromAccessToken(token) else null
             val firstName = fromApi?.takeIf { it.isNotBlank() }
@@ -206,8 +214,9 @@ class HomeViewModel @Inject constructor(
                     },
                     announcements = bannerForHome,
                     announcementsError = placementAnnouncementsError(placementResults),
-                    recadosBadgeCount = recadosBadgeCount,
+                    recadosBadgeCount = recadosBadgeCount + inviteBadgeCount,
                     recadosBadgeKind = recadosBadgeKind,
+                    familyInviteBadgeCount = inviteBadgeCount,
                 )
             }
             if (newOverview != null) {

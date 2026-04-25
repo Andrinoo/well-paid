@@ -44,4 +44,21 @@ data class FamilyInviteCreatedDto(
     val token: String,
     @SerialName("expires_at") val expiresAt: String,
     @SerialName("invite_url") val inviteUrl: String,
+    @SerialName("invite_sent_email") val inviteSentEmail: String? = null,
+    @SerialName("invite_sent") val inviteSent: Boolean = false,
+)
+
+@Serializable
+data class FamilyInviteCreateRequestDto(
+    @SerialName("invite_email") val inviteEmail: String? = null,
+)
+
+@Serializable
+data class FamilyPendingInviteDto(
+    @SerialName("invite_id") val inviteId: String,
+    @SerialName("family_id") val familyId: String,
+    @SerialName("family_name") val familyName: String,
+    @SerialName("invite_email") val inviteEmail: String? = null,
+    @SerialName("expires_at") val expiresAt: String,
+    @SerialName("hours_remaining") val hoursRemaining: Int,
 )

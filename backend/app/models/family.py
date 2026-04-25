@@ -67,6 +67,7 @@ class FamilyInvite(Base):
         ForeignKey("families.id", ondelete="CASCADE"),
         index=True,
     )
+    invite_email: Mapped[str | None] = mapped_column(String(320), nullable=True, index=True)
     token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     used: Mapped[bool] = mapped_column(default=False, nullable=False)

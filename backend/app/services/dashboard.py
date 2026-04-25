@@ -15,7 +15,7 @@ from app.models.goal import Goal
 from app.models.income import Income
 from app.models.user import User
 from app.services.emergency_reserve import refresh_reserve_balances_for_user
-from app.services.family_scope import family_peer_user_ids
+from app.services.family_scope import family_visibility_scope
 from app.schemas.dashboard import (
     CategorySpend,
     DashboardOverviewResponse,
@@ -71,7 +71,31 @@ def get_dashboard_overview(
     nm_month = 1 if next_month_anchor.month == 12 else (next_month_anchor.month + 1)
     next_start, next_end = month_bounds(nm_year, nm_month)
 
-    peer_ids = family_peer_user_ids(db, user.id)
+    owner_ids, include_family = family_visibility_scope(db, user)
+    visible_family_expense = (
+        Expense.owner_user_id.in_(owner_ids)
+        if not include_family
+        else (
+            (Expense.owner_user_id == user.id)
+            | ((Expense.owner_user_id.in_(owner_ids)) & (Expense.is_family.is_(True)))
+        )
+    )
+    visible_family_income = (
+        Income.owner_user_id.in_(owner_ids)
+        if not include_family
+        else (
+            (Income.owner_user_id == user.id)
+            | ((Income.owner_user_id.in_(owner_ids)) & (Income.is_family.is_(True)))
+        )
+    )
+    visible_family_goal = (
+        Goal.owner_user_id.in_(owner_ids)
+        if not include_family
+        else (
+            (Goal.owner_user_id == user.id)
+            | ((Goal.owner_user_id.in_(owner_ids)) & (Goal.is_family.is_(True)))
+        )
+    )
     visible_expense = Expense.deleted_at.is_(None)
 
     er_balance, er_target = refresh_reserve_balances_for_user(
@@ -80,7 +104,7 @@ def get_dashboard_overview(
 
     month_total = db.scalar(
         select(func.coalesce(func.sum(Expense.amount_cents), 0)).where(
-            Expense.owner_user_id.in_(peer_ids),
+            visible_family_expense,
             Expense.expense_date >= start,
             Expense.expense_date <= end,
             visible_expense,
@@ -96,7 +120,7 @@ def get_dashboard_overview(
         )
         .join(Category, Expense.category_id == Category.id)
         .where(
-            Expense.owner_user_id.in_(peer_ids),
+            visible_family_expense,
             Expense.expense_date >= start,
             Expense.expense_date <= end,
             visible_expense,
@@ -113,7 +137,7 @@ def get_dashboard_overview(
 
     pending_total = db.scalar(
         select(func.coalesce(func.sum(Expense.amount_cents), 0)).where(
-            Expense.owner_user_id.in_(peer_ids),
+            visible_family_expense,
             Expense.status == ExpenseStatus.PENDING.value,
             Expense.expense_date >= next_start,
             Expense.expense_date <= next_end,
@@ -125,7 +149,7 @@ def get_dashboard_overview(
     preview_stmt = (
         select(Expense)
         .where(
-            Expense.owner_user_id.in_(peer_ids),
+            visible_family_expense,
             Expense.status == ExpenseStatus.PENDING.value,
             Expense.expense_date >= next_start,
             Expense.expense_date <= next_end,
@@ -152,7 +176,7 @@ def get_dashboard_overview(
     upcoming_stmt = (
         select(Expense)
         .where(
-            Expense.owner_user_id.in_(peer_ids),
+            visible_family_expense,
             Expense.status == ExpenseStatus.PENDING.value,
             Expense.due_date.isnot(None),
             Expense.due_date >= next_start,
@@ -179,7 +203,7 @@ def get_dashboard_overview(
     if session_has_table(db, "incomes"):
         income_sum = db.scalar(
             select(func.coalesce(func.sum(Income.amount_cents), 0)).where(
-                Income.owner_user_id.in_(peer_ids),
+                visible_family_income,
                 Income.income_date >= start,
                 Income.income_date <= end,
             )
@@ -192,7 +216,7 @@ def get_dashboard_overview(
     if session_has_table(db, "goals"):
         goals_rows = (
             db.query(Goal)
-            .filter(Goal.owner_user_id.in_(peer_ids), Goal.is_active.is_(True))
+            .filter(visible_family_goal, Goal.is_active.is_(True))
             .order_by(Goal.updated_at.desc())
             .limit(3)
             .all()

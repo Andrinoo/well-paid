@@ -12,24 +12,28 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.deps import get_current_user
+from app.core.mail import send_family_invite_email
 from app.core.database import get_db
 from app.core.security import hash_password_reset_token
+from app.models.announcement import Announcement
 from app.models.family import Family, FamilyInvite, FamilyMember
 from app.models.user import User
 from app.schemas.family import (
     FamilyCreate,
+    FamilyInviteCreateRequest,
     FamilyInviteCreateResponse,
     FamilyJoinRequest,
     FamilyMeResponse,
     FamilyMemberOut,
     FamilyOut,
+    FamilyPendingInviteOut,
     FamilyUpdate,
 )
 from app.services.family_limits import family_has_room
 
 router = APIRouter(prefix="/families", tags=["families"])
 
-INVITE_VALID_DAYS = 7
+INVITE_VALID_HOURS = 24
 INVITE_URL_PREFIX = "wellpaid://join?token="
 
 
@@ -142,6 +146,7 @@ def update_my_family(
 def create_invite(
     user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
+    body: FamilyInviteCreateRequest | None = None,
 ) -> FamilyInviteCreateResponse:
     row = _member_row(db, user.id)
     if row is None or row.family is None:
@@ -161,14 +166,58 @@ def create_invite(
         )
     raw = secrets.token_urlsafe(32)
     th = hash_password_reset_token(raw)
-    exp = datetime.now(UTC) + timedelta(days=INVITE_VALID_DAYS)
-    inv = FamilyInvite(family_id=row.family_id, token_hash=th, expires_at=exp)
+    req = body or FamilyInviteCreateRequest()
+    invite_email = (req.invite_email or "").strip().lower() or None
+    exp = datetime.now(UTC) + timedelta(hours=INVITE_VALID_HOURS)
+    inv = FamilyInvite(
+        family_id=row.family_id,
+        token_hash=th,
+        expires_at=exp,
+        invite_email=invite_email,
+    )
     db.add(inv)
+    db.commit()
+    invite_url = f"{INVITE_URL_PREFIX}{raw}"
+    sent = False
+    invite_target_user = None
+    if invite_email is not None:
+        invite_target_user = db.scalar(select(User).where(User.email == invite_email))
+    if invite_target_user is not None:
+        db.add(
+            Announcement(
+                title="Convite para família recebido",
+                body=(
+                    f"Recebeste um convite para entrar na família \"{row.family.name}\". "
+                    "Para concluir: ativa o Modo Família em Configurações, abre a área Família, "
+                    f"usa o código {raw} e confirma o ingresso. Este convite expira em 24 horas."
+                )[:2000],
+                kind="warning",
+                placement="announcements_tab",
+                priority=90,
+                cta_label="Abrir Família",
+                cta_url=invite_url,
+                is_active=True,
+                starts_at=datetime.now(UTC),
+                ends_at=exp,
+                created_by_user_id=user.id,
+                target_user_id=invite_target_user.id,
+            )
+        )
+    if invite_email:
+        sent = send_family_invite_email(
+            invite_email,
+            family_name=row.family.name,
+            invite_token=raw,
+            invite_url=invite_url,
+            expires_hours=INVITE_VALID_HOURS,
+        )
     db.commit()
     return FamilyInviteCreateResponse(
         token=raw,
         expires_at=exp,
-        invite_url=f"{INVITE_URL_PREFIX}{raw}",
+        invite_url=invite_url,
+        invite_sent_email=invite_email,
+        invite_sent=sent,
     )
 
 
@@ -205,6 +254,11 @@ def join_family(
             status_code=status.HTTP_410_GONE,
             detail="Convite expirado",
         )
+    if inv.invite_email is not None and inv.invite_email.strip().lower() != user.email.strip().lower():
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Este convite foi emitido para outro e-mail",
+        )
     fam = inv.family
     if fam is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Família não encontrada")
@@ -229,6 +283,41 @@ def join_family(
     )
     assert fam is not None
     return _build_family_out(fam, current_user_id=user.id)
+
+
+@router.get("/invites/pending", response_model=list[FamilyPendingInviteOut])
+def list_pending_invites(
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> list[FamilyPendingInviteOut]:
+    now = datetime.now(UTC)
+    rows = db.scalars(
+        select(FamilyInvite)
+        .options(joinedload(FamilyInvite.family))
+        .where(
+            FamilyInvite.used.is_(False),
+            FamilyInvite.expires_at >= now,
+            FamilyInvite.invite_email == user.email.strip().lower(),
+        )
+        .order_by(FamilyInvite.expires_at.asc())
+    ).all()
+    out: list[FamilyPendingInviteOut] = []
+    for row in rows:
+        if row.family is None:
+            continue
+        secs = int((row.expires_at - now).total_seconds())
+        hours_remaining = max(1, secs // 3600)
+        out.append(
+            FamilyPendingInviteOut(
+                invite_id=row.id,
+                family_id=row.family_id,
+                family_name=row.family.name,
+                invite_email=row.invite_email,
+                expires_at=row.expires_at,
+                hours_remaining=hours_remaining,
+            )
+        )
+    return out
 
 
 @router.delete("/me/members/{member_user_id}", status_code=status.HTTP_204_NO_CONTENT)

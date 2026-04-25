@@ -1,7 +1,7 @@
 import uuid
 from datetime import date
 
-from sqlalchemy import BigInteger, Date, ForeignKey, Integer, String
+from sqlalchemy import BigInteger, Boolean, Date, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -29,6 +29,7 @@ class Income(Base, TimestampMixin):
     )
     notes: Mapped[str | None] = mapped_column(String(500), nullable=True)
     sync_status: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    is_family: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
 
     owner: Mapped["User"] = relationship("User", back_populates="incomes")
     income_category: Mapped["IncomeCategory"] = relationship(

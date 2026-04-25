@@ -12,12 +12,13 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
+from app.models.expense import Expense
 from app.models.family_receivable import FamilyReceivable
 from app.models.income import Income
 from app.models.income_category import IncomeCategory
 from app.models.user import User
 from app.schemas.receivable import ReceivableOut, SettleReceivableRequest
-from app.services.family_scope import family_peer_user_ids
+from app.services.family_scope import family_visibility_scope
 from app.services.family_financial_events import record_receivable_settled
 
 router = APIRouter(prefix="/receivables", tags=["receivables"])
@@ -54,23 +55,35 @@ def list_receivables(
     user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> dict:
-    peer_ids = family_peer_user_ids(db, user.id)
-    if len(peer_ids) <= 1:
+    owner_ids, include_family = family_visibility_scope(db, user)
+    if len(owner_ids) <= 1 and not include_family:
         return {"as_creditor": [], "as_debtor": []}
+    visibility_clause = (
+        FamilyReceivable.creditor_user_id.in_(owner_ids)
+        & FamilyReceivable.debtor_user_id.in_(owner_ids)
+        if not include_family
+        else (
+            (
+                (
+                    FamilyReceivable.creditor_user_id == user.id
+                ) | (FamilyReceivable.debtor_user_id == user.id)
+            )
+            & (
+                (Expense.owner_user_id == user.id)
+                | ((Expense.owner_user_id.in_(owner_ids)) & (Expense.is_family.is_(True)))
+            )
+        )
+    )
     rows = db.scalars(
         select(FamilyReceivable)
         .options(
             joinedload(FamilyReceivable.creditor),
             joinedload(FamilyReceivable.debtor),
         )
+        .join(Expense, Expense.id == FamilyReceivable.source_expense_id, isouter=True)
         .where(
             FamilyReceivable.status == "open",
-            FamilyReceivable.creditor_user_id.in_(peer_ids),
-            FamilyReceivable.debtor_user_id.in_(peer_ids),
-            (
-                (FamilyReceivable.creditor_user_id == user.id)
-                | (FamilyReceivable.debtor_user_id == user.id)
-            ),
+            visibility_clause,
         )
         .order_by(FamilyReceivable.settle_by.asc(), FamilyReceivable.created_at.desc())
     ).unique().all()

@@ -17,7 +17,7 @@ fun wellPaidTopAppBarColors() = TopAppBarDefaults.topAppBarColors(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun wellPaidCenterTopAppBarColors() = TopAppBarDefaults.centerAlignedTopAppBarColors(
+fun wellPaidCenterTopAppBarColors() = TopAppBarDefaults.topAppBarColors(
     containerColor = MaterialTheme.colorScheme.primary,
     titleContentColor = Color.White,
     navigationIconContentColor = Color.White,

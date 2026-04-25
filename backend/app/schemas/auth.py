@@ -89,9 +89,11 @@ class UserMeResponse(BaseModel):
     email: str
     full_name: str | None = None
     display_name: str | None = None
+    family_mode_enabled: bool = False
 
 
 class UserProfilePatch(BaseModel):
     """Corpo para PATCH /auth/me ou POST /auth/profile/display-name."""
 
     display_name: str | None = Field(default=None, max_length=200)
+    family_mode_enabled: bool | None = None

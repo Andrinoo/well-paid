@@ -425,6 +425,30 @@ fun SettingsScreen(
                 shadowElevation = 0.dp,
             ) {
                 Column(Modifier.fillMaxWidth()) {
+                    ListItem(
+                        headlineContent = {
+                            Text(
+                                stringResource(R.string.settings_tile_family_mode),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Medium,
+                            )
+                        },
+                        supportingContent = {
+                            Text(
+                                stringResource(R.string.settings_tile_family_mode_hint),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        },
+                        trailingContent = {
+                            Switch(
+                                checked = profile.familyModeEnabled,
+                                onCheckedChange = { v -> viewModel.setFamilyModeEnabled(v) },
+                            )
+                        },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
                     SettingsNavRow(
                         icon = Icons.Outlined.Shield,
                         title = stringResource(R.string.settings_tile_security),

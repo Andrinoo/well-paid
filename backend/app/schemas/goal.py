@@ -15,6 +15,7 @@ class GoalCreate(BaseModel):
     target_cents: int = Field(gt=0)
     current_cents: int = Field(default=0, ge=0)
     is_active: bool = True
+    is_family: bool = False
     target_url: str | None = Field(default=None, max_length=2048)
     reference_product_name: str | None = Field(default=None, max_length=500)
     reference_price_cents: int | None = Field(default=None, gt=0)
@@ -28,6 +29,7 @@ class GoalUpdate(BaseModel):
     target_cents: int | None = Field(default=None, gt=0)
     current_cents: int | None = Field(default=None, ge=0)
     is_active: bool | None = None
+    is_family: bool | None = None
     target_url: str | None = Field(default=None, max_length=2048)
     reference_product_name: str | None = Field(default=None, max_length=500)
     reference_price_cents: int | None = Field(default=None, gt=0)
@@ -61,6 +63,7 @@ class GoalResponse(BaseModel):
     target_cents: int
     current_cents: int
     is_active: bool
+    is_family: bool = False
     created_at: datetime
     updated_at: datetime
     target_url: str | None = None

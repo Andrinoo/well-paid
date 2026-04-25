@@ -166,6 +166,9 @@ class Settings(BaseSettings):
     )
     market_provider_timeout_seconds: float = 10.0
     market_provider_retries: int = 1
+    # Segurança de isolamento: por omissão cada conta vê apenas os próprios dados.
+    # Ative apenas se quiser partilha entre membros da família.
+    family_data_sharing_enabled: bool = True
 
     @model_validator(mode="before")
     @classmethod
