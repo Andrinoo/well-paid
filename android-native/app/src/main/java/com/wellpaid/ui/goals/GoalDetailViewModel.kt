@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wellpaid.R
 import com.wellpaid.core.model.goal.GoalContributeDto
+import com.wellpaid.core.model.goal.GoalContributionItemDto
 import com.wellpaid.core.model.goal.GoalDto
 import com.wellpaid.core.model.goal.GoalPriceHistoryItemDto
 import com.wellpaid.core.network.GoalsApi
@@ -27,6 +28,7 @@ data class GoalDetailUiState(
     val isRefreshingFromLink: Boolean = false,
     val goal: GoalDto? = null,
     val priceHistory: List<GoalPriceHistoryItemDto> = emptyList(),
+    val goalEvolutionValues: List<Int> = emptyList(),
     val errorMessage: String? = null,
 )
 
@@ -58,11 +60,13 @@ class GoalDetailViewModel @Inject constructor(
         runCatching { goalsApi.getGoal(goalId) }
             .onSuccess { g ->
                 val history = runCatching { goalsApi.priceHistory(goalId).items }.getOrDefault(emptyList())
+                val contributions = runCatching { goalsApi.contributions(goalId) }.getOrDefault(emptyList())
                 _uiState.update {
                     it.copy(
                         isLoading = false,
                         goal = g,
                         priceHistory = history,
+                        goalEvolutionValues = buildEvolutionValues(contributions, g.currentCents),
                         errorMessage = null,
                     )
                 }
@@ -97,7 +101,15 @@ class GoalDetailViewModel @Inject constructor(
             }
                 .onSuccess { g ->
                     val history = runCatching { goalsApi.priceHistory(goalId).items }.getOrDefault(emptyList())
-                    _uiState.update { it.copy(isSaving = false, goal = g, priceHistory = history) }
+                    val contributions = runCatching { goalsApi.contributions(goalId) }.getOrDefault(emptyList())
+                    _uiState.update {
+                        it.copy(
+                            isSaving = false,
+                            goal = g,
+                            priceHistory = history,
+                            goalEvolutionValues = buildEvolutionValues(contributions, g.currentCents),
+                        )
+                    }
                     onSuccess()
                 }
                 .onFailure { t ->
@@ -119,11 +131,13 @@ class GoalDetailViewModel @Inject constructor(
             runCatching { goalsApi.refreshReferencePrice(goalId) }
                 .onSuccess { updated ->
                     val history = runCatching { goalsApi.priceHistory(goalId).items }.getOrDefault(emptyList())
+                    val contributions = runCatching { goalsApi.contributions(goalId) }.getOrDefault(emptyList())
                     _uiState.update {
                         it.copy(
                             isRefreshingFromLink = false,
                             goal = updated,
                             priceHistory = history,
+                            goalEvolutionValues = buildEvolutionValues(contributions, updated.currentCents),
                             errorMessage = null,
                         )
                     }
@@ -167,6 +181,21 @@ class GoalDetailViewModel @Inject constructor(
                         )
                     }
                 }
+        }
+    }
+
+    private fun buildEvolutionValues(
+        contributions: List<GoalContributionItemDto>,
+        currentCents: Int,
+    ): List<Int> {
+        if (contributions.isEmpty()) {
+            return listOf(currentCents.coerceAtLeast(0))
+        }
+        var cumulative = 0
+        val chrono = contributions.reversed()
+        return chrono.map { item ->
+            cumulative += item.amountCents
+            cumulative.coerceAtLeast(0)
         }
     }
 }

@@ -224,6 +224,15 @@ fun GoalDetailScreen(
                 )
             }
 
+            Spacer(Modifier.height(20.dp))
+            GoalPriceBarsChart(
+                history = state.priceHistory,
+                fallbackReferencePriceCents = goal.referencePriceCents,
+                fallbackAlternatives = goal.priceAlternatives,
+                    fallbackEvolutionValues = state.goalEvolutionValues,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
             // Novos campos: link e preço de referência
             val url = goal.targetUrl?.trim().orEmpty()
             val canRefreshPriceByTitle = goal.title.trim().length >= 2
@@ -277,14 +286,6 @@ fun GoalDetailScreen(
                         color = MaterialTheme.colorScheme.tertiary,
                     )
                 }
-                GoalPriceBarsChart(
-                    history = state.priceHistory,
-                    fallbackReferencePriceCents = goal.referencePriceCents,
-                    fallbackAlternatives = goal.priceAlternatives,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 10.dp),
-                )
                 if (goal.isMine && (url.isNotEmpty() || canRefreshPriceByTitle)) {
                     Spacer(Modifier.height(12.dp))
                     OutlinedButton(
@@ -408,23 +409,29 @@ private fun GoalPriceBarsChart(
     history: List<GoalPriceHistoryItemDto>,
     fallbackReferencePriceCents: Int?,
     fallbackAlternatives: List<GoalPriceAlternativeDto>,
+    fallbackEvolutionValues: List<Int>,
     modifier: Modifier = Modifier,
 ) {
-    val chartValues = remember(history, fallbackReferencePriceCents, fallbackAlternatives) {
+    val chartValues = remember(history, fallbackReferencePriceCents, fallbackAlternatives, fallbackEvolutionValues) {
         val historyValues = history.map { it.priceCents }.filter { it > 0 }
         if (historyValues.isNotEmpty()) {
             historyValues
         } else {
-            buildList {
+            val priceFallback = buildList {
                 fallbackReferencePriceCents?.takeIf { it > 0 }?.let { add(it) }
                 fallbackAlternatives
                     .map { it.priceCents }
                     .filter { it > 0 }
                     .forEach { add(it) }
             }
+            if (priceFallback.isNotEmpty()) {
+                priceFallback
+            } else {
+                fallbackEvolutionValues.ifEmpty { listOf(0) }
+            }
         }
     }
-    if (chartValues.size < 2) return
+    if (chartValues.isEmpty()) return
 
     val minValue = chartValues.minOrNull() ?: return
     val maxValue = chartValues.maxOrNull() ?: return

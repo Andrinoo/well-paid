@@ -5,6 +5,7 @@ import com.wellpaid.core.model.goal.GoalCreateDto
 import com.wellpaid.core.model.goal.GoalDto
 import com.wellpaid.core.model.goal.GoalPreviewFromUrlRequestDto
 import com.wellpaid.core.model.goal.GoalPreviewFromUrlDto
+import com.wellpaid.core.model.goal.GoalContributionItemDto
 import com.wellpaid.core.model.goal.GoalProductSearchRequestDto
 import com.wellpaid.core.model.goal.GoalProductSearchResponseDto
 import com.wellpaid.core.model.goal.GoalPriceHistoryResponseDto
@@ -41,6 +42,9 @@ interface GoalsApi {
         @Path("id") id: String,
         @Body body: GoalContributeDto,
     ): GoalDto
+
+    @GET("goals/{id}/contributions")
+    suspend fun contributions(@Path("id") id: String): List<GoalContributionItemDto>
 
     @POST("goals/{id}/refresh-reference-price")
     suspend fun refreshReferencePrice(@Path("id") id: String): GoalDto
