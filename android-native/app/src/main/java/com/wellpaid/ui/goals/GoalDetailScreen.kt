@@ -1,5 +1,8 @@
 package com.wellpaid.ui.goals
 
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -48,11 +51,20 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wellpaid.R
+import com.wellpaid.core.model.goal.GoalPriceAlternativeDto
+import com.wellpaid.core.model.goal.GoalPriceHistoryItemDto
+import com.wellpaid.ui.theme.WellPaidCreamMuted
+import com.wellpaid.ui.theme.WellPaidExpenseLine
+import com.wellpaid.ui.theme.WellPaidGold
+import com.wellpaid.ui.theme.WellPaidNavy
+import com.wellpaid.ui.theme.WellPaidPositive
 import com.wellpaid.ui.theme.wellPaidScreenHorizontalPadding
 import com.wellpaid.ui.theme.wellPaidTopAppBarColors
 import coil.compose.AsyncImage
 import com.wellpaid.util.formatBrlFromCents
+import com.wellpaid.util.formatIsoDateToBr
 import com.wellpaid.util.parseBrlToCents
+import kotlin.math.roundToLong
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -203,6 +215,14 @@ fun GoalDetailScreen(
                     .fillMaxWidth()
                     .padding(top = 8.dp),
             )
+            goal.dueAt?.takeIf { it.isNotBlank() }?.let { dueAt ->
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = stringResource(R.string.goal_field_due_date) + ": " + formatIsoDateToBr(dueAt),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
 
             // Novos campos: link e preço de referência
             val url = goal.targetUrl?.trim().orEmpty()
@@ -257,6 +277,14 @@ fun GoalDetailScreen(
                         color = MaterialTheme.colorScheme.tertiary,
                     )
                 }
+                GoalPriceBarsChart(
+                    history = state.priceHistory,
+                    fallbackReferencePriceCents = goal.referencePriceCents,
+                    fallbackAlternatives = goal.priceAlternatives,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 10.dp),
+                )
                 if (goal.isMine && (url.isNotEmpty() || canRefreshPriceByTitle)) {
                     Spacer(Modifier.height(12.dp))
                     OutlinedButton(
@@ -372,6 +400,104 @@ fun GoalDetailScreen(
                 }
             },
         )
+    }
+}
+
+@Composable
+private fun GoalPriceBarsChart(
+    history: List<GoalPriceHistoryItemDto>,
+    fallbackReferencePriceCents: Int?,
+    fallbackAlternatives: List<GoalPriceAlternativeDto>,
+    modifier: Modifier = Modifier,
+) {
+    val chartValues = remember(history, fallbackReferencePriceCents, fallbackAlternatives) {
+        val historyValues = history.map { it.priceCents }.filter { it > 0 }
+        if (historyValues.isNotEmpty()) {
+            historyValues
+        } else {
+            buildList {
+                fallbackReferencePriceCents?.takeIf { it > 0 }?.let { add(it) }
+                fallbackAlternatives
+                    .map { it.priceCents }
+                    .filter { it > 0 }
+                    .forEach { add(it) }
+            }
+        }
+    }
+    if (chartValues.size < 2) return
+
+    val minValue = chartValues.minOrNull() ?: return
+    val maxValue = chartValues.maxOrNull() ?: return
+    val valueRange = (maxValue - minValue).coerceAtLeast(1).toFloat()
+    val palette = remember {
+        listOf(
+            WellPaidGold,
+            WellPaidPositive,
+            WellPaidExpenseLine,
+            WellPaidNavy,
+            Color(0xFF4F46E5),
+            Color(0xFF0E7490),
+            Color(0xFFB45309),
+            Color(0xFF7C3AED),
+            Color(0xFFBE123C),
+            Color(0xFF15803D),
+        )
+    }
+    val valueToColor = remember(chartValues) {
+        val map = linkedMapOf<Long, Color>()
+        chartValues.forEach { cents ->
+            val key = cents.toLong()
+            if (!map.containsKey(key)) {
+                map[key] = palette[map.size % palette.size]
+            }
+        }
+        map
+    }
+
+    Column(
+        modifier = modifier
+            .background(
+                color = WellPaidCreamMuted.copy(alpha = 0.54f),
+                shape = RoundedCornerShape(10.dp),
+            )
+            .border(
+                width = 1.dp,
+                color = WellPaidGold.copy(alpha = 0.35f),
+                shape = RoundedCornerShape(10.dp),
+            )
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.investments_evolution_title),
+            style = MaterialTheme.typography.labelLarge,
+            color = WellPaidNavy,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Spacer(Modifier.height(6.dp))
+        Canvas(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(84.dp),
+        ) {
+            val width = size.width
+            val height = size.height
+            val barSlot = width / chartValues.size.toFloat()
+            val barWidth = (barSlot * 0.62f).coerceAtLeast(8f)
+            chartValues.forEachIndexed { index, value ->
+                val x = (index * barSlot) + (barSlot / 2f)
+                val normalized = (value - minValue).toFloat() / valueRange
+                val barHeight = (normalized * (height - 6f)).coerceAtLeast(10f)
+                val top = height - barHeight
+                val colorKey = (value.toDouble()).roundToLong()
+                val baseColor = valueToColor[colorKey] ?: WellPaidGold
+                drawRoundRect(
+                    color = if (index == 0) baseColor.copy(alpha = 0.95f) else baseColor.copy(alpha = 0.74f),
+                    topLeft = androidx.compose.ui.geometry.Offset(x - (barWidth / 2f), top),
+                    size = androidx.compose.ui.geometry.Size(barWidth, barHeight),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(6f, 6f),
+                )
+            }
+        }
     }
 }
 

@@ -247,6 +247,7 @@ class HomeViewModel @Inject constructor(
         if (items.isEmpty()) return "info"
         val kinds = items.map { it.kind.lowercase() }.toSet()
         return when {
+            "goal_opportunity" in kinds -> "goal_opportunity"
             "warning" in kinds -> "warning"
             "info" in kinds -> "info"
             "tip" in kinds -> "tip"

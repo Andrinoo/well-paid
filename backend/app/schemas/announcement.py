@@ -4,7 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, HttpUrl, field_validator
 
-AnnouncementKind = Literal["info", "warning", "tip", "material"]
+AnnouncementKind = Literal["info", "warning", "tip", "material", "goal_opportunity"]
 AnnouncementPlacement = Literal[
     "home_banner",
     "home_feed",

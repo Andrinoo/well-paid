@@ -169,6 +169,9 @@ class Settings(BaseSettings):
     # Segurança de isolamento: por omissão cada conta vê apenas os próprios dados.
     # Ative apenas se quiser partilha entre membros da família.
     family_data_sharing_enabled: bool = True
+    goal_tracking_enabled: bool = True
+    goal_tracking_scheduler_minutes: int = 60
+    goal_tracking_drop_threshold_pct: float = 5.0
 
     @model_validator(mode="before")
     @classmethod

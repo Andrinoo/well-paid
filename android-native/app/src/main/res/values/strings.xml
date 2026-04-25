@@ -348,6 +348,11 @@
     <string name="goal_form_loading">Loading goal…</string>
     <string name="goal_field_title">Title</string>
     <string name="goal_field_title_hint_short">What you are saving for (e.g. Air conditioner 12000 BTUs).</string>
+    <string name="goal_field_description">Description (optional)</string>
+    <string name="goal_field_description_hint">Extra details used for price opportunity search.</string>
+    <string name="goal_field_due_date">Goal due date (optional)</string>
+    <string name="goal_field_due_date_hint">Format: YYYY-MM-DD (e.g. 2026-12-31)</string>
+    <string name="goal_form_due_date_invalid">Invalid due date. Use format YYYY-MM-DD.</string>
     <string name="goal_field_title_search_hint">We search Google Shopping (via SerpAPI on the server) using this text. Example: air conditioner 12000 BTUs.</string>
     <string name="goal_price_search_section_title">Reference price</string>
     <string name="goal_optional_search_or_link_label">Extra search term or link (optional)</string>

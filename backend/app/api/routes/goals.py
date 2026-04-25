@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -12,11 +12,14 @@ from app.core.config import get_settings
 from app.core.database import get_db
 from app.models.goal import Goal
 from app.models.goal_contribution import GoalContribution
+from app.models.goal_price_history import GoalPriceHistory
 from app.models.user import User
 from app.schemas.goal import (
     GoalContribute,
     GoalContributionResponse,
     GoalCreate,
+    GoalPriceHistoryItem,
+    GoalPriceHistoryResponse,
     GoalPreviewFromUrlBody,
     GoalPreviewFromUrlResponse,
     GoalProductHit,
@@ -30,6 +33,40 @@ from app.services.goal_product_search import search_products_google_shopping
 from app.services.goal_reference_price import fetch_product_hints
 
 router = APIRouter(prefix="/goals", tags=["goals"])
+
+
+def _default_due_at() -> datetime:
+    return datetime.now(UTC) + timedelta(days=90)
+
+
+def _record_goal_price_history(
+    db: Session,
+    row: Goal,
+    *,
+    capture_type: str,
+    observed_price_cents: int | None = None,
+    observed_title: str | None = None,
+    observed_url: str | None = None,
+    observed_source: str | None = None,
+) -> None:
+    price_cents = (
+        int(observed_price_cents)
+        if observed_price_cents is not None
+        else int(row.reference_price_cents or 0)
+    )
+    if price_cents <= 0:
+        return
+    db.add(
+        GoalPriceHistory(
+            goal_id=row.id,
+            price_cents=price_cents,
+            currency=(row.reference_currency or "BRL")[:8],
+            source=(observed_source or row.price_source or "unavailable")[:64],
+            observed_url=(observed_url or row.target_url),
+            observed_title=(observed_title or row.reference_product_name or row.title)[:500],
+            capture_type=capture_type[:24],
+        )
+    )
 
 
 def _owned_goal(db: Session, goal_id: uuid.UUID, owner_id: uuid.UUID) -> Goal | None:
@@ -80,6 +117,10 @@ def _to_response(row: Goal, viewer_id: uuid.UUID) -> GoalResponse:
         price_checked_at=row.price_checked_at,
         price_source=row.price_source,
         reference_thumbnail_url=row.reference_thumbnail_url,
+        description=row.description,
+        due_at=row.due_at,
+        price_check_interval_hours=int(row.price_check_interval_hours or 12),
+        last_price_track_at=row.last_price_track_at,
         price_alternatives=alts,
     )
 
@@ -125,6 +166,9 @@ def create_goal(
         reference_price_cents=body.reference_price_cents,
         reference_currency=body.reference_currency or "BRL",
         price_source=body.price_source,
+        description=(body.description.strip() if body.description else None),
+        due_at=(body.due_at or _default_due_at()),
+        price_check_interval_hours=int(body.price_check_interval_hours or 12),
         reference_thumbnail_url=(
             body.reference_thumbnail_url.strip()
             if body.reference_thumbnail_url
@@ -141,6 +185,7 @@ def create_goal(
                 note=None,
             )
         )
+    _record_goal_price_history(db, row, capture_type="manual")
     db.commit()
     db.refresh(row)
     return _to_response(row, user.id)
@@ -327,9 +372,11 @@ def refresh_goal_reference_price(
         listing = hints.pop("_listing_url", None)
         if listing:
             row.target_url = listing
+    previous_price = int(row.reference_price_cents or 0)
     if hints.get("reference_product_name"):
         row.reference_product_name = hints["reference_product_name"]
     if hints.get("reference_price_cents") is not None:
+        previous_price = int(row.reference_price_cents or 0)
         pc = int(hints["reference_price_cents"])
         row.reference_price_cents = pc
         row.target_cents = pc
@@ -344,9 +391,44 @@ def refresh_goal_reference_price(
     row.price_alternatives = list(hints.get("price_alternatives") or [])
     if hints.get("reference_thumbnail_url"):
         row.reference_thumbnail_url = str(hints["reference_thumbnail_url"])[:2048]
+    row.last_price_track_at = datetime.now(UTC)
+    _record_goal_price_history(
+        db,
+        row,
+        capture_type="manual",
+        observed_price_cents=int(row.reference_price_cents or 0),
+        observed_title=hints.get("reference_product_name"),
+        observed_url=row.target_url,
+        observed_source=row.price_source,
+    )
     db.commit()
     db.refresh(row)
     return _to_response(row, user.id)
+
+
+@router.get("/{goal_id}/price-history", response_model=GoalPriceHistoryResponse)
+def list_goal_price_history(
+    goal_id: uuid.UUID,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+    limit: int = 120,
+) -> GoalPriceHistoryResponse:
+    row = _visible_goal(db, goal_id, user.id)
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Meta não encontrada")
+    lim = min(max(limit, 1), 365)
+    history_rows = (
+        db.query(GoalPriceHistory)
+        .filter(GoalPriceHistory.goal_id == goal_id)
+        .order_by(GoalPriceHistory.recorded_at.desc())
+        .limit(lim)
+        .all()
+    )
+    items = [
+        GoalPriceHistoryItem.model_validate(h)
+        for h in reversed(history_rows)
+    ]
+    return GoalPriceHistoryResponse(goal_id=goal_id, items=items)
 
 
 @router.get("/{goal_id}", response_model=GoalResponse)
@@ -374,8 +456,22 @@ def update_goal(
     data = body.model_dump(exclude_unset=True)
     if "title" in data and data["title"] is not None:
         data["title"] = data["title"].strip()
+    if "description" in data and isinstance(data["description"], str):
+        data["description"] = data["description"].strip() or None
+    if "price_check_interval_hours" in data and data["price_check_interval_hours"] is not None:
+        data["price_check_interval_hours"] = int(data["price_check_interval_hours"])
     for k, v in data.items():
         setattr(row, k, v)
+    if "reference_price_cents" in data and data.get("reference_price_cents") is not None:
+        _record_goal_price_history(
+            db,
+            row,
+            capture_type="manual",
+            observed_price_cents=int(data["reference_price_cents"]),
+            observed_title=row.reference_product_name,
+            observed_url=row.target_url,
+            observed_source=row.price_source,
+        )
     db.commit()
     db.refresh(row)
     return _to_response(row, user.id)

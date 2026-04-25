@@ -27,6 +27,10 @@ data class GoalDto(
     @SerialName("reference_currency") val referenceCurrency: String = "BRL",
     @SerialName("price_checked_at") val priceCheckedAt: String? = null,
     @SerialName("price_source") val priceSource: String? = null,
+    val description: String? = null,
+    @SerialName("due_at") val dueAt: String? = null,
+    @SerialName("price_check_interval_hours") val priceCheckIntervalHours: Int = 12,
+    @SerialName("last_price_track_at") val lastPriceTrackAt: String? = null,
     @SerialName("reference_thumbnail_url") val referenceThumbnailUrl: String? = null,
     @SerialName("price_alternatives") val priceAlternatives: List<GoalPriceAlternativeDto> = emptyList(),
 )
@@ -42,6 +46,9 @@ data class GoalCreateDto(
     @SerialName("reference_price_cents") val referencePriceCents: Int? = null,
     @SerialName("reference_currency") val referenceCurrency: String = "BRL",
     @SerialName("price_source") val priceSource: String? = null,
+    val description: String? = null,
+    @SerialName("due_at") val dueAt: String? = null,
+    @SerialName("price_check_interval_hours") val priceCheckIntervalHours: Int = 12,
     @SerialName("reference_thumbnail_url") val referenceThumbnailUrl: String? = null,
 )
 
@@ -56,7 +63,29 @@ data class GoalUpdateDto(
     @SerialName("reference_price_cents") val referencePriceCents: Int? = null,
     @SerialName("reference_currency") val referenceCurrency: String? = null,
     @SerialName("price_source") val priceSource: String? = null,
+    val description: String? = null,
+    @SerialName("due_at") val dueAt: String? = null,
+    @SerialName("price_check_interval_hours") val priceCheckIntervalHours: Int? = null,
     @SerialName("reference_thumbnail_url") val referenceThumbnailUrl: String? = null,
+)
+
+@Serializable
+data class GoalPriceHistoryItemDto(
+    val id: String,
+    @SerialName("goal_id") val goalId: String,
+    @SerialName("price_cents") val priceCents: Int,
+    val currency: String = "BRL",
+    val source: String? = null,
+    @SerialName("observed_url") val observedUrl: String? = null,
+    @SerialName("observed_title") val observedTitle: String? = null,
+    @SerialName("capture_type") val captureType: String = "manual",
+    @SerialName("recorded_at") val recordedAt: String,
+)
+
+@Serializable
+data class GoalPriceHistoryResponseDto(
+    @SerialName("goal_id") val goalId: String,
+    val items: List<GoalPriceHistoryItemDto> = emptyList(),
 )
 
 @Serializable

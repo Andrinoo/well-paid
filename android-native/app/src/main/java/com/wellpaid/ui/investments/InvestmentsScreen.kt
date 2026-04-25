@@ -102,6 +102,7 @@ import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
 import kotlin.math.max
+import kotlin.math.roundToLong
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -694,6 +695,30 @@ private fun InvestmentEvolutionChart(
     val maxClose = max(1, points.maxOfOrNull { it.close }?.toInt() ?: 1)
     val minClose = points.minOfOrNull { it.close } ?: 0.0
     val selectedPoint = points.lastOrNull()
+    val pricePalette = remember {
+        listOf(
+            WellPaidGold,
+            WellPaidPositive,
+            WellPaidExpenseLine,
+            WellPaidNavy,
+            Color(0xFF4F46E5),
+            Color(0xFF0E7490),
+            Color(0xFFB45309),
+            Color(0xFF7C3AED),
+            Color(0xFFBE123C),
+            Color(0xFF15803D),
+        )
+    }
+    val priceToColor = remember(points) {
+        val colors = linkedMapOf<Long, Color>()
+        points.forEach { point ->
+            val priceKey = (point.close * 100.0).roundToLong()
+            if (!colors.containsKey(priceKey)) {
+                colors[priceKey] = pricePalette[colors.size % pricePalette.size]
+            }
+        }
+        colors
+    }
 
     Column(
         modifier = modifier
@@ -785,13 +810,8 @@ private fun InvestmentEvolutionChart(
                     val normalized = (point.close - minClose).toFloat() / valueRange
                     val barHeight = (normalized * (height - 6f)).coerceAtLeast(8f)
                     val top = height - barHeight
-                    val prevClose = points.getOrNull(index - 1)?.close
-                    val baseColor = when {
-                        index == 0 || prevClose == null -> WellPaidGold
-                        point.close > (prevClose ?: 0.0) -> WellPaidPositive
-                        point.close < (prevClose ?: 0.0) -> WellPaidExpenseLine
-                        else -> WellPaidNavy
-                    }
+                    val priceKey = (point.close * 100.0).roundToLong()
+                    val baseColor = priceToColor[priceKey] ?: WellPaidGold
                     var bar = baseColor
                     if (index == selectedIndex) {
                         bar = bar.copy(alpha = (bar.alpha * 0.6f + 0.4f).coerceIn(0.5f, 1f))

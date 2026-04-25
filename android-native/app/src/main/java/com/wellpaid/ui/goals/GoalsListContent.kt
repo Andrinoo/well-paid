@@ -375,6 +375,13 @@ private fun GoalCardExpandedPanel(
         )
         Spacer(Modifier.size(4.dp))
     }
+    goal.dueAt?.takeIf { it.isNotBlank() }?.let { dueAt ->
+        GoalListLabeledField(
+            label = stringResource(R.string.goal_field_due_date),
+            value = formatIsoDateToBr(dueAt),
+        )
+        Spacer(Modifier.size(4.dp))
+    }
     if (url.isNotEmpty()) {
         Text(
             text = stringResource(R.string.goal_list_url_label),

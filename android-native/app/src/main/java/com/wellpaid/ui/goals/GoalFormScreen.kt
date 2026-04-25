@@ -197,6 +197,27 @@ fun GoalFormScreen(
                 shape = RoundedCornerShape(14.dp),
             )
             Spacer(Modifier.height(12.dp))
+            OutlinedTextField(
+                value = state.description,
+                onValueChange = { viewModel.setDescription(it) },
+                label = { Text(stringResource(R.string.goal_field_description)) },
+                supportingText = { Text(stringResource(R.string.goal_field_description_hint)) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = false,
+                minLines = 2,
+                shape = RoundedCornerShape(14.dp),
+            )
+            Spacer(Modifier.height(12.dp))
+            OutlinedTextField(
+                value = state.dueDateText,
+                onValueChange = { viewModel.setDueDateText(it) },
+                label = { Text(stringResource(R.string.goal_field_due_date)) },
+                supportingText = { Text(stringResource(R.string.goal_field_due_date_hint)) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                shape = RoundedCornerShape(14.dp),
+            )
+            Spacer(Modifier.height(12.dp))
 
             WellPaidMoneyDigitKeypadField(
                 valueText = state.targetText,

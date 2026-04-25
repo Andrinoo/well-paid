@@ -528,6 +528,7 @@ private fun HomeRecadosHeaderIcon(
 
 private fun recadosBadgeColors(kind: String): Pair<Color, Color> {
     return when (kind.lowercase()) {
+        "goal_opportunity" -> Color(0xFF2563EB) to Color.White
         "warning" -> Color(0xFFDC2626) to Color.White
         "info" -> Color(0xFFEAB308) to Color(0xFF422006)
         "tip" -> Color(0xFF16A34A) to Color.White
@@ -551,6 +552,7 @@ private fun HomeAnnouncementBanner(
     }
 
     val accent = when (announcement.kind.lowercase()) {
+        "goal_opportunity" -> Color(0xFF1D4ED8)
         "warning" -> Color(0xFFB45309)
         "tip" -> Color(0xFF047857)
         "material" -> Color(0xFF6D28D9)

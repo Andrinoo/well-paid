@@ -38,6 +38,8 @@ data class GoalFormUiState(
     val isSearchingProducts: Boolean = false,
     val loaded: GoalDto? = null,
     val title: String = "",
+    val description: String = "",
+    val dueDateText: String = "",
     val targetText: String = "",
     val initialText: String = "",
     val targetUrl: String = "",
@@ -81,6 +83,8 @@ class GoalFormViewModel @Inject constructor(
 
     private data class FormBaseline(
         val title: String,
+        val description: String,
+        val dueDateText: String,
         val targetText: String,
         val initialText: String,
         val targetUrl: String,
@@ -93,6 +97,8 @@ class GoalFormViewModel @Inject constructor(
     private fun snapshotBaseline(s: GoalFormUiState): FormBaseline =
         FormBaseline(
             title = s.title.trim(),
+            description = s.description.trim(),
+            dueDateText = s.dueDateText.trim(),
             targetText = s.targetText.trim(),
             initialText = s.initialText.trim(),
             targetUrl = s.targetUrl.trim(),
@@ -124,6 +130,8 @@ class GoalFormViewModel @Inject constructor(
                                 isLoading = false,
                                 loaded = g,
                                 title = g.title,
+                                description = g.description.orEmpty(),
+                                dueDateText = g.dueAt.orEmpty().take(10),
                                 targetText = centsToBrlInput(g.targetCents),
                                 targetUrl = g.targetUrl.orEmpty(),
                                 isActive = g.isActive,
@@ -150,6 +158,14 @@ class GoalFormViewModel @Inject constructor(
 
     fun setTitle(value: String) {
         _uiState.update { it.copy(title = value) }
+    }
+
+    fun setDescription(value: String) {
+        _uiState.update { it.copy(description = value) }
+    }
+
+    fun setDueDateText(value: String) {
+        _uiState.update { it.copy(dueDateText = value) }
     }
 
     fun setTargetText(value: String) {
@@ -396,6 +412,15 @@ class GoalFormViewModel @Inject constructor(
             _uiState.update { it.copy(errorMessage = appContext.getString(R.string.goal_error_target)) }
             return
         }
+        val dueAtIso = parseDueDateToIsoUtc(s.dueDateText.trim())
+        if (s.dueDateText.isNotBlank() && dueAtIso == null) {
+            _uiState.update {
+                it.copy(
+                    errorMessage = appContext.getString(R.string.goal_form_due_date_invalid),
+                )
+            }
+            return
+        }
 
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true, errorMessage = null) }
@@ -430,6 +455,9 @@ class GoalFormViewModel @Inject constructor(
                             referencePriceCents = s.draftReferencePriceCents,
                             referenceCurrency = s.draftReferenceCurrency,
                             priceSource = s.draftPriceSource,
+                            description = s.description.trim().ifEmpty { null },
+                            dueAt = dueAtIso,
+                            priceCheckIntervalHours = 12,
                             referenceThumbnailUrl = s.draftReferenceThumbnailUrl,
                         ),
                     )
@@ -448,6 +476,9 @@ class GoalFormViewModel @Inject constructor(
                             referencePriceCents = loaded.referencePriceCents,
                             referenceCurrency = loaded.referenceCurrency,
                             priceSource = loaded.priceSource,
+                            description = s.description.trim().ifEmpty { null },
+                            dueAt = dueAtIso,
+                            priceCheckIntervalHours = loaded.priceCheckIntervalHours,
                             referenceThumbnailUrl = loaded.referenceThumbnailUrl,
                         ),
                     )
@@ -478,6 +509,15 @@ class GoalFormViewModel @Inject constructor(
         return t.takeIf {
             it.startsWith("http://", ignoreCase = true) || it.startsWith("https://", ignoreCase = true)
         }
+    }
+
+    private fun parseDueDateToIsoUtc(raw: String): String? {
+        if (raw.isBlank()) return null
+        return runCatching {
+            val date = java.time.LocalDate.parse(raw)
+            date.atStartOfDay(java.time.ZoneOffset.UTC)
+                .format(java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+        }.getOrNull()
     }
 
     fun delete(onSuccess: () -> Unit) {

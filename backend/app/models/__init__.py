@@ -21,6 +21,7 @@ from app.models.investment_position import InvestmentPosition
 from app.models.equity_fundamentals_history import EquityFundamentalsHistory
 from app.models.goal import Goal
 from app.models.goal_contribution import GoalContribution
+from app.models.goal_price_history import GoalPriceHistory
 from app.models.email_verification_token import EmailVerificationToken
 from app.models.password_reset_token import PasswordResetToken
 from app.models.shopping_list import ShoppingList
@@ -45,6 +46,7 @@ __all__ = [
     "FamilyFinancialEvent",
     "Goal",
     "GoalContribution",
+    "GoalPriceHistory",
     "Income",
     "IncomeCategory",
     "Family",

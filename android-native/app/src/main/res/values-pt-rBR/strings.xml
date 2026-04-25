@@ -347,6 +347,11 @@
     <string name="goal_form_loading">A carregar a meta…</string>
     <string name="goal_field_title">Título</string>
     <string name="goal_field_title_hint_short">Nome da meta (ex.: Ar condicionado 12000 BTUs).</string>
+    <string name="goal_field_description">Descrição (opcional)</string>
+    <string name="goal_field_description_hint">Detalhes extras usados na busca de oportunidades de preço.</string>
+    <string name="goal_field_due_date">Validade da meta (opcional)</string>
+    <string name="goal_field_due_date_hint">Formato: AAAA-MM-DD (ex.: 2026-12-31)</string>
+    <string name="goal_form_due_date_invalid">Data de validade inválida. Use o formato AAAA-MM-DD.</string>
     <string name="goal_field_title_search_hint">Pesquisamos no Google Shopping (via SerpAPI no servidor) com este texto. Ex.: ar condicionado 12000 BTUs.</string>
     <string name="goal_price_search_section_title">Preço de referência</string>
     <string name="goal_optional_search_or_link_label">Termo extra ou link (opcional)</string>

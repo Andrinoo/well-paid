@@ -32,6 +32,15 @@ class Goal(Base, TimestampMixin):
     reference_currency: Mapped[str] = mapped_column(String(8), nullable=False, default="BRL")
     price_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     price_source: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    description: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    price_check_interval_hours: Mapped[int] = mapped_column(
+        BigInteger,
+        nullable=False,
+        default=12,
+        server_default=text("12"),
+    )
+    last_price_track_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     reference_thumbnail_url: Mapped[str | None] = mapped_column(
         String(2048), nullable=True
     )
@@ -45,6 +54,11 @@ class Goal(Base, TimestampMixin):
     owner: Mapped["User"] = relationship("User", back_populates="goals")
     contributions: Mapped[list["GoalContribution"]] = relationship(
         "GoalContribution",
+        back_populates="goal",
+        cascade="all, delete-orphan",
+    )
+    price_history: Mapped[list["GoalPriceHistory"]] = relationship(
+        "GoalPriceHistory",
         back_populates="goal",
         cascade="all, delete-orphan",
     )

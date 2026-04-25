@@ -1,4 +1,5 @@
 import logging
+import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request, status
@@ -27,7 +28,9 @@ from app.api.routes import (
     telemetry,
 )
 from app.core.config import get_settings
+from app.core.database import SessionLocal
 from app.core.limiter import limiter
+from app.services.goal_price_tracking import run_goal_price_tracking_cycle
 from app.services.ticker_cache import ticker_cache_service
 
 logger = logging.getLogger(__name__)
@@ -60,11 +63,34 @@ def _warm_ticker_cache() -> None:
         logger.exception("Failed to warm ticker cache on startup.")
 
 
+async def _goal_tracking_loop() -> None:
+    while True:
+        try:
+            with SessionLocal() as db:
+                result = run_goal_price_tracking_cycle(db)
+                logger.info(
+                    "Goal tracking cycle finished: scanned=%s updated=%s alerts=%s",
+                    result.get("scanned", 0),
+                    result.get("updated", 0),
+                    result.get("alerts", 0),
+                )
+        except Exception:
+            logger.exception("Goal tracking cycle failed.")
+        minutes = max(15, int(get_settings().goal_tracking_scheduler_minutes))
+        await asyncio.sleep(minutes * 60)
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     _log_smtp_status()
     _warm_ticker_cache()
+    tracking_task = None
+    if get_settings().goal_tracking_enabled:
+        tracking_task = asyncio.create_task(_goal_tracking_loop())
     yield
+    if tracking_task is not None:
+        tracking_task.cancel()
+
 
 
 app = FastAPI(title="Well Paid API", version="0.1.0", lifespan=lifespan)

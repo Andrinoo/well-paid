@@ -328,6 +328,7 @@ private fun AnnouncementCard(
 }
 
 private fun kindAccent(kind: String): Color = when (kind.lowercase()) {
+    "goal_opportunity" -> Color(0xFF1D4ED8)
     "warning" -> Color(0xFFB45309)
     "tip" -> Color(0xFF047857)
     "material" -> Color(0xFFEC4899)

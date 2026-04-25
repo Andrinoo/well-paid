@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.wellpaid.R
 import com.wellpaid.core.model.goal.GoalContributeDto
 import com.wellpaid.core.model.goal.GoalDto
+import com.wellpaid.core.model.goal.GoalPriceHistoryItemDto
 import com.wellpaid.core.network.GoalsApi
 import com.wellpaid.util.FastApiErrorMapper
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -25,6 +26,7 @@ data class GoalDetailUiState(
     val isDeleting: Boolean = false,
     val isRefreshingFromLink: Boolean = false,
     val goal: GoalDto? = null,
+    val priceHistory: List<GoalPriceHistoryItemDto> = emptyList(),
     val errorMessage: String? = null,
 )
 
@@ -55,8 +57,14 @@ class GoalDetailViewModel @Inject constructor(
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
         runCatching { goalsApi.getGoal(goalId) }
             .onSuccess { g ->
+                val history = runCatching { goalsApi.priceHistory(goalId).items }.getOrDefault(emptyList())
                 _uiState.update {
-                    it.copy(isLoading = false, goal = g, errorMessage = null)
+                    it.copy(
+                        isLoading = false,
+                        goal = g,
+                        priceHistory = history,
+                        errorMessage = null,
+                    )
                 }
             }
             .onFailure { t ->
@@ -88,7 +96,8 @@ class GoalDetailViewModel @Inject constructor(
                 )
             }
                 .onSuccess { g ->
-                    _uiState.update { it.copy(isSaving = false, goal = g) }
+                    val history = runCatching { goalsApi.priceHistory(goalId).items }.getOrDefault(emptyList())
+                    _uiState.update { it.copy(isSaving = false, goal = g, priceHistory = history) }
                     onSuccess()
                 }
                 .onFailure { t ->
@@ -109,10 +118,12 @@ class GoalDetailViewModel @Inject constructor(
             _uiState.update { it.copy(isRefreshingFromLink = true, errorMessage = null) }
             runCatching { goalsApi.refreshReferencePrice(goalId) }
                 .onSuccess { updated ->
+                    val history = runCatching { goalsApi.priceHistory(goalId).items }.getOrDefault(emptyList())
                     _uiState.update {
                         it.copy(
                             isRefreshingFromLink = false,
                             goal = updated,
+                            priceHistory = history,
                             errorMessage = null,
                         )
                     }

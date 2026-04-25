@@ -7,6 +7,7 @@ import com.wellpaid.core.model.goal.GoalPreviewFromUrlRequestDto
 import com.wellpaid.core.model.goal.GoalPreviewFromUrlDto
 import com.wellpaid.core.model.goal.GoalProductSearchRequestDto
 import com.wellpaid.core.model.goal.GoalProductSearchResponseDto
+import com.wellpaid.core.model.goal.GoalPriceHistoryResponseDto
 import com.wellpaid.core.model.goal.GoalUpdateDto
 import retrofit2.Response
 import retrofit2.http.Body
@@ -49,4 +50,7 @@ interface GoalsApi {
 
     @POST("goals/product-search")
     suspend fun productSearch(@Body body: GoalProductSearchRequestDto): GoalProductSearchResponseDto
+
+    @GET("goals/{id}/price-history")
+    suspend fun priceHistory(@Path("id") id: String): GoalPriceHistoryResponseDto
 }

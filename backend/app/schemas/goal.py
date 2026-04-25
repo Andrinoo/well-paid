@@ -10,6 +10,20 @@ class GoalPriceAlternativeItem(BaseModel):
     url: str | None = None
 
 
+class GoalPriceHistoryItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    goal_id: uuid.UUID
+    price_cents: int = Field(ge=0)
+    currency: str = "BRL"
+    source: str | None = None
+    observed_url: str | None = None
+    observed_title: str | None = None
+    capture_type: str = "manual"
+    recorded_at: datetime
+
+
 class GoalCreate(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     target_cents: int = Field(gt=0)
@@ -22,6 +36,9 @@ class GoalCreate(BaseModel):
     reference_currency: str = Field(default="BRL", max_length=8)
     price_source: str | None = Field(default=None, max_length=32)
     reference_thumbnail_url: str | None = Field(default=None, max_length=2048)
+    description: str | None = Field(default=None, max_length=1000)
+    due_at: datetime | None = None
+    price_check_interval_hours: int = Field(default=12, ge=6, le=24)
 
 
 class GoalUpdate(BaseModel):
@@ -36,6 +53,9 @@ class GoalUpdate(BaseModel):
     reference_currency: str | None = Field(default=None, max_length=8)
     price_source: str | None = Field(default=None, max_length=32)
     reference_thumbnail_url: str | None = Field(default=None, max_length=2048)
+    description: str | None = Field(default=None, max_length=1000)
+    due_at: datetime | None = None
+    price_check_interval_hours: int | None = Field(default=None, ge=6, le=24)
 
 
 class GoalContribute(BaseModel):
@@ -73,7 +93,16 @@ class GoalResponse(BaseModel):
     price_checked_at: datetime | None = None
     price_source: str | None = None
     reference_thumbnail_url: str | None = None
+    description: str | None = None
+    due_at: datetime | None = None
+    price_check_interval_hours: int = 12
+    last_price_track_at: datetime | None = None
     price_alternatives: list[dict] = Field(default_factory=list)
+
+
+class GoalPriceHistoryResponse(BaseModel):
+    goal_id: uuid.UUID
+    items: list[GoalPriceHistoryItem] = Field(default_factory=list)
 
 
 class GoalRefreshPriceResponse(BaseModel):
