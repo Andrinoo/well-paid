@@ -41,6 +41,8 @@ import com.wellpaid.ui.theme.WellPaidPositive
 private val JoinCardCorner = RoundedCornerShape(14.dp)
 private val JoinHeroCorner = RoundedCornerShape(16.dp)
 private val JoinFieldCorner = RoundedCornerShape(12.dp)
+private val CryptoHeroColor = Color(0xFF311B5F)
+private val CryptoHeroBadgeColor = Color(0xFFB39DDB)
 private data class JoinMetric(val label: String, val value: String)
 
 @Composable
@@ -58,6 +60,9 @@ fun InvestmentsStockJoinScreen(
             .padding(bottom = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        val isCrypto = isCryptoTypeRule(state.newPositionType)
+        val heroColor = if (isCrypto) CryptoHeroColor else WellPaidNavy
+        val heroBadgeColor = if (isCrypto) CryptoHeroBadgeColor else Color.White.copy(alpha = 0.75f)
         Text(
             text = if (state.newPositionType.equals("crypto", ignoreCase = true)) {
                 stringResource(R.string.investments_stock_join_title_crypto)
@@ -72,7 +77,7 @@ fun InvestmentsStockJoinScreen(
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = JoinHeroCorner,
-            color = WellPaidNavy,
+            color = heroColor,
             shadowElevation = 1.dp,
         ) {
             Column(Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
@@ -82,7 +87,7 @@ fun InvestmentsStockJoinScreen(
                         fallback = stringResource(R.string.investments_bucket_stocks),
                     ),
                     style = MaterialTheme.typography.labelSmall,
-                    color = Color.White.copy(alpha = 0.75f),
+                    color = heroBadgeColor,
                     fontWeight = FontWeight.Medium,
                 )
                 Spacer(Modifier.height(4.dp))

@@ -64,10 +64,7 @@ private fun normalizeAssetTypeKey(raw: String?): String {
 }
 
 private fun isEquityLikeAsset(raw: String?): Boolean {
-    return when (normalizeAssetTypeKey(raw)) {
-        "stock", "fii", "bdr", "etf", "crypto" -> true
-        else -> false
-    }
+    return isVariableIncomeTypeRule(normalizeAssetTypeKey(raw))
 }
 
 data class TickerSuggestionUi(
@@ -802,7 +799,7 @@ class InvestmentsViewModel @Inject constructor(
             if (cached != null) {
                 val line = quoteInfoLineFromDto(cached)
                 _uiState.update {
-                    val shouldAutofillAverage = isEquityLikeAsset(it.newPositionType) &&
+                    val shouldAutofillAverage = isTraditionalEquityTypeRule(normalizeAssetTypeKey(it.newPositionType)) &&
                         (it.averagePriceText.isBlank() || (it.averagePriceText.replace(",", ".").toDoubleOrNull() ?: 0.0) <= 0.0)
                     val averageFromQuote = if (cached.lastPrice > 0) {
                         formatDecimalPtBr(cached.lastPrice)
@@ -839,7 +836,7 @@ class InvestmentsViewModel @Inject constructor(
                     stockQuoteCache[key] = StockQuoteCacheEntry(dto = q)
                     val line = quoteInfoLineFromDto(q)
                     _uiState.update {
-                        val shouldAutofillAverage = isEquityLikeAsset(it.newPositionType) &&
+                        val shouldAutofillAverage = isTraditionalEquityTypeRule(normalizeAssetTypeKey(it.newPositionType)) &&
                             (it.averagePriceText.isBlank() || (it.averagePriceText.replace(",", ".").toDoubleOrNull() ?: 0.0) <= 0.0)
                         val averageFromQuote = if (q.lastPrice > 0) {
                             formatDecimalPtBr(q.lastPrice)
@@ -1094,7 +1091,7 @@ class InvestmentsViewModel @Inject constructor(
     private fun applyWholeShareRuleFromValue() {
         val s = _uiState.value
         if (!s.stockJoinModeByValue) return
-        if (!isEquityLikeAsset(inferInstrumentType(s.newPositionName))) return
+        if (!isTraditionalEquityTypeRule(normalizeAssetTypeKey(s.newPositionType))) return
         val price = s.quoteLastPrice
             ?: s.averagePriceText.replace(",", ".").toDoubleOrNull()
             ?: s.quoteInfoMessage?.let { extractPriceFromQuoteMessage(it) }
@@ -1133,7 +1130,14 @@ class InvestmentsViewModel @Inject constructor(
     fun createPosition() {
         val s = _uiState.value
         val inferredType = inferInstrumentType(s.newPositionName.trim())
-        val name = if (isEquityLikeAsset(inferredType)) {
+        val uiType = normalizeAssetTypeKey(s.newPositionType)
+        val finalType = when {
+            uiType != "unknown" -> uiType
+            else -> inferredType
+        }
+        val isTraditionalEquity = isTraditionalEquityTypeRule(finalType)
+        val isCrypto = isCryptoTypeRule(finalType)
+        val name = if (isVariableIncomeTypeRule(finalType)) {
             (extractTickerFromText(s.newPositionName) ?: s.newPositionName).trim().uppercase(Locale.ROOT)
         } else {
             s.newPositionName.trim()
@@ -1147,7 +1151,7 @@ class InvestmentsViewModel @Inject constructor(
             _uiState.update { it.copy(errorMessage = appContext.getString(R.string.investments_error_principal)) }
             return
         }
-        val isVarIncome = isEquityLikeAsset(inferredType)
+        val isVarIncome = isVariableIncomeTypeRule(finalType)
         val rateBps: Int
         if (isVarIncome) {
             // RV/cripto: o utilizador não indica "taxa CDI" — o backend grava 0 bps.
@@ -1165,7 +1169,7 @@ class InvestmentsViewModel @Inject constructor(
             }
             rateBps = (p * 100.0).toInt()
         }
-        if (isEquityLikeAsset(inferredType)) {
+        if (isTraditionalEquity) {
             val qty = s.quantityText.toIntOrNull()
             val avg = s.quoteLastPrice
                 ?: s.averagePriceText.replace(",", ".").toDoubleOrNull()
@@ -1215,15 +1219,22 @@ class InvestmentsViewModel @Inject constructor(
             if (s.stockJoinNeedsSaveConfirmation) {
                 _uiState.update { it.copy(stockJoinNeedsSaveConfirmation = false, infoMessage = null) }
             }
+        } else if (isCrypto) {
+            // Cripto não usa regra de lote inteiro nem obriga quantidade no cadastro.
+            val avg = s.quoteLastPrice ?: s.averagePriceText.replace(",", ".").toDoubleOrNull()
+            if (avg == null || avg <= 0.0) {
+                _uiState.update { it.copy(errorMessage = appContext.getString(R.string.investments_error_crypto_quote_required)) }
+                return
+            }
         }
         viewModelScope.launch {
             _uiState.update { it.copy(isSavingPosition = true, errorMessage = null, infoMessage = null) }
             runCatching {
                 api.createPosition(
                     InvestmentPositionCreateDto(
-                        instrumentType = inferredType,
+                        instrumentType = finalType,
                         name = name,
-                        description = if (isEquityLikeAsset(inferredType)) s.stockJoinDescription.trim().ifBlank { null } else s.fixedIncomeDescription.trim().ifBlank { null },
+                        description = if (isVariableIncomeTypeRule(finalType)) s.stockJoinDescription.trim().ifBlank { null } else s.fixedIncomeDescription.trim().ifBlank { null },
                         principalCents = principal,
                         annualRateBps = rateBps,
                     )
@@ -1277,7 +1288,7 @@ class InvestmentsViewModel @Inject constructor(
 
     private fun recalculatePrincipalFromStocks() {
         val s = _uiState.value
-        if (!isEquityLikeAsset(inferInstrumentType(s.newPositionName))) return
+        if (!isTraditionalEquityTypeRule(normalizeAssetTypeKey(s.newPositionType))) return
         val qty = s.quantityText.replace(",", ".").toDoubleOrNull()
         val avg = s.quoteLastPrice
             ?: s.averagePriceText.replace(",", ".").toDoubleOrNull()

@@ -771,7 +771,7 @@
     <string name="investments_mode_by_value">Informar por valor</string>
     <string name="investments_whole_share_adjusted">Ajustado para %1$d cotas inteiras (%2$s).</string>
     <string name="investments_whole_share_adjusted_confirm">Pelo valor informado, você pode comprar no máximo %1$d cota(s). Ajustamos para %2$s. Deseja prosseguir? Toque em salvar novamente.</string>
-    <string name="investments_error_stock_quantity_price">Para ações, informe quantidade e preço médio.</string>
+    <string name="investments_error_stock_quantity_price">Para ações/FII/BDR/ETF, informe quantidade e preço médio.</string>
     <string name="investments_error_minimum_share_value">O valor de aporte não corresponde ao mínimo de 1 cota (R$ %1$s).</string>
     <string name="investments_info_tap_save_again">Revise o ajuste e toque em salvar novamente para confirmar.</string>
     <string name="investments_success_position_saved">Posição salva com sucesso.</string>
@@ -800,6 +800,7 @@
     <string name="investments_market_rate_not_applicable">Taxa automática disponível para CDI, CDB ou renda fixa geral.</string>
     <string name="investments_error_ticker">Indique um ticker da B3 (ex. PETR4) no nome da posição antes de buscar a cotação.</string>
     <string name="investments_error_ticker_short_crypto">Indique o símbolo de cripto (ex. BTC) antes de buscar a cotação.</string>
+    <string name="investments_error_crypto_quote_required">Para cripto, busque a cotação antes de salvar a posição.</string>
     <string name="investments_stock_quote">Cotação: R$ %1$s</string>
     <string name="investments_stock_quote_ref">Cotação: R$ %1$s · %2$s</string>
     <string name="investments_quote_unavailable">Cotação indisponível (%1$s).</string>
