@@ -43,7 +43,9 @@ from app.services.expense_splits import (
 from app.services.family_scope import family_visibility_scope
 from app.services.goal_product_search import (
     build_grocery_search_query,
+    merge_and_dedupe_product_rows,
     search_products_google_shopping,
+    search_products_tavily,
 )
 from app.services.shopping_list_totals import resolve_checkout_total_cents
 
@@ -238,26 +240,37 @@ def grocery_price_suggestions(
     body: ShoppingListGroceryPriceBody,
     user: Annotated[User, Depends(get_current_user)],
 ) -> GoalProductSearchResponse:
-    """Sugestões de preço para mercearia (Google Shopping via SerpAPI). Usado ao adicionar item à lista."""
+    """Sugestões de preço para mercearia (SerpAPI + fallback Tavily)."""
     _ = user
     settings = get_settings()
-    if not (settings.serpapi_key or "").strip():
+    has_serp = bool((settings.serpapi_key or "").strip())
+    has_tavily = bool((settings.tavily_api_key or "").strip())
+    if not has_serp and not has_tavily:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Sugestões de preço indisponíveis: configure SERPAPI_KEY no servidor.",
+            detail="Sugestões de preço indisponíveis: configure SERPAPI_KEY ou TAVILY_API_KEY no servidor.",
         )
     q = build_grocery_search_query(
         body.query.strip(),
         body.unit,
         settings.grocery_search_location_hint,
     )
-    rows = search_products_google_shopping(
+    rows_serp = search_products_google_shopping(
         q,
-        serpapi_key=settings.serpapi_key,
+        serpapi_key=settings.serpapi_key if has_serp else None,
         serp_limit=12,
         serp_timeout_s=10.0,
         max_total=24,
-    )
+    ) if has_serp else []
+    rows_tavily = []
+    if has_tavily and len(rows_serp) < 12:
+        rows_tavily = search_products_tavily(
+            q,
+            tavily_api_key=settings.tavily_api_key,
+            limit=12,
+            timeout_s=10.0,
+        )
+    rows = merge_and_dedupe_product_rows(rows_serp, rows_tavily, max_total=24)
     return GoalProductSearchResponse(
         results=[GoalProductHit.model_validate(r) for r in rows],
     )

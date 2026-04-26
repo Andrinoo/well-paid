@@ -531,6 +531,7 @@
     <string name="shopping_field_unit_price">Custo por unidade (opcional)</string>
     <string name="shopping_grocery_price_hints_title">Preços de referência (toque para preencher o custo)</string>
     <string name="shopping_grocery_search_auto_hint">As sugestões aparecem ao escrever (2+ caracteres) quando a opção acima está ligada.</string>
+    <string name="shopping_grocery_manual_save_hint">Mesmo se a pesquisa falhar, você pode salvar manualmente.</string>
     <string name="shopping_close_purchase">Fechar compra</string>
     <string name="shopping_subtotal_lines">Subtotal (linhas com preço)</string>
     <string name="shopping_units_total">Unidades</string>

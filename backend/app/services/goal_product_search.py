@@ -1,4 +1,4 @@
-"""Pesquisa de produtos por texto via SerpAPI (Google Shopping). Requer SERPAPI_KEY."""
+"""Pesquisa de produtos por texto via SerpAPI (Google Shopping) com fallback opcional Tavily."""
 
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ import httpx
 logger = logging.getLogger(__name__)
 
 _USER_AGENT = "WellPaid/1.0 (+https://wellpaid.app) SerpAPI Google Shopping price search"
+_TAVILY_URL = "https://api.tavily.com/search"
 
 
 def _parse_brl_price_to_cents(price: Any) -> int | None:
@@ -166,6 +167,110 @@ def search_products_google_shopping(
         limit=lim,
         timeout_s=serp_timeout_s,
     )[:max_total]
+
+
+def _extract_first_brl_price_from_text(text: str) -> int | None:
+    t = (text or "").strip()
+    if not t:
+        return None
+    # Exemplos: "R$ 12,90", "R$12,90", "12,90", "1.234,56".
+    for raw in re.findall(r"R\$\s*\d{1,3}(?:\.\d{3})*(?:,\d{2})|R\$\s*\d+(?:,\d{2})|\d{1,3}(?:\.\d{3})*,\d{2}", t):
+        cents = _parse_brl_price_to_cents(raw)
+        if cents is not None and cents > 0:
+            return cents
+    return None
+
+
+def search_products_tavily(
+    query: str,
+    *,
+    tavily_api_key: str | None,
+    limit: int = 12,
+    timeout_s: float = 12.0,
+) -> list[dict[str, Any]]:
+    """Pesquisa web via Tavily e extrai preços BRL dos snippets como fallback."""
+    q = query.strip()
+    if len(q) < 2:
+        return []
+    key = (tavily_api_key or "").strip()
+    if not key:
+        return []
+    lim = max(1, min(int(limit), 15))
+    payload: dict[str, Any] = {
+        "api_key": key,
+        "query": q,
+        "search_depth": "advanced",
+        "max_results": lim,
+        "include_raw_content": False,
+    }
+    try:
+        with httpx.Client(timeout=timeout_s, headers={"User-Agent": _USER_AGENT}) as client:
+            r = client.post(_TAVILY_URL, json=payload)
+        if r.status_code != 200:
+            logger.warning("Tavily search HTTP %s: %s", r.status_code, (r.text or "")[:300])
+            return []
+        data = r.json()
+    except Exception:
+        logger.exception("Tavily search unexpected error")
+        return []
+    if not isinstance(data, dict):
+        return []
+    rows: list[dict[str, Any]] = []
+    for it in (data.get("results") or []):
+        if not isinstance(it, dict):
+            continue
+        title = str(it.get("title") or "").strip()[:500]
+        url = str(it.get("url") or "").strip()
+        if not title or not url:
+            continue
+        snippet = " ".join(
+            p
+            for p in (
+                str(it.get("title") or ""),
+                str(it.get("content") or ""),
+                str(it.get("raw_content") or ""),
+            )
+            if p
+        )
+        cents = _extract_first_brl_price_from_text(snippet)
+        if cents is None or cents <= 0:
+            continue
+        rows.append(
+            {
+                "title": title,
+                "price_cents": cents,
+                "currency_id": "BRL",
+                "url": url,
+                "thumbnail": None,
+                "external_id": None,
+                "source": "tavily_search",
+            }
+        )
+        if len(rows) >= lim:
+            break
+    return rows
+
+
+def merge_and_dedupe_product_rows(
+    primary: list[dict[str, Any]],
+    secondary: list[dict[str, Any]],
+    *,
+    max_total: int,
+) -> list[dict[str, Any]]:
+    """Mantém ordem (primary primeiro), removendo duplicados por URL/título."""
+    out: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for row in [*primary, *secondary]:
+        title = str(row.get("title") or "").strip().lower()
+        url = str(row.get("url") or "").strip().lower()
+        key = url or title
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        out.append(row)
+        if len(out) >= max_total:
+            break
+    return out
 
 
 def _shopping_blocks_to_rows(

@@ -265,6 +265,8 @@ fun ShoppingListDetailScreen(
     var showDelete by remember { mutableStateOf(false) }
     var showAddItem by remember { mutableStateOf(false) }
     var addProductFormReset by remember { mutableStateOf(0) }
+    var addPrefillLabel by remember { mutableStateOf("") }
+    var addPrefillAmount by remember { mutableStateOf("") }
     var editItem by remember { mutableStateOf<ShoppingListItemDto?>(null) }
     var showRemoveItem by remember { mutableStateOf<ShoppingListItemDto?>(null) }
     var showCompleteSheet by remember { mutableStateOf(false) }
@@ -489,7 +491,15 @@ fun ShoppingListDetailScreen(
                             Spacer(Modifier.padding(top = 8.dp))
                             OutlinedTextField(
                                 value = listSearchInput,
-                                onValueChange = { listSearchInput = it },
+                                onValueChange = {
+                                    listSearchInput = it
+                                    val t = it.trim()
+                                    if (t.length >= 2) {
+                                        viewModel.onShoppingItemLabelForPriceHints(t)
+                                    } else {
+                                        viewModel.clearGroceryPriceHints()
+                                    }
+                                },
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true,
                                 enabled = !state.isSaving,
@@ -520,6 +530,7 @@ fun ShoppingListDetailScreen(
                                             onClick = {
                                                 listSearchInput = ""
                                                 listSearchAppliedQuery = ""
+                                                viewModel.clearGroceryPriceHints()
                                             },
                                             modifier = Modifier.size(40.dp),
                                         ) {
@@ -548,6 +559,48 @@ fun ShoppingListDetailScreen(
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = WellPaidNavy.copy(alpha = 0.55f),
                                 )
+                                if (state.groceryPriceSearchLoading) {
+                                    Spacer(Modifier.padding(top = 8.dp))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.Center,
+                                    ) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(24.dp),
+                                            color = WellPaidNavy,
+                                            strokeWidth = 2.dp,
+                                        )
+                                    }
+                                } else if (state.groceryPriceHits.isNotEmpty()) {
+                                    Spacer(Modifier.padding(top = 10.dp))
+                                    Text(
+                                        text = stringResource(R.string.shopping_grocery_price_hints_title),
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = WellPaidNavy.copy(alpha = 0.85f),
+                                    )
+                                    Spacer(Modifier.padding(top = 6.dp))
+                                    state.groceryPriceHits.forEach { hit ->
+                                        ProductPriceHitCard(
+                                            title = hit.title,
+                                            priceLabel = formatBrlFromCents(hit.priceCents),
+                                            source = hit.source,
+                                            enabled = !state.isSaving,
+                                            onClick = {
+                                                addPrefillLabel = hit.title.trim().take(200)
+                                                addPrefillAmount = centsToBrlInput(hit.priceCents)
+                                                showAddItem = true
+                                            },
+                                            modifier = Modifier.padding(vertical = 5.dp),
+                                        )
+                                    }
+                                } else if (!state.groceryPriceSearchMessage.isNullOrBlank()) {
+                                    Spacer(Modifier.padding(top = 8.dp))
+                                    Text(
+                                        text = state.groceryPriceSearchMessage.orEmpty(),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.error,
+                                    )
+                                }
                             }
                             if (filteredItems.isNotEmpty()) {
                                 Spacer(Modifier.padding(top = 10.dp))
@@ -699,9 +752,9 @@ fun ShoppingListDetailScreen(
     if (showAddItem) {
         AddEditItemBottomSheet(
             title = stringResource(R.string.shopping_add_item),
-            initialLabel = "",
+            initialLabel = addPrefillLabel,
             initialQty = "1",
-            initialAmount = "",
+            initialAmount = addPrefillAmount,
             isSaving = state.isSaving,
             isAddProductFlow = true,
             addFormResetVersion = addProductFormReset,
@@ -714,11 +767,15 @@ fun ShoppingListDetailScreen(
             onGroceryHintPicked = { viewModel.clearGroceryPriceHints() },
             onDismiss = {
                 viewModel.clearGroceryPriceHints()
+                addPrefillLabel = ""
+                addPrefillAmount = ""
                 showAddItem = false
             },
             onSave = { label, qty, amountCents ->
                 viewModel.addItem(label, qty, amountCents) {
                     viewModel.clearGroceryPriceHints()
+                    addPrefillLabel = ""
+                    addPrefillAmount = ""
                     addProductFormReset++
                 }
             },
@@ -1343,6 +1400,7 @@ private fun AddEditItemBottomSheet(
     var qty by remember(initialQty) { mutableStateOf(initialQty) }
     var amount by remember(initialAmount) { mutableStateOf(initialAmount) }
     var previousGroceryHitCount by remember { mutableIntStateOf(0) }
+    val canSaveManually = !isSaving && label.trim().isNotEmpty()
 
     LaunchedEffect(groceryHits.size) {
         if (previousGroceryHitCount > 0 && groceryHits.isEmpty()) {
@@ -1503,12 +1561,19 @@ private fun AddEditItemBottomSheet(
             }
             if (!groceryLoading && !groceryMessage.isNullOrBlank()) {
                 item {
-                    Text(
-                        text = groceryMessage,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(top = 10.dp),
-                    )
+                    Column(modifier = Modifier.padding(top = 10.dp)) {
+                        Text(
+                            text = groceryMessage,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                        Text(
+                            text = stringResource(R.string.shopping_grocery_manual_save_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = WellPaidNavy.copy(alpha = 0.65f),
+                            modifier = Modifier.padding(top = 4.dp),
+                        )
+                    }
                 }
             }
             if (groceryHits.isNotEmpty()) {
@@ -1554,7 +1619,7 @@ private fun AddEditItemBottomSheet(
                             val cents = amount.trim().ifEmpty { null }?.let { parseBrlToCents(it) }
                             onSave(label.trim(), q, cents)
                         },
-                        enabled = !isSaving && label.isNotBlank(),
+                        enabled = canSaveManually,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = WellPaidGold,
                             contentColor = Color.Black,

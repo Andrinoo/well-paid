@@ -133,6 +133,11 @@ class Settings(BaseSettings):
         default=None,
         validation_alias=AliasChoices("serpapi_key", "SERPAPI_KEY"),
     )
+    # Opcional: fallback de pesquisa web para preços (Tavily).
+    tavily_api_key: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("tavily_api_key", "TAVILY_API_KEY"),
+    )
     # Opcional: sufixo de local na query de mercearia (ex.: "Blumenau SC") para POST /shopping-lists/price-suggestions.
     grocery_search_location_hint: str | None = Field(
         default=None,
@@ -164,6 +169,11 @@ class Settings(BaseSettings):
         default="",
         validation_alias=AliasChoices("b3_api_base_url", "B3_API_BASE_URL"),
     )
+    # Alpha Vantage (opcional): suporte adicional para cotações cripto (ex.: BTC, ETH).
+    alpha_vantage_api_key: str = Field(
+        default="",
+        validation_alias=AliasChoices("alpha_vantage_api_key", "ALPHA_VANTAGE_API_KEY"),
+    )
     market_provider_timeout_seconds: float = 10.0
     market_provider_retries: int = 1
     # Segurança de isolamento: por omissão cada conta vê apenas os próprios dados.
@@ -186,6 +196,7 @@ class Settings(BaseSettings):
             "mail_from",
             "email_verification_link_base",
             "serpapi_key",
+            "tavily_api_key",
             "grocery_search_location_hint",
         ):
             v = data.get(key)

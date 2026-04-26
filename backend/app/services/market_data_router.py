@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from app.domain.asset_types import normalize_asset_type
+from app.services.providers.alpha_vantage_provider import AlphaVantageProvider
 from app.services.providers.b3_provider import B3Provider
 from app.services.providers.brapi_provider import BrapiProvider
 from app.services.investment_brapi import (
@@ -16,6 +17,7 @@ from app.services.providers.sgs_provider import SgsProvider
 
 _TICKER_RX = re.compile(r"^[A-Z]{4}\d{1,2}$")
 _TICKER_FAMILY_RX = re.compile(r"^([A-Z]{4})(\d{1,2})?$")
+_CRYPTO_SYMBOL_RX = re.compile(r"^[A-Z]{2,10}$")
 _ALLOWED_RANGES = {"5m", "30m", "60m", "3h", "12h", "1d", "1w", "1m", "3m", "6m", "1y", "2y", "3y"}
 _RANGE_ALIASES = {
     "3mo": "3m",
@@ -25,20 +27,26 @@ _RANGE_ALIASES = {
     "36m": "3y",
 }
 _ALLOWED_MOVER_WINDOWS = {"hour", "day", "week"}
+_KNOWN_CRYPTO_SYMBOLS = {"BTC", "ETH", "SOL", "BNB", "XRP", "ADA", "DOGE", "LTC", "USDT", "USDC"}
 
 
 @dataclass
 class MarketDataRouterService:
     b3: B3Provider = field(default_factory=B3Provider)
     brapi: BrapiProvider = field(default_factory=BrapiProvider)
+    alpha_vantage: AlphaVantageProvider = field(default_factory=AlphaVantageProvider)
     sgs: SgsProvider = field(default_factory=SgsProvider)
     fundamentus: FundamentusProvider = field(default_factory=FundamentusProvider)
 
     def _normalize_ticker(self, symbol: str) -> str:
         s = (symbol or "").strip().upper()
-        if not _TICKER_RX.match(s):
+        if not _TICKER_RX.match(s) and not self._is_crypto_symbol(s):
             raise ValueError("ticker_invalid")
         return s
+
+    def _is_crypto_symbol(self, symbol: str) -> bool:
+        s = (symbol or "").strip().upper()
+        return bool(_CRYPTO_SYMBOL_RX.match(s)) and s in _KNOWN_CRYPTO_SYMBOLS
 
     def _normalize_range(self, range_key: str) -> str:
         key = (range_key or "").strip().lower()
@@ -52,13 +60,21 @@ class MarketDataRouterService:
         if len(q) < 3:
             return []
         synthetic = self._synthetic_fixed_income_rows(q)
+        synthetic_crypto = self._synthetic_crypto_rows(q)
         raw_rows = self.b3.search_tickers(query=q, limit=max(40, limit))
         if not raw_rows:
             raw_rows = self.brapi.search_tickers(query=q, limit=max(40, limit))
-        return self._rank_and_trim_search_rows([*synthetic, *raw_rows], query=q, limit=limit)
+        return self._rank_and_trim_search_rows([*synthetic, *synthetic_crypto, *raw_rows], query=q, limit=limit)
 
     def quote(self, symbol: str) -> dict[str, Any] | None:
         ticker = self._normalize_ticker(symbol)
+        if self._is_crypto_symbol(ticker):
+            crypto_quote = self.alpha_vantage.quote_crypto(ticker)
+            if crypto_quote is not None:
+                crypto_quote["fallback_used"] = False
+                crypto_quote["provider_strategy"] = "single"
+                crypto_quote["stale"] = bool(crypto_quote.get("error"))
+            return crypto_quote
         quote = self.b3.quote(ticker)
         if quote and not quote.get("error"):
             quote["fallback_used"] = False
@@ -263,6 +279,35 @@ class MarketDataRouterService:
             )
         return rows
 
+    def _synthetic_crypto_rows(self, query: str) -> list[dict[str, Any]]:
+        q = query.upper().strip()
+        catalog = [
+            ("BTC", "Bitcoin (BTC)"),
+            ("ETH", "Ethereum (ETH)"),
+            ("SOL", "Solana (SOL)"),
+            ("BNB", "BNB (BNB)"),
+            ("XRP", "XRP (XRP)"),
+            ("ADA", "Cardano (ADA)"),
+            ("DOGE", "Dogecoin (DOGE)"),
+            ("LTC", "Litecoin (LTC)"),
+            ("USDT", "Tether USD (USDT)"),
+            ("USDC", "USD Coin (USDC)"),
+        ]
+        rows: list[dict[str, Any]] = []
+        for sym, name in catalog:
+            if q and q not in sym and q not in name.upper():
+                continue
+            rows.append(
+                {
+                    "symbol": sym,
+                    "name": name,
+                    "instrument_type": "crypto",
+                    "source": "alpha_vantage",
+                    "confidence": 0.90,
+                }
+            )
+        return rows
+
     def _infer_asset_type(self, *, symbol: str, name: str, raw_type: str) -> str:
         normalized = normalize_asset_type(raw_type, default="stock")
         if normalized != "stock":
@@ -270,6 +315,8 @@ class MarketDataRouterService:
 
         upper_symbol = symbol.upper()
         upper_name = name.upper()
+        if upper_symbol in _KNOWN_CRYPTO_SYMBOLS:
+            return "crypto"
         # BDRs are usually 4 letters + 34/35/39 suffix.
         if upper_symbol.endswith(("34", "35", "39")):
             return "bdr"
