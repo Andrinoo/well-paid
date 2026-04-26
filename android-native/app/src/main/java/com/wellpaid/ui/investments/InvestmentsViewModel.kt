@@ -38,7 +38,7 @@ import java.util.Locale
 import java.util.regex.Pattern
 import javax.inject.Inject
 
-private val TickerPattern = Pattern.compile("([A-Za-z]{4}\\d{1,2})")
+private val TickerPattern = Pattern.compile("([A-Za-z]{4}\\d{1,2}|BTC|ETH|SOL|BNB|XRP|ADA|DOGE|LTC|USDT|USDC)")
 private val StrictTickerPattern = Pattern.compile("^[A-Za-z]{4}\\d{1,2}$")
 val InvestmentHistoryRanges = listOf("5m", "30m", "60m", "3h", "12h", "1d", "1w", "1m", "3m", "6m", "1y", "2y", "3y")
 
@@ -48,7 +48,7 @@ private fun normalizeAssetTypeKey(raw: String?): String {
 
 private fun isEquityLikeAsset(raw: String?): Boolean {
     return when (normalizeAssetTypeKey(raw)) {
-        "stock", "fii", "bdr", "etf" -> true
+        "stock", "fii", "bdr", "etf", "crypto" -> true
         else -> false
     }
 }
@@ -767,7 +767,7 @@ class InvestmentsViewModel @Inject constructor(
             ?: _uiState.value.tickerSuggestions.firstOrNull { it.symbol == symbol }
         val instrument = normalizeAssetTypeKey(selected?.instrumentType ?: inferInstrumentType(symbol))
         when (instrument) {
-            "stock", "fii", "bdr", "etf" -> openStockJoin(symbol = symbol, instrumentType = instrument)
+            "stock", "fii", "bdr", "etf", "crypto" -> openStockJoin(symbol = symbol, instrumentType = instrument)
             "treasury", "cdi", "cdb", "fixed_income" -> openFixedIncomeJoin(symbol = symbol, instrumentType = instrument)
             else -> openFixedIncomeJoin(symbol = symbol, instrumentType = "fixed_income")
         }
@@ -1181,6 +1181,8 @@ class InvestmentsViewModel @Inject constructor(
 
     private fun inferInstrumentType(text: String): String {
         val raw = text.trim().lowercase(Locale.ROOT)
+        if (raw in setOf("btc", "eth", "sol", "bnb", "xrp", "ada", "doge", "ltc", "usdt", "usdc")) return "crypto"
+        if ("bitcoin" in raw || "ethereum" in raw || "cripto" in raw || "crypto" in raw) return "crypto"
         if (extractTickerFromText(text) != null) {
             val ticker = extractTickerFromText(text)?.uppercase(Locale.ROOT).orEmpty()
             if (ticker.endsWith("34") || ticker.endsWith("35") || ticker.endsWith("39")) return "bdr"
