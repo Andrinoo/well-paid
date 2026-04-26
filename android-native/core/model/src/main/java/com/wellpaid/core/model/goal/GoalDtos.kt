@@ -29,7 +29,7 @@ data class GoalDto(
     @SerialName("price_source") val priceSource: String? = null,
     val description: String? = null,
     @SerialName("due_at") val dueAt: String? = null,
-    @SerialName("price_check_interval_hours") val priceCheckIntervalHours: Int = 12,
+    @SerialName("price_check_interval_hours") val priceCheckIntervalHours: Int = 6,
     @SerialName("last_price_track_at") val lastPriceTrackAt: String? = null,
     @SerialName("reference_thumbnail_url") val referenceThumbnailUrl: String? = null,
     @SerialName("price_alternatives") val priceAlternatives: List<GoalPriceAlternativeDto> = emptyList(),
@@ -48,7 +48,7 @@ data class GoalCreateDto(
     @SerialName("price_source") val priceSource: String? = null,
     val description: String? = null,
     @SerialName("due_at") val dueAt: String? = null,
-    @SerialName("price_check_interval_hours") val priceCheckIntervalHours: Int = 12,
+    @SerialName("price_check_interval_hours") val priceCheckIntervalHours: Int = 6,
     @SerialName("reference_thumbnail_url") val referenceThumbnailUrl: String? = null,
 )
 

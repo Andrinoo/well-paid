@@ -70,6 +70,8 @@ class GoalFormViewModel @Inject constructor(
 ) : ViewModel() {
 
     companion object {
+        private const val GOAL_PRICE_CHECK_INTERVAL_HOURS = 6
+
         /** Máximo de resultados no seletor (pesquisa Google Shopping via servidor). */
         const val PRODUCT_SEARCH_MAX_RESULTS: Int = 12
     }
@@ -457,7 +459,7 @@ class GoalFormViewModel @Inject constructor(
                             priceSource = s.draftPriceSource,
                             description = s.description.trim().ifEmpty { null },
                             dueAt = dueAtIso,
-                            priceCheckIntervalHours = 12,
+                            priceCheckIntervalHours = GOAL_PRICE_CHECK_INTERVAL_HOURS,
                             referenceThumbnailUrl = s.draftReferenceThumbnailUrl,
                         ),
                     )
@@ -478,7 +480,7 @@ class GoalFormViewModel @Inject constructor(
                             priceSource = loaded.priceSource,
                             description = s.description.trim().ifEmpty { null },
                             dueAt = dueAtIso,
-                            priceCheckIntervalHours = loaded.priceCheckIntervalHours,
+                            priceCheckIntervalHours = GOAL_PRICE_CHECK_INTERVAL_HOURS,
                             referenceThumbnailUrl = loaded.referenceThumbnailUrl,
                         ),
                     )

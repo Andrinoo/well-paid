@@ -64,7 +64,9 @@ import coil.compose.AsyncImage
 import com.wellpaid.util.formatBrlFromCents
 import com.wellpaid.util.formatIsoDateToBr
 import com.wellpaid.util.parseBrlToCents
-import kotlin.math.roundToLong
+import java.time.LocalDate
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -227,6 +229,7 @@ fun GoalDetailScreen(
             Spacer(Modifier.height(20.dp))
             GoalPriceBarsChart(
                 history = state.priceHistory,
+                goalCreatedAt = goal.createdAt,
                 fallbackReferencePriceCents = goal.referencePriceCents,
                 fallbackAlternatives = goal.priceAlternatives,
                 modifier = Modifier.fillMaxWidth(),
@@ -406,12 +409,25 @@ fun GoalDetailScreen(
 @Composable
 private fun GoalPriceBarsChart(
     history: List<GoalPriceHistoryItemDto>,
+    goalCreatedAt: String?,
     fallbackReferencePriceCents: Int?,
     fallbackAlternatives: List<GoalPriceAlternativeDto>,
     modifier: Modifier = Modifier,
 ) {
-    val chartValues = remember(history, fallbackReferencePriceCents, fallbackAlternatives) {
-        val historyValues = history.map { it.priceCents }.filter { it > 0 }
+    val chartValues = remember(history, goalCreatedAt, fallbackReferencePriceCents, fallbackAlternatives) {
+        val startDate = parseIsoLocalDate(goalCreatedAt)
+        val endDate = startDate?.plusDays(30)
+        val historyValues = history
+            .asSequence()
+            .filter { it.priceCents > 0 }
+            .filter { item ->
+                val recordedDate = parseIsoLocalDate(item.recordedAt) ?: return@filter false
+                if (startDate == null || endDate == null) return@filter true
+                !recordedDate.isBefore(startDate) && recordedDate.isBefore(endDate)
+            }
+            .sortedBy { it.recordedAt }
+            .map { it.priceCents }
+            .toList()
         if (historyValues.isNotEmpty()) {
             historyValues
         } else {
@@ -426,9 +442,9 @@ private fun GoalPriceBarsChart(
     }
     if (chartValues.isEmpty()) return
 
-    val minValue = chartValues.minOrNull() ?: return
     val maxValue = chartValues.maxOrNull() ?: return
-    val valueRange = (maxValue - minValue).coerceAtLeast(1).toFloat()
+    if (maxValue <= 0) return
+    val valueRange = maxValue.toFloat()
     val palette = remember {
         listOf(
             WellPaidGold,
@@ -485,10 +501,10 @@ private fun GoalPriceBarsChart(
             val barWidth = (barSlot * 0.62f).coerceAtLeast(8f)
             chartValues.forEachIndexed { index, value ->
                 val x = (index * barSlot) + (barSlot / 2f)
-                val normalized = (value - minValue).toFloat() / valueRange
+                val normalized = value.toFloat() / valueRange
                 val barHeight = (normalized * (height - 6f)).coerceAtLeast(10f)
                 val top = height - barHeight
-                val colorKey = (value.toDouble()).roundToLong()
+                val colorKey = value.toLong()
                 val baseColor = valueToColor[colorKey] ?: WellPaidGold
                 drawRoundRect(
                     color = if (index == 0) baseColor.copy(alpha = 0.95f) else baseColor.copy(alpha = 0.74f),
@@ -499,6 +515,17 @@ private fun GoalPriceBarsChart(
             }
         }
     }
+}
+
+private fun parseIsoLocalDate(raw: String?): LocalDate? {
+    val value = raw?.trim().orEmpty()
+    if (value.isEmpty()) return null
+    return runCatching {
+        LocalDate.parse(value.take(10), DateTimeFormatter.ISO_LOCAL_DATE)
+    }.getOrNull()
+        ?: runCatching {
+            java.time.OffsetDateTime.parse(value).atZoneSameInstant(ZoneOffset.UTC).toLocalDate()
+        }.getOrNull()
 }
 
 @Composable

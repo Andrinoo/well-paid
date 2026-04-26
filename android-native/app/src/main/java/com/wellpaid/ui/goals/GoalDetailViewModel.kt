@@ -18,6 +18,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import retrofit2.Response
+import java.time.Duration
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 data class GoalDetailUiState(
@@ -36,6 +41,9 @@ class GoalDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val goalsApi: GoalsApi,
 ) : ViewModel() {
+    companion object {
+        private const val FALLBACK_REFRESH_INTERVAL_HOURS = 6
+    }
 
     private val goalId: String = checkNotNull(savedStateHandle.get<String>("goalId"))
 
@@ -57,11 +65,12 @@ class GoalDetailViewModel @Inject constructor(
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
         runCatching { goalsApi.getGoal(goalId) }
             .onSuccess { g ->
+                val goalForView = maybeRefreshPriceIfStale(g)
                 val history = runCatching { goalsApi.priceHistory(goalId).items }.getOrDefault(emptyList())
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        goal = g,
+                        goal = goalForView,
                         priceHistory = history,
                         errorMessage = null,
                     )
@@ -75,6 +84,34 @@ class GoalDetailViewModel @Inject constructor(
                     )
                 }
             }
+    }
+
+    private suspend fun maybeRefreshPriceIfStale(goal: GoalDto): GoalDto {
+        val hasLink = !goal.targetUrl.isNullOrBlank()
+        if (!goal.isMine || !hasLink) return goal
+        if (!shouldAutoRefresh(goal, Instant.now())) return goal
+        return runCatching { goalsApi.refreshReferencePrice(goalId) }.getOrDefault(goal)
+    }
+
+    private fun shouldAutoRefresh(goal: GoalDto, now: Instant): Boolean {
+        val lastTracked = parseIsoInstant(goal.lastPriceTrackAt)
+            ?: parseIsoInstant(goal.priceCheckedAt)
+            ?: return true
+        val intervalHours = goal.priceCheckIntervalHours
+            .takeIf { it > 0 }
+            ?: FALLBACK_REFRESH_INTERVAL_HOURS
+        return Duration.between(lastTracked, now).toHours() >= intervalHours
+    }
+
+    private fun parseIsoInstant(raw: String?): Instant? {
+        val value = raw?.trim().orEmpty()
+        if (value.isEmpty()) return null
+        return runCatching { Instant.parse(value) }.getOrNull()
+            ?: runCatching { java.time.OffsetDateTime.parse(value).toInstant() }.getOrNull()
+            ?: runCatching {
+                val localDate = LocalDate.parse(value.take(10), DateTimeFormatter.ISO_LOCAL_DATE)
+                localDate.atStartOfDay(ZoneOffset.UTC).toInstant()
+            }.getOrNull()
     }
 
     fun contribute(amountCents: Int, note: String?, onSuccess: () -> Unit) {
