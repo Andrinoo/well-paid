@@ -13,6 +13,7 @@ import com.wellpaid.core.model.investment.InvestmentPositionDto
 import com.wellpaid.core.model.investment.InvestmentOverviewDto
 import com.wellpaid.core.model.investment.MacroSnapshotDto
 import com.wellpaid.core.model.investment.StockHistoryPointDto
+import com.wellpaid.core.model.investment.StockQuoteDto
 import com.wellpaid.core.model.investment.TopMoverItemDto
 import com.wellpaid.core.network.InvestmentsApi
 import com.wellpaid.util.FastApiErrorMapper
@@ -35,12 +36,24 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
 import java.util.regex.Pattern
 import javax.inject.Inject
 
 private val TickerPattern = Pattern.compile("([A-Za-z]{4}\\d{1,2}|BTC|ETH|SOL|BNB|XRP|ADA|DOGE|LTC|USDT|USDC)")
 private val StrictTickerPattern = Pattern.compile("^[A-Za-z]{4}\\d{1,2}$")
+private val SearchShortCrypto = Pattern.compile("^(BTC|ETH|SOL|BNB|XRP|ADA|DOGE|LTC|USDT|USDC)$", Pattern.CASE_INSENSITIVE)
+/** Single-word queries that look like tickers but are not equities/crypto (B3/RF shortcuts). */
+private val NonEquityUpperTokens = setOf("CDB", "CDI", "LCI", "LCA", "LIG", "LF", "CRI", "CRA", "FIDC")
+private const val StaleQuoteTtlMs = 45_000L
 val InvestmentHistoryRanges = listOf("5m", "30m", "60m", "3h", "12h", "1d", "1w", "1m", "3m", "6m", "1y", "2y", "3y")
+
+private data class StockQuoteCacheEntry(
+    val dto: StockQuoteDto,
+    val receivedAt: Long = System.currentTimeMillis(),
+) {
+    fun isFresh() = (System.currentTimeMillis() - receivedAt) < StaleQuoteTtlMs
+}
 
 private fun normalizeAssetTypeKey(raw: String?): String {
     return InvestmentAssetType.fromRaw(raw).key
@@ -159,15 +172,114 @@ class InvestmentsViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context,
     private val api: InvestmentsApi,
 ) : ViewModel() {
-    private val searchMinLength = 3
+    private val searchMinLengthB3 = 3
+    private val searchMinLengthCrypto = 2
     private val autoOpenDelayMs = 700L
     private var formSearchRequestSeq: Long = 0
     private var globalSearchRequestSeq: Long = 0
     private var globalAutoOpenJob: Job? = null
+    private val stockQuoteCache = ConcurrentHashMap<String, StockQuoteCacheEntry>(32)
     private val _uiState = MutableStateFlow(InvestmentsUiState())
     val uiState: StateFlow<InvestmentsUiState> = _uiState.asStateFlow()
     private val formTickerQueryFlow = MutableSharedFlow<String>(extraBufferCapacity = 1)
     private val globalTickerQueryFlow = MutableSharedFlow<String>(extraBufferCapacity = 1)
+
+    private fun isKnownShortCryptoSymbol(upper: String): Boolean = SearchShortCrypto.matcher(upper).matches()
+
+    private fun isLikelyLetterTickerToken(upper: String): Boolean {
+        if (upper.isEmpty() || upper.length > 4) return false
+        if (!upper.all { it.isLetter() }) return false
+        if (upper in NonEquityUpperTokens) return false
+        if (upper == "BDR" || upper == "FII" || upper == "ETF" || upper == "RF") return false
+        return true
+    }
+
+    private fun isCryptoTickerSymbol(upper: String): Boolean {
+        if (isKnownShortCryptoSymbol(upper)) return true
+        if (StrictTickerPattern.matcher(upper).matches()) return false
+        return isLikelyLetterTickerToken(upper)
+    }
+
+    private fun isCryptoByInstrumentOrName(
+        rawInstrumentType: String?,
+        nameOrQuery: String,
+    ): Boolean {
+        val t = normalizeAssetTypeKey(rawInstrumentType)
+        if (t == "crypto") return true
+        val u = (extractTickerFromText(nameOrQuery.trim()) ?: nameOrQuery.trim())
+            .uppercase(Locale.ROOT)
+        if (u.isNotBlank() && isCryptoTickerSymbol(u)) return true
+        return false
+    }
+
+    private fun minTickerSearchLengthForQuery(query: String): Int {
+        val u = query.trim().uppercase(Locale.ROOT)
+        if (u.isEmpty()) return searchMinLengthB3
+        if (isKnownShortCryptoSymbol(u) || isLikelyLetterTickerToken(u)) {
+            return searchMinLengthCrypto
+        }
+        if (u.length < 3) {
+            return searchMinLengthCrypto
+        }
+        if (StrictTickerPattern.matcher(u).matches() || (u.length == 3 && TickerPattern.matcher(u).find())) {
+            return searchMinLengthB3
+        }
+        return searchMinLengthCrypto
+    }
+
+    private fun quoteInfoLineFromDto(q: StockQuoteDto): String {
+        val err = q.error
+        if (!err.isNullOrBlank() && isLikelyProviderRateLimit(err)) {
+            return appContext.getString(
+                R.string.investments_quote_rate_limited,
+                q.source,
+            )
+        }
+        if (!err.isNullOrBlank() || q.lastPrice <= 0) {
+            return appContext.getString(
+                R.string.investments_quote_unavailable,
+                err.orEmpty().ifBlank { "—" },
+            )
+        }
+        val priceStr = String.format(Locale.US, "%.2f", q.lastPrice).replace('.', ',')
+        val asOf = q.asOf?.trim().orEmpty()
+        val ccy = q.currency.uppercase(Locale.ROOT)
+        val withAsOf = { base: String ->
+            if (asOf.isNotEmpty()) appContext.getString(R.string.investments_quote_line_ref, base, asOf)
+            else base
+        }
+        val line = when (ccy) {
+            "BRL" -> withAsOf(
+                appContext.getString(
+                    R.string.investments_quote_line_brl,
+                    priceStr,
+                ),
+            )
+            "USD" -> withAsOf(
+                appContext.getString(
+                    R.string.investments_quote_line_usd,
+                    priceStr,
+                ),
+            )
+            else -> withAsOf(
+                appContext.getString(
+                    R.string.investments_quote_line_generic,
+                    ccy,
+                    priceStr,
+                ),
+            )
+        }
+        return if (q.fallbackUsed) {
+            appContext.getString(R.string.investments_quote_with_fallback, line, q.source)
+        } else {
+            line
+        }
+    }
+
+    private fun isLikelyProviderRateLimit(err: String): Boolean {
+        val s = err.lowercase(Locale.ROOT)
+        return "429" in s || "rate limit" in s || "too many" in s || "limite" in s
+    }
 
     init {
         observeFormTickerSearch()
@@ -181,7 +293,7 @@ class InvestmentsViewModel @Inject constructor(
                 .debounce(600)
                 .distinctUntilChanged()
                 .collectLatest { query ->
-                    if (query.length < searchMinLength) {
+                    if (query.length < minTickerSearchLengthForQuery(query)) {
                         _uiState.update {
                             it.copy(
                                 tickerSuggestions = emptyList(),
@@ -239,7 +351,7 @@ class InvestmentsViewModel @Inject constructor(
                         }
                         return@collectLatest
                     }
-                    if (query.length < searchMinLength) {
+                    if (query.length < minTickerSearchLengthForQuery(query)) {
                         _uiState.update {
                             it.copy(
                                 globalTickerSuggestions = emptyList(),
@@ -331,7 +443,10 @@ class InvestmentsViewModel @Inject constructor(
 
     private fun preloadCardFundamentals(positions: List<InvestmentPositionDto>) {
         val stockPositions = positions
-            .filter { isEquityLikeAsset(it.instrumentType) }
+            .filter {
+                isEquityLikeAsset(it.instrumentType) &&
+                    !isCryptoByInstrumentOrName(it.instrumentType, it.name)
+            }
             .mapNotNull { p ->
                 val symbol = extractTickerFromText(p.name)?.uppercase(Locale.ROOT) ?: return@mapNotNull null
                 p.id to symbol
@@ -405,6 +520,7 @@ class InvestmentsViewModel @Inject constructor(
 
     fun openPositionDetails(positionId: String) {
         val selected = _uiState.value.positions.firstOrNull { it.id == positionId }
+        val isCrypto = selected != null && isCryptoByInstrumentOrName(selected.instrumentType, selected.name)
         _uiState.update {
             it.copy(
                 selectedPositionId = positionId,
@@ -415,7 +531,18 @@ class InvestmentsViewModel @Inject constructor(
         }
         val symbol = extractTickerFromText(selected?.name.orEmpty())
         if (!symbol.isNullOrBlank()) {
-            loadHistoryForSymbol(symbol = symbol, range = _uiState.value.selectedHistoryRange)
+            if (isCrypto) {
+                _uiState.update {
+                    it.copy(
+                        selectedPositionHistory = emptyList(),
+                        selectedPositionHistorySymbol = symbol,
+                        isLoadingHistory = false,
+                        historyErrorMessage = appContext.getString(R.string.investments_history_crypto_unavailable),
+                    )
+                }
+            } else {
+                loadHistoryForSymbol(symbol = symbol, range = _uiState.value.selectedHistoryRange)
+            }
         } else {
             _uiState.update {
                 it.copy(
@@ -425,7 +552,7 @@ class InvestmentsViewModel @Inject constructor(
                 )
             }
         }
-        if (selected != null && isEquityLikeAsset(selected.instrumentType)) {
+        if (selected != null && isEquityLikeAsset(selected.instrumentType) && !isCrypto) {
             val sym = extractTickerFromText(selected.name)
             if (!sym.isNullOrBlank()) {
                 viewModelScope.launch {
@@ -471,7 +598,19 @@ class InvestmentsViewModel @Inject constructor(
     fun setHistoryRange(range: String) {
         if (range !in InvestmentHistoryRanges) return
         _uiState.update { it.copy(selectedHistoryRange = range) }
-        val selectedSymbol = _uiState.value.selectedPositionHistorySymbol
+        val st = _uiState.value
+        val pos = st.selectedPositionId?.let { id -> st.positions.firstOrNull { it.id == id } }
+        if (pos != null && isCryptoByInstrumentOrName(pos.instrumentType, pos.name)) {
+            _uiState.update {
+                it.copy(
+                    isLoadingHistory = false,
+                    selectedPositionHistory = emptyList(),
+                    historyErrorMessage = appContext.getString(R.string.investments_history_crypto_unavailable),
+                )
+            }
+            return
+        }
+        val selectedSymbol = st.selectedPositionHistorySymbol
             ?: extractTickerFromSelectedPosition()
         if (!selectedSymbol.isNullOrBlank()) {
             loadHistoryForSymbol(selectedSymbol, range)
@@ -493,6 +632,7 @@ class InvestmentsViewModel @Inject constructor(
                 isLoadingAporteFundamentals = false,
             )
         }
+        if (isCryptoByInstrumentOrName(p.instrumentType, p.name)) return
         if (normalizeAssetTypeKey(p.instrumentType) != "stock") return
         val sym = extractTickerFromText(p.name) ?: return
         viewModelScope.launch {
@@ -610,28 +750,53 @@ class InvestmentsViewModel @Inject constructor(
     fun fetchB3StockQuote() {
         val state = _uiState.value
         val sym = extractTickerFromText(state.newPositionName.trim()) ?: state.newPositionName.trim()
-        if (sym.length < 3) {
-            _uiState.update { it.copy(errorMessage = appContext.getString(R.string.investments_error_ticker)) }
+        val key = sym.uppercase(Locale.ROOT)
+        val isCrypto = isCryptoByInstrumentOrName(state.newPositionType, state.newPositionName)
+        val minLen = if (isCrypto) searchMinLengthCrypto else searchMinLengthB3
+        if (sym.length < minLen) {
+            val msg = if (isCrypto) {
+                appContext.getString(R.string.investments_error_ticker_short_crypto)
+            } else {
+                appContext.getString(R.string.investments_error_ticker)
+            }
+            _uiState.update { it.copy(errorMessage = msg) }
             return
         }
         viewModelScope.launch {
-            _uiState.update { it.copy(isFetchingQuote = true, errorMessage = null) }
-            runCatching { api.getStockQuote(symbol = sym.uppercase(Locale.ROOT)) }
-                .onSuccess { q ->
-                    val line = if (!q.error.isNullOrBlank() || q.lastPrice <= 0) {
-                        appContext.getString(
-                            R.string.investments_quote_unavailable,
-                            q.error.orEmpty().ifBlank { "—" },
-                        )
+            val cached = stockQuoteCache[key]?.takeIf { it.isFresh() }?.dto
+            if (cached != null) {
+                val line = quoteInfoLineFromDto(cached)
+                _uiState.update {
+                    val shouldAutofillAverage = isEquityLikeAsset(it.newPositionType) &&
+                        (it.averagePriceText.isBlank() || (it.averagePriceText.replace(",", ".").toDoubleOrNull() ?: 0.0) <= 0.0)
+                    val averageFromQuote = if (cached.lastPrice > 0) {
+                        String.format(Locale.US, "%.2f", cached.lastPrice).replace('.', ',')
                     } else {
-                        val priceStr = String.format(Locale.US, "%.2f", q.lastPrice).replace('.', ',')
-                        val asOf = q.asOf?.trim().orEmpty()
-                        if (asOf.isNotEmpty()) {
-                            appContext.getString(R.string.investments_stock_quote_ref, priceStr, asOf)
-                        } else {
-                            appContext.getString(R.string.investments_stock_quote, priceStr)
-                        }
+                        null
                     }
+                    it.copy(
+                        isFetchingQuote = false,
+                        errorMessage = null,
+                        quoteInfoMessage = line,
+                        quoteSourceLabel = cached.source,
+                        quoteConfidence = cached.confidence,
+                        quoteLastPrice = cached.lastPrice.takeIf { p -> p > 0.0 },
+                        averagePriceText = if (shouldAutofillAverage && averageFromQuote != null) averageFromQuote else it.averagePriceText,
+                    )
+                }
+                if (cached.lastPrice > 0) {
+                    recalculatePrincipalFromStocks()
+                }
+                if (isEquityLikeAsset(state.newPositionType) && !isCrypto) {
+                    loadHistoryForSymbol(key, state.selectedHistoryRange)
+                }
+                return@launch
+            }
+            _uiState.update { it.copy(isFetchingQuote = true, errorMessage = null) }
+            runCatching { api.getStockQuote(symbol = key) }
+                .onSuccess { q ->
+                    stockQuoteCache[key] = StockQuoteCacheEntry(dto = q)
+                    val line = quoteInfoLineFromDto(q)
                     _uiState.update {
                         val shouldAutofillAverage = isEquityLikeAsset(it.newPositionType) &&
                             (it.averagePriceText.isBlank() || (it.averagePriceText.replace(",", ".").toDoubleOrNull() ?: 0.0) <= 0.0)
@@ -652,8 +817,8 @@ class InvestmentsViewModel @Inject constructor(
                     if (q.lastPrice > 0) {
                         recalculatePrincipalFromStocks()
                     }
-                    if (isEquityLikeAsset(state.newPositionType)) {
-                        loadHistoryForSymbol(sym.uppercase(Locale.ROOT), state.selectedHistoryRange)
+                    if (isEquityLikeAsset(state.newPositionType) && !isCrypto) {
+                        loadHistoryForSymbol(key, state.selectedHistoryRange)
                     }
                 }
                 .onFailure { t ->
@@ -694,11 +859,11 @@ class InvestmentsViewModel @Inject constructor(
                 )
             }
         }
-        if (trimmed.length >= searchMinLength) {
+        if (trimmed.length >= searchMinLengthCrypto) {
             loadTopMoversIfNeeded()
         }
         if (!_uiState.value.familySearchEnabled) {
-            if (trimmed.length >= searchMinLength) {
+            if (trimmed.length >= minTickerSearchLengthForQuery(trimmed)) {
                 globalAutoOpenJob = viewModelScope.launch {
                     // Wait a short idle window to avoid opening on partial typing (e.g. FIIP1 before FIIP11).
                     delay(autoOpenDelayMs)
@@ -710,6 +875,9 @@ class InvestmentsViewModel @Inject constructor(
                             openStockJoin(upper, inferred)
                             return@launch
                         }
+                    } else if (isKnownShortCryptoSymbol(upper) || (upper.length in 2..3 && isCryptoTickerSymbol(upper))) {
+                        openStockJoin(upper, "crypto")
+                        return@launch
                     }
                     if (upper == "CDB" || upper == "CDI" || upper.contains("RENDA FIXA")) {
                         val type = when {
@@ -756,7 +924,7 @@ class InvestmentsViewModel @Inject constructor(
         }
         if (enabled) {
             val q = _uiState.value.globalSearchText.trim()
-            if (q.length >= searchMinLength) {
+            if (q.length >= minTickerSearchLengthForQuery(q)) {
                 globalTickerQueryFlow.tryEmit(q)
             }
         }
@@ -1104,6 +1272,12 @@ class InvestmentsViewModel @Inject constructor(
     }
 
     private fun fetchB3StockQuoteAndFundamentals() {
+        val st = _uiState.value
+        if (isCryptoByInstrumentOrName(st.newPositionType, st.newPositionName)) {
+            fetchB3StockQuote()
+            _uiState.update { it.copy(selectedFundamentals = null) }
+            return
+        }
         fetchB3StockQuote()
         val symbol = extractTickerFromText(_uiState.value.newPositionName.trim()) ?: return
         viewModelScope.launch {
@@ -1112,7 +1286,7 @@ class InvestmentsViewModel @Inject constructor(
                     applyFundamentals(payload)
                 }
                 .onFailure {
-                    _uiState.update { st -> st.copy(selectedFundamentals = null) }
+                    _uiState.update { s -> s.copy(selectedFundamentals = null) }
                 }
         }
     }
@@ -1196,6 +1370,17 @@ class InvestmentsViewModel @Inject constructor(
     }
 
     private fun loadHistoryForSymbol(symbol: String, range: String) {
+        if (isCryptoTickerSymbol(symbol.uppercase(Locale.ROOT))) {
+            _uiState.update {
+                it.copy(
+                    isLoadingHistory = false,
+                    selectedPositionHistory = emptyList(),
+                    selectedPositionHistorySymbol = symbol,
+                    historyErrorMessage = appContext.getString(R.string.investments_history_crypto_unavailable),
+                )
+            }
+            return
+        }
         viewModelScope.launch {
             _uiState.update {
                 it.copy(
