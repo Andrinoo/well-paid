@@ -79,6 +79,10 @@ data class StockQuoteDto(
     @SerialName("fallback_used") val fallbackUsed: Boolean = false,
     @SerialName("provider_strategy") val providerStrategy: String = "single",
     val stale: Boolean = false,
+    @SerialName("change_24h") val change24h: Double? = null,
+    @SerialName("change_24h_percent") val change24hPercent: Double? = null,
+    @SerialName("day_high") val dayHigh: Double? = null,
+    @SerialName("day_low") val dayLow: Double? = null,
     val error: String? = null,
 )
 

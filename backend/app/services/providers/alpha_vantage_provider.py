@@ -20,4 +20,5 @@ class AlphaVantageProvider:
             "error": raw.get("raw_error"),
             "source": self.source,
             "confidence": 0.78,
+            "currency": "USD",
         }

@@ -94,6 +94,7 @@ class B3Provider:
             "error": None,
             "source": self.source,
             "confidence": 0.97,
+            "currency": "BRL",
         }
 
     def history(self, symbol: str, range_key: str) -> dict[str, Any] | None:

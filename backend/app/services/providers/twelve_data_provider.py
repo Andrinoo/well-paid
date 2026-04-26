@@ -20,4 +20,5 @@ class TwelveDataProvider:
             "error": raw.get("raw_error"),
             "source": self.source,
             "confidence": 0.76,
+            "currency": "USD",
         }

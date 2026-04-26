@@ -46,6 +46,7 @@ class BrapiProvider:
             "error": raw.get("raw_error"),
             "source": self.source,
             "confidence": 0.82,
+            "currency": "BRL",
         }
 
     def history(self, symbol: str, range_key: str) -> dict[str, object] | None:

@@ -16,6 +16,7 @@ fun investmentInstrumentLabel(
         "fixed_income" -> stringResource(R.string.investments_bucket_fixed_income)
         "tesouro", "treasury" -> stringResource(R.string.investments_bucket_tesouro)
         "stocks", "stock", "fii", "bdr", "etf" -> stringResource(R.string.investments_bucket_stocks)
+        "crypto" -> stringResource(R.string.investments_bucket_crypto)
         else -> fallback ?: key.uppercase(Locale.ROOT)
     }
 }

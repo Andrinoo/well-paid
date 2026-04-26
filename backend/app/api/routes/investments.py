@@ -79,19 +79,36 @@ def read_stock_quote(
         return StockQuoteOut(
             symbol=symbol.strip().upper(),
             last_price=0.0,
+            currency=str(raw.get("currency") or "BRL"),
             error=str(raw.get("error") or "quote_unavailable"),
             source=str(raw.get("source") or "brapi"),
             confidence=raw.get("confidence"),
         )
+    ccy = str(raw.get("currency") or "BRL")
+
+    def _opt_f(key: str) -> float | None:
+        v = raw.get(key)
+        if v is None:
+            return None
+        try:
+            return float(v)
+        except (TypeError, ValueError):
+            return None
+
     return StockQuoteOut(
         symbol=symbol.strip().upper(),
         last_price=float(raw["last_price"]),
+        currency=ccy,
         as_of=raw.get("as_of"),
         source=str(raw.get("source") or "brapi"),
         confidence=raw.get("confidence"),
         fallback_used=bool(raw.get("fallback_used", False)),
         provider_strategy=str(raw.get("provider_strategy") or "single"),
         stale=bool(raw.get("stale", False)),
+        change_24h=_opt_f("change_24h"),
+        change_24h_percent=_opt_f("change_24h_percent"),
+        day_high=_opt_f("day_high"),
+        day_low=_opt_f("day_low"),
         error=None,
     )
 

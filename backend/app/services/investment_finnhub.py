@@ -47,7 +47,7 @@ def fetch_crypto_quote_finnhub(symbol: str, *, quote_currency: str = "USD") -> d
         return None
     if not isinstance(data, dict):
         return None
-    # Finnhub quote: c=current, t=timestamp
+    # Finnhub quote: c=current, d=change, dp=percent, h/l high/low, t=timestamp
     raw_price = data.get("c")
     try:
         price = float(raw_price) if raw_price is not None else 0.0
@@ -57,4 +57,23 @@ def fetch_crypto_quote_finnhub(symbol: str, *, quote_currency: str = "USD") -> d
         return {"last_price": None, "as_of": None, "raw_error": "no_price"}
     ts = data.get("t")
     as_of = str(ts) if ts is not None else None
-    return {"last_price": price, "as_of": as_of, "raw_error": None}
+
+    def _opt_float(key: str) -> float | None:
+        v = data.get(key)
+        if v is None:
+            return None
+        try:
+            return float(v)
+        except (TypeError, ValueError):
+            return None
+
+    return {
+        "last_price": price,
+        "as_of": as_of,
+        "raw_error": None,
+        "currency": "USD",
+        "change_24h": _opt_float("d"),
+        "change_24h_percent": _opt_float("dp"),
+        "day_high": _opt_float("h"),
+        "day_low": _opt_float("l"),
+    }

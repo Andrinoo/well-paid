@@ -20,4 +20,9 @@ class FinnhubProvider:
             "error": raw.get("raw_error"),
             "source": self.source,
             "confidence": 0.74,
+            "currency": raw.get("currency") or "USD",
+            "change_24h": raw.get("change_24h"),
+            "change_24h_percent": raw.get("change_24h_percent"),
+            "day_high": raw.get("day_high"),
+            "day_low": raw.get("day_low"),
         }

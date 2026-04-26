@@ -756,6 +756,7 @@
     <string name="investments_error_session_expired">Session expired. Sign in again to save your position.</string>
     <string name="investments_bucket_tesouro">Treasury (Tesouro Direto / IPCA+)</string>
     <string name="investments_bucket_stocks">Stocks (B3)</string>
+    <string name="investments_bucket_crypto">Crypto</string>
     <string name="investments_apply_market_rate">Use market rate (CDI)</string>
     <string name="investments_fetch_b3_quote">B3 quote</string>
     <string name="investments_global_search_label">Search and add position (e.g. PETR4, CDB, CDI)</string>
@@ -771,6 +772,7 @@
     <string name="investments_error_stock_quantity_price">For stocks, enter quantity and average price.</string>
     <string name="investments_field_description">Short description</string>
     <string name="investments_stock_join_title">Join stock position</string>
+    <string name="investments_stock_join_title_crypto">New crypto position</string>
     <string name="investments_stock_join_section_market">Quote &amp; ratios</string>
     <string name="investments_stock_join_section_form">Position details</string>
     <string name="investments_metric_dy">DY</string>
@@ -810,6 +812,9 @@
     <string name="investments_quote_with_fallback">%1$s (via %2$s)</string>
     <string name="investments_quote_rate_limited">Data provider is rate-limited. Try again later (source: %1$s).</string>
     <string name="investments_history_crypto_unavailable">Price history for crypto is not available in the app yet.</string>
+    <string name="investments_quote_metric_change">Change</string>
+    <string name="investments_quote_metric_high">High</string>
+    <string name="investments_quote_metric_low">Low</string>
     <string name="investments_view_compact">Compact list</string>
     <string name="investments_view_cards">Cards</string>
     <string name="investments_view_details">Details</string>

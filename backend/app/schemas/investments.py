@@ -74,6 +74,11 @@ class StockQuoteOut(BaseModel):
     fallback_used: bool = False
     provider_strategy: str = "single"
     stale: bool = False
+    # Cripto (ex. Finnhub): variação e faixa do dia, quando o provedor enviar.
+    change_24h: float | None = None
+    change_24h_percent: float | None = None
+    day_high: float | None = None
+    day_low: float | None = None
     error: str | None = None
 
 

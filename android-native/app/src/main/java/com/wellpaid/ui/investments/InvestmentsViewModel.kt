@@ -17,6 +17,7 @@ import com.wellpaid.core.model.investment.StockQuoteDto
 import com.wellpaid.core.model.investment.TopMoverItemDto
 import com.wellpaid.core.network.InvestmentsApi
 import com.wellpaid.util.FastApiErrorMapper
+import com.wellpaid.util.formatDecimalPtBr
 import com.wellpaid.util.parseBrlToCents
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -154,6 +155,12 @@ data class InvestmentsUiState(
     val quoteSourceLabel: String? = null,
     val quoteConfidence: Double? = null,
     val quoteLastPrice: Double? = null,
+    /** Moeda de last_price (ex. BRL, USD). */
+    val quoteCurrency: String? = null,
+    val quoteChange24h: Double? = null,
+    val quoteChange24hPercent: Double? = null,
+    val quoteDayHigh: Double? = null,
+    val quoteDayLow: Double? = null,
     val infoMessage: String? = null,
     val errorMessage: String? = null,
     val positionDetailsFundamentals: FundamentalPreviewUi? = null,
@@ -241,7 +248,7 @@ class InvestmentsViewModel @Inject constructor(
                 err.orEmpty().ifBlank { "—" },
             )
         }
-        val priceStr = String.format(Locale.US, "%.2f", q.lastPrice).replace('.', ',')
+        val priceStr = formatDecimalPtBr(q.lastPrice)
         val asOf = q.asOf?.trim().orEmpty()
         val ccy = q.currency.uppercase(Locale.ROOT)
         val withAsOf = { base: String ->
@@ -473,6 +480,14 @@ class InvestmentsViewModel @Inject constructor(
             it.copy(
                 showCreatePositionForm = true,
                 quoteInfoMessage = null,
+                quoteSourceLabel = null,
+                quoteConfidence = null,
+                quoteLastPrice = null,
+                quoteCurrency = null,
+                quoteChange24h = null,
+                quoteChange24hPercent = null,
+                quoteDayHigh = null,
+                quoteDayLow = null,
                 tickerSuggestions = emptyList(),
                 globalTickerSuggestions = emptyList(),
                 newPositionType = "fixed_income",
@@ -496,6 +511,14 @@ class InvestmentsViewModel @Inject constructor(
                 newPositionAnnualRateText = "",
                 isSavingPosition = false,
                 quoteInfoMessage = null,
+                quoteSourceLabel = null,
+                quoteConfidence = null,
+                quoteLastPrice = null,
+                quoteCurrency = null,
+                quoteChange24h = null,
+                quoteChange24hPercent = null,
+                quoteDayHigh = null,
+                quoteDayLow = null,
                 tickerSuggestions = emptyList(),
             )
         }
@@ -506,6 +529,14 @@ class InvestmentsViewModel @Inject constructor(
             it.copy(
                 newPositionType = value,
                 quoteInfoMessage = null,
+                quoteSourceLabel = null,
+                quoteConfidence = null,
+                quoteLastPrice = null,
+                quoteCurrency = null,
+                quoteChange24h = null,
+                quoteChange24hPercent = null,
+                quoteDayHigh = null,
+                quoteDayLow = null,
                 tickerSuggestions = emptyList(),
             )
         }
@@ -770,10 +801,11 @@ class InvestmentsViewModel @Inject constructor(
                     val shouldAutofillAverage = isEquityLikeAsset(it.newPositionType) &&
                         (it.averagePriceText.isBlank() || (it.averagePriceText.replace(",", ".").toDoubleOrNull() ?: 0.0) <= 0.0)
                     val averageFromQuote = if (cached.lastPrice > 0) {
-                        String.format(Locale.US, "%.2f", cached.lastPrice).replace('.', ',')
+                        formatDecimalPtBr(cached.lastPrice)
                     } else {
                         null
                     }
+                    val hasPrice = cached.lastPrice > 0.0
                     it.copy(
                         isFetchingQuote = false,
                         errorMessage = null,
@@ -781,6 +813,11 @@ class InvestmentsViewModel @Inject constructor(
                         quoteSourceLabel = cached.source,
                         quoteConfidence = cached.confidence,
                         quoteLastPrice = cached.lastPrice.takeIf { p -> p > 0.0 },
+                        quoteCurrency = cached.currency.takeIf { hasPrice },
+                        quoteChange24h = cached.change24h.takeIf { hasPrice },
+                        quoteChange24hPercent = cached.change24hPercent.takeIf { hasPrice },
+                        quoteDayHigh = cached.dayHigh.takeIf { hasPrice },
+                        quoteDayLow = cached.dayLow.takeIf { hasPrice },
                         averagePriceText = if (shouldAutofillAverage && averageFromQuote != null) averageFromQuote else it.averagePriceText,
                     )
                 }
@@ -801,16 +838,22 @@ class InvestmentsViewModel @Inject constructor(
                         val shouldAutofillAverage = isEquityLikeAsset(it.newPositionType) &&
                             (it.averagePriceText.isBlank() || (it.averagePriceText.replace(",", ".").toDoubleOrNull() ?: 0.0) <= 0.0)
                         val averageFromQuote = if (q.lastPrice > 0) {
-                            String.format(Locale.US, "%.2f", q.lastPrice).replace('.', ',')
+                            formatDecimalPtBr(q.lastPrice)
                         } else {
                             null
                         }
+                        val hasPrice = q.lastPrice > 0.0
                         it.copy(
                             isFetchingQuote = false,
                             quoteInfoMessage = line,
                             quoteSourceLabel = q.source,
                             quoteConfidence = q.confidence,
                             quoteLastPrice = q.lastPrice.takeIf { p -> p > 0.0 },
+                            quoteCurrency = q.currency.takeIf { hasPrice },
+                            quoteChange24h = q.change24h.takeIf { hasPrice },
+                            quoteChange24hPercent = q.change24hPercent.takeIf { hasPrice },
+                            quoteDayHigh = q.dayHigh.takeIf { hasPrice },
+                            quoteDayLow = q.dayLow.takeIf { hasPrice },
                             averagePriceText = if (shouldAutofillAverage && averageFromQuote != null) averageFromQuote else it.averagePriceText,
                         )
                     }
@@ -1302,6 +1345,15 @@ class InvestmentsViewModel @Inject constructor(
                 showCreatePositionForm = true,
                 infoMessage = null,
                 errorMessage = null,
+                quoteInfoMessage = null,
+                quoteSourceLabel = null,
+                quoteConfidence = null,
+                quoteLastPrice = null,
+                quoteCurrency = null,
+                quoteChange24h = null,
+                quoteChange24hPercent = null,
+                quoteDayHigh = null,
+                quoteDayLow = null,
             )
         }
         fetchB3StockQuoteAndFundamentals()
@@ -1314,7 +1366,15 @@ class InvestmentsViewModel @Inject constructor(
                 showCreatePositionForm = false,
                 stockJoinAdjustedAlert = null,
                 stockJoinNeedsSaveConfirmation = false,
+                quoteInfoMessage = null,
+                quoteSourceLabel = null,
+                quoteConfidence = null,
                 quoteLastPrice = null,
+                quoteCurrency = null,
+                quoteChange24h = null,
+                quoteChange24hPercent = null,
+                quoteDayHigh = null,
+                quoteDayLow = null,
                 errorMessage = null,
                 infoMessage = null,
             )

@@ -27,8 +27,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import java.util.Locale
 import com.wellpaid.R
 import com.wellpaid.ui.components.WellPaidMoneyDigitKeypadField
+import com.wellpaid.util.formatDecimalPtBr
 import com.wellpaid.ui.theme.WellPaidCardWhite
 import com.wellpaid.ui.theme.WellPaidCream
 import com.wellpaid.ui.theme.WellPaidCreamMuted
@@ -57,7 +59,11 @@ fun InvestmentsStockJoinScreen(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
-            text = stringResource(R.string.investments_stock_join_title),
+            text = if (state.newPositionType.equals("crypto", ignoreCase = true)) {
+                stringResource(R.string.investments_stock_join_title_crypto)
+            } else {
+                stringResource(R.string.investments_stock_join_title)
+            },
             style = MaterialTheme.typography.titleSmall,
             color = WellPaidNavy,
             fontWeight = FontWeight.SemiBold,
@@ -127,12 +133,81 @@ fun InvestmentsStockJoinScreen(
                             fontWeight = FontWeight.Medium,
                         )
                         state.quoteLastPrice?.takeIf { it > 0.0 }?.let { price ->
-                            val priceLabel = String.format(java.util.Locale.US, "%.2f", price).replace('.', ',')
+                            val ccy = (state.quoteCurrency ?: "BRL").uppercase(Locale.ROOT)
+                            val prefix = when (ccy) {
+                                "BRL" -> "R$ "
+                                "USD" -> "US$ "
+                                else -> "$ccy "
+                            }
+                            val priceLabel = formatDecimalPtBr(price)
                             Text(
-                                text = "R$ $priceLabel",
+                                text = prefix + priceLabel,
                                 style = MaterialTheme.typography.headlineMedium,
                                 color = WellPaidPositive,
                                 fontWeight = FontWeight.Bold,
+                            )
+                        }
+                        val ccyU = (state.quoteCurrency ?: "BRL").uppercase(Locale.ROOT)
+                        val symPrefix = when (ccyU) {
+                            "BRL" -> "R$ "
+                            "USD" -> "US$ "
+                            else -> "$ccyU "
+                        }
+                        val pct = state.quoteChange24hPercent
+                        val ch = state.quoteChange24h
+                        if (pct != null) {
+                            val sign = when {
+                                pct > 0.0 -> "+"
+                                pct < 0.0 -> "−"
+                                else -> ""
+                            }
+                            val num = formatDecimalPtBr(
+                                kotlin.math.abs(pct),
+                                minFractionDigits = 2,
+                                maxFractionDigits = 4,
+                            )
+                            val changeColor = when {
+                                pct > 0.0 -> WellPaidPositive
+                                pct < 0.0 -> Color(0xFFE53935)
+                                else -> WellPaidNavy.copy(alpha = 0.75f)
+                            }
+                            val absPart = if (ch != null) {
+                                " (" + symPrefix + formatDecimalPtBr(kotlin.math.abs(ch)) + ")"
+                            } else {
+                                ""
+                            }
+                            Text(
+                                text = stringResource(R.string.investments_quote_metric_change) + ": $sign$num%$absPart",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = changeColor,
+                            )
+                        } else if (ch != null) {
+                            val sign = when {
+                                ch > 0.0 -> "+"
+                                ch < 0.0 -> "−"
+                                else -> ""
+                            }
+                            Text(
+                                text = stringResource(R.string.investments_quote_metric_change) + ": " +
+                                    sign + symPrefix + formatDecimalPtBr(kotlin.math.abs(ch)),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = WellPaidNavy.copy(alpha = 0.8f),
+                            )
+                        }
+                        if (state.quoteDayHigh != null) {
+                            Text(
+                                text = stringResource(R.string.investments_quote_metric_high) + ": " + symPrefix +
+                                    formatDecimalPtBr(state.quoteDayHigh!!),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = WellPaidNavy.copy(alpha = 0.72f),
+                            )
+                        }
+                        if (state.quoteDayLow != null) {
+                            Text(
+                                text = stringResource(R.string.investments_quote_metric_low) + ": " + symPrefix +
+                                    formatDecimalPtBr(state.quoteDayLow!!),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = WellPaidNavy.copy(alpha = 0.72f),
                             )
                         }
                         quoteMeta?.let { meta ->

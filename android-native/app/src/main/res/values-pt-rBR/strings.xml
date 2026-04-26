@@ -747,6 +747,7 @@
     <string name="investments_field_quantity">Quantidade</string>
     <string name="investments_field_average_price">Preço médio (R$)</string>
     <string name="investments_stock_join_title">Nova posição em ações</string>
+    <string name="investments_stock_join_title_crypto">Nova posição em cripto</string>
     <string name="investments_stock_join_section_market">Cotação e indicadores</string>
     <string name="investments_stock_join_section_form">Dados da posição</string>
     <string name="investments_metric_dy">DY</string>
@@ -786,6 +787,7 @@
     <string name="investments_error_session_expired">Sessão expirada. Entre novamente para salvar a posição.</string>
     <string name="investments_bucket_tesouro">Tesouro (Direto / IPCA+)</string>
     <string name="investments_bucket_stocks">Ações (B3)</string>
+    <string name="investments_bucket_crypto">Criptoativos</string>
     <string name="investments_apply_market_rate">Usar taxa de mercado (CDI)</string>
     <string name="investments_fetch_b3_quote">Cotação B3</string>
     <string name="investments_global_search_label">Pesquisar e adicionar posição (ex.: PETR4, CDB, CDI)</string>
@@ -808,6 +810,9 @@
     <string name="investments_quote_with_fallback">%1$s (via %2$s)</string>
     <string name="investments_quote_rate_limited">O provedor de dados limitou requisições. Tente de novo em instantes (fonte: %1$s).</string>
     <string name="investments_history_crypto_unavailable">Histórico de preço de cripto ainda não está disponível no app.</string>
+    <string name="investments_quote_metric_change">Variação</string>
+    <string name="investments_quote_metric_high">Máx. do dia</string>
+    <string name="investments_quote_metric_low">Mín. do dia</string>
     <string name="investments_field_target_price">Preço-alvo (opcional)</string>
     <string name="investments_view_compact">Lista compacta</string>
     <string name="investments_view_cards">Cards</string>
