@@ -174,6 +174,16 @@ class Settings(BaseSettings):
         default="",
         validation_alias=AliasChoices("alpha_vantage_api_key", "ALPHA_VANTAGE_API_KEY"),
     )
+    # Twelve Data (opcional): fallback para cotações cripto.
+    twelve_data_api_key: str = Field(
+        default="",
+        validation_alias=AliasChoices("twelve_data_api_key", "TWELVE_DATA_API_KEY"),
+    )
+    # Finnhub (opcional): fallback adicional para cotações cripto.
+    finnhub_api_key: str = Field(
+        default="",
+        validation_alias=AliasChoices("finnhub_api_key", "FINNHUB_API_KEY"),
+    )
     market_provider_timeout_seconds: float = 10.0
     market_provider_retries: int = 1
     # Segurança de isolamento: por omissão cada conta vê apenas os próprios dados.

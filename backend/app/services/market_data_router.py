@@ -8,12 +8,14 @@ from app.domain.asset_types import normalize_asset_type
 from app.services.providers.alpha_vantage_provider import AlphaVantageProvider
 from app.services.providers.b3_provider import B3Provider
 from app.services.providers.brapi_provider import BrapiProvider
+from app.services.providers.finnhub_provider import FinnhubProvider
 from app.services.investment_brapi import (
     fetch_brapi_key_statistics_enrichment,
     fetch_stock_quote_snapshot_brapi,
 )
 from app.services.providers.fundamentus_provider import FundamentusProvider
 from app.services.providers.sgs_provider import SgsProvider
+from app.services.providers.twelve_data_provider import TwelveDataProvider
 
 _TICKER_RX = re.compile(r"^[A-Z]{4}\d{1,2}$")
 _TICKER_FAMILY_RX = re.compile(r"^([A-Z]{4})(\d{1,2})?$")
@@ -35,6 +37,8 @@ class MarketDataRouterService:
     b3: B3Provider = field(default_factory=B3Provider)
     brapi: BrapiProvider = field(default_factory=BrapiProvider)
     alpha_vantage: AlphaVantageProvider = field(default_factory=AlphaVantageProvider)
+    twelve_data: TwelveDataProvider = field(default_factory=TwelveDataProvider)
+    finnhub: FinnhubProvider = field(default_factory=FinnhubProvider)
     sgs: SgsProvider = field(default_factory=SgsProvider)
     fundamentus: FundamentusProvider = field(default_factory=FundamentusProvider)
 
@@ -69,12 +73,24 @@ class MarketDataRouterService:
     def quote(self, symbol: str) -> dict[str, Any] | None:
         ticker = self._normalize_ticker(symbol)
         if self._is_crypto_symbol(ticker):
-            crypto_quote = self.alpha_vantage.quote_crypto(ticker)
-            if crypto_quote is not None:
-                crypto_quote["fallback_used"] = False
-                crypto_quote["provider_strategy"] = "single"
-                crypto_quote["stale"] = bool(crypto_quote.get("error"))
-            return crypto_quote
+            providers = [self.alpha_vantage, self.twelve_data, self.finnhub]
+            first_any: dict[str, Any] | None = None
+            for idx, provider in enumerate(providers):
+                candidate = provider.quote_crypto(ticker)
+                if candidate is None:
+                    continue
+                if first_any is None:
+                    first_any = candidate
+                if not candidate.get("error") and candidate.get("last_price") is not None:
+                    candidate["fallback_used"] = idx > 0
+                    candidate["provider_strategy"] = "fallback_chain"
+                    candidate["stale"] = False
+                    return candidate
+            if first_any is not None:
+                first_any["fallback_used"] = False
+                first_any["provider_strategy"] = "fallback_chain"
+                first_any["stale"] = True
+            return first_any
         quote = self.b3.quote(ticker)
         if quote and not quote.get("error"):
             quote["fallback_used"] = False
