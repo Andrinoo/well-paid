@@ -105,14 +105,20 @@ def _expense_description_for_list(row: ShoppingList, expense_date: date) -> str:
     return _default_expense_description(row.store_name, expense_date)
 
 
+def _picked_items_for_totals(items: list[ShoppingListItem]) -> list[ShoppingListItem]:
+    """Apenas itens marcados como pegos entram na soma e no fechamento."""
+    return [i for i in items if bool(getattr(i, "is_picked", True))]
+
+
 def _recompute_list_total_cents(
     items: list[ShoppingListItem],
     *,
     fallback_total_cents: int | None,
 ) -> int:
+    picked = _picked_items_for_totals(items)
     line_extensions = [
         (i.line_amount_cents, int(i.quantity) if i.quantity is not None else 1)
-        for i in items
+        for i in picked
     ]
     try:
         return resolve_checkout_total_cents(
@@ -159,6 +165,7 @@ def _to_item(row: ShoppingListItem) -> ShoppingListItemResponse:
         line_amount_cents=int(row.line_amount_cents)
         if row.line_amount_cents is not None
         else None,
+        is_picked=bool(getattr(row, "is_picked", True)),
     )
 
 
@@ -394,6 +401,7 @@ def add_shopping_list_item(
         label=body.label,
         quantity=body.quantity,
         line_amount_cents=body.line_amount_cents,
+        is_picked=body.is_picked,
     )
     db.add(item)
     db.flush()
@@ -524,9 +532,15 @@ def complete_shopping_list(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Adicione pelo menos um item antes de fechar a compra",
         )
+    picked_items = _picked_items_for_totals(list(row.items))
+    if not picked_items:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Marque pelo menos um item como pego antes de fechar a compra.",
+        )
     line_extensions = [
         (i.line_amount_cents, int(i.quantity) if i.quantity is not None else 1)
-        for i in row.items
+        for i in picked_items
     ]
     try:
         total = resolve_checkout_total_cents(

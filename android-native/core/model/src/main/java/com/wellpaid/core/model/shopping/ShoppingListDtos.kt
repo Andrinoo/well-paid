@@ -10,6 +10,8 @@ data class ShoppingListItemDto(
     val label: String,
     val quantity: Int,
     @SerialName("line_amount_cents") val lineAmountCents: Int? = null,
+    /** Itens antigos sem campo no JSON contam como pegos (compatível com listas legadas). */
+    @SerialName("is_picked") val isPicked: Boolean = true,
 )
 
 @Serializable
@@ -62,6 +64,7 @@ data class ShoppingListItemCreateDto(
     val label: String,
     val quantity: Int = 1,
     @SerialName("line_amount_cents") val lineAmountCents: Int? = null,
+    @SerialName("is_picked") val isPicked: Boolean = false,
 )
 
 @Serializable

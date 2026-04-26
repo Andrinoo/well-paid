@@ -25,8 +25,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -48,13 +48,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.dp
@@ -63,8 +67,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wellpaid.R
 import com.wellpaid.core.model.goal.GoalPriceAlternativeDto
 import com.wellpaid.core.model.goal.GoalPriceHistoryItemDto
+import com.wellpaid.ui.components.WellPaidPullToRefreshBox
 import com.wellpaid.ui.theme.WellPaidCreamMuted
-import com.wellpaid.ui.theme.WellPaidExpenseLine
 import com.wellpaid.ui.theme.WellPaidGold
 import com.wellpaid.ui.theme.WellPaidNavy
 import com.wellpaid.ui.theme.WellPaidPositive
@@ -77,6 +81,8 @@ import com.wellpaid.util.parseBrlToCents
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import java.util.Locale
+import kotlin.math.abs
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -90,6 +96,7 @@ fun GoalDetailScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var showContribute by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showProductDetails by remember { mutableStateOf(false) }
     val uriHandler = LocalUriHandler.current
 
     Scaffold(
@@ -146,14 +153,49 @@ fun GoalDetailScreen(
             return@Scaffold
         }
 
-        Column(
+        val url = goal.targetUrl?.trim().orEmpty()
+        val canRefreshPriceByTitle = goal.title.trim().length >= 2
+        val canSwipeRefreshPrice = goal.isMine && (url.isNotEmpty() || canRefreshPriceByTitle)
+
+        WellPaidPullToRefreshBox(
+            refreshing = state.isRefreshingFromLink,
+            onRefresh = {
+                if (canSwipeRefreshPrice) {
+                    viewModel.refreshTargetFromLink()
+                }
+            },
             modifier = Modifier
                 .fillMaxSize()
-                .padding(inner)
-                .imePadding()
-                .wellPaidScreenHorizontalPadding()
-                .verticalScroll(rememberScrollState()),
+                .padding(inner),
         ) {
+            val progress = if (goal.targetCents > 0) {
+                (goal.currentCents.toFloat() / goal.targetCents.toFloat()).coerceIn(0f, 1f)
+            } else {
+                0f
+            }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .imePadding()
+                    .wellPaidScreenHorizontalPadding(),
+            ) {
+            GoalProgressStickyHeader(
+                currentValue = formatBrlFromCents(goal.currentCents),
+                targetValue = formatBrlFromCents(goal.targetCents),
+                progress = progress,
+                dueAtLabel = goal.dueAt?.takeIf { it.isNotBlank() }?.let { dueAt ->
+                    stringResource(R.string.goal_field_due_date) + ": " + formatIsoDateToBr(dueAt)
+                },
+            )
+            Spacer(Modifier.height(12.dp))
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState()),
+            ) {
             state.errorMessage?.let { msg ->
                 Text(
                     text = msg,
@@ -172,8 +214,8 @@ fun GoalDetailScreen(
                         model = thumb,
                         contentDescription = null,
                         modifier = Modifier
-                            .size(36.dp)
-                            .clip(RoundedCornerShape(12.dp)),
+                            .size(72.dp)
+                            .clip(RoundedCornerShape(16.dp)),
                         contentScale = ContentScale.Crop,
                     )
                     Spacer(Modifier.width(12.dp))
@@ -181,10 +223,12 @@ fun GoalDetailScreen(
                 Column(Modifier.weight(1f)) {
                     Text(
                         text = goal.title,
-                        style = MaterialTheme.typography.headlineSmall.copy(
-                            fontSize = MaterialTheme.typography.headlineSmall.fontSize * 0.8f,
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontSize = MaterialTheme.typography.titleLarge.fontSize * 0.78f,
                         ),
                         fontWeight = FontWeight.SemiBold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
@@ -210,37 +254,34 @@ fun GoalDetailScreen(
 
             Spacer(Modifier.height(20.dp))
 
-            val progress = if (goal.targetCents > 0) {
-                (goal.currentCents.toFloat() / goal.targetCents.toFloat()).coerceIn(0f, 1f)
-            } else {
-                0f
-            }
-            Text(
-                text = stringResource(
-                    R.string.goal_detail_progress_label,
-                    formatBrlFromCents(goal.currentCents),
-                    formatBrlFromCents(goal.targetCents),
-                ),
-                style = MaterialTheme.typography.bodyLarge,
+            val remainingCents = (goal.targetCents - goal.currentCents).coerceAtLeast(0)
+            GoalQuickStatsRow(
+                savedValue = formatBrlFromCents(goal.currentCents),
+                remainingValue = formatBrlFromCents(remainingCents),
+                updatedValue = formatIsoDateToBr(goal.updatedAt),
             )
-            LinearProgressIndicator(
-                progress = { progress },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
-            )
-            goal.dueAt?.takeIf { it.isNotBlank() }?.let { dueAt ->
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = stringResource(R.string.goal_field_due_date) + ": " + formatIsoDateToBr(dueAt),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            Spacer(Modifier.height(14.dp))
 
             Spacer(Modifier.height(20.dp))
-            GoalPriceBarsChart(
+            if (goal.isMine && goal.isActive) {
+                Button(
+                    onClick = { showContribute = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    enabled = !state.isSaving && !state.isDeleting,
+                ) {
+                    Text(
+                        text = stringResource(R.string.goal_contribute_button),
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
+                Spacer(Modifier.height(14.dp))
+            }
+
+            GoalPriceLineChart(
                 history = state.priceHistory,
+                targetCents = goal.targetCents,
                 goalCreatedAt = goal.createdAt,
                 fallbackReferencePriceCents = goal.referencePriceCents,
                 fallbackAlternatives = goal.priceAlternatives,
@@ -248,73 +289,67 @@ fun GoalDetailScreen(
             )
 
             // Novos campos: link e preço de referência
-            val url = goal.targetUrl?.trim().orEmpty()
-            val canRefreshPriceByTitle = goal.title.trim().length >= 2
             if (url.isNotEmpty() || goal.referencePriceCents != null || goal.referenceProductName != null ||
                 goal.priceAlternatives.isNotEmpty() || (goal.isMine && canRefreshPriceByTitle)
             ) {
                 Spacer(Modifier.height(20.dp))
-                Text(
-                    text = stringResource(R.string.goal_detail_section_link),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Spacer(Modifier.height(6.dp))
-                if (url.isNotEmpty()) {
-                    TextButton(onClick = { runCatching { uriHandler.openUri(url) } }) {
-                        Text(stringResource(R.string.goal_detail_open_link))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(R.string.goal_detail_section_link),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    TextButton(
+                        onClick = { showProductDetails = !showProductDetails },
+                    ) {
+                        Text(
+                            text = if (showProductDetails) {
+                                stringResource(R.string.goal_card_less)
+                            } else {
+                                stringResource(R.string.goal_card_more)
+                            },
+                        )
                     }
                 }
-                goal.referenceProductName?.takeIf { it.isNotBlank() }?.let { name ->
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = stringResource(R.string.goal_detail_product_name, name),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                goal.referencePriceCents?.let { cents ->
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = stringResource(
-                            R.string.goal_detail_reference_price,
-                            formatBrlFromCents(cents),
-                        ),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-                if (goal.priceAlternatives.isNotEmpty()) {
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = stringResource(
-                            R.string.goal_detail_alternatives_count,
-                            goal.priceAlternatives.size,
-                        ),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.tertiary,
-                    )
-                }
-                if (goal.isMine && (url.isNotEmpty() || canRefreshPriceByTitle)) {
-                    Spacer(Modifier.height(12.dp))
-                    OutlinedButton(
-                        onClick = { viewModel.refreshTargetFromLink() },
-                        enabled = !state.isSaving && !state.isDeleting && !state.isRefreshingFromLink,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center,
-                        ) {
-                            Icon(Icons.Filled.Refresh, contentDescription = null)
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                text = if (state.isRefreshingFromLink) {
-                                    stringResource(R.string.goal_refreshing_price)
-                                } else {
-                                    stringResource(R.string.goal_detail_refresh_target_from_link)
-                                },
-                            )
+                if (showProductDetails) {
+                    Spacer(Modifier.height(6.dp))
+                    if (url.isNotEmpty()) {
+                        TextButton(onClick = { runCatching { uriHandler.openUri(url) } }) {
+                            Text(stringResource(R.string.goal_detail_open_link))
                         }
+                    }
+                    goal.referenceProductName?.takeIf { it.isNotBlank() }?.let { name ->
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = stringResource(R.string.goal_detail_product_name, name),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    goal.referencePriceCents?.let { cents ->
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = stringResource(
+                                R.string.goal_detail_reference_price,
+                                formatBrlFromCents(cents),
+                            ),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                    if (goal.priceAlternatives.isNotEmpty()) {
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = stringResource(
+                                R.string.goal_detail_alternatives_count,
+                                goal.priceAlternatives.size,
+                            ),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.tertiary,
+                        )
                     }
                 }
             }
@@ -340,16 +375,6 @@ fun GoalDetailScreen(
                             ),
                         )
                     }
-                    if (goal.isActive) {
-                        add(
-                            GoalDetailAction(
-                                label = stringResource(R.string.goal_contribute_button),
-                                enabled = !state.isSaving && !state.isDeleting,
-                                onClick = { showContribute = true },
-                                isDestructive = false,
-                            ),
-                        )
-                    }
                 }
                 actions.chunked(2).forEachIndexed { index, rowActions ->
                     if (index > 0) Spacer(Modifier.height(8.dp))
@@ -362,7 +387,7 @@ fun GoalDetailScreen(
                                 onClick = action.onClick,
                                 modifier = Modifier
                                     .weight(1f)
-                                    .height(46.dp),
+                                    .height(52.dp),
                                 enabled = action.enabled,
                             ) {
                                 Text(
@@ -372,7 +397,12 @@ fun GoalDetailScreen(
                                     } else {
                                         MaterialTheme.colorScheme.onSurface
                                     },
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontSize = MaterialTheme.typography.labelMedium.fontSize * 0.88f,
+                                    ),
                                     textAlign = TextAlign.Center,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
                                 )
                             }
                         }
@@ -380,7 +410,7 @@ fun GoalDetailScreen(
                             Spacer(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .height(46.dp),
+                                    .height(52.dp),
                             )
                         }
                     }
@@ -388,6 +418,8 @@ fun GoalDetailScreen(
             }
 
             Spacer(Modifier.height(32.dp))
+        }
+        }
         }
     }
 
@@ -446,8 +478,9 @@ fun GoalDetailScreen(
 }
 
 @Composable
-private fun GoalPriceBarsChart(
+private fun GoalPriceLineChart(
     history: List<GoalPriceHistoryItemDto>,
+    targetCents: Int?,
     goalCreatedAt: String?,
     fallbackReferencePriceCents: Int?,
     fallbackAlternatives: List<GoalPriceAlternativeDto>,
@@ -468,7 +501,8 @@ private fun GoalPriceBarsChart(
             .map { item ->
                 GoalBarEntry(
                     priceCents = item.priceCents,
-                    label = formatIsoDateToBr(item.recordedAt),
+                    shortLabel = formatRelativePriceDate(item.recordedAt),
+                    fullLabel = formatIsoDateToBr(item.recordedAt),
                 )
             }
             .toList()
@@ -480,7 +514,8 @@ private fun GoalPriceBarsChart(
                     add(
                         GoalBarEntry(
                             priceCents = it,
-                            label = "Referência",
+                            shortLabel = "Referência",
+                            fullLabel = "Preço de referência",
                         ),
                     )
                 }
@@ -490,7 +525,8 @@ private fun GoalPriceBarsChart(
                         add(
                             GoalBarEntry(
                                 priceCents = alt.priceCents,
-                                label = alt.label.ifBlank { "Alternativa" },
+                                shortLabel = alt.label.ifBlank { "Alternativa" },
+                                fullLabel = alt.label.ifBlank { "Alternativa de preço" },
                             ),
                         )
                     }
@@ -498,38 +534,37 @@ private fun GoalPriceBarsChart(
         }
     }
     if (chartEntries.isEmpty()) return
-    var selectedBarIndex by remember(chartEntries) { mutableIntStateOf(-1) }
+    var selectedPointIndex by remember(chartEntries) { mutableIntStateOf(-1) }
 
+    val currentPrice = chartEntries.last().priceCents
+    val minEntry = chartEntries.minByOrNull { it.priceCents } ?: return
+    val maxEntry = chartEntries.maxByOrNull { it.priceCents } ?: return
+    val firstPrice = chartEntries.first().priceCents
+    val deltaPercent = if (firstPrice > 0) {
+        ((currentPrice - firstPrice).toFloat() / firstPrice.toFloat()) * 100f
+    } else {
+        0f
+    }
+    val directionColor = when {
+        deltaPercent <= -0.5f -> WellPaidPositive
+        deltaPercent >= 0.5f -> MaterialTheme.colorScheme.error
+        else -> MaterialTheme.colorScheme.primary
+    }
+    val errorColor = MaterialTheme.colorScheme.error
     val maxValue = chartEntries.maxOfOrNull { it.priceCents } ?: return
-    if (maxValue <= 0) return
-    val valueRange = maxValue.toFloat()
-    val midValue = (maxValue / 2f).toInt()
+    val goalValue = (targetCents ?: 0).coerceAtLeast(0)
+    val hasTargetLine = goalValue > 0
+    val axisBottomValue = 0
+    val axisMiddleValue = (goalValue / 2).coerceAtLeast(0)
+    val axisTopByGoal = if (goalValue > 0) (goalValue * 1.2f).toInt() else 0
+    val axisTopByData = (maxValue * 1.1f).toInt()
+    val axisTopValue = maxOf(axisTopByGoal, axisTopByData, 1)
+    val valueRange = (axisTopValue - axisBottomValue).toFloat().coerceAtLeast(1f)
     val gridColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
     val horizontalScroll = rememberScrollState()
-    val palette = remember {
-        listOf(
-            WellPaidGold,
-            WellPaidPositive,
-            WellPaidExpenseLine,
-            WellPaidNavy,
-            Color(0xFF4F46E5),
-            Color(0xFF0E7490),
-            Color(0xFFB45309),
-            Color(0xFF7C3AED),
-            Color(0xFFBE123C),
-            Color(0xFF15803D),
-        )
-    }
-    val valueToColor = remember(chartEntries) {
-        val map = linkedMapOf<Long, Color>()
-        chartEntries.forEach { entry ->
-            val key = entry.priceCents.toLong()
-            if (!map.containsKey(key)) {
-                map[key] = palette[map.size % palette.size]
-            }
-        }
-        map
-    }
+    val minIndex = chartEntries.indexOf(minEntry)
+    val maxIndex = chartEntries.indexOf(maxEntry)
+    val currentIndex = chartEntries.lastIndex
 
     Column(
         modifier = modifier
@@ -545,46 +580,39 @@ private fun GoalPriceBarsChart(
             .padding(horizontal = 8.dp, vertical = 6.dp),
     ) {
         Text(
-            text = stringResource(R.string.investments_evolution_title),
+            text = stringResource(R.string.goal_price_history_title),
             style = MaterialTheme.typography.labelLarge,
             color = WellPaidNavy,
             fontWeight = FontWeight.SemiBold,
         )
-        if (selectedBarIndex in chartEntries.indices) {
+        Spacer(Modifier.height(4.dp))
+        if (selectedPointIndex in chartEntries.indices) {
             Spacer(Modifier.height(2.dp))
             Text(
-                text = "${chartEntries[selectedBarIndex].label} · ${formatBrlFromCents(chartEntries[selectedBarIndex].priceCents)}",
+                text = "${chartEntries[selectedPointIndex].fullLabel} · ${formatBrlFromCents(chartEntries[selectedPointIndex].priceCents)}",
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = WellPaidNavy,
+                fontWeight = FontWeight.Medium,
             )
         }
         Spacer(Modifier.height(6.dp))
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(122.dp),
+                .height(156.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(
-                modifier = Modifier.width(56.dp),
+                modifier = Modifier
+                    .width(50.dp)
+                    .fillMaxSize()
+                    .padding(top = 6.dp, bottom = 8.dp),
                 verticalArrangement = Arrangement.SpaceBetween,
                 horizontalAlignment = Alignment.End,
             ) {
-                Text(
-                    text = formatBrlFromCents(maxValue),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    text = formatBrlFromCents(midValue),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    text = formatBrlFromCents(0),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                GoalAxisLabel(axisTopValue)
+                GoalAxisLabel(axisMiddleValue)
+                GoalAxisLabel(axisBottomValue)
             }
             Spacer(Modifier.width(8.dp))
             BoxWithConstraints(modifier = Modifier.weight(1f)) {
@@ -599,23 +627,47 @@ private fun GoalPriceBarsChart(
                     Canvas(
                         modifier = Modifier
                             .requiredWidth(chartWidth)
-                            .height(122.dp)
+                            .height(156.dp)
                             .pointerInput(chartEntries) {
                                 detectTapGestures { offset ->
-                                    val barSlot = size.width / chartEntries.size.toFloat()
-                                    val tapped = (offset.x / barSlot).toInt()
-                                    selectedBarIndex = tapped.coerceIn(0, chartEntries.lastIndex)
+                                    if (chartEntries.isEmpty()) return@detectTapGestures
+                                    val step = if (chartEntries.size == 1) {
+                                        0f
+                                    } else {
+                                        size.width / (chartEntries.size - 1).toFloat()
+                                    }
+                                    var nearest = 0
+                                    var nearestDistance = Float.MAX_VALUE
+                                    chartEntries.indices.forEach { index ->
+                                        val pointX = if (chartEntries.size == 1) {
+                                            size.width / 2f
+                                        } else {
+                                            index * step
+                                        }
+                                        val distance = abs(pointX - offset.x)
+                                        if (distance < nearestDistance) {
+                                            nearestDistance = distance
+                                            nearest = index
+                                        }
+                                    }
+                                    selectedPointIndex = nearest
                                 }
                             },
                     ) {
                         val width = size.width
                         val height = size.height
-                        val barSlot = width / chartEntries.size.toFloat()
-                        val barWidth = 14.dp.toPx().coerceAtMost(barSlot * 0.8f).coerceAtLeast(6.dp.toPx())
+                        val topPadding = 6.dp.toPx()
+                        val bottomPadding = 8.dp.toPx()
+                        val lineHeight = (height - topPadding - bottomPadding).coerceAtLeast(1f)
+                        val step = if (chartEntries.size == 1) {
+                            0f
+                        } else {
+                            width / (chartEntries.size - 1).toFloat()
+                        }
 
-                        val guideYTop = 2.dp.toPx()
+                        val guideYTop = topPadding
                         val guideYMid = height / 2f
-                        val guideYBottom = height - 2.dp.toPx()
+                        val guideYBottom = height - bottomPadding
                         listOf(guideYTop, guideYMid, guideYBottom).forEach { y ->
                             drawLine(
                                 color = gridColor,
@@ -624,32 +676,233 @@ private fun GoalPriceBarsChart(
                                 strokeWidth = 1.dp.toPx(),
                             )
                         }
+                        if (hasTargetLine) {
+                            val targetNormalized =
+                                (goalValue - axisBottomValue).toFloat() / valueRange
+                            val targetY = height - bottomPadding - (targetNormalized * lineHeight)
+                            drawLine(
+                                color = WellPaidGold.copy(alpha = 0.9f),
+                                start = androidx.compose.ui.geometry.Offset(0f, targetY),
+                                end = androidx.compose.ui.geometry.Offset(width, targetY),
+                                strokeWidth = 1.5.dp.toPx(),
+                                pathEffect = PathEffect.dashPathEffect(
+                                    intervals = floatArrayOf(9f, 8f),
+                                    phase = 0f,
+                                ),
+                            )
+                        }
 
-                        chartEntries.forEachIndexed { index, entry ->
-                            val x = (index * barSlot) + (barSlot / 2f)
-                            val normalized = entry.priceCents.toFloat() / valueRange
-                            val barHeight = (normalized * (height - 8.dp.toPx())).coerceAtLeast(8.dp.toPx())
-                            val top = height - barHeight
-                            val colorKey = entry.priceCents.toLong()
-                            val baseColor = valueToColor[colorKey] ?: WellPaidGold
-                            val isSelected = selectedBarIndex == index
-                            drawRoundRect(
-                                color = if (isSelected) {
-                                    baseColor.copy(alpha = 1f)
-                                } else if (index == 0) {
-                                    baseColor.copy(alpha = 0.95f)
-                                } else {
-                                    baseColor.copy(alpha = 0.74f)
+                        val points = chartEntries.mapIndexed { index, entry ->
+                            val x = if (chartEntries.size == 1) width / 2f else index * step
+                            val normalized = (entry.priceCents - axisBottomValue).toFloat() / valueRange
+                            val adjustedY = height - bottomPadding - (normalized * lineHeight)
+                            androidx.compose.ui.geometry.Offset(x, adjustedY)
+                        }
+
+                        if (points.size >= 2) {
+                            val smoothPath = androidx.compose.ui.graphics.Path().apply {
+                                moveTo(points.first().x, points.first().y)
+                                points.zipWithNext().forEach { (start, end) ->
+                                    val controlX = (start.x + end.x) / 2f
+                                    cubicTo(
+                                        controlX,
+                                        start.y,
+                                        controlX,
+                                        end.y,
+                                        end.x,
+                                        end.y,
+                                    )
+                                }
+                            }
+                            val areaPath = androidx.compose.ui.graphics.Path().apply {
+                                addPath(smoothPath)
+                                lineTo(points.last().x, height - bottomPadding)
+                                lineTo(points.first().x, height - bottomPadding)
+                                close()
+                            }
+                            drawPath(
+                                path = areaPath,
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(
+                                        directionColor.copy(alpha = 0.28f),
+                                        directionColor.copy(alpha = 0.04f),
+                                    ),
+                                    startY = topPadding,
+                                    endY = height - bottomPadding,
+                                ),
+                            )
+                            drawPath(
+                                path = smoothPath,
+                                color = directionColor.copy(alpha = 0.95f),
+                                style = androidx.compose.ui.graphics.drawscope.Stroke(
+                                    width = 4.dp.toPx(),
+                                    cap = androidx.compose.ui.graphics.StrokeCap.Round,
+                                    join = androidx.compose.ui.graphics.StrokeJoin.Round,
+                                ),
+                            )
+                        }
+
+                        points.forEachIndexed { index, point ->
+                            val isSelected = selectedPointIndex == index
+                            val isMin = index == minIndex
+                            val isMax = index == maxIndex
+                            val isCurrent = index == currentIndex
+                            val baseColor = when {
+                                isMin -> WellPaidPositive
+                                isMax -> errorColor
+                                isCurrent -> directionColor
+                                else -> directionColor.copy(alpha = 0.8f)
+                            }
+                            if (isSelected) {
+                                drawCircle(
+                                    color = baseColor.copy(alpha = 0.28f),
+                                    radius = 9.dp.toPx(),
+                                    center = point,
+                                )
+                                drawCircle(
+                                    color = Color.White.copy(alpha = 0.95f),
+                                    radius = 6.4.dp.toPx(),
+                                    center = point,
+                                    style = Stroke(width = 2.dp.toPx()),
+                                )
+                            }
+                            drawCircle(
+                                color = baseColor.copy(alpha = if (isSelected) 1f else 0.88f),
+                                radius = when {
+                                    isCurrent -> 5.6.dp.toPx()
+                                    isMin || isMax -> 5.dp.toPx()
+                                    isSelected -> 5.dp.toPx()
+                                    else -> 3.6.dp.toPx()
                                 },
-                                topLeft = androidx.compose.ui.geometry.Offset(x - (barWidth / 2f), top),
-                                size = androidx.compose.ui.geometry.Size(barWidth, barHeight),
-                                cornerRadius = androidx.compose.ui.geometry.CornerRadius(6f, 6f),
+                                center = point,
                             )
                         }
                     }
                 }
             }
         }
+        if (chartEntries.size >= 2) {
+            Spacer(Modifier.height(6.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = chartEntries.first().shortLabel,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = chartEntries[chartEntries.lastIndex / 2].shortLabel,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = chartEntries.last().shortLabel,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun GoalQuickStatsRow(
+    savedValue: String,
+    remainingValue: String,
+    updatedValue: String,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        GoalQuickStatCard(
+            modifier = Modifier.weight(1f),
+            label = stringResource(R.string.goal_list_label_saved),
+            value = savedValue,
+        )
+        GoalQuickStatCard(
+            modifier = Modifier.weight(1f),
+            label = stringResource(R.string.goal_detail_label_remaining),
+            value = remainingValue,
+        )
+        GoalQuickStatCard(
+            modifier = Modifier.weight(1f),
+            label = stringResource(R.string.goal_list_label_updated),
+            value = updatedValue,
+        )
+    }
+}
+
+@Composable
+private fun GoalProgressStickyHeader(
+    currentValue: String,
+    targetValue: String,
+    progress: Float,
+    dueAtLabel: String?,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(WellPaidCreamMuted.copy(alpha = 0.78f))
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.goal_detail_progress_label, currentValue, targetValue),
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Medium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        LinearProgressIndicator(
+            progress = { progress },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 6.dp),
+        )
+        dueAtLabel?.let {
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = it,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@Composable
+private fun GoalQuickStatCard(
+    modifier: Modifier = Modifier,
+    label: String,
+    value: String,
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(WellPaidCreamMuted.copy(alpha = 0.72f))
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Spacer(Modifier.height(2.dp))
+        Text(
+            text = value,
+            style = MaterialTheme.typography.labelMedium,
+            color = WellPaidNavy,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
@@ -662,13 +915,54 @@ private data class GoalDetailAction(
 
 private data class GoalBarEntry(
     val priceCents: Int,
-    val label: String,
+    val shortLabel: String,
+    val fullLabel: String,
 )
 
 private fun preferredChartWidthForEntries(entryCount: Int): Dp {
     val slot = 24.dp
     val sidePadding = 12.dp
     return (slot * entryCount) + sidePadding
+}
+
+@Composable
+private fun GoalAxisLabel(valueCents: Int) {
+    Text(
+        text = formatGoalAxisValueFromCents(valueCents),
+        style = MaterialTheme.typography.labelSmall.copy(
+            fontSize = MaterialTheme.typography.labelSmall.fontSize * 0.84f,
+        ),
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
+
+private fun formatGoalAxisValueFromCents(cents: Int): String {
+    val absCents = kotlin.math.abs(cents.toLong())
+    if (absCents >= 100_000L) {
+        val mil = absCents / 100_000.0
+        val compact = "${formatCompactNumber(mil)} mil"
+        return if (cents < 0) "-$compact" else compact
+    }
+    val absValue = absCents / 100.0
+    val formatted = String.format(Locale("pt", "BR"), "%.2f", absValue)
+    return if (cents < 0) "-$formatted" else formatted
+}
+
+private fun formatCompactNumber(value: Double): String {
+    val rounded = if (value >= 10) String.format("%.0f", value) else String.format("%.1f", value)
+    return rounded.replace('.', ',')
+}
+
+private fun formatRelativePriceDate(raw: String): String {
+    val date = parseIsoLocalDate(raw) ?: return formatIsoDateToBr(raw)
+    val today = LocalDate.now()
+    val days = java.time.temporal.ChronoUnit.DAYS.between(date, today)
+    return when {
+        days <= 0L -> "Hoje"
+        days == 1L -> "Ontem"
+        days in 2L..6L -> "$days dias atrás"
+        else -> formatIsoDateToBr(raw)
+    }
 }
 
 private fun parseIsoLocalDate(raw: String?): LocalDate? {

@@ -18,6 +18,7 @@ import com.wellpaid.core.network.shoppingListItemPatchJson
 import com.wellpaid.data.SEARCH_DEBOUNCE_MS
 import com.wellpaid.data.UiPreferencesRepository
 import com.wellpaid.util.FastApiErrorMapper
+import com.wellpaid.util.normalizeShoppingListSearchText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
@@ -44,6 +45,7 @@ data class ShoppingListDetailUiState(
     val autoGroceryPriceHints: Boolean = true,
     val groceryPriceHits: List<GoalProductHitDto> = emptyList(),
     val groceryPriceSearchLoading: Boolean = false,
+    val groceryPriceSearchMessage: String? = null,
 )
 
 @HiltViewModel
@@ -105,16 +107,24 @@ class ShoppingListDetailViewModel @Inject constructor(
         if (!_uiState.value.autoGroceryPriceHints) {
             groceryPriceSearchJob?.cancel()
             _uiState.update {
-                it.copy(groceryPriceHits = emptyList(), groceryPriceSearchLoading = false)
+                it.copy(
+                    groceryPriceHits = emptyList(),
+                    groceryPriceSearchLoading = false,
+                    groceryPriceSearchMessage = null,
+                )
             }
             return
         }
         groceryPriceSearchJob?.cancel()
-        val t = label.trim()
+        val t = normalizeShoppingListSearchText(label)
         if (t.length < 2) {
             groceryPriceSearchNonce.incrementAndGet()
             _uiState.update {
-                it.copy(groceryPriceHits = emptyList(), groceryPriceSearchLoading = false)
+                it.copy(
+                    groceryPriceHits = emptyList(),
+                    groceryPriceSearchLoading = false,
+                    groceryPriceSearchMessage = null,
+                )
             }
             return
         }
@@ -123,10 +133,15 @@ class ShoppingListDetailViewModel @Inject constructor(
             delay(SEARCH_DEBOUNCE_MS)
             coroutineContext.ensureActive()
             if (id != groceryPriceSearchNonce.get()) return@launch
-            _uiState.update { it.copy(groceryPriceSearchLoading = true) }
+            _uiState.update {
+                it.copy(
+                    groceryPriceSearchLoading = true,
+                    groceryPriceSearchMessage = null,
+                )
+            }
             try {
                 val resp = api.groceryPriceSuggestions(
-                    ShoppingListGroceryPriceRequestDto(query = t, unit = null),
+                    ShoppingListGroceryPriceRequestDto(query = t.take(200), unit = null),
                 )
                 coroutineContext.ensureActive()
                 if (id != groceryPriceSearchNonce.get()) return@launch
@@ -134,17 +149,26 @@ class ShoppingListDetailViewModel @Inject constructor(
                     it.copy(
                         groceryPriceSearchLoading = false,
                         groceryPriceHits = resp.results.take(12),
+                        groceryPriceSearchMessage = null,
                     )
                 }
             } catch (e: CancellationException) {
-                _uiState.update { it.copy(groceryPriceSearchLoading = false) }
+                _uiState.update {
+                    it.copy(
+                        groceryPriceSearchLoading = false,
+                        groceryPriceSearchMessage = null,
+                    )
+                }
                 throw e
-            } catch (_: Exception) {
+            } catch (t: Exception) {
                 if (id != groceryPriceSearchNonce.get()) return@launch
                 _uiState.update {
                     it.copy(
                         groceryPriceSearchLoading = false,
                         groceryPriceHits = emptyList(),
+                        groceryPriceSearchMessage = FastApiErrorMapper.message(appContext, t).ifBlank {
+                            appContext.getString(R.string.shopping_error_detail)
+                        },
                     )
                 }
             }
@@ -155,7 +179,11 @@ class ShoppingListDetailViewModel @Inject constructor(
         groceryPriceSearchJob?.cancel()
         groceryPriceSearchNonce.incrementAndGet()
         _uiState.update {
-            it.copy(groceryPriceHits = emptyList(), groceryPriceSearchLoading = false)
+            it.copy(
+                groceryPriceHits = emptyList(),
+                groceryPriceSearchLoading = false,
+                groceryPriceSearchMessage = null,
+            )
         }
     }
 
@@ -240,6 +268,7 @@ class ShoppingListDetailViewModel @Inject constructor(
                 label = label.trim(),
                 quantity = quantity.coerceIn(1, 9999),
                 lineAmountCents = lineAmountCents,
+                isPicked = false,
             )
             runCatching { api.addShoppingListItem(listId, body) }
                 .onSuccess { d ->
@@ -269,6 +298,7 @@ class ShoppingListDetailViewModel @Inject constructor(
         quantity: Int? = null,
         lineAmountCents: Int? = null,
         clearLineAmount: Boolean = false,
+        isPicked: Boolean? = null,
     ) {
         if (listId.isBlank()) return
         viewModelScope.launch {
@@ -278,6 +308,7 @@ class ShoppingListDetailViewModel @Inject constructor(
                 quantity = quantity,
                 lineAmountCents = lineAmountCents,
                 clearLineAmount = clearLineAmount,
+                isPicked = isPicked,
             )
             runCatching { api.patchShoppingListItem(listId, itemId, json) }
                 .onSuccess { d -> _uiState.update { it.copy(isSaving = false, detail = d) } }

@@ -2,10 +2,10 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.Properties
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.serialization")
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.dagger.hilt.android")
@@ -62,6 +62,26 @@ fun releaseApiUrlFromProject(): String {
 fun escapeBuildConfigString(s: String): String =
     s.replace("\\", "\\\\").replace("\"", "\\\"")
 
+fun detectAlembicHead(): Int {
+    val versionsDir = rootProject.projectDir.resolve("../backend/alembic/versions")
+    if (!versionsDir.exists()) return 1
+
+    return versionsDir
+        .listFiles()
+        ?.asSequence()
+        ?.mapNotNull { file ->
+            val m = Regex("""^(\d{3})_.*\.py$""").find(file.name) ?: return@mapNotNull null
+            m.groupValues[1].toIntOrNull()
+        }
+        ?.maxOrNull()
+        ?: 1
+}
+
+val alembicHead = detectAlembicHead()
+val derivedVersionCode = (alembicHead - 1).coerceAtLeast(1)
+val derivedVersionName = "0.1.$derivedVersionCode"
+val derivedRevisionCode = alembicHead.toString().padStart(3, '0')
+
 android {
     namespace = "com.wellpaid"
     compileSdk = 35
@@ -70,12 +90,12 @@ android {
         applicationId = "com.wellpaid"
         minSdk = 26
         targetSdk = 35
-        // Alinha com a revisão Alembic em `head` (ex.: 033 → 0.1.32). Atualizar ao adicionar migrações.
-        versionCode = 32
-        versionName = "0.1.32"
+        // Alinha automaticamente com Alembic head (ex.: 040 -> versionCode 39, versionName 0.1.39).
+        versionCode = derivedVersionCode
+        versionName = derivedVersionName
         val revisionPrefix =
             (project.findProperty("wellpaid.revision.code") as String?)?.trim()?.takeIf { it.isNotEmpty() }
-                ?: "AN_CA_RBCCA"
+                ?: derivedRevisionCode
         val buildStamp = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss", Locale.US).format(Date())
         buildConfigField("String", "REVISION_CODE", "\"${escapeBuildConfigString(revisionPrefix)}\"")
         buildConfigField("String", "BUILD_TIMESTAMP", "\"${escapeBuildConfigString(buildStamp)}\"")
@@ -117,10 +137,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-    }
-
     buildFeatures {
         compose = true
         buildConfig = true
@@ -132,6 +148,31 @@ android {
         // automático no assembleRelease; corre `./gradlew lint` quando quiseres análise.
         checkReleaseBuilds = false
     }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17)
+        // Kotlin 2.2 warning reduction: keep constructor annotations
+        // semantics stable across upcoming defaults.
+        freeCompilerArgs.add("-Xannotation-default-target=param-property")
+    }
+}
+
+baselineProfile {
+    warnings {
+        // We intentionally run on AGP 9.1.1; keep build output clean.
+        maxAgpVersion = false
+    }
+}
+
+val releaseWellPaidApk by tasks.registering(Copy::class) {
+    dependsOn("assembleRelease")
+    val releaseDir = layout.buildDirectory.dir("outputs/apk/release")
+    val namedDir = releaseDir.map { it.dir("named") }
+    from(releaseDir.map { it.file("app-release.apk") })
+    into(namedDir)
+    rename("app-release.apk", "wellpaid-$derivedVersionName.apk")
 }
 
 dependencies {
@@ -170,8 +211,8 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences:1.1.1")
     implementation("androidx.work:work-runtime-ktx:2.10.1")
 
-    implementation("com.google.dagger:hilt-android:2.52")
-    ksp("com.google.dagger:hilt-android-compiler:2.52")
+    implementation("com.google.dagger:hilt-android:2.59.2")
+    ksp("com.google.dagger:hilt-android-compiler:2.59.2")
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")

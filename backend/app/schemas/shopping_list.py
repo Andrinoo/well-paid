@@ -51,6 +51,10 @@ class ShoppingListItemCreate(BaseModel):
         gt=0,
         description="Preço unitário em centavos (total da linha = unitário × quantidade)",
     )
+    is_picked: bool = Field(
+        default=True,
+        description="Se o item já foi pego no mercado. Omitido em clientes antigos: assume true.",
+    )
 
     @field_validator("label")
     @classmethod
@@ -66,6 +70,7 @@ class ShoppingListItemPatch(BaseModel):
         description="Preço unitário em centavos",
     )
     sort_order: int | None = Field(default=None, ge=0)
+    is_picked: bool | None = None
 
     @field_validator("label")
     @classmethod
@@ -93,6 +98,7 @@ class ShoppingListItemResponse(BaseModel):
         default=None,
         description="Preço unitário em centavos; total da linha = unitário × quantidade",
     )
+    is_picked: bool = True
 
 
 class ShoppingListSummaryResponse(BaseModel):

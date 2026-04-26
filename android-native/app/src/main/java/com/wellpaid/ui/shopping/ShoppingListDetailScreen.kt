@@ -31,13 +31,18 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -78,7 +83,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -104,6 +108,8 @@ import com.wellpaid.ui.theme.wellPaidScreenHorizontalPadding
 import com.wellpaid.ui.theme.wellPaidTopAppBarColors
 import com.wellpaid.util.centsToBrlInput
 import com.wellpaid.util.formatBrlFromCents
+import com.wellpaid.util.shoppingListLabelMatchesSearch
+import com.wellpaid.util.shoppingListSearchMatchRank
 import com.wellpaid.util.formatIsoDateForList
 import com.wellpaid.util.localDateToIso
 import com.wellpaid.util.parseBrlToCents
@@ -114,16 +120,19 @@ import java.util.Locale
 /** Altura comum dos campos quantidade + preço na linha do item (~40dp + 10%). */
 private val ShoppingItemRowFieldsHeight = 44.dp
 
-private fun ShoppingListDetailDto.sumLineCents(): Int = items.sumOf { row ->
+private fun ShoppingListDetailDto.sumPickedLineCents(): Int = items.filter { it.isPicked }.sumOf { row ->
     val u = row.lineAmountCents ?: return@sumOf 0
     u * row.quantity
 }
 
-private fun ShoppingListDetailDto.totalUnits(): Int = items.sumOf { it.quantity }
+private fun ShoppingListDetailDto.totalPickedUnits(): Int = items.filter { it.isPicked }.sumOf { it.quantity }
+
+private fun ShoppingListDetailDto.pickedItemCount(): Int = items.count { it.isPicked }
 
 @Composable
 private fun DraftListFooter(
-    itemCount: Int,
+    pickedCount: Int,
+    totalCount: Int,
     sumLineCents: Int,
     isSaving: Boolean,
     canCompletePurchase: Boolean,
@@ -140,9 +149,15 @@ private fun DraftListFooter(
         HorizontalDivider(color = WellPaidNavy.copy(alpha = 0.12f))
         Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
             Text(
-                text = pluralStringResource(R.plurals.shopping_items_total_footer, itemCount, itemCount),
+                text = stringResource(R.string.shopping_items_footer_picked, pickedCount, totalCount),
                 style = MaterialTheme.typography.bodySmall,
                 color = WellPaidNavy.copy(alpha = 0.58f),
+            )
+            Spacer(Modifier.padding(top = 4.dp))
+            Text(
+                text = stringResource(R.string.shopping_estimated_total_picked_hint),
+                style = MaterialTheme.typography.labelSmall,
+                color = WellPaidNavy.copy(alpha = 0.5f),
             )
             Spacer(Modifier.padding(top = 8.dp))
             Row(
@@ -253,6 +268,9 @@ fun ShoppingListDetailScreen(
     var editItem by remember { mutableStateOf<ShoppingListItemDto?>(null) }
     var showRemoveItem by remember { mutableStateOf<ShoppingListItemDto?>(null) }
     var showCompleteSheet by remember { mutableStateOf(false) }
+    var listSearchInput by remember { mutableStateOf("") }
+    var listSearchAppliedQuery by remember { mutableStateOf("") }
+    var showPickedItems by remember { mutableStateOf(false) }
 
     val isDraft = detail?.status?.equals("draft", true) == true
     val isCompleted = detail?.status?.equals("completed", true) == true
@@ -260,6 +278,12 @@ fun ShoppingListDetailScreen(
     val canEditMeta = detail != null && isMine && (isDraft || isCompleted)
     val canEditItems = detail != null && isMine && (isDraft || isCompleted)
     val readOnlyOtherDraft = detail != null && !isMine && isDraft
+    val focusManager = LocalFocusManager.current
+
+    LaunchedEffect(listSearchInput) {
+        delay(250)
+        listSearchAppliedQuery = listSearchInput
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -301,12 +325,14 @@ fun ShoppingListDetailScreen(
         },
         bottomBar = {
             if (detail != null && isMine && isDraft) {
-                val sumLines = detail.sumLineCents()
+                val sumLines = detail.sumPickedLineCents()
+                val picked = detail.pickedItemCount()
                 DraftListFooter(
-                    itemCount = detail.items.size,
+                    pickedCount = picked,
+                    totalCount = detail.items.size,
                     sumLineCents = sumLines,
                     isSaving = state.isSaving,
-                    canCompletePurchase = detail.items.isNotEmpty(),
+                    canCompletePurchase = picked > 0,
                     onAddItem = { showAddItem = true },
                     onCompletePurchase = { showCompleteSheet = true },
                     modifier = Modifier
@@ -396,6 +422,18 @@ fun ShoppingListDetailScreen(
                     }
                 }
                 else -> {
+                    val filteredItems = remember(detail.items, listSearchAppliedQuery) {
+                        val q = listSearchAppliedQuery.trim()
+                        if (q.isEmpty()) {
+                            detail.items
+                        } else {
+                            detail.items
+                                .filter { shoppingListLabelMatchesSearch(it.label, q) }
+                                .sortedByDescending { shoppingListSearchMatchRank(it.label, q) }
+                        }
+                    }
+                    val pendingItems = remember(filteredItems) { filteredItems.filterNot { it.isPicked } }
+                    val pickedItems = remember(filteredItems) { filteredItems.filter { it.isPicked } }
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
@@ -425,15 +463,15 @@ fun ShoppingListDetailScreen(
                             if (isCompleted) {
                                 CompletedSummary(
                                     detail = detail,
-                                    sumLines = detail.sumLineCents(),
-                                    totalUnits = detail.totalUnits(),
+                                    sumLines = detail.sumPickedLineCents(),
+                                    totalUnits = detail.totalPickedUnits(),
                                     isOwner = isMine,
                                     onSyncTotal = {
                                         if (
                                             isMine &&
                                             detail.totalCents != null &&
-                                            detail.sumLineCents() > 0 &&
-                                            detail.totalCents != detail.sumLineCents()
+                                            detail.sumPickedLineCents() > 0 &&
+                                            detail.totalCents != detail.sumPickedLineCents()
                                         ) {
                                             viewModel.syncTotalFromLines()
                                         }
@@ -449,28 +487,173 @@ fun ShoppingListDetailScreen(
                                 color = WellPaidNavy,
                             )
                             Spacer(Modifier.padding(top = 8.dp))
-                        }
-                        items(detail.items, key = { it.id }) { line ->
-                            ItemLineCard(
-                                line = line,
-                                canEdit = canEditItems,
-                                isSaving = state.isSaving,
-                                onEdit = { editItem = line },
-                                onRemove = { showRemoveItem = line },
-                                onCommitQuantity = { qty ->
-                                    viewModel.patchItem(
-                                        itemId = line.id,
-                                        quantity = qty,
+                            OutlinedTextField(
+                                value = listSearchInput,
+                                onValueChange = { listSearchInput = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                enabled = !state.isSaving,
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                                keyboardActions = KeyboardActions(
+                                    onSearch = {
+                                        listSearchAppliedQuery = listSearchInput
+                                        focusManager.clearFocus()
+                                    },
+                                    onDone = {
+                                        listSearchAppliedQuery = listSearchInput
+                                        focusManager.clearFocus()
+                                    },
+                                ),
+                                placeholder = {
+                                    Text(stringResource(R.string.shopping_list_search_placeholder))
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.Search,
+                                        contentDescription = null,
+                                        tint = WellPaidNavy.copy(alpha = 0.55f),
                                     )
                                 },
-                                onCommitCost = { cents, clear ->
-                                    viewModel.patchItem(
-                                        itemId = line.id,
-                                        lineAmountCents = cents,
-                                        clearLineAmount = clear,
-                                    )
+                                trailingIcon = {
+                                    if (listSearchInput.isNotEmpty()) {
+                                        IconButton(
+                                            onClick = {
+                                                listSearchInput = ""
+                                                listSearchAppliedQuery = ""
+                                            },
+                                            modifier = Modifier.size(40.dp),
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Close,
+                                                contentDescription = stringResource(R.string.shopping_list_search_clear_cd),
+                                                tint = WellPaidNavy.copy(alpha = 0.72f),
+                                            )
+                                        }
+                                    }
                                 },
+                                shape = RoundedCornerShape(10.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedTextColor = WellPaidNavy,
+                                    unfocusedTextColor = WellPaidNavy,
+                                    focusedContainerColor = WellPaidCreamMuted,
+                                    unfocusedContainerColor = WellPaidCreamMuted,
+                                    focusedBorderColor = WellPaidNavy.copy(alpha = 0.45f),
+                                    unfocusedBorderColor = WellPaidNavy.copy(alpha = 0.22f),
+                                ),
                             )
+                            if (listSearchAppliedQuery.isNotBlank() && filteredItems.isEmpty()) {
+                                Spacer(Modifier.padding(top = 8.dp))
+                                Text(
+                                    text = stringResource(R.string.shopping_list_search_no_results),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = WellPaidNavy.copy(alpha = 0.55f),
+                                )
+                            }
+                            if (filteredItems.isNotEmpty()) {
+                                Spacer(Modifier.padding(top = 10.dp))
+                                Text(
+                                    text = stringResource(
+                                        R.string.shopping_items_section_summary,
+                                        pendingItems.size,
+                                        pickedItems.size,
+                                    ),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = WellPaidNavy.copy(alpha = 0.62f),
+                                )
+                            }
+                            Spacer(Modifier.padding(top = 8.dp))
+                        }
+                        if (pendingItems.isNotEmpty()) {
+                            item {
+                                SectionHeader(
+                                    title = stringResource(
+                                        R.string.shopping_items_pending_section,
+                                        pendingItems.size,
+                                    ),
+                                    expanded = true,
+                                    onToggle = null,
+                                )
+                            }
+                            items(pendingItems, key = { it.id }) { line ->
+                                ItemLineCard(
+                                    line = line,
+                                    canEdit = canEditItems,
+                                    isSaving = state.isSaving,
+                                    onEdit = { editItem = line },
+                                    onRemove = { showRemoveItem = line },
+                                    onTogglePicked = { picked ->
+                                        viewModel.patchItem(
+                                            itemId = line.id,
+                                            isPicked = picked,
+                                        )
+                                    },
+                                    onCommitQuantity = { qty ->
+                                        viewModel.patchItem(
+                                            itemId = line.id,
+                                            quantity = qty,
+                                        )
+                                    },
+                                    onCommitCost = { cents, clear ->
+                                        viewModel.patchItem(
+                                            itemId = line.id,
+                                            lineAmountCents = cents,
+                                            clearLineAmount = clear,
+                                        )
+                                    },
+                                )
+                            }
+                        }
+                        if (pickedItems.isNotEmpty()) {
+                            item {
+                                SectionHeader(
+                                    title = stringResource(
+                                        R.string.shopping_items_picked_section,
+                                        pickedItems.size,
+                                    ),
+                                    expanded = showPickedItems,
+                                    onToggle = { showPickedItems = !showPickedItems },
+                                )
+                            }
+                            if (showPickedItems) {
+                                items(pickedItems, key = { it.id }) { line ->
+                                    ItemLineCard(
+                                        line = line,
+                                        canEdit = canEditItems,
+                                        isSaving = state.isSaving,
+                                        onEdit = { editItem = line },
+                                        onRemove = { showRemoveItem = line },
+                                        onTogglePicked = { picked ->
+                                            viewModel.patchItem(
+                                                itemId = line.id,
+                                                isPicked = picked,
+                                            )
+                                        },
+                                        onCommitQuantity = { qty ->
+                                            viewModel.patchItem(
+                                                itemId = line.id,
+                                                quantity = qty,
+                                            )
+                                        },
+                                        onCommitCost = { cents, clear ->
+                                            viewModel.patchItem(
+                                                itemId = line.id,
+                                                lineAmountCents = cents,
+                                                clearLineAmount = clear,
+                                            )
+                                        },
+                                    )
+                                }
+                            }
+                        }
+                        if (pendingItems.isEmpty() && pickedItems.isEmpty() && listSearchAppliedQuery.isBlank()) {
+                            item {
+                                Text(
+                                    text = stringResource(R.string.shopping_list_search_no_results),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = WellPaidNavy.copy(alpha = 0.55f),
+                                    modifier = Modifier.padding(vertical = 8.dp),
+                                )
+                            }
                         }
                     }
                 }
@@ -526,6 +709,7 @@ fun ShoppingListDetailScreen(
             onAutoGroceryPriceHintsChange = { viewModel.setAutoGroceryPriceHints(it) },
             groceryHits = state.groceryPriceHits,
             groceryLoading = state.groceryPriceSearchLoading,
+            groceryMessage = state.groceryPriceSearchMessage,
             onLabelChanged = { viewModel.onShoppingItemLabelForPriceHints(it) },
             onGroceryHintPicked = { viewModel.clearGroceryPriceHints() },
             onDismiss = {
@@ -553,6 +737,7 @@ fun ShoppingListDetailScreen(
             showClearPrice = line.lineAmountCents != null,
             groceryHits = state.groceryPriceHits,
             groceryLoading = state.groceryPriceSearchLoading,
+            groceryMessage = state.groceryPriceSearchMessage,
             onLabelChanged = { viewModel.onShoppingItemLabelForPriceHints(it) },
             onGroceryHintPicked = { viewModel.clearGroceryPriceHints() },
             onDismiss = {
@@ -613,6 +798,44 @@ fun ShoppingListDetailScreen(
                 }
             },
         )
+    }
+}
+
+@Composable
+private fun SectionHeader(
+    title: String,
+    expanded: Boolean,
+    onToggle: (() -> Unit)?,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 4.dp, bottom = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = WellPaidNavy,
+            modifier = Modifier.weight(1f),
+        )
+        if (onToggle != null) {
+            IconButton(
+                onClick = onToggle,
+                modifier = Modifier.size(36.dp),
+            ) {
+                Icon(
+                    imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = if (expanded) {
+                        stringResource(R.string.shopping_section_hide)
+                    } else {
+                        stringResource(R.string.shopping_section_show)
+                    },
+                    tint = WellPaidNavy.copy(alpha = 0.72f),
+                )
+            }
+        }
     }
 }
 
@@ -906,10 +1129,17 @@ private fun ItemLineCard(
     isSaving: Boolean,
     onEdit: () -> Unit,
     onRemove: () -> Unit,
+    onTogglePicked: (Boolean) -> Unit,
     onCommitQuantity: (Int) -> Unit,
     onCommitCost: (cents: Int?, clearLineAmount: Boolean) -> Unit,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
+    val pickedCheckboxCd = stringResource(R.string.shopping_item_picked_cd)
+    val subtotalCents = run {
+        val u = line.lineAmountCents ?: return@run null
+        if (u > 0 && line.quantity > 0) (u.toLong() * line.quantity).toInt().coerceAtLeast(0) else null
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -920,16 +1150,30 @@ private fun ItemLineCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            val unitCents = line.lineAmountCents
-            val showLineSubtotal = unitCents != null && unitCents > 0 && line.quantity > 0
+            if (canEdit) {
+                Checkbox(
+                    checked = line.isPicked,
+                    onCheckedChange = if (!isSaving) onTogglePicked else null,
+                    modifier = Modifier
+                        .size(48.dp)
+                        .padding(top = 2.dp)
+                        .semantics {
+                            contentDescription = pickedCheckboxCd
+                        },
+                    enabled = !isSaving,
+                    colors = CheckboxDefaults.colors(
+                        checkedColor = WellPaidGold,
+                        checkmarkColor = Color.Black,
+                        uncheckedColor = WellPaidNavy.copy(alpha = 0.55f),
+                    ),
+                )
+            }
             Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(end = 4.dp),
+                modifier = Modifier.weight(1f),
             ) {
                 Text(
                     text = line.label,
@@ -937,48 +1181,50 @@ private fun ItemLineCard(
                         lineHeight = 20.sp,
                     ),
                     fontWeight = FontWeight.SemiBold,
-                    color = WellPaidNavy,
-                    maxLines = 2,
+                    color = if (!line.isPicked && canEdit) {
+                        WellPaidNavy.copy(alpha = 0.55f)
+                    } else {
+                        WellPaidNavy
+                    },
+                    maxLines = 3,
                     overflow = TextOverflow.Ellipsis,
                 )
-                if (showLineSubtotal) {
-                    val subtotal = (unitCents.toLong() * line.quantity)
-                        .toInt()
-                        .coerceAtLeast(0)
+                if (subtotalCents != null) {
                     Text(
-                        text = formatBrlFromCents(subtotal),
+                        text = formatBrlFromCents(subtotalCents),
                         style = MaterialTheme.typography.labelSmall,
                         color = WellPaidNavy.copy(alpha = 0.5f),
                         maxLines = 1,
                         modifier = Modifier.padding(top = 2.dp),
                     )
                 }
-            }
-            Row(
-                modifier = Modifier
-                    .weight(0.92f)
-                    .height(ShoppingItemRowFieldsHeight),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                ItemLineQtyField(
-                    line = line,
-                    canEdit = canEdit,
-                    isSaving = isSaving,
-                    onCommitQuantity = onCommitQuantity,
+                Spacer(Modifier.height(8.dp))
+                Row(
                     modifier = Modifier
-                        .weight(0.35f)
-                        .fillMaxHeight(),
-                )
-                ItemLineCostField(
-                    line = line,
-                    canEdit = canEdit,
-                    isSaving = isSaving,
-                    onCommitCost = onCommitCost,
-                    modifier = Modifier
-                        .weight(0.65f)
-                        .fillMaxHeight(),
-                )
+                        .fillMaxWidth()
+                        .height(ShoppingItemRowFieldsHeight),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    ItemLineQtyField(
+                        line = line,
+                        canEdit = canEdit,
+                        isSaving = isSaving,
+                        onCommitQuantity = onCommitQuantity,
+                        modifier = Modifier
+                            .weight(0.35f)
+                            .fillMaxHeight(),
+                    )
+                    ItemLineCostField(
+                        line = line,
+                        canEdit = canEdit,
+                        isSaving = isSaving,
+                        onCommitCost = onCommitCost,
+                        modifier = Modifier
+                            .weight(0.65f)
+                            .fillMaxHeight(),
+                    )
+                }
             }
             if (canEdit) {
                 Box {
@@ -1080,6 +1326,7 @@ private fun AddEditItemBottomSheet(
     showClearPrice: Boolean = false,
     groceryHits: List<GoalProductHitDto> = emptyList(),
     groceryLoading: Boolean = false,
+    groceryMessage: String? = null,
     onLabelChanged: (String) -> Unit = {},
     /** Chamado ao escolher uma sugestão: limpar lista e aproximar o botão Guardar. */
     onGroceryHintPicked: () -> Unit = {},
@@ -1252,6 +1499,16 @@ private fun AddEditItemBottomSheet(
                             strokeWidth = 2.dp,
                         )
                     }
+                }
+            }
+            if (!groceryLoading && !groceryMessage.isNullOrBlank()) {
+                item {
+                    Text(
+                        text = groceryMessage,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(top = 10.dp),
+                    )
                 }
             }
             if (groceryHits.isNotEmpty()) {
