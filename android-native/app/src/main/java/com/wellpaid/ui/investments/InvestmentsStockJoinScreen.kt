@@ -215,6 +215,14 @@ fun InvestmentsStockJoinScreen(
                                 color = WellPaidNavy.copy(alpha = 0.72f),
                             )
                         }
+                        if (state.quoteVolume24h != null) {
+                            Text(
+                                text = stringResource(R.string.investments_quote_metric_volume) + ": " +
+                                    formatDecimalPtBr(state.quoteVolume24h!!, minFractionDigits = 0, maxFractionDigits = 0),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = WellPaidNavy.copy(alpha = 0.72f),
+                            )
+                        }
                         quoteMeta?.let { meta ->
                             Text(
                                 text = meta,

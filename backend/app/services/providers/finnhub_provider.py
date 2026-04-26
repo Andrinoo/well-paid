@@ -25,4 +25,5 @@ class FinnhubProvider:
             "change_24h_percent": raw.get("change_24h_percent"),
             "day_high": raw.get("day_high"),
             "day_low": raw.get("day_low"),
+            "volume_24h": raw.get("volume_24h"),
         }

@@ -83,6 +83,7 @@ data class StockQuoteDto(
     @SerialName("change_24h_percent") val change24hPercent: Double? = null,
     @SerialName("day_high") val dayHigh: Double? = null,
     @SerialName("day_low") val dayLow: Double? = null,
+    @SerialName("volume_24h") val volume24h: Double? = null,
     val error: String? = null,
 )
 
@@ -93,6 +94,12 @@ data class TickerSearchItemDto(
     @SerialName("instrument_type") val instrumentType: String = "stock",
     val source: String = "unknown",
     val confidence: Double? = null,
+    @SerialName("last_price") val lastPrice: Double? = null,
+    val currency: String? = null,
+    @SerialName("change_24h_percent") val change24hPercent: Double? = null,
+    @SerialName("day_high") val dayHigh: Double? = null,
+    @SerialName("day_low") val dayLow: Double? = null,
+    @SerialName("volume_24h") val volume24h: Double? = null,
 )
 
 @Serializable

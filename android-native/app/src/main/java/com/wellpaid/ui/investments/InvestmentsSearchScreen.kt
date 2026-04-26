@@ -28,6 +28,7 @@ import com.wellpaid.ui.theme.WellPaidCream
 import com.wellpaid.ui.theme.WellPaidCreamMuted
 import com.wellpaid.ui.theme.WellPaidGold
 import com.wellpaid.ui.theme.WellPaidNavy
+import com.wellpaid.util.formatDecimalPtBr
 import java.util.Locale
 
 @Composable
@@ -107,6 +108,23 @@ fun InvestmentsSearchScreen(
                             text = "${item.source.uppercase(Locale.ROOT)} · ${instrumentLabelForKeyLocal(item.instrumentType)}",
                             style = MaterialTheme.typography.labelSmall,
                         )
+                        if (item.instrumentType.equals("crypto", ignoreCase = true) && item.lastPrice != null) {
+                            val ccy = (item.currency ?: "USD").uppercase(Locale.ROOT)
+                            val prefix = when (ccy) {
+                                "USD" -> "US$ "
+                                "BRL" -> "R$ "
+                                else -> "$ccy "
+                            }
+                            val changeLabel = item.change24hPercent?.let { pct ->
+                                val sign = if (pct > 0.0) "+" else ""
+                                " · $sign${formatDecimalPtBr(pct, 2, 2)}%"
+                            }.orEmpty()
+                            Text(
+                                text = prefix + formatDecimalPtBr(item.lastPrice) + changeLabel,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if ((item.change24hPercent ?: 0.0) >= 0.0) Color(0xFF2E7D32) else Color(0xFFC62828),
+                            )
+                        }
                     }
                 }
                 Spacer(Modifier.height(6.dp))
@@ -154,6 +172,7 @@ private fun instrumentLabelForKeyLocal(key: String): String {
         "fixed_income" -> stringResource(R.string.investments_bucket_fixed_income)
         "tesouro", "treasury" -> stringResource(R.string.investments_bucket_tesouro)
         "stocks", "stock", "fii", "bdr", "etf" -> stringResource(R.string.investments_bucket_stocks)
+        "crypto" -> stringResource(R.string.investments_bucket_crypto)
         else -> key.uppercase(Locale.ROOT)
     }
 }

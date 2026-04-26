@@ -816,6 +816,7 @@
     <string name="investments_quote_metric_change">Change</string>
     <string name="investments_quote_metric_high">High</string>
     <string name="investments_quote_metric_low">Low</string>
+    <string name="investments_quote_metric_volume">24h volume</string>
     <string name="investments_view_compact">Compact list</string>
     <string name="investments_view_cards">Cards</string>
     <string name="investments_view_details">Details</string>

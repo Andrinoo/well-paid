@@ -76,4 +76,5 @@ def fetch_crypto_quote_finnhub(symbol: str, *, quote_currency: str = "USD") -> d
         "change_24h_percent": _opt_float("dp"),
         "day_high": _opt_float("h"),
         "day_low": _opt_float("l"),
+        "volume_24h": _opt_float("v"),
     }

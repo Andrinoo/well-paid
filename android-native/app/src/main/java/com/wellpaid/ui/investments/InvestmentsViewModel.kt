@@ -73,6 +73,12 @@ data class TickerSuggestionUi(
     val instrumentType: String = "stock",
     val source: String = "unknown",
     val confidence: Double? = null,
+    val lastPrice: Double? = null,
+    val currency: String? = null,
+    val change24hPercent: Double? = null,
+    val dayHigh: Double? = null,
+    val dayLow: Double? = null,
+    val volume24h: Double? = null,
 )
 
 data class FundamentalPreviewUi(
@@ -161,6 +167,7 @@ data class InvestmentsUiState(
     val quoteChange24hPercent: Double? = null,
     val quoteDayHigh: Double? = null,
     val quoteDayLow: Double? = null,
+    val quoteVolume24h: Double? = null,
     val infoMessage: String? = null,
     val errorMessage: String? = null,
     val positionDetailsFundamentals: FundamentalPreviewUi? = null,
@@ -324,6 +331,12 @@ class InvestmentsViewModel @Inject constructor(
                                             instrumentType = row.instrumentType,
                                             source = row.source,
                                             confidence = row.confidence,
+                                            lastPrice = row.lastPrice,
+                                            currency = row.currency,
+                                            change24hPercent = row.change24hPercent,
+                                            dayHigh = row.dayHigh,
+                                            dayLow = row.dayLow,
+                                            volume24h = row.volume24h,
                                         )
                                     },
                                 )
@@ -383,6 +396,12 @@ class InvestmentsViewModel @Inject constructor(
                                             instrumentType = row.instrumentType,
                                             source = row.source,
                                             confidence = row.confidence,
+                                            lastPrice = row.lastPrice,
+                                            currency = row.currency,
+                                            change24hPercent = row.change24hPercent,
+                                            dayHigh = row.dayHigh,
+                                            dayLow = row.dayLow,
+                                            volume24h = row.volume24h,
                                         )
                                     },
                                 )
@@ -488,6 +507,7 @@ class InvestmentsViewModel @Inject constructor(
                 quoteChange24hPercent = null,
                 quoteDayHigh = null,
                 quoteDayLow = null,
+                quoteVolume24h = null,
                 newPositionAnnualRateText = "",
                 tickerSuggestions = emptyList(),
                 globalTickerSuggestions = emptyList(),
@@ -520,6 +540,7 @@ class InvestmentsViewModel @Inject constructor(
                 quoteChange24hPercent = null,
                 quoteDayHigh = null,
                 quoteDayLow = null,
+                quoteVolume24h = null,
                 tickerSuggestions = emptyList(),
             )
         }
@@ -538,6 +559,7 @@ class InvestmentsViewModel @Inject constructor(
                 quoteChange24hPercent = null,
                 quoteDayHigh = null,
                 quoteDayLow = null,
+                quoteVolume24h = null,
                 tickerSuggestions = emptyList(),
             )
         }
@@ -819,6 +841,7 @@ class InvestmentsViewModel @Inject constructor(
                         quoteChange24hPercent = cached.change24hPercent.takeIf { hasPrice },
                         quoteDayHigh = cached.dayHigh.takeIf { hasPrice },
                         quoteDayLow = cached.dayLow.takeIf { hasPrice },
+                        quoteVolume24h = cached.volume24h.takeIf { hasPrice },
                         averagePriceText = if (shouldAutofillAverage && averageFromQuote != null) averageFromQuote else it.averagePriceText,
                     )
                 }
@@ -855,6 +878,7 @@ class InvestmentsViewModel @Inject constructor(
                             quoteChange24hPercent = q.change24hPercent.takeIf { hasPrice },
                             quoteDayHigh = q.dayHigh.takeIf { hasPrice },
                             quoteDayLow = q.dayLow.takeIf { hasPrice },
+                            quoteVolume24h = q.volume24h.takeIf { hasPrice },
                             averagePriceText = if (shouldAutofillAverage && averageFromQuote != null) averageFromQuote else it.averagePriceText,
                         )
                     }
@@ -1381,6 +1405,7 @@ class InvestmentsViewModel @Inject constructor(
                 quoteChange24hPercent = null,
                 quoteDayHigh = null,
                 quoteDayLow = null,
+                quoteVolume24h = null,
                 newPositionAnnualRateText = "",
             )
         }
@@ -1403,6 +1428,7 @@ class InvestmentsViewModel @Inject constructor(
                 quoteChange24hPercent = null,
                 quoteDayHigh = null,
                 quoteDayLow = null,
+                quoteVolume24h = null,
                 newPositionAnnualRateText = "",
                 errorMessage = null,
                 infoMessage = null,

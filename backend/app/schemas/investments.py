@@ -79,6 +79,7 @@ class StockQuoteOut(BaseModel):
     change_24h_percent: float | None = None
     day_high: float | None = None
     day_low: float | None = None
+    volume_24h: float | None = None
     error: str | None = None
 
 
@@ -88,6 +89,12 @@ class TickerSearchItemOut(BaseModel):
     instrument_type: str = "stock"
     source: str = "unknown"
     confidence: float | None = Field(default=None, ge=0, le=1)
+    last_price: float | None = Field(default=None, ge=0)
+    currency: str | None = None
+    change_24h_percent: float | None = None
+    day_high: float | None = Field(default=None, ge=0)
+    day_low: float | None = Field(default=None, ge=0)
+    volume_24h: float | None = Field(default=None, ge=0)
 
 
 class StockHistoryPointOut(BaseModel):

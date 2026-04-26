@@ -109,6 +109,7 @@ def read_stock_quote(
         change_24h_percent=_opt_f("change_24h_percent"),
         day_high=_opt_f("day_high"),
         day_low=_opt_f("day_low"),
+        volume_24h=_opt_f("volume_24h"),
         error=None,
     )
 
@@ -160,6 +161,14 @@ def search_tickers(
             instrument_type=normalize_asset_type(str(r.get("instrument_type") or "stock"), default="stock"),
             source=str(r.get("source") or "unknown"),
             confidence=r.get("confidence"),
+            last_price=float(r["last_price"]) if isinstance(r.get("last_price"), (int, float)) else None,
+            currency=str(r.get("currency")) if r.get("currency") is not None else None,
+            change_24h_percent=(
+                float(r["change_24h_percent"]) if isinstance(r.get("change_24h_percent"), (int, float)) else None
+            ),
+            day_high=float(r["day_high"]) if isinstance(r.get("day_high"), (int, float)) else None,
+            day_low=float(r["day_low"]) if isinstance(r.get("day_low"), (int, float)) else None,
+            volume_24h=float(r["volume_24h"]) if isinstance(r.get("volume_24h"), (int, float)) else None,
         )
         for r in rows
     ]

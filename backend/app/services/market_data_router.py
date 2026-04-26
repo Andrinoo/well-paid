@@ -59,7 +59,7 @@ class MarketDataRouterService:
             raise ValueError("range_invalid")
         return key
 
-    def search_tickers(self, query: str, limit: int = 12) -> list[dict[str, str]]:
+    def search_tickers(self, query: str, limit: int = 12) -> list[dict[str, Any]]:
         q = (query or "").strip().upper()
         if len(q) < 3:
             return []
@@ -68,7 +68,8 @@ class MarketDataRouterService:
         raw_rows = self.b3.search_tickers(query=q, limit=max(40, limit))
         if not raw_rows:
             raw_rows = self.brapi.search_tickers(query=q, limit=max(40, limit))
-        return self._rank_and_trim_search_rows([*synthetic, *synthetic_crypto, *raw_rows], query=q, limit=limit)
+        ranked = self._rank_and_trim_search_rows([*synthetic, *synthetic_crypto, *raw_rows], query=q, limit=limit)
+        return self._enrich_crypto_search_rows(ranked)
 
     def quote(self, symbol: str) -> dict[str, Any] | None:
         ticker = self._normalize_ticker(symbol)
@@ -343,6 +344,39 @@ class MarketDataRouterService:
             if any(token in upper_name for token in ("FII", "FUNDO IMOBILI", "IMOBILIARIO", "IMOBILIÁRIO")):
                 return "fii"
         return "stock"
+
+    def _enrich_crypto_search_rows(self, rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """
+        Adds market snapshot fields for crypto suggestions so the app can show
+        price/variation directly in the search results.
+        """
+        out: list[dict[str, Any]] = []
+        enriched = 0
+        for row in rows:
+            item = dict(row)
+            if str(item.get("instrument_type") or "").lower() == "crypto" and enriched < 3:
+                symbol = str(item.get("symbol") or "").upper().strip()
+                if symbol:
+                    quote = self.quote(symbol) or {}
+                    lp = quote.get("last_price")
+                    if isinstance(lp, (int, float)) and float(lp) > 0:
+                        item["last_price"] = float(lp)
+                        item["currency"] = str(quote.get("currency") or "USD")
+                        c24 = quote.get("change_24h_percent")
+                        if isinstance(c24, (int, float)):
+                            item["change_24h_percent"] = float(c24)
+                        hi = quote.get("day_high")
+                        lo = quote.get("day_low")
+                        vol = quote.get("volume_24h")
+                        if isinstance(hi, (int, float)):
+                            item["day_high"] = float(hi)
+                        if isinstance(lo, (int, float)):
+                            item["day_low"] = float(lo)
+                        if isinstance(vol, (int, float)):
+                            item["volume_24h"] = float(vol)
+                        enriched += 1
+            out.append(item)
+        return out
 
 
 market_data_router = MarketDataRouterService()
