@@ -229,7 +229,6 @@ fun GoalDetailScreen(
                 history = state.priceHistory,
                 fallbackReferencePriceCents = goal.referencePriceCents,
                 fallbackAlternatives = goal.priceAlternatives,
-                    fallbackEvolutionValues = state.goalEvolutionValues,
                 modifier = Modifier.fillMaxWidth(),
             )
 
@@ -409,25 +408,19 @@ private fun GoalPriceBarsChart(
     history: List<GoalPriceHistoryItemDto>,
     fallbackReferencePriceCents: Int?,
     fallbackAlternatives: List<GoalPriceAlternativeDto>,
-    fallbackEvolutionValues: List<Int>,
     modifier: Modifier = Modifier,
 ) {
-    val chartValues = remember(history, fallbackReferencePriceCents, fallbackAlternatives, fallbackEvolutionValues) {
+    val chartValues = remember(history, fallbackReferencePriceCents, fallbackAlternatives) {
         val historyValues = history.map { it.priceCents }.filter { it > 0 }
         if (historyValues.isNotEmpty()) {
             historyValues
         } else {
-            val priceFallback = buildList {
+            buildList {
                 fallbackReferencePriceCents?.takeIf { it > 0 }?.let { add(it) }
                 fallbackAlternatives
                     .map { it.priceCents }
                     .filter { it > 0 }
                     .forEach { add(it) }
-            }
-            if (priceFallback.isNotEmpty()) {
-                priceFallback
-            } else {
-                fallbackEvolutionValues.ifEmpty { listOf(0) }
             }
         }
     }

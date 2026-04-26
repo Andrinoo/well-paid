@@ -95,15 +95,6 @@ data class GoalContributeDto(
 )
 
 @Serializable
-data class GoalContributionItemDto(
-    val id: String,
-    @SerialName("goal_id") val goalId: String,
-    @SerialName("amount_cents") val amountCents: Int,
-    val note: String? = null,
-    @SerialName("recorded_at") val recordedAt: String,
-)
-
-@Serializable
 data class GoalPreviewFromUrlRequestDto(val url: String)
 
 @Serializable
