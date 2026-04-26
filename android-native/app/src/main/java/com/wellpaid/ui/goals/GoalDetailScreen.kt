@@ -3,7 +3,10 @@ package com.wellpaid.ui.goals
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,9 +15,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -36,6 +41,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -43,10 +49,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.max
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -162,7 +172,7 @@ fun GoalDetailScreen(
                         model = thumb,
                         contentDescription = null,
                         modifier = Modifier
-                            .size(72.dp)
+                            .size(36.dp)
                             .clip(RoundedCornerShape(12.dp)),
                         contentScale = ContentScale.Crop,
                     )
@@ -171,7 +181,9 @@ fun GoalDetailScreen(
                 Column(Modifier.weight(1f)) {
                     Text(
                         text = goal.title,
-                        style = MaterialTheme.typography.headlineSmall,
+                        style = MaterialTheme.typography.headlineSmall.copy(
+                            fontSize = MaterialTheme.typography.headlineSmall.fontSize * 0.8f,
+                        ),
                         fontWeight = FontWeight.SemiBold,
                     )
                     Spacer(Modifier.height(8.dp))
@@ -249,12 +261,6 @@ fun GoalDetailScreen(
                 )
                 Spacer(Modifier.height(6.dp))
                 if (url.isNotEmpty()) {
-                    Text(
-                        text = url,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(Modifier.height(6.dp))
                     TextButton(onClick = { runCatching { uriHandler.openUri(url) } }) {
                         Text(stringResource(R.string.goal_detail_open_link))
                     }
@@ -315,36 +321,69 @@ fun GoalDetailScreen(
 
             if (goal.isMine) {
                 Spacer(Modifier.height(24.dp))
-                OutlinedButton(
-                    onClick = { onEditGoal(goal.id) },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !state.isSaving && !state.isDeleting,
-                ) {
-                    Text(stringResource(R.string.goal_detail_edit_button))
-                }
-                if (goal.currentCents == 0) {
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedButton(
-                        onClick = { showDeleteConfirm = true },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !state.isSaving && !state.isDeleting,
-                    ) {
-                        Text(
-                            text = stringResource(R.string.goal_detail_delete_button),
-                            color = MaterialTheme.colorScheme.error,
+                val actions = buildList {
+                    add(
+                        GoalDetailAction(
+                            label = stringResource(R.string.goal_detail_edit_button),
+                            enabled = !state.isSaving && !state.isDeleting,
+                            onClick = { onEditGoal(goal.id) },
+                            isDestructive = false,
+                        ),
+                    )
+                    if (goal.currentCents == 0) {
+                        add(
+                            GoalDetailAction(
+                                label = stringResource(R.string.goal_detail_delete_button),
+                                enabled = !state.isSaving && !state.isDeleting,
+                                onClick = { showDeleteConfirm = true },
+                                isDestructive = true,
+                            ),
+                        )
+                    }
+                    if (goal.isActive) {
+                        add(
+                            GoalDetailAction(
+                                label = stringResource(R.string.goal_contribute_button),
+                                enabled = !state.isSaving && !state.isDeleting,
+                                onClick = { showContribute = true },
+                                isDestructive = false,
+                            ),
                         )
                     }
                 }
-            }
-
-            if (goal.isMine && goal.isActive) {
-                Spacer(Modifier.height(16.dp))
-                OutlinedButton(
-                    onClick = { showContribute = true },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !state.isSaving && !state.isDeleting,
-                ) {
-                    Text(stringResource(R.string.goal_contribute_button))
+                actions.chunked(2).forEachIndexed { index, rowActions ->
+                    if (index > 0) Spacer(Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        rowActions.forEach { action ->
+                            OutlinedButton(
+                                onClick = action.onClick,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(46.dp),
+                                enabled = action.enabled,
+                            ) {
+                                Text(
+                                    text = action.label,
+                                    color = if (action.isDestructive) {
+                                        MaterialTheme.colorScheme.error
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurface
+                                    },
+                                    textAlign = TextAlign.Center,
+                                )
+                            }
+                        }
+                        if (rowActions.size == 1) {
+                            Spacer(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(46.dp),
+                            )
+                        }
+                    }
                 }
             }
 
@@ -414,10 +453,10 @@ private fun GoalPriceBarsChart(
     fallbackAlternatives: List<GoalPriceAlternativeDto>,
     modifier: Modifier = Modifier,
 ) {
-    val chartValues = remember(history, goalCreatedAt, fallbackReferencePriceCents, fallbackAlternatives) {
+    val chartEntries = remember(history, goalCreatedAt, fallbackReferencePriceCents, fallbackAlternatives) {
         val startDate = parseIsoLocalDate(goalCreatedAt)
         val endDate = startDate?.plusDays(30)
-        val historyValues = history
+        val historyEntries = history
             .asSequence()
             .filter { it.priceCents > 0 }
             .filter { item ->
@@ -426,25 +465,47 @@ private fun GoalPriceBarsChart(
                 !recordedDate.isBefore(startDate) && recordedDate.isBefore(endDate)
             }
             .sortedBy { it.recordedAt }
-            .map { it.priceCents }
+            .map { item ->
+                GoalBarEntry(
+                    priceCents = item.priceCents,
+                    label = formatIsoDateToBr(item.recordedAt),
+                )
+            }
             .toList()
-        if (historyValues.isNotEmpty()) {
-            historyValues
+        if (historyEntries.isNotEmpty()) {
+            historyEntries
         } else {
             buildList {
-                fallbackReferencePriceCents?.takeIf { it > 0 }?.let { add(it) }
+                fallbackReferencePriceCents?.takeIf { it > 0 }?.let {
+                    add(
+                        GoalBarEntry(
+                            priceCents = it,
+                            label = "Referência",
+                        ),
+                    )
+                }
                 fallbackAlternatives
-                    .map { it.priceCents }
-                    .filter { it > 0 }
-                    .forEach { add(it) }
+                    .filter { it.priceCents > 0 }
+                    .forEach { alt ->
+                        add(
+                            GoalBarEntry(
+                                priceCents = alt.priceCents,
+                                label = alt.label.ifBlank { "Alternativa" },
+                            ),
+                        )
+                    }
             }
         }
     }
-    if (chartValues.isEmpty()) return
+    if (chartEntries.isEmpty()) return
+    var selectedBarIndex by remember(chartEntries) { mutableIntStateOf(-1) }
 
-    val maxValue = chartValues.maxOrNull() ?: return
+    val maxValue = chartEntries.maxOfOrNull { it.priceCents } ?: return
     if (maxValue <= 0) return
     val valueRange = maxValue.toFloat()
+    val midValue = (maxValue / 2f).toInt()
+    val gridColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
+    val horizontalScroll = rememberScrollState()
     val palette = remember {
         listOf(
             WellPaidGold,
@@ -459,10 +520,10 @@ private fun GoalPriceBarsChart(
             Color(0xFF15803D),
         )
     }
-    val valueToColor = remember(chartValues) {
+    val valueToColor = remember(chartEntries) {
         val map = linkedMapOf<Long, Color>()
-        chartValues.forEach { cents ->
-            val key = cents.toLong()
+        chartEntries.forEach { entry ->
+            val key = entry.priceCents.toLong()
             if (!map.containsKey(key)) {
                 map[key] = palette[map.size % palette.size]
             }
@@ -489,32 +550,125 @@ private fun GoalPriceBarsChart(
             color = WellPaidNavy,
             fontWeight = FontWeight.SemiBold,
         )
+        if (selectedBarIndex in chartEntries.indices) {
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = "${chartEntries[selectedBarIndex].label} · ${formatBrlFromCents(chartEntries[selectedBarIndex].priceCents)}",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         Spacer(Modifier.height(6.dp))
-        Canvas(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(84.dp),
+                .height(122.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            val width = size.width
-            val height = size.height
-            val barSlot = width / chartValues.size.toFloat()
-            val barWidth = (barSlot * 0.62f).coerceAtLeast(8f)
-            chartValues.forEachIndexed { index, value ->
-                val x = (index * barSlot) + (barSlot / 2f)
-                val normalized = value.toFloat() / valueRange
-                val barHeight = (normalized * (height - 6f)).coerceAtLeast(10f)
-                val top = height - barHeight
-                val colorKey = value.toLong()
-                val baseColor = valueToColor[colorKey] ?: WellPaidGold
-                drawRoundRect(
-                    color = if (index == 0) baseColor.copy(alpha = 0.95f) else baseColor.copy(alpha = 0.74f),
-                    topLeft = androidx.compose.ui.geometry.Offset(x - (barWidth / 2f), top),
-                    size = androidx.compose.ui.geometry.Size(barWidth, barHeight),
-                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(6f, 6f),
+            Column(
+                modifier = Modifier.width(56.dp),
+                verticalArrangement = Arrangement.SpaceBetween,
+                horizontalAlignment = Alignment.End,
+            ) {
+                Text(
+                    text = formatBrlFromCents(maxValue),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                Text(
+                    text = formatBrlFromCents(midValue),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = formatBrlFromCents(0),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            BoxWithConstraints(modifier = Modifier.weight(1f)) {
+                val minChartWidth = maxWidth
+                val preferredChartWidth = preferredChartWidthForEntries(chartEntries.size)
+                val chartWidth = max(minChartWidth, preferredChartWidth)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(horizontalScroll),
+                ) {
+                    Canvas(
+                        modifier = Modifier
+                            .requiredWidth(chartWidth)
+                            .height(122.dp)
+                            .pointerInput(chartEntries) {
+                                detectTapGestures { offset ->
+                                    val barSlot = size.width / chartEntries.size.toFloat()
+                                    val tapped = (offset.x / barSlot).toInt()
+                                    selectedBarIndex = tapped.coerceIn(0, chartEntries.lastIndex)
+                                }
+                            },
+                    ) {
+                        val width = size.width
+                        val height = size.height
+                        val barSlot = width / chartEntries.size.toFloat()
+                        val barWidth = 14.dp.toPx().coerceAtMost(barSlot * 0.8f).coerceAtLeast(6.dp.toPx())
+
+                        val guideYTop = 2.dp.toPx()
+                        val guideYMid = height / 2f
+                        val guideYBottom = height - 2.dp.toPx()
+                        listOf(guideYTop, guideYMid, guideYBottom).forEach { y ->
+                            drawLine(
+                                color = gridColor,
+                                start = androidx.compose.ui.geometry.Offset(0f, y),
+                                end = androidx.compose.ui.geometry.Offset(width, y),
+                                strokeWidth = 1.dp.toPx(),
+                            )
+                        }
+
+                        chartEntries.forEachIndexed { index, entry ->
+                            val x = (index * barSlot) + (barSlot / 2f)
+                            val normalized = entry.priceCents.toFloat() / valueRange
+                            val barHeight = (normalized * (height - 8.dp.toPx())).coerceAtLeast(8.dp.toPx())
+                            val top = height - barHeight
+                            val colorKey = entry.priceCents.toLong()
+                            val baseColor = valueToColor[colorKey] ?: WellPaidGold
+                            val isSelected = selectedBarIndex == index
+                            drawRoundRect(
+                                color = if (isSelected) {
+                                    baseColor.copy(alpha = 1f)
+                                } else if (index == 0) {
+                                    baseColor.copy(alpha = 0.95f)
+                                } else {
+                                    baseColor.copy(alpha = 0.74f)
+                                },
+                                topLeft = androidx.compose.ui.geometry.Offset(x - (barWidth / 2f), top),
+                                size = androidx.compose.ui.geometry.Size(barWidth, barHeight),
+                                cornerRadius = androidx.compose.ui.geometry.CornerRadius(6f, 6f),
+                            )
+                        }
+                    }
+                }
             }
         }
     }
+}
+
+private data class GoalDetailAction(
+    val label: String,
+    val enabled: Boolean,
+    val onClick: () -> Unit,
+    val isDestructive: Boolean,
+)
+
+private data class GoalBarEntry(
+    val priceCents: Int,
+    val label: String,
+)
+
+private fun preferredChartWidthForEntries(entryCount: Int): Dp {
+    val slot = 24.dp
+    val sidePadding = 12.dp
+    return (slot * entryCount) + sidePadding
 }
 
 private fun parseIsoLocalDate(raw: String?): LocalDate? {
