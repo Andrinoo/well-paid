@@ -57,6 +57,9 @@ private data class StockQuoteCacheEntry(
 }
 
 private fun normalizeAssetTypeKey(raw: String?): String {
+    if (raw.isNullOrBlank()) return InvestmentAssetType.UNKNOWN.key
+    val s = raw.trim().lowercase(Locale.ROOT)
+    if (s == "crypto" || s == "cripto") return "crypto"
     return InvestmentAssetType.fromRaw(raw).key
 }
 
@@ -488,6 +491,7 @@ class InvestmentsViewModel @Inject constructor(
                 quoteChange24hPercent = null,
                 quoteDayHigh = null,
                 quoteDayLow = null,
+                newPositionAnnualRateText = "",
                 tickerSuggestions = emptyList(),
                 globalTickerSuggestions = emptyList(),
                 newPositionType = "fixed_income",
@@ -1143,12 +1147,24 @@ class InvestmentsViewModel @Inject constructor(
             _uiState.update { it.copy(errorMessage = appContext.getString(R.string.investments_error_principal)) }
             return
         }
-        val annualPct = s.newPositionAnnualRateText.replace(",", ".").toDoubleOrNull()
-        if (annualPct == null || annualPct < 0.0 || annualPct > 1000.0) {
-            _uiState.update { it.copy(errorMessage = appContext.getString(R.string.investments_error_rate)) }
-            return
+        val isVarIncome = isEquityLikeAsset(inferredType)
+        val rateBps: Int
+        if (isVarIncome) {
+            // RV/cripto: o utilizador não indica "taxa CDI" — o backend grava 0 bps.
+            val p = s.newPositionAnnualRateText.replace(",", ".").toDoubleOrNull() ?: 0.0
+            if (p < 0.0 || p > 1000.0) {
+                _uiState.update { it.copy(errorMessage = appContext.getString(R.string.investments_error_rate)) }
+                return
+            }
+            rateBps = (p * 100.0).toInt()
+        } else {
+            val p = s.newPositionAnnualRateText.replace(",", ".").toDoubleOrNull()
+            if (p == null || p < 0.0 || p > 1000.0) {
+                _uiState.update { it.copy(errorMessage = appContext.getString(R.string.investments_error_rate)) }
+                return
+            }
+            rateBps = (p * 100.0).toInt()
         }
-        val rateBps = (annualPct * 100.0).toInt()
         if (isEquityLikeAsset(inferredType)) {
             val qty = s.quantityText.toIntOrNull()
             val avg = s.quoteLastPrice
@@ -1354,6 +1370,7 @@ class InvestmentsViewModel @Inject constructor(
                 quoteChange24hPercent = null,
                 quoteDayHigh = null,
                 quoteDayLow = null,
+                newPositionAnnualRateText = "",
             )
         }
         fetchB3StockQuoteAndFundamentals()
@@ -1375,6 +1392,7 @@ class InvestmentsViewModel @Inject constructor(
                 quoteChange24hPercent = null,
                 quoteDayHigh = null,
                 quoteDayLow = null,
+                newPositionAnnualRateText = "",
                 errorMessage = null,
                 infoMessage = null,
             )

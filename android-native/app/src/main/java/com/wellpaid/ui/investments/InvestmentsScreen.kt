@@ -507,7 +507,7 @@ fun InvestmentsScreen(
                     placeholder = stringResource(R.string.emergency_monthly_placeholder),
                 )
                 Spacer(Modifier.height(8.dp))
-                if (state.newPositionType in listOf("stock", "stocks", "fii", "bdr", "etf")) {
+                if (state.newPositionType in listOf("stock", "stocks", "fii", "bdr", "etf", "crypto")) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -547,32 +547,34 @@ fun InvestmentsScreen(
                     }
                     Spacer(Modifier.height(8.dp))
                 }
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    OutlinedTextField(
-                        value = state.newPositionAnnualRateText,
-                        onValueChange = { viewModel.setNewPositionAnnualRateText(it) },
-                        label = { Text(stringResource(R.string.investments_field_rate)) },
-                        singleLine = true,
-                        modifier = Modifier.weight(1f),
-                    )
-                    if (detectedTicker.isNullOrBlank()) {
-                        TextButton(
-                            onClick = { viewModel.applyMarketRateToForm() },
-                            enabled = !state.isLoadingSuggestedRates && !state.isSavingPosition,
-                        ) {
-                            if (state.isLoadingSuggestedRates) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(20.dp),
-                                    strokeWidth = 2.dp,
-                                )
-                            } else {
-                                Text(
-                                    stringResource(R.string.investments_apply_market_rate),
-                                    maxLines = 2,
-                                )
+                if (!isVariableIncomePositionType(state.newPositionType)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        OutlinedTextField(
+                            value = state.newPositionAnnualRateText,
+                            onValueChange = { viewModel.setNewPositionAnnualRateText(it) },
+                            label = { Text(stringResource(R.string.investments_field_rate)) },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                        )
+                        if (detectedTicker.isNullOrBlank()) {
+                            TextButton(
+                                onClick = { viewModel.applyMarketRateToForm() },
+                                enabled = !state.isLoadingSuggestedRates && !state.isSavingPosition,
+                            ) {
+                                if (state.isLoadingSuggestedRates) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(20.dp),
+                                        strokeWidth = 2.dp,
+                                    )
+                                } else {
+                                    Text(
+                                        stringResource(R.string.investments_apply_market_rate),
+                                        maxLines = 2,
+                                    )
+                                }
                             }
                         }
                     }
