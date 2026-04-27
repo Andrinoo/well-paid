@@ -100,6 +100,7 @@ import com.wellpaid.ui.theme.wellPaidMaxContentWidth
 import com.wellpaid.ui.theme.wellPaidTopAppBarColors
 import com.wellpaid.util.formatDecimalPtBr
 import java.time.ZoneId
+import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
@@ -698,7 +699,10 @@ private fun InvestmentEvolutionChart(
 ) {
     val hideBalance = LocalPrivacyHideBalance.current
     val maxClose = max(1, points.maxOfOrNull { it.close }?.toInt() ?: 1)
-    val minClose = points.minOfOrNull { it.close } ?: 0.0
+    val axisBottomValue = 0.0
+    val axisTopValue = (maxClose * 1.25).coerceAtLeast(1.0)
+    val axisMiddleValue = axisTopValue / 2.0
+    val axisRange = (axisTopValue - axisBottomValue).coerceAtLeast(1.0)
     val selectedPoint = points.lastOrNull()
     val pricePalette = remember {
         listOf(
@@ -791,52 +795,107 @@ private fun InvestmentEvolutionChart(
                 fontWeight = FontWeight.Bold,
             )
             Spacer(Modifier.height(4.dp))
-            Canvas(
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(72.dp),
+                    .height(80.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                val width = size.width
-                val height = size.height
-                val barSlot = width / points.size.toFloat()
-                val barWidth = (barSlot * 0.62f).coerceAtLeast(8f)
-                val valueRange = (maxClose - minClose.toInt()).coerceAtLeast(1).toFloat()
-                val selectedIndex = points.lastIndex
-                val selectedX = (selectedIndex * barSlot) + (barSlot / 2f)
+                Column(
+                    modifier = Modifier
+                        .width(44.dp)
+                        .fillMaxHeight()
+                        .padding(top = 2.dp, bottom = 2.dp),
+                    verticalArrangement = Arrangement.SpaceBetween,
+                    horizontalAlignment = Alignment.End,
+                ) {
+                    InvestmentAxisLabel(value = axisTopValue, hideBalance = hideBalance)
+                    InvestmentAxisLabel(value = axisMiddleValue, hideBalance = hideBalance)
+                    InvestmentAxisLabel(value = axisBottomValue, hideBalance = hideBalance)
+                }
+                Spacer(Modifier.width(8.dp))
+                Canvas(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                ) {
+                    val width = size.width
+                    val height = size.height
+                    val barSlot = width / points.size.toFloat()
+                    val barWidth = (barSlot * 0.62f).coerceAtLeast(8f)
+                    val selectedIndex = points.lastIndex
+                    val selectedX = (selectedIndex * barSlot) + (barSlot / 2f)
+                    val topGuide = 0f
+                    val midGuide = height - (((axisMiddleValue - axisBottomValue) / axisRange).toFloat() * height)
+                    val bottomGuide = height
 
-                drawLine(
-                    color = WellPaidNavy.copy(alpha = 0.18f),
-                    start = androidx.compose.ui.geometry.Offset(selectedX, 0f),
-                    end = androidx.compose.ui.geometry.Offset(selectedX, height),
-                    strokeWidth = 2f,
-                )
-                points.forEachIndexed { index, point ->
-                    val x = (index * barSlot) + (barSlot / 2f)
-                    val normalized = (point.close - minClose).toFloat() / valueRange
-                    val barHeight = (normalized * (height - 6f)).coerceAtLeast(8f)
-                    val top = height - barHeight
-                    val priceKey = (point.close * 100.0).roundToLong()
-                    val baseColor = priceToColor[priceKey] ?: WellPaidGold
-                    var bar = baseColor
-                    if (index == selectedIndex) {
-                        bar = bar.copy(alpha = (bar.alpha * 0.6f + 0.4f).coerceIn(0.5f, 1f))
-                    } else {
-                        bar = bar.copy(alpha = 0.72f)
-                    }
-                    drawRoundRect(
-                        color = bar,
-                        topLeft = androidx.compose.ui.geometry.Offset(x - (barWidth / 2f), top),
-                        size = androidx.compose.ui.geometry.Size(barWidth, barHeight),
-                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(6f, 6f),
-                    )
-                    if (index == selectedIndex) {
-                        drawRoundRect(
-                            color = Color.White.copy(alpha = 0.9f),
-                            topLeft = androidx.compose.ui.geometry.Offset(x - (barWidth / 2f), top),
-                            size = androidx.compose.ui.geometry.Size(barWidth, 2.5f),
-                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(4f, 4f),
+                    listOf(topGuide, midGuide, bottomGuide).forEach { y ->
+                        drawLine(
+                            color = WellPaidNavy.copy(alpha = 0.14f),
+                            start = androidx.compose.ui.geometry.Offset(0f, y),
+                            end = androidx.compose.ui.geometry.Offset(width, y),
+                            strokeWidth = 1f,
                         )
                     }
+                    drawLine(
+                        color = WellPaidNavy.copy(alpha = 0.18f),
+                        start = androidx.compose.ui.geometry.Offset(selectedX, 0f),
+                        end = androidx.compose.ui.geometry.Offset(selectedX, height),
+                        strokeWidth = 2f,
+                    )
+                    points.forEachIndexed { index, point ->
+                        val x = (index * barSlot) + (barSlot / 2f)
+                        val normalized = ((point.close - axisBottomValue) / axisRange).toFloat().coerceIn(0f, 1f)
+                        val barHeight = (normalized * (height - 4f)).coerceAtLeast(8f)
+                        val top = height - barHeight
+                        val priceKey = (point.close * 100.0).roundToLong()
+                        val baseColor = priceToColor[priceKey] ?: WellPaidGold
+                        var bar = baseColor
+                        if (index == selectedIndex) {
+                            bar = bar.copy(alpha = (bar.alpha * 0.6f + 0.4f).coerceIn(0.5f, 1f))
+                        } else {
+                            bar = bar.copy(alpha = 0.72f)
+                        }
+                        drawRoundRect(
+                            color = bar,
+                            topLeft = androidx.compose.ui.geometry.Offset(x - (barWidth / 2f), top),
+                            size = androidx.compose.ui.geometry.Size(barWidth, barHeight),
+                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(6f, 6f),
+                        )
+                        if (index == selectedIndex) {
+                            drawRoundRect(
+                                color = Color.White.copy(alpha = 0.9f),
+                                topLeft = androidx.compose.ui.geometry.Offset(x - (barWidth / 2f), top),
+                                size = androidx.compose.ui.geometry.Size(barWidth, 2.5f),
+                                cornerRadius = androidx.compose.ui.geometry.CornerRadius(4f, 4f),
+                            )
+                        }
+                    }
+                }
+            }
+            if (points.size >= 2) {
+                Spacer(Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 52.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        text = formatHistoryTickLabel(points.first().asOf),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text = formatHistoryTickLabel(points[points.lastIndex / 2].asOf),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text = formatHistoryTickLabel(points.last().asOf),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
         }
@@ -856,6 +915,43 @@ private fun InvestmentEvolutionChart(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun InvestmentAxisLabel(
+    value: Double,
+    hideBalance: Boolean,
+) {
+    Text(
+        text = formatInvestmentAxisValue(value = value, hideBalance = hideBalance),
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
+
+private fun formatInvestmentAxisValue(
+    value: Double,
+    hideBalance: Boolean,
+): String {
+    if (hideBalance) return "---"
+    return when {
+        value >= 1000.0 -> String.format(Locale("pt", "BR"), "R$ %.1fk", value / 1000.0)
+        else -> String.format(Locale("pt", "BR"), "R$ %.0f", value)
+    }
+}
+
+private fun formatHistoryTickLabel(iso: String?): String {
+    if (iso.isNullOrBlank()) return "—"
+    return runCatching {
+        val date = LocalDate.parse(iso.take(10), DateTimeFormatter.ISO_LOCAL_DATE)
+        date.format(DateTimeFormatter.ofPattern("dd/MM", Locale("pt", "BR")))
+    }.getOrElse {
+        runCatching {
+            val parsed = java.time.OffsetDateTime.parse(iso)
+            parsed.atZoneSameInstant(ZoneId.systemDefault())
+                .format(DateTimeFormatter.ofPattern("dd/MM", Locale("pt", "BR")))
+        }.getOrDefault("—")
     }
 }
 
