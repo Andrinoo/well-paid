@@ -576,6 +576,7 @@ private fun GoalPriceLineChart(
         }
         colors
     }
+    val gridColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
 
     Column(
         modifier = modifier
@@ -642,7 +643,7 @@ private fun GoalPriceLineChart(
                 val guideYBottom = height - bottomPadding
                 listOf(guideYTop, guideYMid, guideYBottom).forEach { y ->
                     drawLine(
-                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f),
+                        color = gridColor,
                         start = androidx.compose.ui.geometry.Offset(0f, y),
                         end = androidx.compose.ui.geometry.Offset(width, y),
                         strokeWidth = 1.dp.toPx(),
