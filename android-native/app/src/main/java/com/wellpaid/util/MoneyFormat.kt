@@ -17,6 +17,15 @@ fun formatBrlFromCents(cents: Int): String {
     return "${if (neg) "-" else ""}R$ $reaisPart,${"%02d".format(frac)}"
 }
 
+fun formatBrlFromCents(cents: Long): String {
+    val neg = cents < 0
+    val a = kotlin.math.abs(cents)
+    val reais = a / 100
+    val frac = (a % 100).toInt()
+    val reaisPart = formatIntWithThousandsDots(reais)
+    return "${if (neg) "-" else ""}R$ $reaisPart,${"%02d".format(frac)}"
+}
+
 /** Texto de campo sem prefixo (ex.: `1.234,56`), com milhares. */
 fun formatBrlInputFromCents(cents: Int): String = centsToBrlInput(cents)
 

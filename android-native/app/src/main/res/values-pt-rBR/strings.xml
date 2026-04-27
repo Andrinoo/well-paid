@@ -815,6 +815,13 @@
     <string name="investments_quote_metric_high">Máx. do dia</string>
     <string name="investments_quote_metric_low">Mín. do dia</string>
     <string name="investments_quote_metric_volume">Volume 24h</string>
+    <string name="investments_metric_price">Preço</string>
+    <string name="investments_metric_annual_rate">Taxa anual</string>
+    <string name="investments_metric_maturity">Vencimento</string>
+    <string name="investments_metric_liquidity">Liquidez</string>
+    <string name="investments_metric_class">Classe</string>
+    <string name="investments_liquidity_high">Alta</string>
+    <string name="investments_liquidity_low">Baixa</string>
     <string name="investments_field_target_price">Preço-alvo (opcional)</string>
     <string name="investments_view_compact">Lista compacta</string>
     <string name="investments_view_cards">Cards</string>
@@ -825,6 +832,10 @@
     <string name="investments_instrument_fii">Fundo imobiliário (FII)</string>
     <string name="investments_instrument_etf">ETF</string>
     <string name="investments_instrument_bdr">BDR</string>
+    <string name="investments_instrument_treasury">Tesouro</string>
+    <string name="investments_instrument_cdb">CDB</string>
+    <string name="investments_instrument_cdi">CDI</string>
+    <string name="investments_instrument_fixed_income">Renda fixa</string>
     <string name="investments_instrument_equity">Renda variável</string>
     <string name="investments_position_card_subtitle">DE ONDE: %1$s | EXEMPLO: %2$s</string>
     <string name="investments_position_fundamental_net_margin">Margem líquida</string>

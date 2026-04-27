@@ -817,6 +817,13 @@
     <string name="investments_quote_metric_high">High</string>
     <string name="investments_quote_metric_low">Low</string>
     <string name="investments_quote_metric_volume">24h volume</string>
+    <string name="investments_metric_price">Price</string>
+    <string name="investments_metric_annual_rate">Annual rate</string>
+    <string name="investments_metric_maturity">Maturity</string>
+    <string name="investments_metric_liquidity">Liquidity</string>
+    <string name="investments_metric_class">Class</string>
+    <string name="investments_liquidity_high">High</string>
+    <string name="investments_liquidity_low">Low</string>
     <string name="investments_view_compact">Compact list</string>
     <string name="investments_view_cards">Cards</string>
     <string name="investments_view_details">Details</string>
@@ -826,6 +833,10 @@
     <string name="investments_instrument_fii">Real estate fund (FII)</string>
     <string name="investments_instrument_etf">ETF</string>
     <string name="investments_instrument_bdr">BDR</string>
+    <string name="investments_instrument_treasury">Treasury</string>
+    <string name="investments_instrument_cdb">CDB</string>
+    <string name="investments_instrument_cdi">CDI</string>
+    <string name="investments_instrument_fixed_income">Fixed income</string>
     <string name="investments_instrument_equity">Variable income</string>
     <string name="investments_position_card_subtitle">From: %1$s | e.g. %2$s</string>
     <string name="investments_position_fundamental_net_margin">Net margin</string>

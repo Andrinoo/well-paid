@@ -26,6 +26,11 @@ fun formatBrlFromCentsRespectPrivacy(
     hideBalance: Boolean,
 ): String = if (hideBalance) HiddenAmountPlaceholder else formatBrlFromCents(cents)
 
+fun formatBrlFromCentsRespectPrivacy(
+    cents: Long,
+    hideBalance: Boolean,
+): String = if (hideBalance) HiddenAmountPlaceholder else formatBrlFromCents(cents)
+
 @Composable
 fun DiscreetBalanceValue(
     cents: Int,

@@ -172,6 +172,7 @@ data class InvestmentsUiState(
     val errorMessage: String? = null,
     val positionDetailsFundamentals: FundamentalPreviewUi? = null,
     val positionCardFundamentals: Map<String, FundamentalPreviewUi> = emptyMap(),
+    val positionCardQuotes: Map<String, StockQuoteDto> = emptyMap(),
     val isLoadingPositionDetailsFundamentals: Boolean = false,
     val aporteAmountText: String = "",
     val aporteFundamentals: FundamentalPreviewUi? = null,
@@ -451,10 +452,13 @@ class InvestmentsViewModel @Inject constructor(
                             positionCardFundamentals = it.positionCardFundamentals.filterKeys { id ->
                                 positions.any { p -> p.id == id }
                             },
+                            positionCardQuotes = it.positionCardQuotes.filterKeys { id ->
+                                positions.any { p -> p.id == id }
+                            },
                             errorMessage = null,
                         )
                     }
-                    preloadCardFundamentals(positions)
+                    preloadCardMarketData(positions)
                 }
                 .onFailure { t ->
                     _uiState.update {
@@ -467,7 +471,7 @@ class InvestmentsViewModel @Inject constructor(
         }
     }
 
-    private fun preloadCardFundamentals(positions: List<InvestmentPositionDto>) {
+    private fun preloadCardMarketData(positions: List<InvestmentPositionDto>) {
         val stockPositions = positions
             .filter {
                 isEquityLikeAsset(it.instrumentType) &&
@@ -488,6 +492,34 @@ class InvestmentsViewModel @Inject constructor(
                             st.copy(
                                 positionCardFundamentals = st.positionCardFundamentals + (positionId to fundamentalPreviewFromDto(dto)),
                             )
+                        }
+                    }
+            }
+        }
+
+        val cryptoPositions = positions
+            .filter { isCryptoByInstrumentOrName(it.instrumentType, it.name) }
+            .mapNotNull { p ->
+                val symbol = extractTickerFromText(p.name)?.uppercase(Locale.ROOT) ?: return@mapNotNull null
+                p.id to symbol
+            }
+            .filter { (positionId, _) -> !_uiState.value.positionCardQuotes.containsKey(positionId) }
+            .take(6)
+        if (cryptoPositions.isEmpty()) return
+        cryptoPositions.forEach { (positionId, symbol) ->
+            viewModelScope.launch {
+                val cached = stockQuoteCache[symbol]?.takeIf { it.isFresh() }?.dto
+                if (cached != null) {
+                    _uiState.update { st ->
+                        st.copy(positionCardQuotes = st.positionCardQuotes + (positionId to cached))
+                    }
+                    return@launch
+                }
+                runCatching { api.getStockQuote(symbol = symbol) }
+                    .onSuccess { quote ->
+                        stockQuoteCache[symbol] = StockQuoteCacheEntry(dto = quote)
+                        _uiState.update { st ->
+                            st.copy(positionCardQuotes = st.positionCardQuotes + (positionId to quote))
                         }
                     }
             }
@@ -719,11 +751,11 @@ class InvestmentsViewModel @Inject constructor(
     }
 
     fun submitAporte(positionId: String, onSuccess: () -> Unit) {
-        val principal = parseBrlToCents(_uiState.value.aporteAmountText) ?: run {
+        val principal = parseBrlToCents(_uiState.value.aporteAmountText)?.toLong() ?: run {
             _uiState.update { it.copy(aporteErrorMessage = appContext.getString(R.string.investments_error_principal)) }
             return
         }
-        if (principal <= 0) {
+        if (principal <= 0L) {
             _uiState.update { it.copy(aporteErrorMessage = appContext.getString(R.string.investments_error_principal)) }
             return
         }
@@ -1170,7 +1202,7 @@ class InvestmentsViewModel @Inject constructor(
             _uiState.update { it.copy(errorMessage = appContext.getString(R.string.investments_error_name)) }
             return
         }
-        val principal = parseBrlToCents(s.newPositionPrincipalText)?.takeIf { it > 0 }
+        val principal = parseBrlToCents(s.newPositionPrincipalText)?.toLong()?.takeIf { it > 0L }
         if (principal == null) {
             _uiState.update { it.copy(errorMessage = appContext.getString(R.string.investments_error_principal)) }
             return
@@ -1201,7 +1233,7 @@ class InvestmentsViewModel @Inject constructor(
                 _uiState.update { it.copy(errorMessage = appContext.getString(R.string.investments_error_stock_quantity_price)) }
                 return
             }
-            val minLotCents = (avg * 100.0).toInt()
+            val minLotCents = (avg * 100.0).toLong()
             if (principal < minLotCents) {
                 _uiState.update {
                     it.copy(

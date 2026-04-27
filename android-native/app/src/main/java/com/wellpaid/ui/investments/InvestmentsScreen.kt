@@ -82,6 +82,7 @@ import com.wellpaid.core.model.investment.InvestmentBucketDto
 import com.wellpaid.core.model.investment.InvestmentAssetType
 import com.wellpaid.core.model.investment.InvestmentPositionDto
 import com.wellpaid.core.model.investment.StockHistoryPointDto
+import com.wellpaid.core.model.investment.StockQuoteDto
 import com.wellpaid.ui.components.WellPaidMoneyDigitKeypadField
 import com.wellpaid.ui.components.WellPaidPullToRefreshBox
 import com.wellpaid.ui.theme.WellPaidCream
@@ -97,6 +98,7 @@ import com.wellpaid.ui.theme.LocalPrivacyHideBalance
 import com.wellpaid.ui.theme.formatBrlFromCentsRespectPrivacy
 import com.wellpaid.ui.theme.wellPaidMaxContentWidth
 import com.wellpaid.ui.theme.wellPaidTopAppBarColors
+import com.wellpaid.util.formatDecimalPtBr
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -605,6 +607,7 @@ fun InvestmentsScreen(
         InvestmentPositionsCarousel(
             positions = state.positions,
             fundamentalsByPositionId = state.positionCardFundamentals,
+            quotesByPositionId = state.positionCardQuotes,
             onDetails = { id -> viewModel.openPositionDetails(id) },
         )
         if (state.positions.isNotEmpty()) {
@@ -860,6 +863,7 @@ private fun InvestmentEvolutionChart(
 private fun InvestmentPositionsCarousel(
     positions: List<InvestmentPositionDto>,
     fundamentalsByPositionId: Map<String, FundamentalPreviewUi>,
+    quotesByPositionId: Map<String, StockQuoteDto>,
     onDetails: (String) -> Unit,
 ) {
     if (positions.isEmpty()) return
@@ -885,6 +889,7 @@ private fun InvestmentPositionsCarousel(
             InvestmentPositionCard(
                 position = position,
                 fundamentals = fundamentalsByPositionId[position.id],
+                quote = quotesByPositionId[position.id],
                 onDetails = { onDetails(position.id) },
             )
         }
@@ -951,10 +956,13 @@ private fun InvestmentPositionCompactRow(
 private fun InvestmentPositionCard(
     position: InvestmentPositionDto,
     fundamentals: FundamentalPreviewUi?,
+    quote: StockQuoteDto?,
     onDetails: () -> Unit,
 ) {
     val hideBalance = LocalPrivacyHideBalance.current
-    val instrumentKey = InvestmentAssetType.fromRaw(position.instrumentType).key
+    val normalizedType = position.instrumentType.trim().lowercase(Locale.ROOT)
+    val isCrypto = normalizedType == "crypto" || normalizedType == "cripto"
+    val instrumentKey = if (isCrypto) "crypto" else InvestmentAssetType.fromRaw(position.instrumentType).key
     val cardBackground = when (instrumentKey) {
         "stock" -> WellPaidGold
         "fii" -> WellPaidNavy
@@ -974,6 +982,7 @@ private fun InvestmentPositionCard(
     val iconTint = if (instrumentKey == "stock") WellPaidGold else Color.White
     val borderColor = titleHighlightColor.copy(alpha = if (instrumentKey == "stock") 0.55f else 0.48f)
     val instrumentLabel = when (instrumentKey) {
+        "crypto" -> stringResource(R.string.investments_bucket_crypto)
         "fii" -> stringResource(R.string.investments_instrument_fii)
         "etf" -> stringResource(R.string.investments_instrument_etf)
         "bdr" -> stringResource(R.string.investments_instrument_bdr)
@@ -981,6 +990,7 @@ private fun InvestmentPositionCard(
         else -> stringResource(R.string.investments_instrument_equity)
     }
     val leadingIcon = when (instrumentKey) {
+        "crypto" -> Icons.Filled.Savings
         "fii" -> Icons.Filled.PieChart
         "etf" -> Icons.AutoMirrored.Filled.ShowChart
         "bdr" -> Icons.Filled.TrackChanges
@@ -997,6 +1007,30 @@ private fun InvestmentPositionCard(
     val netMargin = metricOr(fundamentals?.netMargin)
     val netDebtEbitda = metricOr(fundamentals?.netDebtEbitda)
     val lpa = metricOr(fundamentals?.eps)
+    val quotePrice = quotePriceLabelForCard(quote = quote, hideBalance = hideBalance)
+    val quoteChange = quoteChangeLabelForCard(quote = quote)
+    val quoteHigh = quoteExtremaLabelForCard(quote?.dayHigh, quote?.currency, hideBalance)
+    val quoteLow = quoteExtremaLabelForCard(quote?.dayLow, quote?.currency, hideBalance)
+    val quoteVolume = quote?.volume24h?.let { formatDecimalPtBr(it, minFractionDigits = 0, maxFractionDigits = 0) } ?: "—"
+    val quoteSource = quote?.source?.uppercase(Locale.ROOT) ?: "—"
+    val annualRateLabel = if (position.annualRateBps > 0) {
+        formatDecimalPtBr(position.annualRateBps / 100.0) + "% a.a."
+    } else {
+        "—"
+    }
+    val maturityLabel = metricOr(formatMaturityForPositionCard(position.maturityDate))
+    val liquidityLabel = if (position.isLiquid) {
+        stringResource(R.string.investments_liquidity_high)
+    } else {
+        stringResource(R.string.investments_liquidity_low)
+    }
+    val fixedIncomeTypeLabel = when (instrumentKey) {
+        "treasury" -> stringResource(R.string.investments_instrument_treasury)
+        "cdb" -> stringResource(R.string.investments_instrument_cdb)
+        "cdi" -> stringResource(R.string.investments_instrument_cdi)
+        "fixed_income" -> stringResource(R.string.investments_instrument_fixed_income)
+        else -> "—"
+    }
     val cardShape = RoundedCornerShape(14.dp)
     val iconCellBg = Color.White.copy(alpha = 0.28f)
 
@@ -1087,6 +1121,14 @@ private fun InvestmentPositionCard(
             )
             Spacer(Modifier.height(1.dp))
             val metrics = when (instrumentKey) {
+                "crypto" -> listOf(
+                    Triple(Icons.Filled.MonetizationOn, stringResource(R.string.investments_metric_price), quotePrice),
+                    Triple(Icons.AutoMirrored.Filled.ShowChart, stringResource(R.string.investments_quote_metric_change), quoteChange),
+                    Triple(Icons.Filled.BarChart, stringResource(R.string.investments_quote_metric_high), quoteHigh),
+                    Triple(Icons.Filled.TrackChanges, stringResource(R.string.investments_quote_metric_low), quoteLow),
+                    Triple(Icons.Filled.Receipt, stringResource(R.string.investments_quote_metric_volume), quoteVolume),
+                    Triple(Icons.Filled.Balance, stringResource(R.string.goal_list_label_source), quoteSource),
+                )
                 "fii" -> listOf(
                     Triple(Icons.Filled.MonetizationOn, stringResource(R.string.investments_metric_dy), dy),
                     Triple(Icons.Filled.BarChart, stringResource(R.string.investments_metric_pvp), pvp),
@@ -1100,6 +1142,12 @@ private fun InvestmentPositionCard(
                     Triple(Icons.Filled.MonetizationOn, stringResource(R.string.investments_metric_dy), dy),
                     Triple(Icons.AutoMirrored.Filled.ShowChart, stringResource(R.string.investments_metric_pl), pl),
                     Triple(Icons.AutoMirrored.Filled.ShowChart, stringResource(R.string.investments_metric_ev_ebitda), evEbitda),
+                )
+                "treasury", "cdb", "cdi", "fixed_income" -> listOf(
+                    Triple(Icons.Filled.TrackChanges, stringResource(R.string.investments_metric_annual_rate), annualRateLabel),
+                    Triple(Icons.Filled.Receipt, stringResource(R.string.investments_metric_maturity), maturityLabel),
+                    Triple(Icons.Filled.Balance, stringResource(R.string.investments_metric_liquidity), liquidityLabel),
+                    Triple(Icons.Filled.Savings, stringResource(R.string.investments_metric_class), fixedIncomeTypeLabel),
                 )
                 else -> listOf(
                     Triple(Icons.Filled.BarChart, stringResource(R.string.investments_metric_pl), pl),
@@ -1369,6 +1417,37 @@ private fun formatMaturityForPositionCard(raw: String?): String? {
                 .withLocale(Locale.getDefault()),
         )
     }.getOrNull()
+}
+
+private fun quotePriceLabelForCard(quote: StockQuoteDto?, hideBalance: Boolean): String {
+    val price = quote?.lastPrice ?: return "—"
+    if (price <= 0.0) return "—"
+    if (hideBalance) return "---"
+    val prefix = when (quote.currency.trim().uppercase(Locale.ROOT)) {
+        "BRL" -> "R$ "
+        "USD" -> "US$ "
+        else -> ""
+    }
+    return prefix + formatDecimalPtBr(price)
+}
+
+private fun quoteExtremaLabelForCard(value: Double?, currency: String?, hideBalance: Boolean): String {
+    val v = value ?: return "—"
+    if (v <= 0.0) return "—"
+    if (hideBalance) return "---"
+    val prefix = when (currency?.trim()?.uppercase(Locale.ROOT)) {
+        "BRL" -> "R$ "
+        "USD" -> "US$ "
+        else -> ""
+    }
+    return prefix + formatDecimalPtBr(v)
+}
+
+private fun quoteChangeLabelForCard(quote: StockQuoteDto?): String {
+    val pct = quote?.change24hPercent
+    if (pct == null) return "—"
+    val sign = if (pct > 0) "+" else ""
+    return sign + formatDecimalPtBr(pct, 2, 2) + "%"
 }
 
 private fun fundamentalsSummaryLine(f: FundamentalPreviewUi): String {
