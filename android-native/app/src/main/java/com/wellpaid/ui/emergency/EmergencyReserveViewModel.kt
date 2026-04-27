@@ -68,6 +68,7 @@ data class EmergencyReserveUiState(
     val newPlanTargetEndText: String = "",
     /** Aporte inicial (dinheiro já na reserva ao criar o plano). */
     val newPlanOpeningBalanceText: String = "",
+    val newPlanInformInvestments: Boolean = false,
     val newPlanRecommendedMonthlyCents: Int? = null,
     val newPlanRetroOffer: EmergencyRetroactivePlanOffer? = null,
     val newPlanRetroDismissFingerprint: String? = null,
@@ -80,6 +81,7 @@ data class EmergencyReserveUiState(
     val editingPlanTrackingStartText: String = "",
     val editingPlanTargetEndText: String = "",
     val editingPlanOpeningBalanceText: String = "",
+    val editingPlanInformInvestments: Boolean = false,
     val editingPlanRecommendedMonthlyCents: Int? = null,
     val editingPlanBalanceCents: Int = 0,
     val editingPlanInitialOpeningCents: Int = 0,
@@ -105,7 +107,7 @@ class EmergencyReserveViewModel @Inject constructor(
     private val tokenStorage: TokenStorage,
     familyMeRepository: FamilyMeRepository,
     private val prefetchTiming: MainPrefetchTiming,
-    uiPreferencesRepository: UiPreferencesRepository,
+    private val uiPreferencesRepository: UiPreferencesRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(EmergencyReserveUiState())
@@ -121,8 +123,20 @@ class EmergencyReserveViewModel @Inject constructor(
             )
 
     private var syncingPlanSchedule = false
+    private var defaultInformInvestments: Boolean = false
 
     init {
+        uiPreferencesRepository.emergencyInformInvestmentsFlow
+            .onEach { saved ->
+                defaultInformInvestments = saved
+                _uiState.update {
+                    it.copy(
+                        newPlanInformInvestments = saved,
+                        editingPlanInformInvestments = saved,
+                    )
+                }
+            }
+            .launchIn(viewModelScope)
         familyMeRepository.family
             .onEach {
                 // Não bloquear edição localmente para evitar falso negativo de role/isSelf.
@@ -280,6 +294,13 @@ class EmergencyReserveViewModel @Inject constructor(
         recalcNewPlanRecommendation()
     }
 
+    fun setNewPlanInformInvestments(value: Boolean) {
+        _uiState.update { it.copy(newPlanInformInvestments = value) }
+        viewModelScope.launch {
+            uiPreferencesRepository.setEmergencyInformInvestments(value)
+        }
+    }
+
     fun resetNewPlanFormFields() {
         _uiState.update {
             it.copy(
@@ -291,6 +312,7 @@ class EmergencyReserveViewModel @Inject constructor(
                 newPlanTrackingStartText = "",
                 newPlanTargetEndText = "",
                 newPlanOpeningBalanceText = "",
+                newPlanInformInvestments = defaultInformInvestments,
                 newPlanRecommendedMonthlyCents = null,
                 newPlanRetroOffer = null,
                 newPlanRetroDismissFingerprint = null,
@@ -311,6 +333,7 @@ class EmergencyReserveViewModel @Inject constructor(
                 editingPlanTrackingStartText = plan.trackingStart,
                 editingPlanTargetEndText = plan.targetEndDate.orEmpty(),
                 editingPlanOpeningBalanceText = centsToBrlInput(plan.openingBalanceCents),
+                editingPlanInformInvestments = defaultInformInvestments,
                 editingPlanRecommendedMonthlyCents = plan.monthlyNeededCents,
                 editingPlanBalanceCents = plan.balanceCents,
                 editingPlanInitialOpeningCents = plan.openingBalanceCents,
@@ -335,6 +358,7 @@ class EmergencyReserveViewModel @Inject constructor(
                 editingPlanTrackingStartText = "",
                 editingPlanTargetEndText = "",
                 editingPlanOpeningBalanceText = "",
+                editingPlanInformInvestments = defaultInformInvestments,
                 editingPlanRecommendedMonthlyCents = null,
                 editingPlanBalanceCents = 0,
                 editingPlanInitialOpeningCents = 0,
@@ -367,6 +391,13 @@ class EmergencyReserveViewModel @Inject constructor(
     fun setEditingPlanOpeningBalanceText(value: String) {
         _uiState.update { it.copy(editingPlanOpeningBalanceText = value) }
         recalcEditingPlanRecommendation()
+    }
+
+    fun setEditingPlanInformInvestments(value: Boolean) {
+        _uiState.update { it.copy(editingPlanInformInvestments = value) }
+        viewModelScope.launch {
+            uiPreferencesRepository.setEmergencyInformInvestments(value)
+        }
     }
 
     fun setEditingPlanDurationMonthsText(value: String) {
@@ -500,8 +531,9 @@ class EmergencyReserveViewModel @Inject constructor(
         _uiState.update { it.copy(showDeletePlanConfirm = false, deletingPlanId = null) }
     }
 
-    fun createNamedPlan(onSuccess: (() -> Unit)? = null) {
+    fun createNamedPlan(onSuccess: ((Boolean) -> Unit)? = null) {
         val s = _uiState.value
+        val informInvestments = s.newPlanInformInvestments
         val title = s.newPlanTitleText.trim()
         if (title.isEmpty()) {
             _uiState.update {
@@ -571,13 +603,14 @@ class EmergencyReserveViewModel @Inject constructor(
                             newPlanTrackingStartText = "",
                             newPlanTargetEndText = "",
                             newPlanOpeningBalanceText = "",
+                            newPlanInformInvestments = defaultInformInvestments,
                             newPlanRecommendedMonthlyCents = null,
                             newPlanRetroOffer = null,
                             newPlanRetroDismissFingerprint = null,
                             errorMessage = null,
                         )
                     }
-                    onSuccess?.invoke()
+                    onSuccess?.invoke(informInvestments)
                     refresh()
                 }
                 .onFailure { t ->
@@ -591,8 +624,9 @@ class EmergencyReserveViewModel @Inject constructor(
         }
     }
 
-    fun saveEditingPlan() {
+    fun saveEditingPlan(onSuccess: ((Boolean) -> Unit)? = null) {
         val s = _uiState.value
+        val informInvestments = s.editingPlanInformInvestments
         val planId = s.editingPlanId ?: return
         val existingPlan = s.plans.firstOrNull { it.id == planId }
         val title = s.editingPlanTitleText.trim()
@@ -651,6 +685,7 @@ class EmergencyReserveViewModel @Inject constructor(
                 )
             }.onSuccess {
                 _uiState.update { it.copy(isUpdatingPlan = false) }
+                onSuccess?.invoke(informInvestments)
                 refresh(rebindEditingPlanId = planId)
             }.onFailure { t ->
                 _uiState.update {
@@ -670,7 +705,22 @@ class EmergencyReserveViewModel @Inject constructor(
             _uiState.update { it.copy(isUpdatingPlan = true, errorMessage = null) }
             runCatching {
                 val resp = api.deletePlan(planId)
-                if (!resp.isSuccessful) error("HTTP ${resp.code()}")
+                if (!resp.isSuccessful) {
+                    val detail = try {
+                        resp.errorBody()?.string().orEmpty()
+                    } catch (_: Exception) {
+                        ""
+                    }
+                    if (resp.code() == 403) {
+                        val msg = if (detail.contains("Apenas o titular", ignoreCase = true)) {
+                            appContext.getString(R.string.emergency_error_owner_only)
+                        } else {
+                            appContext.getString(R.string.login_error_forbidden)
+                        }
+                        throw IllegalArgumentException(msg)
+                    }
+                    error("HTTP ${resp.code()} ${detail.take(240)}")
+                }
             }
                 .onSuccess {
                     _uiState.update {

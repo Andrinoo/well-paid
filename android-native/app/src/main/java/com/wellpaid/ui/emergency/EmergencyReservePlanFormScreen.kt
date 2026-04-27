@@ -29,6 +29,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -60,7 +61,7 @@ import com.wellpaid.ui.theme.wellPaidTopAppBarColors
 @Composable
 fun EmergencyReservePlanFormScreen(
     onNavigateBack: () -> Unit,
-    onCreatedNeedRefresh: () -> Unit,
+    onCreatedNeedRefresh: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: EmergencyReserveViewModel,
 ) {
@@ -222,6 +223,43 @@ fun EmergencyReservePlanFormScreen(
                 label = { Text(stringResource(R.string.emergency_new_plan_target_label)) },
                 placeholder = stringResource(R.string.emergency_monthly_placeholder),
             )
+            Spacer(Modifier.height(8.dp))
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                ),
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.emergency_inform_investments_title),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = WellPaidNavy,
+                        )
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = stringResource(R.string.emergency_inform_investments_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(
+                        checked = state.newPlanInformInvestments,
+                        onCheckedChange = { viewModel.setNewPlanInformInvestments(it) },
+                        enabled = !state.isCreatingPlan && !state.isSaving,
+                    )
+                }
+            }
             state.newPlanRecommendedMonthlyCents?.let { rec ->
                 Spacer(Modifier.height(6.dp))
                 Text(
@@ -277,7 +315,11 @@ fun EmergencyReservePlanFormScreen(
             }
             Spacer(Modifier.height(20.dp))
             Button(
-                onClick = { viewModel.createNamedPlan(onSuccess = onCreatedNeedRefresh) },
+                onClick = {
+                    viewModel.createNamedPlan { informInvestments ->
+                        onCreatedNeedRefresh(informInvestments)
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !state.isCreatingPlan && !state.isSaving,
                 shape = RoundedCornerShape(24.dp),

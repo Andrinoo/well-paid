@@ -446,7 +446,12 @@ fun WellPaidNavHost(
                     }
                     EmergencyReservePlanFormScreen(
                         onNavigateBack = { navController.popBackStack() },
-                        onCreatedNeedRefresh = refreshEmergencyAndPop,
+                        onCreatedNeedRefresh = { informInvestments ->
+                            refreshEmergencyAndPop()
+                            if (informInvestments) {
+                                navController.navigate(NavRoutes.Investments)
+                            }
+                        },
                         viewModel = hiltViewModel(mainEntry),
                     )
                 }
@@ -468,6 +473,9 @@ fun WellPaidNavHost(
                         },
                         onOpenMonthlyProgress = {
                             navController.navigate(NavRoutes.emergencyPlanMonthBreakdown(planId))
+                        },
+                        onOpenInvestments = {
+                            navController.navigate(NavRoutes.Investments)
                         },
                         viewModel = hiltViewModel(mainEntry),
                     )

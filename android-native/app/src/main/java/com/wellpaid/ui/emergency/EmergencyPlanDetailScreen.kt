@@ -61,6 +61,7 @@ fun EmergencyPlanDetailScreen(
     onNavigateBack: () -> Unit,
     onPlanDeletedNavigateBack: () -> Unit,
     onOpenMonthlyProgress: () -> Unit,
+    onOpenInvestments: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: EmergencyReserveViewModel,
 ) {
@@ -221,7 +222,11 @@ fun EmergencyPlanDetailScreen(
             )
             Spacer(Modifier.height(6.dp))
             Button(
-                onClick = { viewModel.saveEditingPlan() },
+                onClick = {
+                    viewModel.saveEditingPlan { informInvestments ->
+                        if (informInvestments) onOpenInvestments()
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !state.isUpdatingPlan && state.editingPlanId == planId,
                 shape = RoundedCornerShape(18.dp),

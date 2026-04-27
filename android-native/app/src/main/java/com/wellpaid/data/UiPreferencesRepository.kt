@@ -29,6 +29,8 @@ class UiPreferencesRepository @Inject constructor(
         val emergencyPlanHideTargetEndDate = booleanPreferencesKey("emergency_plan_hide_target_end")
         /** Se true, permite capturas de ecrã (remove FLAG_SECURE). Por defeito false = bloqueio ativo. */
         val screenshotsAllowed = booleanPreferencesKey("screenshots_allowed")
+        /** Última escolha do toggle "Informar investimentos" no fluxo de reserva de emergência. */
+        val emergencyInformInvestments = booleanPreferencesKey("emergency_inform_investments")
     }
 
     val shoppingAutoGroceryHintsFlow: Flow<Boolean> =
@@ -45,6 +47,9 @@ class UiPreferencesRepository @Inject constructor(
 
     val screenshotsAllowedFlow: Flow<Boolean> =
         dataStore.data.map { it[Keys.screenshotsAllowed] ?: false }
+
+    val emergencyInformInvestmentsFlow: Flow<Boolean> =
+        dataStore.data.map { it[Keys.emergencyInformInvestments] ?: false }
 
     suspend fun setShoppingAutoGroceryHints(value: Boolean) {
         dataStore.edit { it[Keys.shoppingAutoGroceryHints] = value }
@@ -64,5 +69,9 @@ class UiPreferencesRepository @Inject constructor(
 
     suspend fun setScreenshotsAllowed(value: Boolean) {
         dataStore.edit { it[Keys.screenshotsAllowed] = value }
+    }
+
+    suspend fun setEmergencyInformInvestments(value: Boolean) {
+        dataStore.edit { it[Keys.emergencyInformInvestments] = value }
     }
 }

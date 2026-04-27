@@ -35,6 +35,9 @@
     <string name="login_error_empty">Enter email and password.</string>
     <string name="login_error_invalid">Incorrect email or password.</string>
     <string name="login_error_forbidden">Could not sign in. Check your account or confirm your email.</string>
+    <string name="emergency_error_owner_only">Only the family owner can change or delete emergency reserve plans.</string>
+    <string name="emergency_inform_investments_title">Inform investments</string>
+    <string name="emergency_inform_investments_desc">If enabled, after saving this plan the app opens Investments. If disabled, the value stays only in emergency reserve.</string>
     <string name="login_error_validation">Invalid data. Check email and password.</string>
     <string name="login_error_rate_limit">Too many attempts. Please wait.</string>
     <string name="login_error_network">Could not reach the server. Try again.</string>
