@@ -488,7 +488,7 @@ private fun GoalPriceLineChart(
 ) {
     val chartEntries = remember(history, goalCreatedAt, fallbackReferencePriceCents, fallbackAlternatives) {
         val startDate = parseIsoLocalDate(goalCreatedAt)
-        val endDate = startDate?.plusDays(30)
+        val endDate = startDate?.plusMonths(3)
         val historyEntries = history
             .asSequence()
             .filter { it.priceCents > 0 }
@@ -534,37 +534,46 @@ private fun GoalPriceLineChart(
         }
     }
     if (chartEntries.isEmpty()) return
-    var selectedPointIndex by remember(chartEntries) { mutableIntStateOf(-1) }
-
-    val currentPrice = chartEntries.last().priceCents
-    val minEntry = chartEntries.minByOrNull { it.priceCents } ?: return
-    val maxEntry = chartEntries.maxByOrNull { it.priceCents } ?: return
+    val currentEntry = chartEntries.last()
+    val minValue = chartEntries.minOfOrNull { it.priceCents } ?: return
+    val maxValue = chartEntries.maxOfOrNull { it.priceCents } ?: return
+    val valueRange = (maxValue - minValue).toFloat().coerceAtLeast(1f)
+    val goalValue = (targetCents ?: 0).coerceAtLeast(0)
+    val hasGoalValue = goalValue > 0
     val firstPrice = chartEntries.first().priceCents
     val deltaPercent = if (firstPrice > 0) {
-        ((currentPrice - firstPrice).toFloat() / firstPrice.toFloat()) * 100f
+        ((currentEntry.priceCents - firstPrice).toFloat() / firstPrice.toFloat()) * 100f
     } else {
         0f
     }
-    val directionColor = when {
-        deltaPercent <= -0.5f -> WellPaidPositive
+    val trendColor = when {
         deltaPercent >= 0.5f -> MaterialTheme.colorScheme.error
-        else -> MaterialTheme.colorScheme.primary
+        deltaPercent <= -0.5f -> WellPaidPositive
+        else -> WellPaidNavy
     }
-    val errorColor = MaterialTheme.colorScheme.error
-    val maxValue = chartEntries.maxOfOrNull { it.priceCents } ?: return
-    val goalValue = (targetCents ?: 0).coerceAtLeast(0)
-    val hasTargetLine = goalValue > 0
-    val axisBottomValue = 0
-    val axisMiddleValue = (goalValue / 2).coerceAtLeast(0)
-    val axisTopByGoal = if (goalValue > 0) (goalValue * 1.2f).toInt() else 0
-    val axisTopByData = (maxValue * 1.1f).toInt()
-    val axisTopValue = maxOf(axisTopByGoal, axisTopByData, 1)
-    val valueRange = (axisTopValue - axisBottomValue).toFloat().coerceAtLeast(1f)
-    val gridColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
-    val horizontalScroll = rememberScrollState()
-    val minIndex = chartEntries.indexOf(minEntry)
-    val maxIndex = chartEntries.indexOf(maxEntry)
-    val currentIndex = chartEntries.lastIndex
+    val barPalette = remember {
+        listOf(
+            WellPaidGold,
+            WellPaidPositive,
+            WellPaidNavy,
+            Color(0xFF6C63FF),
+            Color(0xFF14B8A6),
+            Color(0xFFB45309),
+            Color(0xFF8B5CF6),
+            Color(0xFFBE123C),
+            Color(0xFF0EA5E9),
+            Color(0xFF7C3AED),
+        )
+    }
+    val priceToColor = remember(chartEntries) {
+        val colors = linkedMapOf<Int, Color>()
+        chartEntries.forEach { entry ->
+            if (!colors.containsKey(entry.priceCents)) {
+                colors[entry.priceCents] = barPalette[colors.size % barPalette.size]
+            }
+        }
+        colors
+    }
 
     Column(
         modifier = modifier
@@ -586,15 +595,12 @@ private fun GoalPriceLineChart(
             fontWeight = FontWeight.SemiBold,
         )
         Spacer(Modifier.height(4.dp))
-        if (selectedPointIndex in chartEntries.indices) {
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = "${chartEntries[selectedPointIndex].fullLabel} · ${formatBrlFromCents(chartEntries[selectedPointIndex].priceCents)}",
-                style = MaterialTheme.typography.labelMedium,
-                color = WellPaidNavy,
-                fontWeight = FontWeight.Medium,
-            )
-        }
+        Text(
+            text = "${currentEntry.fullLabel} · ${formatBrlFromCents(currentEntry.priceCents)}",
+            style = MaterialTheme.typography.labelMedium,
+            color = WellPaidNavy,
+            fontWeight = FontWeight.Medium,
+        )
         Spacer(Modifier.height(6.dp))
         Row(
             modifier = Modifier
@@ -610,173 +616,68 @@ private fun GoalPriceLineChart(
                 verticalArrangement = Arrangement.SpaceBetween,
                 horizontalAlignment = Alignment.End,
             ) {
-                GoalAxisLabel(axisTopValue)
-                GoalAxisLabel(axisMiddleValue)
-                GoalAxisLabel(axisBottomValue)
+                GoalAxisLabel(maxValue)
+                GoalAxisLabel((maxValue + minValue) / 2)
+                GoalAxisLabel(minValue)
             }
             Spacer(Modifier.width(8.dp))
-            BoxWithConstraints(modifier = Modifier.weight(1f)) {
-                val minChartWidth = maxWidth
-                val preferredChartWidth = preferredChartWidthForEntries(chartEntries.size)
-                val chartWidth = max(minChartWidth, preferredChartWidth)
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(horizontalScroll),
-                ) {
-                    Canvas(
-                        modifier = Modifier
-                            .requiredWidth(chartWidth)
-                            .height(156.dp)
-                            .pointerInput(chartEntries) {
-                                detectTapGestures { offset ->
-                                    if (chartEntries.isEmpty()) return@detectTapGestures
-                                    val step = if (chartEntries.size == 1) {
-                                        0f
-                                    } else {
-                                        size.width / (chartEntries.size - 1).toFloat()
-                                    }
-                                    var nearest = 0
-                                    var nearestDistance = Float.MAX_VALUE
-                                    chartEntries.indices.forEach { index ->
-                                        val pointX = if (chartEntries.size == 1) {
-                                            size.width / 2f
-                                        } else {
-                                            index * step
-                                        }
-                                        val distance = abs(pointX - offset.x)
-                                        if (distance < nearestDistance) {
-                                            nearestDistance = distance
-                                            nearest = index
-                                        }
-                                    }
-                                    selectedPointIndex = nearest
-                                }
-                            },
-                    ) {
-                        val width = size.width
-                        val height = size.height
-                        val topPadding = 6.dp.toPx()
-                        val bottomPadding = 8.dp.toPx()
-                        val lineHeight = (height - topPadding - bottomPadding).coerceAtLeast(1f)
-                        val step = if (chartEntries.size == 1) {
-                            0f
-                        } else {
-                            width / (chartEntries.size - 1).toFloat()
-                        }
+            Canvas(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(156.dp),
+            ) {
+                val width = size.width
+                val height = size.height
+                val topPadding = 6.dp.toPx()
+                val bottomPadding = 8.dp.toPx()
+                val drawableHeight = (height - topPadding - bottomPadding).coerceAtLeast(1f)
+                val barSlot = width / chartEntries.size.toFloat()
+                val barWidth = (barSlot * 0.62f).coerceAtLeast(8f)
+                val selectedIndex = chartEntries.lastIndex
 
-                        val guideYTop = topPadding
-                        val guideYMid = height / 2f
-                        val guideYBottom = height - bottomPadding
-                        listOf(guideYTop, guideYMid, guideYBottom).forEach { y ->
-                            drawLine(
-                                color = gridColor,
-                                start = androidx.compose.ui.geometry.Offset(0f, y),
-                                end = androidx.compose.ui.geometry.Offset(width, y),
-                                strokeWidth = 1.dp.toPx(),
-                            )
-                        }
-                        if (hasTargetLine) {
-                            val targetNormalized =
-                                (goalValue - axisBottomValue).toFloat() / valueRange
-                            val targetY = height - bottomPadding - (targetNormalized * lineHeight)
-                            drawLine(
-                                color = WellPaidGold.copy(alpha = 0.9f),
-                                start = androidx.compose.ui.geometry.Offset(0f, targetY),
-                                end = androidx.compose.ui.geometry.Offset(width, targetY),
-                                strokeWidth = 1.5.dp.toPx(),
-                                pathEffect = PathEffect.dashPathEffect(
-                                    intervals = floatArrayOf(9f, 8f),
-                                    phase = 0f,
-                                ),
-                            )
-                        }
+                if (hasGoalValue) {
+                    val goalNormalized = ((goalValue - minValue).toFloat() / valueRange).coerceIn(0f, 1f)
+                    val goalY = height - bottomPadding - (goalNormalized * drawableHeight)
+                    drawLine(
+                        color = trendColor.copy(alpha = 0.28f),
+                        start = androidx.compose.ui.geometry.Offset(0f, goalY),
+                        end = androidx.compose.ui.geometry.Offset(width, goalY),
+                        strokeWidth = 1.5.dp.toPx(),
+                    )
+                }
 
-                        val points = chartEntries.mapIndexed { index, entry ->
-                            val x = if (chartEntries.size == 1) width / 2f else index * step
-                            val normalized = (entry.priceCents - axisBottomValue).toFloat() / valueRange
-                            val adjustedY = height - bottomPadding - (normalized * lineHeight)
-                            androidx.compose.ui.geometry.Offset(x, adjustedY)
-                        }
+                val selectedX = (selectedIndex * barSlot) + (barSlot / 2f)
+                drawLine(
+                    color = WellPaidNavy.copy(alpha = 0.18f),
+                    start = androidx.compose.ui.geometry.Offset(selectedX, topPadding),
+                    end = androidx.compose.ui.geometry.Offset(selectedX, height - bottomPadding),
+                    strokeWidth = 2f,
+                )
 
-                        if (points.size >= 2) {
-                            val smoothPath = androidx.compose.ui.graphics.Path().apply {
-                                moveTo(points.first().x, points.first().y)
-                                points.zipWithNext().forEach { (start, end) ->
-                                    val controlX = (start.x + end.x) / 2f
-                                    cubicTo(
-                                        controlX,
-                                        start.y,
-                                        controlX,
-                                        end.y,
-                                        end.x,
-                                        end.y,
-                                    )
-                                }
-                            }
-                            val areaPath = androidx.compose.ui.graphics.Path().apply {
-                                addPath(smoothPath)
-                                lineTo(points.last().x, height - bottomPadding)
-                                lineTo(points.first().x, height - bottomPadding)
-                                close()
-                            }
-                            drawPath(
-                                path = areaPath,
-                                brush = Brush.verticalGradient(
-                                    colors = listOf(
-                                        directionColor.copy(alpha = 0.28f),
-                                        directionColor.copy(alpha = 0.04f),
-                                    ),
-                                    startY = topPadding,
-                                    endY = height - bottomPadding,
-                                ),
-                            )
-                            drawPath(
-                                path = smoothPath,
-                                color = directionColor.copy(alpha = 0.95f),
-                                style = androidx.compose.ui.graphics.drawscope.Stroke(
-                                    width = 4.dp.toPx(),
-                                    cap = androidx.compose.ui.graphics.StrokeCap.Round,
-                                    join = androidx.compose.ui.graphics.StrokeJoin.Round,
-                                ),
-                            )
-                        }
-
-                        points.forEachIndexed { index, point ->
-                            val isSelected = selectedPointIndex == index
-                            val isMin = index == minIndex
-                            val isMax = index == maxIndex
-                            val isCurrent = index == currentIndex
-                            val baseColor = when {
-                                isMin -> WellPaidPositive
-                                isMax -> errorColor
-                                isCurrent -> directionColor
-                                else -> directionColor.copy(alpha = 0.8f)
-                            }
-                            if (isSelected) {
-                                drawCircle(
-                                    color = baseColor.copy(alpha = 0.28f),
-                                    radius = 9.dp.toPx(),
-                                    center = point,
-                                )
-                                drawCircle(
-                                    color = Color.White.copy(alpha = 0.95f),
-                                    radius = 6.4.dp.toPx(),
-                                    center = point,
-                                    style = Stroke(width = 2.dp.toPx()),
-                                )
-                            }
-                            drawCircle(
-                                color = baseColor.copy(alpha = if (isSelected) 1f else 0.88f),
-                                radius = when {
-                                    isCurrent -> 5.6.dp.toPx()
-                                    isMin || isMax -> 5.dp.toPx()
-                                    isSelected -> 5.dp.toPx()
-                                    else -> 3.6.dp.toPx()
-                                },
-                                center = point,
-                            )
-                        }
+                chartEntries.forEachIndexed { index, entry ->
+                    val x = (index * barSlot) + (barSlot / 2f)
+                    val normalized = ((entry.priceCents - minValue).toFloat() / valueRange).coerceIn(0f, 1f)
+                    val barHeight = (normalized * drawableHeight).coerceAtLeast(8f)
+                    val top = height - bottomPadding - barHeight
+                    val baseColor = priceToColor[entry.priceCents] ?: WellPaidGold
+                    val color = if (index == selectedIndex) {
+                        baseColor.copy(alpha = (baseColor.alpha * 0.6f + 0.4f).coerceIn(0.5f, 1f))
+                    } else {
+                        baseColor.copy(alpha = 0.72f)
+                    }
+                    drawRoundRect(
+                        color = color,
+                        topLeft = androidx.compose.ui.geometry.Offset(x - (barWidth / 2f), top),
+                        size = androidx.compose.ui.geometry.Size(barWidth, barHeight),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(6f, 6f),
+                    )
+                    if (index == selectedIndex) {
+                        drawRoundRect(
+                            color = Color.White.copy(alpha = 0.9f),
+                            topLeft = androidx.compose.ui.geometry.Offset(x - (barWidth / 2f), top),
+                            size = androidx.compose.ui.geometry.Size(barWidth, 2.5f),
+                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(4f, 4f),
+                        )
                     }
                 }
             }
