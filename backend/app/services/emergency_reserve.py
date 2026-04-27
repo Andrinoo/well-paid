@@ -7,7 +7,7 @@ from datetime import date, datetime, timezone
 from math import ceil
 from typing import TYPE_CHECKING
 
-from sqlalchemy import extract, func, or_, select
+from sqlalchemy import extract, func, select
 from sqlalchemy.orm import Session
 
 from app.core.schema_introspection import session_has_table
@@ -17,7 +17,6 @@ from app.models.emergency_reserve import (
     EmergencyReserveContributionItem,
     EmergencyReservePlan,
 )
-from app.models.family import FamilyMember
 from app.models.goal import Goal
 from app.models.goal_contribution import GoalContribution
 from app.services.family_scope import family_peer_user_ids
@@ -181,29 +180,17 @@ def _resolve_scope(
     db: Session,
     user_id: uuid.UUID,
     *,
-    prefer_family_scope: bool = True,
-) -> tuple[uuid.UUID | None, uuid.UUID | None]:
-    row = db.scalar(select(FamilyMember).where(FamilyMember.user_id == user_id))
-    if row is not None and prefer_family_scope:
-        return (row.family_id, None)
+    prefer_family_scope: bool = False,
+) -> tuple[None, uuid.UUID]:
+    # Reserva de emergência é sempre individual (sem escopo de família).
+    _ = db
+    _ = prefer_family_scope
     return (None, user_id)
 
 
-def _scope_filter(q, family_id: uuid.UUID | None, solo_user_id: uuid.UUID | None):
-    if family_id is not None:
-        return q.where(EmergencyReservePlan.family_id == family_id)
-    return q.where(EmergencyReservePlan.solo_user_id == solo_user_id)
-
-
 def _scope_filter_visible_for_user(q, family_id: uuid.UUID | None, user_id: uuid.UUID):
-    if family_id is None:
-        return q.where(EmergencyReservePlan.solo_user_id == user_id)
-    return q.where(
-        or_(
-            EmergencyReservePlan.family_id == family_id,
-            EmergencyReservePlan.solo_user_id == user_id,
-        )
-    )
+    _ = family_id
+    return q.where(EmergencyReservePlan.solo_user_id == user_id)
 
 
 def list_plans_for_user(
@@ -287,7 +274,7 @@ def upsert_monthly_target(
     user_id: uuid.UUID,
     monthly_target_cents: int,
 ) -> EmergencyReservePlan:
-    family_id, solo_user_id = _resolve_scope(db, user_id)
+    _, solo_user_id = _resolve_scope(db, user_id)
     r = get_primary_plan_for_user(db, user_id)
     if r is not None:
         r.monthly_target_cents = int(monthly_target_cents)
@@ -298,8 +285,7 @@ def upsert_monthly_target(
     anchor = first_of_month(date.today())
     r = EmergencyReservePlan(
         id=uuid.uuid4(),
-        family_id=family_id,
-        solo_user_id=solo_user_id if family_id is None else None,
+        solo_user_id=solo_user_id,
         title="",
         details=None,
         monthly_target_cents=int(monthly_target_cents),
@@ -555,13 +541,13 @@ def create_plan(
     opening_balance_cents: int | None = None,
     is_family: bool = True,
 ) -> EmergencyReservePlan:
-    family_id, solo_user_id = _resolve_scope(db, user_id, prefer_family_scope=is_family)
+    _ = is_family
+    _, solo_user_id = _resolve_scope(db, user_id, prefer_family_scope=False)
     anchor = first_of_month(tracking_start or date.today())
     opening = int(opening_balance_cents or 0)
     p = EmergencyReservePlan(
         id=uuid.uuid4(),
-        family_id=family_id,
-        solo_user_id=solo_user_id if family_id is None else None,
+        solo_user_id=solo_user_id,
         title=title.strip()[:200],
         details=(details or "").strip()[:1200] or None,
         monthly_target_cents=int(monthly_target_cents),
@@ -615,15 +601,8 @@ def update_plan_for_user(
     plan.plan_duration_months = plan_duration_months
     if opening_balance_cents is not None:
         plan.opening_balance_cents = int(opening_balance_cents)
-    if is_family is not None:
-        if is_family:
-            row = db.scalar(select(FamilyMember).where(FamilyMember.user_id == user_id))
-            if row is not None:
-                plan.family_id = row.family_id
-                plan.solo_user_id = None
-        else:
-            plan.family_id = None
-            plan.solo_user_id = user_id
+    _ = is_family
+    plan.solo_user_id = user_id
     normalize_plan_end_fields(plan)
     db.commit()
     db.refresh(plan)
@@ -755,11 +734,10 @@ def create_contribution(
     allocations: list[dict],
     note: str | None = None,
 ) -> EmergencyReserveContribution:
-    family_id, solo_user_id = _resolve_scope(db, user_id)
+    _, solo_user_id = _resolve_scope(db, user_id)
     contrib = EmergencyReserveContribution(
         id=uuid.uuid4(),
-        family_id=family_id,
-        solo_user_id=solo_user_id if family_id is None else None,
+        solo_user_id=solo_user_id,
         contribution_date=contribution_date or date.today(),
         total_amount_cents=int(total_amount_cents),
         created_by_user_id=user_id,

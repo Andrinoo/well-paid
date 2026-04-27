@@ -55,4 +55,5 @@ backend/.venv/
 
 # Node (admin console local)
 node_modules/
+admin-console/
 admin-console/dist/

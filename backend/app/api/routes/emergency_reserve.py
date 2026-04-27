@@ -5,13 +5,11 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response, status
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.core.schema_introspection import session_has_table
-from app.models.family import FamilyMember
 from app.models.user import User
 from app.schemas.emergency_reserve import (
     EmergencyReserveAccrualItem,
@@ -49,44 +47,10 @@ from app.services.emergency_reserve import (
 router = APIRouter(prefix="/emergency-reserve", tags=["emergency-reserve"])
 
 
-def _is_owner_role(role: str | None) -> bool:
-    normalized = (role or "").strip().lower()
-    return normalized in {"owner", "titular", "admin"}
-
-
 def _tables_ready(db: Session) -> bool:
     return session_has_table(db, "emergency_reserve_plans") and session_has_table(
         db, "emergency_reserve_accruals"
     )
-
-
-def _require_owner_if_family_scope(db: Session, user_id) -> None:
-    row = db.scalar(select(FamilyMember).where(FamilyMember.user_id == user_id))
-    if row is None:
-        return
-    members = db.scalars(
-        select(FamilyMember.user_id).where(FamilyMember.family_id == row.family_id)
-    ).all()
-    # Ambiente de teste/edge-case: com família unitária, não bloquear operações de manutenção.
-    if len(members) <= 1:
-        return
-    role = row.role
-    if not _is_owner_role(role):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Apenas o titular da família pode alterar a reserva de emergência.",
-        )
-
-
-def _has_family_peers(db: Session, user_id) -> bool:
-    row = db.scalar(select(FamilyMember).where(FamilyMember.user_id == user_id))
-    if row is None:
-        return False
-    members = db.scalars(
-        select(FamilyMember.user_id).where(FamilyMember.family_id == row.family_id)
-    ).all()
-    return len(members) >= 2
-
 
 @router.get("/plans", response_model=list[EmergencyReservePlanItem])
 def list_reserve_plans(
@@ -108,7 +72,7 @@ def _to_plan_item(r) -> EmergencyReservePlanItem:
         id=r.id,
         title=r.title or "",
         details=r.details,
-        is_family=bool(r.family_id is not None),
+        is_family=False,
         monthly_target_cents=int(r.monthly_target_cents),
         target_cents=int(r.target_cents) if r.target_cents is not None else None,
         balance_cents=int(r.balance_cents),
@@ -135,9 +99,6 @@ def create_reserve_plan(
 ) -> EmergencyReservePlanItem:
     if not _tables_ready(db):
         raise _reserve_unavailable()
-    use_family_scope = bool(body.is_family) and bool(user.family_mode_enabled) and _has_family_peers(db, user.id)
-    if use_family_scope:
-        _require_owner_if_family_scope(db, user.id)
     p = create_plan(
         db,
         user.id,
@@ -149,7 +110,7 @@ def create_reserve_plan(
         target_end_date=body.target_end_date,
         plan_duration_months=body.plan_duration_months,
         opening_balance_cents=body.opening_balance_cents,
-        is_family=use_family_scope,
+        is_family=False,
     )
     return _to_plan_item(p)
 
@@ -162,7 +123,6 @@ def create_manual_contribution(
 ) -> EmergencyReserveContributionResponse:
     if not _tables_ready(db):
         raise _reserve_unavailable()
-    _require_owner_if_family_scope(db, user.id)
     total_alloc = sum(int(a.amount_cents) for a in body.allocations)
     if total_alloc != int(body.total_amount_cents):
         raise HTTPException(
@@ -205,13 +165,6 @@ def update_reserve_plan(
 ) -> EmergencyReservePlanItem:
     if not _tables_ready(db):
         raise _reserve_unavailable()
-    use_family_scope = (
-        bool(body.is_family)
-        and bool(user.family_mode_enabled)
-        and _has_family_peers(db, user.id)
-    ) if body.is_family is not None else None
-    if use_family_scope:
-        _require_owner_if_family_scope(db, user.id)
     try:
         p = update_plan_for_user(
             db,
@@ -225,7 +178,7 @@ def update_reserve_plan(
             target_end_date=body.target_end_date,
             plan_duration_months=body.plan_duration_months,
             opening_balance_cents=body.opening_balance_cents,
-            is_family=use_family_scope,
+            is_family=False,
         )
     except ValueError as e:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
@@ -242,7 +195,6 @@ def delete_reserve_plan(
 ) -> Response:
     if not _tables_ready(db):
         raise _reserve_unavailable()
-    _require_owner_if_family_scope(db, user.id)
     if not delete_plan_for_user(db, user.id, plan_id):
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Plano não encontrado")
     return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -274,7 +226,6 @@ def complete_reserve_plan(
 ) -> EmergencyReservePlanItem:
     if not _tables_ready(db):
         raise _reserve_unavailable()
-    _require_owner_if_family_scope(db, user.id)
     if body.goal_id is not None and body.to_plan_id is not None:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
@@ -334,7 +285,6 @@ def update_emergency_reserve(
     if not _tables_ready(db):
         raise _reserve_unavailable()
 
-    _require_owner_if_family_scope(db, user.id)
     r = upsert_monthly_target(db, user.id, body.monthly_target_cents)
     ensure_accruals(db, r, date.today())
     db.refresh(r)
@@ -390,7 +340,6 @@ def patch_emergency_reserve_accrual(
 ) -> EmergencyReserveResponse:
     if not _tables_ready(db):
         raise _reserve_unavailable()
-    _require_owner_if_family_scope(db, user.id)
     try:
         r = patch_accrual_for_user(db, user.id, year, month, body.amount_cents)
     except ValueError as e:
@@ -414,7 +363,6 @@ def delete_emergency_reserve_accrual(
 ) -> EmergencyReserveResponse:
     if not _tables_ready(db):
         raise _reserve_unavailable()
-    _require_owner_if_family_scope(db, user.id)
     reserve, deleted = delete_accrual_for_user(db, user.id, year, month)
     if reserve is None:
         raise HTTPException(
@@ -439,7 +387,6 @@ def delete_emergency_reserve(
     """Remove todos os planos de reserva e o histórico (recomeçar do zero)."""
     if not _tables_ready(db):
         raise _reserve_unavailable()
-    _require_owner_if_family_scope(db, user.id)
     if not delete_reserve_for_user(db, user.id):
         raise HTTPException(
             status.HTTP_404_NOT_FOUND,

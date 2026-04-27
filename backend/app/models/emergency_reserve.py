@@ -9,18 +9,12 @@ from app.models.base import Base, TimestampMixin
 
 
 class EmergencyReservePlan(Base, TimestampMixin):
-    """Plano de reserva (vários por família ou utilizador solo)."""
+    """Plano de reserva de emergência por utilizador."""
 
     __tablename__ = "emergency_reserve_plans"
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
-    family_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("families.id", ondelete="CASCADE"),
-        nullable=True,
-        index=True,
     )
     solo_user_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
@@ -111,12 +105,6 @@ class EmergencyReserveContribution(Base, TimestampMixin):
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
-    family_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("families.id", ondelete="CASCADE"),
-        nullable=True,
-        index=True,
     )
     solo_user_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),

@@ -48,6 +48,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
@@ -503,6 +504,7 @@ private fun GoalPriceLineChart(
                     priceCents = item.priceCents,
                     shortLabel = formatRelativePriceDate(item.recordedAt),
                     fullLabel = formatIsoDateToBr(item.recordedAt),
+                    dateKey = parseIsoLocalDate(item.recordedAt)?.toString(),
                 )
             }
             .toList()
@@ -553,43 +555,55 @@ private fun GoalPriceLineChart(
         deltaPercent <= -0.5f -> WellPaidPositive
         else -> WellPaidNavy
     }
-    val barPalette = remember {
+    val vividDayPalettes = remember {
         listOf(
-            WellPaidGold,
-            WellPaidPositive,
-            WellPaidNavy,
-            Color(0xFF6C63FF),
-            Color(0xFF14B8A6),
-            Color(0xFFB45309),
-            Color(0xFF8B5CF6),
-            Color(0xFFBE123C),
-            Color(0xFF0EA5E9),
-            Color(0xFF7C3AED),
+            listOf(Color(0xFFFF3B30), Color(0xFFFF2D55), Color(0xFFFF6B6B), Color(0xFFFF7F50)),
+            listOf(Color(0xFF00C853), Color(0xFF00E676), Color(0xFF69F0AE), Color(0xFF76FF03)),
+            listOf(Color(0xFF2962FF), Color(0xFF2979FF), Color(0xFF00B0FF), Color(0xFF40C4FF)),
+            listOf(Color(0xFFAA00FF), Color(0xFFD500F9), Color(0xFFE040FB), Color(0xFFEA80FC)),
+            listOf(Color(0xFFFF9100), Color(0xFFFFAB00), Color(0xFFFFD740), Color(0xFFFF6D00)),
+            listOf(Color(0xFF00BFA5), Color(0xFF1DE9B6), Color(0xFF64FFDA), Color(0xFF00E5FF)),
         )
     }
-    val priceToColor = remember(chartEntries) {
-        val colors = linkedMapOf<Int, Color>()
-        chartEntries.forEach { entry ->
-            if (!colors.containsKey(entry.priceCents)) {
-                colors[entry.priceCents] = barPalette[colors.size % barPalette.size]
+    val barColors = remember(chartEntries) {
+        val dayToPaletteIndex = linkedMapOf<String, Int>()
+        val dayPriceToColor = linkedMapOf<Pair<String, Int>, Color>()
+        val dayVariantCount = linkedMapOf<String, Int>()
+
+        chartEntries.mapIndexed { index, entry ->
+            val dayKey = entry.dateKey ?: "fallback-$index"
+            val paletteIndex = dayToPaletteIndex.getOrPut(dayKey) {
+                dayToPaletteIndex.size % vividDayPalettes.size
+            }
+            val dayPalette = vividDayPalettes[paletteIndex]
+            val dayPriceKey = dayKey to entry.priceCents
+            dayPriceToColor.getOrPut(dayPriceKey) {
+                val variantIndex = dayVariantCount.getOrDefault(dayKey, 0)
+                dayVariantCount[dayKey] = variantIndex + 1
+                dayPalette[variantIndex % dayPalette.size]
             }
         }
-        colors
     }
     val gridColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
 
     Column(
         modifier = modifier
+            .shadow(
+                elevation = 8.dp,
+                shape = RoundedCornerShape(14.dp),
+                ambientColor = WellPaidNavy.copy(alpha = 0.14f),
+                spotColor = WellPaidNavy.copy(alpha = 0.14f),
+            )
             .background(
-                color = WellPaidCreamMuted.copy(alpha = 0.54f),
-                shape = RoundedCornerShape(10.dp),
+                color = WellPaidCreamMuted.copy(alpha = 0.74f),
+                shape = RoundedCornerShape(14.dp),
             )
             .border(
                 width = 1.dp,
-                color = WellPaidGold.copy(alpha = 0.35f),
-                shape = RoundedCornerShape(10.dp),
+                color = WellPaidGold.copy(alpha = 0.42f),
+                shape = RoundedCornerShape(14.dp),
             )
-            .padding(horizontal = 8.dp, vertical = 6.dp),
+            .padding(horizontal = 10.dp, vertical = 8.dp),
     ) {
         Text(
             text = stringResource(R.string.goal_price_history_title),
@@ -650,38 +664,19 @@ private fun GoalPriceLineChart(
                     )
                 }
 
-                if (hasGoalValue) {
-                    val goalNormalized = ((goalValue - axisBottomValue).toFloat() / valueRange).coerceIn(0f, 1f)
-                    val goalY = height - bottomPadding - (goalNormalized * drawableHeight)
-                    drawLine(
-                        color = trendColor.copy(alpha = 0.28f),
-                        start = androidx.compose.ui.geometry.Offset(0f, goalY),
-                        end = androidx.compose.ui.geometry.Offset(width, goalY),
-                        strokeWidth = 1.5.dp.toPx(),
-                    )
-                }
-
-                val selectedX = (selectedIndex * barSlot) + (barSlot / 2f)
-                drawLine(
-                    color = WellPaidNavy.copy(alpha = 0.18f),
-                    start = androidx.compose.ui.geometry.Offset(selectedX, topPadding),
-                    end = androidx.compose.ui.geometry.Offset(selectedX, height - bottomPadding),
-                    strokeWidth = 2f,
-                )
-
                 chartEntries.forEachIndexed { index, entry ->
                     val x = (index * barSlot) + (barSlot / 2f)
                     val normalized = ((entry.priceCents - axisBottomValue).toFloat() / valueRange).coerceIn(0f, 1f)
                     val barHeight = (normalized * drawableHeight).coerceAtLeast(8f)
                     val top = height - bottomPadding - barHeight
-                    val baseColor = priceToColor[entry.priceCents] ?: WellPaidGold
+                    val baseColor = barColors.getOrNull(index) ?: WellPaidGold
                     val hasPriceChange = index > 0 && chartEntries[index - 1].priceCents != entry.priceCents
                     val color = if (index == selectedIndex) {
-                        baseColor.copy(alpha = (baseColor.alpha * 0.6f + 0.4f).coerceIn(0.5f, 1f))
+                        baseColor.copy(alpha = 1f)
                     } else if (hasPriceChange) {
-                        baseColor.copy(alpha = 0.95f)
+                        baseColor.copy(alpha = 0.94f)
                     } else {
-                        baseColor.copy(alpha = 0.68f)
+                        baseColor.copy(alpha = 0.86f)
                     }
                     drawRoundRect(
                         color = color,
@@ -843,6 +838,7 @@ private data class GoalBarEntry(
     val priceCents: Int,
     val shortLabel: String,
     val fullLabel: String,
+    val dateKey: String? = null,
 )
 
 private fun preferredChartWidthForEntries(entryCount: Int): Dp {
