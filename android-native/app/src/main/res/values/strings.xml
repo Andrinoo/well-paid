@@ -38,6 +38,10 @@
     <string name="emergency_error_owner_only">Only the family owner can change or delete emergency reserve plans.</string>
     <string name="emergency_inform_investments_title">Inform investments</string>
     <string name="emergency_inform_investments_desc">If enabled, after saving this plan the app opens Investments. If disabled, the value stays only in emergency reserve.</string>
+    <string name="emergency_family_reserve_toggle_title">Save as family reserve</string>
+    <string name="emergency_family_reserve_toggle_desc">Requires Family Mode enabled and at least one other member in your family.</string>
+    <string name="emergency_family_mode_required_fallback">Family reserve was not enabled because Family Mode is off. The plan was saved as a normal reserve.</string>
+    <string name="emergency_family_no_members_fallback">No family members found for this account. The plan was saved as a normal reserve.</string>
     <string name="login_error_validation">Invalid data. Check email and password.</string>
     <string name="login_error_rate_limit">Too many attempts. Please wait.</string>
     <string name="login_error_network">Could not reach the server. Try again.</string>

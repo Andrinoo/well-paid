@@ -39,6 +39,7 @@ class EmergencyReservePlanItem(BaseModel):
     id: UUID
     title: str
     details: str | None = None
+    is_family: bool = False
     monthly_target_cents: int = Field(ge=0)
     target_cents: int | None = Field(default=None, ge=0)
     balance_cents: int
@@ -59,6 +60,7 @@ class EmergencyReservePlanItem(BaseModel):
 class EmergencyReservePlanCreate(BaseModel):
     title: str = Field(default="", max_length=200)
     details: str | None = Field(default=None, max_length=1200)
+    is_family: bool = False
     monthly_target_cents: int = Field(ge=0)
     target_cents: int | None = Field(default=None, ge=0)
     tracking_start: date_type | None = None
@@ -74,6 +76,7 @@ class EmergencyReservePlanCreate(BaseModel):
 class EmergencyReservePlanUpdate(BaseModel):
     title: str = Field(default="", max_length=200)
     details: str | None = Field(default=None, max_length=1200)
+    is_family: bool | None = None
     monthly_target_cents: int = Field(ge=0)
     target_cents: int | None = Field(default=None, ge=0)
     tracking_start: date_type | None = None

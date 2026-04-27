@@ -14,6 +14,7 @@ import com.wellpaid.core.model.emergency.EmergencyReservePlanDto
 import com.wellpaid.core.model.emergency.EmergencyReservePlanUpdateDto
 import com.wellpaid.core.model.emergency.EmergencyReserveUpdateDto
 import com.wellpaid.core.network.EmergencyReserveApi
+import com.wellpaid.core.network.UserApi
 import com.wellpaid.data.FamilyMeRepository
 import com.wellpaid.data.MainPrefetchTiming
 import com.wellpaid.data.UiPreferencesRepository
@@ -69,6 +70,7 @@ data class EmergencyReserveUiState(
     /** Aporte inicial (dinheiro já na reserva ao criar o plano). */
     val newPlanOpeningBalanceText: String = "",
     val newPlanInformInvestments: Boolean = false,
+    val newPlanFamilyReserve: Boolean = false,
     val newPlanRecommendedMonthlyCents: Int? = null,
     val newPlanRetroOffer: EmergencyRetroactivePlanOffer? = null,
     val newPlanRetroDismissFingerprint: String? = null,
@@ -82,6 +84,7 @@ data class EmergencyReserveUiState(
     val editingPlanTargetEndText: String = "",
     val editingPlanOpeningBalanceText: String = "",
     val editingPlanInformInvestments: Boolean = false,
+    val editingPlanFamilyReserve: Boolean = false,
     val editingPlanRecommendedMonthlyCents: Int? = null,
     val editingPlanBalanceCents: Int = 0,
     val editingPlanInitialOpeningCents: Int = 0,
@@ -104,8 +107,9 @@ data class EmergencyReserveUiState(
 class EmergencyReserveViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context,
     private val api: EmergencyReserveApi,
+    private val userApi: UserApi,
     private val tokenStorage: TokenStorage,
-    familyMeRepository: FamilyMeRepository,
+    private val familyMeRepository: FamilyMeRepository,
     private val prefetchTiming: MainPrefetchTiming,
     private val uiPreferencesRepository: UiPreferencesRepository,
 ) : ViewModel() {
@@ -301,6 +305,10 @@ class EmergencyReserveViewModel @Inject constructor(
         }
     }
 
+    fun setNewPlanFamilyReserve(value: Boolean) {
+        _uiState.update { it.copy(newPlanFamilyReserve = value) }
+    }
+
     fun resetNewPlanFormFields() {
         _uiState.update {
             it.copy(
@@ -313,6 +321,7 @@ class EmergencyReserveViewModel @Inject constructor(
                 newPlanTargetEndText = "",
                 newPlanOpeningBalanceText = "",
                 newPlanInformInvestments = defaultInformInvestments,
+                newPlanFamilyReserve = false,
                 newPlanRecommendedMonthlyCents = null,
                 newPlanRetroOffer = null,
                 newPlanRetroDismissFingerprint = null,
@@ -334,6 +343,7 @@ class EmergencyReserveViewModel @Inject constructor(
                 editingPlanTargetEndText = plan.targetEndDate.orEmpty(),
                 editingPlanOpeningBalanceText = centsToBrlInput(plan.openingBalanceCents),
                 editingPlanInformInvestments = defaultInformInvestments,
+                editingPlanFamilyReserve = false,
                 editingPlanRecommendedMonthlyCents = plan.monthlyNeededCents,
                 editingPlanBalanceCents = plan.balanceCents,
                 editingPlanInitialOpeningCents = plan.openingBalanceCents,
@@ -359,6 +369,7 @@ class EmergencyReserveViewModel @Inject constructor(
                 editingPlanTargetEndText = "",
                 editingPlanOpeningBalanceText = "",
                 editingPlanInformInvestments = defaultInformInvestments,
+                editingPlanFamilyReserve = false,
                 editingPlanRecommendedMonthlyCents = null,
                 editingPlanBalanceCents = 0,
                 editingPlanInitialOpeningCents = 0,
@@ -398,6 +409,10 @@ class EmergencyReserveViewModel @Inject constructor(
         viewModelScope.launch {
             uiPreferencesRepository.setEmergencyInformInvestments(value)
         }
+    }
+
+    fun setEditingPlanFamilyReserve(value: Boolean) {
+        _uiState.update { it.copy(editingPlanFamilyReserve = value) }
     }
 
     fun setEditingPlanDurationMonthsText(value: String) {
@@ -576,12 +591,17 @@ class EmergencyReserveViewModel @Inject constructor(
         val openingCents = parseBrlToCents(s.newPlanOpeningBalanceText)?.takeIf { it >= 0 }
 
         viewModelScope.launch {
+            val familyNormalization = normalizeFamilyReserveRequest(
+                requested = s.newPlanFamilyReserve,
+                context = FamilyReserveContext.New,
+            )
             _uiState.update { it.copy(isCreatingPlan = true, errorMessage = null) }
             runCatching {
                 api.createPlan(
                     EmergencyReservePlanCreateDto(
                         title = title,
                         details = s.newPlanDetailsText.trim().ifBlank { null },
+                        isFamily = familyNormalization.useFamilyReserve,
                         monthlyTargetCents = cents,
                         targetCents = targetCents,
                         trackingStart = trackingStart?.toString(),
@@ -604,11 +624,15 @@ class EmergencyReserveViewModel @Inject constructor(
                             newPlanTargetEndText = "",
                             newPlanOpeningBalanceText = "",
                             newPlanInformInvestments = defaultInformInvestments,
+                            newPlanFamilyReserve = false,
                             newPlanRecommendedMonthlyCents = null,
                             newPlanRetroOffer = null,
                             newPlanRetroDismissFingerprint = null,
                             errorMessage = null,
                         )
+                    }
+                    familyNormalization.warningMessage?.let { warning ->
+                        _uiState.update { it.copy(errorMessage = warning) }
                     }
                     onSuccess?.invoke(informInvestments)
                     refresh()
@@ -668,6 +692,10 @@ class EmergencyReserveViewModel @Inject constructor(
         val openingCents = parseBrlToCents(s.editingPlanOpeningBalanceText.trim()) ?: 0
 
         viewModelScope.launch {
+            val familyNormalization = normalizeFamilyReserveRequest(
+                requested = s.editingPlanFamilyReserve,
+                context = FamilyReserveContext.Editing,
+            )
             _uiState.update { it.copy(isUpdatingPlan = true, errorMessage = null) }
             runCatching {
                 api.updatePlan(
@@ -675,6 +703,7 @@ class EmergencyReserveViewModel @Inject constructor(
                     EmergencyReservePlanUpdateDto(
                         title = title,
                         details = s.editingPlanDetailsText.trim().ifBlank { null },
+                        isFamily = familyNormalization.useFamilyReserve,
                         monthlyTargetCents = cents,
                         targetCents = targetCents,
                         trackingStart = trackingStart?.toString(),
@@ -685,6 +714,9 @@ class EmergencyReserveViewModel @Inject constructor(
                 )
             }.onSuccess {
                 _uiState.update { it.copy(isUpdatingPlan = false) }
+                familyNormalization.warningMessage?.let { warning ->
+                    _uiState.update { it.copy(errorMessage = warning) }
+                }
                 onSuccess?.invoke(informInvestments)
                 refresh(rebindEditingPlanId = planId)
             }.onFailure { t ->
@@ -703,26 +735,32 @@ class EmergencyReserveViewModel @Inject constructor(
         val planId = s.deletingPlanId ?: return
         viewModelScope.launch {
             _uiState.update { it.copy(isUpdatingPlan = true, errorMessage = null) }
-            runCatching {
-                val resp = api.deletePlan(planId)
-                if (!resp.isSuccessful) {
-                    val detail = try {
-                        resp.errorBody()?.string().orEmpty()
-                    } catch (_: Exception) {
-                        ""
-                    }
-                    if (resp.code() == 403) {
-                        val msg = if (detail.contains("Apenas o titular", ignoreCase = true)) {
-                            appContext.getString(R.string.emergency_error_owner_only)
-                        } else {
-                            appContext.getString(R.string.login_error_forbidden)
+            runCatching { api.deletePlan(planId) }
+                .onSuccess { resp ->
+                    if (!resp.isSuccessful) {
+                        val detail = try {
+                            resp.errorBody()?.string().orEmpty()
+                        } catch (_: Exception) {
+                            ""
                         }
-                        throw IllegalArgumentException(msg)
+                        val ownerOnlyError = detail.contains("Apenas o titular", ignoreCase = true) ||
+                            detail.contains("Only the family owner", ignoreCase = true)
+                        val message = when {
+                            resp.code() == 403 && ownerOnlyError ->
+                                appContext.getString(R.string.emergency_error_owner_only)
+                            resp.code() == 403 ->
+                                appContext.getString(R.string.login_error_forbidden)
+                            else ->
+                                "HTTP ${resp.code()} ${detail.take(240)}"
+                        }
+                        _uiState.update {
+                            it.copy(
+                                isUpdatingPlan = false,
+                                errorMessage = message,
+                            )
+                        }
+                        return@onSuccess
                     }
-                    error("HTTP ${resp.code()} ${detail.take(240)}")
-                }
-            }
-                .onSuccess {
                     _uiState.update {
                         it.copy(
                             isUpdatingPlan = false,
@@ -855,6 +893,46 @@ class EmergencyReserveViewModel @Inject constructor(
     private fun parseIsoDateOrNull(value: String): LocalDate? {
         if (value.isBlank()) return null
         return runCatching { LocalDate.parse(value.trim()) }.getOrNull()
+    }
+
+    private enum class FamilyReserveContext { New, Editing }
+
+    private data class FamilyReserveNormalization(
+        val useFamilyReserve: Boolean = false,
+        val warningMessage: String? = null,
+    )
+
+    private suspend fun normalizeFamilyReserveRequest(
+        requested: Boolean,
+        context: FamilyReserveContext,
+    ): FamilyReserveNormalization {
+        if (!requested) return FamilyReserveNormalization(useFamilyReserve = false)
+        val familyModeEnabled = runCatching { userApi.getCurrentUser().familyModeEnabled }
+            .getOrDefault(false)
+        val hasPeers = familyHasPeers()
+        if (familyModeEnabled && hasPeers) {
+            return FamilyReserveNormalization(useFamilyReserve = true)
+        }
+        val warning = if (!hasPeers) {
+            appContext.getString(R.string.emergency_family_no_members_fallback)
+        } else {
+            appContext.getString(R.string.emergency_family_mode_required_fallback)
+        }
+        _uiState.update { state ->
+            when (context) {
+                FamilyReserveContext.New -> state.copy(newPlanFamilyReserve = false)
+                FamilyReserveContext.Editing -> state.copy(editingPlanFamilyReserve = false)
+            }
+        }
+        return FamilyReserveNormalization(
+            useFamilyReserve = false,
+            warningMessage = warning,
+        )
+    }
+
+    private fun familyHasPeers(): Boolean {
+        val family = familyMeRepository.family.value ?: return false
+        return family.members.any { !it.isSelf }
     }
 
     fun dismissNewPlanRetroOffer() {

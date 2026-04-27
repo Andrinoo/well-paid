@@ -177,9 +177,14 @@ def is_month_skipped(plan: EmergencyReservePlan, year: int, month: int) -> bool:
     return month_key(year, month) in _skip_keys(plan)
 
 
-def _resolve_scope(db: Session, user_id: uuid.UUID) -> tuple[uuid.UUID | None, uuid.UUID | None]:
+def _resolve_scope(
+    db: Session,
+    user_id: uuid.UUID,
+    *,
+    prefer_family_scope: bool = True,
+) -> tuple[uuid.UUID | None, uuid.UUID | None]:
     row = db.scalar(select(FamilyMember).where(FamilyMember.user_id == user_id))
-    if row is not None:
+    if row is not None and prefer_family_scope:
         return (row.family_id, None)
     return (None, user_id)
 
@@ -537,8 +542,9 @@ def create_plan(
     target_end_date: date | None = None,
     plan_duration_months: int | None = None,
     opening_balance_cents: int | None = None,
+    is_family: bool = True,
 ) -> EmergencyReservePlan:
-    family_id, solo_user_id = _resolve_scope(db, user_id)
+    family_id, solo_user_id = _resolve_scope(db, user_id, prefer_family_scope=is_family)
     anchor = first_of_month(tracking_start or date.today())
     opening = int(opening_balance_cents or 0)
     p = EmergencyReservePlan(
@@ -579,6 +585,7 @@ def update_plan_for_user(
     target_end_date: date | None = None,
     plan_duration_months: int | None = None,
     opening_balance_cents: int | None = None,
+    is_family: bool | None = None,
 ) -> EmergencyReservePlan | None:
     plan = get_plan_for_user(db, user_id, plan_id)
     if plan is None:
@@ -597,6 +604,15 @@ def update_plan_for_user(
     plan.plan_duration_months = plan_duration_months
     if opening_balance_cents is not None:
         plan.opening_balance_cents = int(opening_balance_cents)
+    if is_family is not None:
+        if is_family:
+            row = db.scalar(select(FamilyMember).where(FamilyMember.user_id == user_id))
+            if row is not None:
+                plan.family_id = row.family_id
+                plan.solo_user_id = None
+        else:
+            plan.family_id = None
+            plan.solo_user_id = user_id
     normalize_plan_end_fields(plan)
     db.commit()
     db.refresh(plan)

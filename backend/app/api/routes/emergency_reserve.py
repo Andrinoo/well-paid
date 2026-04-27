@@ -71,6 +71,16 @@ def _require_owner_if_family_scope(db: Session, user_id) -> None:
         )
 
 
+def _has_family_peers(db: Session, user_id) -> bool:
+    row = db.scalar(select(FamilyMember).where(FamilyMember.user_id == user_id))
+    if row is None:
+        return False
+    members = db.scalars(
+        select(FamilyMember.user_id).where(FamilyMember.family_id == row.family_id)
+    ).all()
+    return len(members) >= 2
+
+
 @router.get("/plans", response_model=list[EmergencyReservePlanItem])
 def list_reserve_plans(
     user: Annotated[User, Depends(get_current_user)],
@@ -91,6 +101,7 @@ def _to_plan_item(r) -> EmergencyReservePlanItem:
         id=r.id,
         title=r.title or "",
         details=r.details,
+        is_family=bool(r.family_id is not None),
         monthly_target_cents=int(r.monthly_target_cents),
         target_cents=int(r.target_cents) if r.target_cents is not None else None,
         balance_cents=int(r.balance_cents),
@@ -117,7 +128,9 @@ def create_reserve_plan(
 ) -> EmergencyReservePlanItem:
     if not _tables_ready(db):
         raise _reserve_unavailable()
-    _require_owner_if_family_scope(db, user.id)
+    use_family_scope = bool(body.is_family) and bool(user.family_mode_enabled) and _has_family_peers(db, user.id)
+    if use_family_scope:
+        _require_owner_if_family_scope(db, user.id)
     p = create_plan(
         db,
         user.id,
@@ -129,6 +142,7 @@ def create_reserve_plan(
         target_end_date=body.target_end_date,
         plan_duration_months=body.plan_duration_months,
         opening_balance_cents=body.opening_balance_cents,
+        is_family=use_family_scope,
     )
     return _to_plan_item(p)
 
@@ -184,7 +198,13 @@ def update_reserve_plan(
 ) -> EmergencyReservePlanItem:
     if not _tables_ready(db):
         raise _reserve_unavailable()
-    _require_owner_if_family_scope(db, user.id)
+    use_family_scope = (
+        bool(body.is_family)
+        and bool(user.family_mode_enabled)
+        and _has_family_peers(db, user.id)
+    ) if body.is_family is not None else None
+    if use_family_scope:
+        _require_owner_if_family_scope(db, user.id)
     try:
         p = update_plan_for_user(
             db,
@@ -198,6 +218,7 @@ def update_reserve_plan(
             target_end_date=body.target_end_date,
             plan_duration_months=body.plan_duration_months,
             opening_balance_cents=body.opening_balance_cents,
+            is_family=use_family_scope,
         )
     except ValueError as e:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(e)) from e

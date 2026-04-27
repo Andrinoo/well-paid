@@ -37,6 +37,10 @@
     <string name="emergency_error_owner_only">Apenas o titular da família pode alterar ou apagar planos da reserva de emergência.</string>
     <string name="emergency_inform_investments_title">Informar investimentos</string>
     <string name="emergency_inform_investments_desc">Se ativado, após salvar o plano o app abre Investimentos. Se desativado, o valor fica apenas na reserva de emergência.</string>
+    <string name="emergency_family_reserve_toggle_title">Salvar como reserva familiar</string>
+    <string name="emergency_family_reserve_toggle_desc">Exige Modo família ligado e pelo menos mais um membro na sua família.</string>
+    <string name="emergency_family_mode_required_fallback">A reserva familiar não foi ativada porque o Modo família está desligado. O plano foi salvo como reserva normal.</string>
+    <string name="emergency_family_no_members_fallback">Não há membros de família para este utilizador. O plano foi salvo como reserva normal.</string>
     <string name="login_error_validation">Dados inválidos. Verifique e-mail e palavra-passe.</string>
     <string name="login_error_rate_limit">Muitas tentativas. Aguarde um momento.</string>
     <string name="login_error_network">Sem ligação ao servidor. Tente novamente.</string>

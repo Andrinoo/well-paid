@@ -29,6 +29,7 @@ data class EmergencyReservePlanDto(
     val id: String,
     val title: String,
     val details: String? = null,
+    @SerialName("is_family") val isFamily: Boolean = false,
     @SerialName("monthly_target_cents") val monthlyTargetCents: Int,
     @SerialName("target_cents") val targetCents: Int? = null,
     @SerialName("balance_cents") val balanceCents: Int,
@@ -50,6 +51,7 @@ data class EmergencyReservePlanDto(
 data class EmergencyReservePlanCreateDto(
     val title: String = "",
     val details: String? = null,
+    @SerialName("is_family") val isFamily: Boolean = false,
     @SerialName("monthly_target_cents") val monthlyTargetCents: Int,
     @SerialName("target_cents") val targetCents: Int? = null,
     @SerialName("tracking_start") val trackingStart: String? = null,
@@ -62,6 +64,7 @@ data class EmergencyReservePlanCreateDto(
 data class EmergencyReservePlanUpdateDto(
     val title: String = "",
     val details: String? = null,
+    @SerialName("is_family") val isFamily: Boolean? = null,
     @SerialName("monthly_target_cents") val monthlyTargetCents: Int,
     @SerialName("target_cents") val targetCents: Int? = null,
     @SerialName("tracking_start") val trackingStart: String? = null,

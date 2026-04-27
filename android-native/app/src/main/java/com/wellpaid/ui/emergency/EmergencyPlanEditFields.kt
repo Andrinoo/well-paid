@@ -248,6 +248,39 @@ fun EmergencyPlanEditFields(
                 )
             }
         }
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(14.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+            ),
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.emergency_family_reserve_toggle_title),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = WellPaidNavy,
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = stringResource(R.string.emergency_family_reserve_toggle_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = state.editingPlanFamilyReserve,
+                    onCheckedChange = { viewModel.setEditingPlanFamilyReserve(it) },
+                    enabled = enabled,
+                )
+            }
+        }
         state.editingPlanRecommendedMonthlyCents?.let { rec ->
             Text(
                 text = stringResource(
