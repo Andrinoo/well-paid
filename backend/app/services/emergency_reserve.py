@@ -7,7 +7,7 @@ from datetime import date, datetime, timezone
 from math import ceil
 from typing import TYPE_CHECKING
 
-from sqlalchemy import extract, func, select
+from sqlalchemy import extract, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.schema_introspection import session_has_table
@@ -195,15 +195,26 @@ def _scope_filter(q, family_id: uuid.UUID | None, solo_user_id: uuid.UUID | None
     return q.where(EmergencyReservePlan.solo_user_id == solo_user_id)
 
 
+def _scope_filter_visible_for_user(q, family_id: uuid.UUID | None, user_id: uuid.UUID):
+    if family_id is None:
+        return q.where(EmergencyReservePlan.solo_user_id == user_id)
+    return q.where(
+        or_(
+            EmergencyReservePlan.family_id == family_id,
+            EmergencyReservePlan.solo_user_id == user_id,
+        )
+    )
+
+
 def list_plans_for_user(
     db: Session,
     user_id: uuid.UUID,
     *,
     active_only: bool = False,
 ) -> list[EmergencyReservePlan]:
-    family_id, solo_user_id = _resolve_scope(db, user_id)
+    family_id, _ = _resolve_scope(db, user_id)
     q = select(EmergencyReservePlan)
-    q = _scope_filter(q, family_id, solo_user_id)
+    q = _scope_filter_visible_for_user(q, family_id, user_id)
     if active_only:
         q = q.where(EmergencyReservePlan.status == "active")
     q = q.order_by(EmergencyReservePlan.created_at.asc())
@@ -254,9 +265,9 @@ def get_plan_for_user(
     user_id: uuid.UUID,
     plan_id: uuid.UUID,
 ) -> EmergencyReservePlan | None:
-    family_id, solo_user_id = _resolve_scope(db, user_id)
+    family_id, _ = _resolve_scope(db, user_id)
     q = select(EmergencyReservePlan).where(EmergencyReservePlan.id == plan_id)
-    q = _scope_filter(q, family_id, solo_user_id)
+    q = _scope_filter_visible_for_user(q, family_id, user_id)
     return db.scalar(q)
 
 
