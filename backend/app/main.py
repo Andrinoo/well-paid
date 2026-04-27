@@ -1,5 +1,7 @@
 import logging
 import asyncio
+import time
+import uuid
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request, status
@@ -139,6 +141,37 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    request_id = request.headers.get("x-request-id") or str(uuid.uuid4())
+    started = time.perf_counter()
+    path = request.url.path
+    method = request.method
+    try:
+        response = await call_next(request)
+    except Exception:
+        elapsed_ms = int((time.perf_counter() - started) * 1000)
+        logger.exception(
+            "HTTP request failed: method=%s path=%s request_id=%s elapsed_ms=%s",
+            method,
+            path,
+            request_id,
+            elapsed_ms,
+        )
+        raise
+    elapsed_ms = int((time.perf_counter() - started) * 1000)
+    response.headers["x-request-id"] = request_id
+    logger.info(
+        "HTTP request handled: method=%s path=%s status=%s request_id=%s elapsed_ms=%s",
+        method,
+        path,
+        response.status_code,
+        request_id,
+        elapsed_ms,
+    )
+    return response
 
 app.include_router(health.router)
 app.include_router(auth.router)

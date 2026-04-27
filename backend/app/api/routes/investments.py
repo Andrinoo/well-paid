@@ -378,10 +378,29 @@ def create_investment_position(
     user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
 ) -> InvestmentPositionOut:
+    logger.info(
+        "investments.create_position received: user_id=%s instrument_type=%s name=%s principal_cents=%s annual_rate_bps=%s",
+        getattr(user, "id", None),
+        body.instrument_type,
+        body.name,
+        body.principal_cents,
+        body.annual_rate_bps,
+    )
     try:
-        return create_position_for_user(db, user.id, body)
+        out = create_position_for_user(db, user.id, body)
+        logger.info(
+            "investments.create_position success: user_id=%s position_id=%s instrument_type=%s",
+            getattr(user, "id", None),
+            out.id,
+            out.instrument_type,
+        )
+        return out
     except ValueError as exc:
         if str(exc) == "investments_positions_unavailable":
+            logger.warning(
+                "investments.create_position unavailable table: user_id=%s",
+                getattr(user, "id", None),
+            )
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail=(
@@ -389,6 +408,14 @@ def create_investment_position(
                     "python -m alembic upgrade head"
                 ),
             ) from exc
+        raise
+    except Exception:
+        logger.exception(
+            "investments.create_position unexpected failure: user_id=%s instrument_type=%s name=%s",
+            getattr(user, "id", None),
+            body.instrument_type,
+            body.name,
+        )
         raise
 
 
