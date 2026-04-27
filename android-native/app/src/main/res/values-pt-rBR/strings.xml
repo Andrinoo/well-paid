@@ -860,6 +860,11 @@
     <string name="emergency_plan_opening_label">Aporte inicial (opcional)</string>
     <string name="emergency_plan_opening_hint">O saldo em dinheiro é este valor mais os aportes registados. O detalhe mensal usa só aportes reais. Se o plano é retroativo e deixa este campo vazio, o saldo fica 0 até aportar ? veja o ritmo (delta) para o atraso face ao cronograma.</string>
     <string name="emergency_plan_opening_line">Aporte inicial: %1$s</string>
+    <string name="emergency_insight_active_plans">Planos ativos</string>
+    <string name="emergency_insight_monthly_commitment">Compromisso mensal</string>
+    <string name="emergency_insight_pace_attention">Abaixo do ritmo</string>
+    <string name="emergency_insight_nearest_target">Meta mais próxima</string>
+    <string name="emergency_insight_not_defined">Não definida</string>
     <string name="emergency_selected_plan_contribution_label">Aporte deste mês no plano selecionado (R$)</string>
     <string name="emergency_selected_plan_fallback">Plano sem nome</string>
     <string name="emergency_selected_plan_title">Plano selecionado para aporte: %1$s</string>
