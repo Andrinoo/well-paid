@@ -260,43 +260,6 @@ fun EmergencyReservePlanFormScreen(
                     )
                 }
             }
-            Spacer(Modifier.height(8.dp))
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-                ),
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Column(
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        Text(
-                            text = stringResource(R.string.emergency_family_reserve_toggle_title),
-                            style = MaterialTheme.typography.titleSmall,
-                            color = WellPaidNavy,
-                        )
-                        Spacer(Modifier.height(2.dp))
-                        Text(
-                            text = stringResource(R.string.emergency_family_reserve_toggle_desc),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    Switch(
-                        checked = state.newPlanFamilyReserve,
-                        onCheckedChange = { viewModel.setNewPlanFamilyReserve(it) },
-                        enabled = !state.isCreatingPlan && !state.isSaving,
-                    )
-                }
-            }
             state.newPlanRecommendedMonthlyCents?.let { rec ->
                 Spacer(Modifier.height(6.dp))
                 Text(

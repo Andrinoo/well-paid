@@ -150,6 +150,12 @@ fun EmergencyReserveContent(
                 val progress = (r.balanceCents.toFloat() / annualTarget.toFloat()).coerceIn(0f, 1f)
                 val pctAnnual = (progress * 100f).roundToInt().coerceIn(0, 100)
                 val planCount = state.plans.size
+                val activePlans = state.plans.count { it.status.equals("active", ignoreCase = true) }
+                val belowPaceCount = state.plans.count { it.paceStatus.equals("below", ignoreCase = true) }
+                val monthlyCommitmentCents = state.plans.sumOf { it.monthlyTargetCents }
+                val nearestEndDate = state.plans
+                    .mapNotNull { it.targetEndDate }
+                    .minOrNull()
 
                 Button(
                     onClick = onOpenReserveNew,
@@ -175,6 +181,13 @@ fun EmergencyReserveContent(
                     progress = progress,
                     pctAnnual = pctAnnual,
                     planCount = planCount,
+                )
+                Spacer(Modifier.height(10.dp))
+                EmergencyReserveInsightsGrid(
+                    activePlans = activePlans,
+                    belowPaceCount = belowPaceCount,
+                    monthlyCommitmentCents = monthlyCommitmentCents,
+                    nearestEndDate = nearestEndDate,
                 )
 
                 if (state.plans.isNotEmpty()) {
@@ -391,6 +404,86 @@ private fun EmergencyReserveCompactHero(
             color = WellPaidGold,
             trackColor = Color.White.copy(alpha = 0.15f),
         )
+    }
+}
+
+@Composable
+private fun EmergencyReserveInsightsGrid(
+    activePlans: Int,
+    belowPaceCount: Int,
+    monthlyCommitmentCents: Int,
+    nearestEndDate: String?,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            EmergencyInsightCard(
+                title = stringResource(R.string.emergency_insight_active_plans),
+                value = activePlans.toString(),
+                modifier = Modifier.weight(1f),
+            )
+            EmergencyInsightCard(
+                title = stringResource(R.string.emergency_insight_monthly_commitment),
+                value = formatBrlFromCents(monthlyCommitmentCents),
+                modifier = Modifier.weight(1f),
+            )
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            EmergencyInsightCard(
+                title = stringResource(R.string.emergency_insight_pace_attention),
+                value = belowPaceCount.toString(),
+                modifier = Modifier.weight(1f),
+            )
+            EmergencyInsightCard(
+                title = stringResource(R.string.emergency_insight_nearest_target),
+                value = nearestEndDate?.let { formatIsoDateToBr(it) }
+                    ?: stringResource(R.string.emergency_insight_not_defined),
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun EmergencyInsightCard(
+    title: String,
+    value: String,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(3.dp),
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = WellPaidNavy,
+                maxLines = 1,
+            )
+        }
     }
 }
 

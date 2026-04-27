@@ -34,13 +34,8 @@
     <string name="login_error_empty">Introduza e-mail e palavra-passe.</string>
     <string name="login_error_invalid">E-mail ou palavra-passe incorretos.</string>
     <string name="login_error_forbidden">Não foi possível iniciar sessão. Verifique a conta ou confirme o e-mail.</string>
-    <string name="emergency_error_owner_only">Apenas o titular da família pode alterar ou apagar planos da reserva de emergência.</string>
     <string name="emergency_inform_investments_title">Informar investimentos</string>
     <string name="emergency_inform_investments_desc">Se ativado, após salvar o plano o app abre Investimentos. Se desativado, o valor fica apenas na reserva de emergência.</string>
-    <string name="emergency_family_reserve_toggle_title">Salvar como reserva familiar</string>
-    <string name="emergency_family_reserve_toggle_desc">Exige Modo família ligado e pelo menos mais um membro na sua família.</string>
-    <string name="emergency_family_mode_required_fallback">A reserva familiar não foi ativada porque o Modo família está desligado. O plano foi salvo como reserva normal.</string>
-    <string name="emergency_family_no_members_fallback">Não há membros de família para este utilizador. O plano foi salvo como reserva normal.</string>
     <string name="login_error_validation">Dados inválidos. Verifique e-mail e palavra-passe.</string>
     <string name="login_error_rate_limit">Muitas tentativas. Aguarde um momento.</string>
     <string name="login_error_network">Sem ligação ao servidor. Tente novamente.</string>
@@ -663,7 +658,6 @@
     <string name="expense_share_whole_family">Família toda</string>
     <string name="expense_share_with_label">Partilhar com</string>
     <string name="expense_share_need_family">Adicione mais membros ao agregado para partilhar a despesa com alguém em concreto.</string>
-    <string name="emergency_readonly_not_owner">Só o titular da família pode alterar a reserva de emergência.</string>
     <string name="emergency_new_plan_section">Adicionar reserva nomeada</string>
     <string name="emergency_new_plan_more_options">Mais opções</string>
     <string name="emergency_new_plan_name_label">Nome do plano</string>
