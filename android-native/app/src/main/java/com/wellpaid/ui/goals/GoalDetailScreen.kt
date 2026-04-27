@@ -535,9 +535,11 @@ private fun GoalPriceLineChart(
     }
     if (chartEntries.isEmpty()) return
     val currentEntry = chartEntries.last()
-    val minValue = chartEntries.minOfOrNull { it.priceCents } ?: return
-    val maxValue = chartEntries.maxOfOrNull { it.priceCents } ?: return
-    val valueRange = (maxValue - minValue).toFloat().coerceAtLeast(1f)
+    val maxQuoteValue = chartEntries.maxOfOrNull { it.priceCents } ?: return
+    val axisBottomValue = 0
+    val axisTopValue = ((maxQuoteValue * 1.5f).toInt()).coerceAtLeast(1)
+    val axisMiddleValue = axisTopValue / 2
+    val valueRange = (axisTopValue - axisBottomValue).toFloat().coerceAtLeast(1f)
     val goalValue = (targetCents ?: 0).coerceAtLeast(0)
     val hasGoalValue = goalValue > 0
     val firstPrice = chartEntries.first().priceCents
@@ -616,9 +618,9 @@ private fun GoalPriceLineChart(
                 verticalArrangement = Arrangement.SpaceBetween,
                 horizontalAlignment = Alignment.End,
             ) {
-                GoalAxisLabel(maxValue)
-                GoalAxisLabel((maxValue + minValue) / 2)
-                GoalAxisLabel(minValue)
+                GoalAxisLabel(axisTopValue)
+                GoalAxisLabel(axisMiddleValue)
+                GoalAxisLabel(axisBottomValue)
             }
             Spacer(Modifier.width(8.dp))
             Canvas(
@@ -635,8 +637,20 @@ private fun GoalPriceLineChart(
                 val barWidth = (barSlot * 0.62f).coerceAtLeast(8f)
                 val selectedIndex = chartEntries.lastIndex
 
+                val guideYTop = topPadding
+                val guideYMid = height - bottomPadding - (((axisMiddleValue - axisBottomValue).toFloat() / valueRange) * drawableHeight)
+                val guideYBottom = height - bottomPadding
+                listOf(guideYTop, guideYMid, guideYBottom).forEach { y ->
+                    drawLine(
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f),
+                        start = androidx.compose.ui.geometry.Offset(0f, y),
+                        end = androidx.compose.ui.geometry.Offset(width, y),
+                        strokeWidth = 1.dp.toPx(),
+                    )
+                }
+
                 if (hasGoalValue) {
-                    val goalNormalized = ((goalValue - minValue).toFloat() / valueRange).coerceIn(0f, 1f)
+                    val goalNormalized = ((goalValue - axisBottomValue).toFloat() / valueRange).coerceIn(0f, 1f)
                     val goalY = height - bottomPadding - (goalNormalized * drawableHeight)
                     drawLine(
                         color = trendColor.copy(alpha = 0.28f),
@@ -656,14 +670,17 @@ private fun GoalPriceLineChart(
 
                 chartEntries.forEachIndexed { index, entry ->
                     val x = (index * barSlot) + (barSlot / 2f)
-                    val normalized = ((entry.priceCents - minValue).toFloat() / valueRange).coerceIn(0f, 1f)
+                    val normalized = ((entry.priceCents - axisBottomValue).toFloat() / valueRange).coerceIn(0f, 1f)
                     val barHeight = (normalized * drawableHeight).coerceAtLeast(8f)
                     val top = height - bottomPadding - barHeight
                     val baseColor = priceToColor[entry.priceCents] ?: WellPaidGold
+                    val hasPriceChange = index > 0 && chartEntries[index - 1].priceCents != entry.priceCents
                     val color = if (index == selectedIndex) {
                         baseColor.copy(alpha = (baseColor.alpha * 0.6f + 0.4f).coerceIn(0.5f, 1f))
+                    } else if (hasPriceChange) {
+                        baseColor.copy(alpha = 0.95f)
                     } else {
-                        baseColor.copy(alpha = 0.72f)
+                        baseColor.copy(alpha = 0.68f)
                     }
                     drawRoundRect(
                         color = color,
@@ -677,6 +694,13 @@ private fun GoalPriceLineChart(
                             topLeft = androidx.compose.ui.geometry.Offset(x - (barWidth / 2f), top),
                             size = androidx.compose.ui.geometry.Size(barWidth, 2.5f),
                             cornerRadius = androidx.compose.ui.geometry.CornerRadius(4f, 4f),
+                        )
+                    } else if (hasPriceChange) {
+                        drawRoundRect(
+                            color = Color.White.copy(alpha = 0.55f),
+                            topLeft = androidx.compose.ui.geometry.Offset(x - (barWidth / 2f), top),
+                            size = androidx.compose.ui.geometry.Size(barWidth, 2f),
+                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(3f, 3f),
                         )
                     }
                 }
