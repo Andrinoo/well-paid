@@ -29,6 +29,7 @@ class _NewExpensePageState extends ConsumerState<NewExpensePage> {
   final _descCtrl = TextEditingController();
   final _amountCtrl = TextEditingController();
   final _installmentsCtrl = TextEditingController(text: '1');
+  final _monthlyInterestCtrl = TextEditingController();
   DateTime _expenseDate = DateTime.now();
   DateTime? _dueDate;
   String? _categoryId;
@@ -45,7 +46,16 @@ class _NewExpensePageState extends ConsumerState<NewExpensePage> {
     _descCtrl.dispose();
     _amountCtrl.dispose();
     _installmentsCtrl.dispose();
+    _monthlyInterestCtrl.dispose();
     super.dispose();
+  }
+
+  int? _parseInterestBps(String text) {
+    final raw = text.trim().replaceAll('%', '').replaceAll(',', '.');
+    if (raw.isEmpty) return null;
+    final v = double.tryParse(raw);
+    if (v == null || v < 0 || v > 100) return null;
+    return (v * 100).round();
   }
 
   Future<void> _pickExpenseDate() async {
@@ -108,6 +118,13 @@ class _NewExpensePageState extends ConsumerState<NewExpensePage> {
       );
       return;
     }
+    final monthlyInterestBps = _parseInterestBps(_monthlyInterestCtrl.text);
+    if (_kind == _ExpenseKind.installments && monthlyInterestBps == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Informe o juro mensal (%) para parcelamento.')),
+      );
+      return;
+    }
 
     final messenger = ScaffoldMessenger.of(context);
     try {
@@ -122,6 +139,7 @@ class _NewExpensePageState extends ConsumerState<NewExpensePage> {
             recurringFrequency: recurringFrequency,
             isShared: _isShared,
             sharedWithUserId: _isShared ? _sharedWithUserId : null,
+            monthlyInterestBps: monthlyInterestBps,
           );
       ref.invalidate(expensesListProvider);
       ref.invalidate(dashboardOverviewProvider);
@@ -269,6 +287,24 @@ class _NewExpensePageState extends ConsumerState<NewExpensePage> {
                   setState(() => _installments = n);
                 },
               ),
+            if (_kind == _ExpenseKind.installments)
+              TextFormField(
+                controller: _monthlyInterestCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Juro mensal (%)',
+                  hintText: 'Ex.: 4,5',
+                ),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                validator: (v) {
+                  if (_kind != _ExpenseKind.installments) return null;
+                  final parsed = _parseInterestBps(v ?? '');
+                  if (parsed == null) return 'Informe uma taxa entre 0 e 100';
+                  return null;
+                },
+              ),
+            if (_kind == _ExpenseKind.installments)
+              const SizedBox(height: 8),
             if (_kind == _ExpenseKind.installments)
               Padding(
                 padding: const EdgeInsets.only(top: 8, bottom: 4),

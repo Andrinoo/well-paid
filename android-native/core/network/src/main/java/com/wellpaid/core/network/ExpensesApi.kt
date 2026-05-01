@@ -1,6 +1,7 @@
 package com.wellpaid.core.network
 
 import com.wellpaid.core.model.expense.ExpenseCoverRequestDto
+import com.wellpaid.core.model.expense.ExpenseAdvanceQuoteDto
 import com.wellpaid.core.model.expense.ExpenseCreateDto
 import com.wellpaid.core.model.expense.ExpenseCreateOutcomeDto
 import com.wellpaid.core.model.expense.ExpenseDto
@@ -51,6 +52,9 @@ interface ExpensesApi {
         @Path("id") id: String,
         @Body body: ExpensePayDto = ExpensePayDto(),
     ): ExpenseDto
+
+    @POST("expenses/{id}/advance-quote")
+    suspend fun quoteAdvancePayment(@Path("id") id: String): ExpenseAdvanceQuoteDto
 
     @POST("expenses/{id}/share/cover-request")
     suspend fun requestShareCover(

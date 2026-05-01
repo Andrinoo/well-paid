@@ -17,6 +17,29 @@ class ExpenseListResult {
   final bool servedFromLocalCache;
 }
 
+class ExpenseAdvanceQuote {
+  const ExpenseAdvanceQuote({
+    required this.expenseId,
+    required this.nominalAmountCents,
+    required this.settlementAmountCents,
+    required this.discountCents,
+  });
+
+  final String expenseId;
+  final int nominalAmountCents;
+  final int settlementAmountCents;
+  final int discountCents;
+
+  factory ExpenseAdvanceQuote.fromJson(Map<String, dynamic> json) {
+    return ExpenseAdvanceQuote(
+      expenseId: json['expense_id'] as String,
+      nominalAmountCents: (json['nominal_amount_cents'] as num).toInt(),
+      settlementAmountCents: (json['settlement_amount_cents'] as num).toInt(),
+      discountCents: (json['discount_cents'] as num).toInt(),
+    );
+  }
+}
+
 class ExpensesRepository {
   ExpensesRepository(this._dio, this._local);
 
@@ -135,6 +158,7 @@ class ExpensesRepository {
     String? recurringFrequency,
     bool isShared = false,
     String? sharedWithUserId,
+    int? monthlyInterestBps,
   }) async {
     final body = <String, dynamic>{
       'description': description.trim(),
@@ -147,6 +171,7 @@ class ExpensesRepository {
       'recurring_frequency': recurringFrequency,
       'is_shared': isShared,
       'shared_with_user_id': sharedWithUserId,
+      if (monthlyInterestBps != null) 'monthly_interest_bps': monthlyInterestBps,
     };
     try {
       final res = await _dio.post<Map<String, dynamic>>(
@@ -178,6 +203,7 @@ class ExpensesRepository {
         sharedWithUserId: sharedWithUserId,
         description: description.trim(),
         amountCents: amountCents,
+        monthlyInterestBps: monthlyInterestBps,
         expenseDate: expenseDate,
         dueDate: dueDate,
         status: status,
@@ -214,6 +240,7 @@ class ExpensesRepository {
     String? recurringFrequency,
     required bool isShared,
     String? sharedWithUserId,
+    int? monthlyInterestBps,
   }) async {
     final body = <String, dynamic>{
       'description': description.trim(),
@@ -225,6 +252,7 @@ class ExpensesRepository {
       'recurring_frequency': recurringFrequency,
       'is_shared': isShared,
       'shared_with_user_id': sharedWithUserId,
+      if (monthlyInterestBps != null) 'monthly_interest_bps': monthlyInterestBps,
     };
     try {
       final res = await _dio.put<Map<String, dynamic>>(
@@ -249,6 +277,7 @@ class ExpensesRepository {
           recurringFrequency: recurringFrequency,
           isShared: isShared,
           sharedWithUserId: sharedWithUserId,
+          monthlyInterestBps: monthlyInterestBps,
           syncStatus: 1,
           updatedAt: DateTime.now(),
         );
@@ -396,6 +425,28 @@ class ExpensesRepository {
       if (paid != null) return paid;
       rethrow;
     }
+  }
+
+  Future<ExpenseAdvanceQuote> quoteAdvancePayment(String id) async {
+    final res = await _dio.post<Map<String, dynamic>>('/expenses/$id/advance-quote');
+    return ExpenseAdvanceQuote.fromJson(res.data!);
+  }
+
+  Future<ExpenseItem> payExpenseAdvanced(
+    String id, {
+    required int amountCents,
+  }) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/expenses/$id/pay',
+      data: {
+        'allow_advance': true,
+        'amount_cents': amountCents,
+      },
+    );
+    final item = ExpenseItem.fromJson(res.data!);
+    _local.upsertOne(item);
+    await _flushQueue();
+    return item;
   }
 
   Future<void> _flushQueue() async {

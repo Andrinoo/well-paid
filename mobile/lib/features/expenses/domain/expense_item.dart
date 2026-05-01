@@ -8,6 +8,7 @@ class ExpenseItem {
     this.sharedWithLabel,
     required this.description,
     required this.amountCents,
+    this.monthlyInterestBps,
     required this.expenseDate,
     this.dueDate,
     required this.status,
@@ -35,6 +36,7 @@ class ExpenseItem {
   final String? sharedWithLabel;
   final String description;
   final int amountCents;
+  final int? monthlyInterestBps;
   final DateTime expenseDate;
   final DateTime? dueDate;
   final String status;
@@ -80,6 +82,7 @@ class ExpenseItem {
       sharedWithLabel: json['shared_with_label'] as String?,
       description: json['description'] as String,
       amountCents: (json['amount_cents'] as num).toInt(),
+      monthlyInterestBps: (json['monthly_interest_bps'] as num?)?.toInt(),
       expenseDate: DateTime.parse(json['expense_date'] as String),
       dueDate: json['due_date'] == null
           ? null
@@ -116,6 +119,7 @@ class ExpenseItem {
       if (sharedWithLabel != null) 'shared_with_label': sharedWithLabel,
       'description': description,
       'amount_cents': amountCents,
+      if (monthlyInterestBps != null) 'monthly_interest_bps': monthlyInterestBps,
       'expense_date': isoDate(expenseDate),
       'due_date': dueDate == null ? null : isoDate(dueDate!),
       'status': status,
@@ -146,6 +150,7 @@ class ExpenseItem {
     String? sharedWithLabel,
     String? description,
     int? amountCents,
+    int? monthlyInterestBps,
     DateTime? expenseDate,
     DateTime? dueDate,
     String? status,
@@ -173,6 +178,7 @@ class ExpenseItem {
       sharedWithLabel: sharedWithLabel ?? this.sharedWithLabel,
       description: description ?? this.description,
       amountCents: amountCents ?? this.amountCents,
+      monthlyInterestBps: monthlyInterestBps ?? this.monthlyInterestBps,
       expenseDate: expenseDate ?? this.expenseDate,
       dueDate: dueDate ?? this.dueDate,
       status: status ?? this.status,

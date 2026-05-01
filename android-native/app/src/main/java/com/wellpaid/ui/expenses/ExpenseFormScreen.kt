@@ -348,6 +348,21 @@ fun ExpenseFormScreen(
                     colors = fieldColors,
                 )
                 Spacer(Modifier.height(6.dp))
+                if (isInst) {
+                    OutlinedTextField(
+                        value = state.monthlyInterestText,
+                        onValueChange = { if (canEdit) viewModel.setMonthlyInterestText(it) },
+                        label = { Text("Juro mensal (%)") },
+                        placeholder = { Text("Ex.: 4,5") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = canEdit,
+                        singleLine = true,
+                        shape = fieldShape,
+                        colors = fieldColors,
+                    )
+                    Spacer(Modifier.height(6.dp))
+                }
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -580,6 +595,21 @@ fun ExpenseFormScreen(
                     colors = fieldColors,
                 )
                 Spacer(Modifier.height(8.dp))
+                if (state.loadedExpense?.installmentGroupId != null) {
+                    OutlinedTextField(
+                        value = state.monthlyInterestText,
+                        onValueChange = { if (canEdit) viewModel.setMonthlyInterestText(it) },
+                        label = { Text("Juro mensal (%)") },
+                        placeholder = { Text("Ex.: 4,5") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = canEdit,
+                        singleLine = true,
+                        shape = fieldShape,
+                        colors = fieldColors,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                }
 
                 WellPaidDatePickerField(
                     label = { Text(stringResource(R.string.expense_field_expense_date)) },
@@ -1134,6 +1164,13 @@ fun ExpenseFormScreen(
                             placeholder = stringResource(R.string.expense_field_amount_hint),
                             shape = fieldShape,
                             colors = fieldColors,
+                        )
+                    }
+                    if ((state.payDiscountCents ?: 0) > 0) {
+                        Text(
+                            text = "Desconto: ${formatBrlFromCents(state.payDiscountCents ?: 0)}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = WellPaidNavy,
                         )
                     }
                 }

@@ -10,6 +10,7 @@ data class ExpenseDto(
     @SerialName("is_mine") val isMine: Boolean = true,
     val description: String,
     @SerialName("amount_cents") val amountCents: Int,
+    @SerialName("monthly_interest_bps") val monthlyInterestBps: Int? = null,
     @SerialName("expense_date") val expenseDate: String,
     @SerialName("due_date") val dueDate: String? = null,
     val status: String,

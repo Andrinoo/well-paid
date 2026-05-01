@@ -107,6 +107,7 @@ class _ExpenseEditFormState extends ConsumerState<_ExpenseEditForm> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _descCtrl;
   late final TextEditingController _amountCtrl;
+  late final TextEditingController _monthlyInterestCtrl;
   late DateTime _expenseDate;
   DateTime? _dueDate;
   late String _categoryId;
@@ -123,6 +124,11 @@ class _ExpenseEditFormState extends ConsumerState<_ExpenseEditForm> {
     _amountCtrl = TextEditingController(
       text: formatBrlInputFromCents(e.amountCents),
     );
+    _monthlyInterestCtrl = TextEditingController(
+      text: e.monthlyInterestBps == null
+          ? ''
+          : (e.monthlyInterestBps! / 100).toStringAsFixed(2).replaceAll('.', ','),
+    );
     _expenseDate = e.expenseDate;
     _dueDate = e.dueDate;
     _categoryId = e.categoryId;
@@ -136,7 +142,16 @@ class _ExpenseEditFormState extends ConsumerState<_ExpenseEditForm> {
   void dispose() {
     _descCtrl.dispose();
     _amountCtrl.dispose();
+    _monthlyInterestCtrl.dispose();
     super.dispose();
+  }
+
+  int? _parseInterestBps(String text) {
+    final raw = text.trim().replaceAll('%', '').replaceAll(',', '.');
+    if (raw.isEmpty) return null;
+    final v = double.tryParse(raw);
+    if (v == null || v < 0 || v > 100) return null;
+    return (v * 100).round();
   }
 
   String _dmY(DateTime d) =>
@@ -172,6 +187,13 @@ class _ExpenseEditFormState extends ConsumerState<_ExpenseEditForm> {
       );
       return;
     }
+    final monthlyInterestBps = _parseInterestBps(_monthlyInterestCtrl.text);
+    if (widget.expense.isInstallmentPlan && monthlyInterestBps == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Informe o juro mensal (%) para parcelamento.')),
+      );
+      return;
+    }
 
     final messenger = ScaffoldMessenger.of(context);
     try {
@@ -187,6 +209,7 @@ class _ExpenseEditFormState extends ConsumerState<_ExpenseEditForm> {
                 widget.expense.isInstallmentPlan ? null : _recurring,
             isShared: _isShared,
             sharedWithUserId: _isShared ? _sharedWithUserId : null,
+            monthlyInterestBps: monthlyInterestBps,
           );
       ref.invalidate(expenseDetailProvider(widget.expenseId));
       ref.invalidate(expensesListProvider);
@@ -310,6 +333,24 @@ class _ExpenseEditFormState extends ConsumerState<_ExpenseEditForm> {
                 return null;
               },
             ),
+            if (widget.expense.isInstallmentPlan) ...[
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _monthlyInterestCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Juro mensal (%)',
+                  hintText: 'Ex.: 4,5',
+                ),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                validator: (v) {
+                  if (!widget.expense.isInstallmentPlan) return null;
+                  final parsed = _parseInterestBps(v ?? '');
+                  if (parsed == null) return 'Informe uma taxa entre 0 e 100';
+                  return null;
+                },
+              ),
+            ],
             const SizedBox(height: 16),
             ListTile(
               contentPadding: EdgeInsets.zero,

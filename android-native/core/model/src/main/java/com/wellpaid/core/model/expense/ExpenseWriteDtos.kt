@@ -7,6 +7,7 @@ import kotlinx.serialization.Serializable
 data class ExpenseCreateDto(
     val description: String,
     @SerialName("amount_cents") val amountCents: Int,
+    @SerialName("monthly_interest_bps") val monthlyInterestBps: Int? = null,
     @SerialName("expense_date") val expenseDate: String,
     @SerialName("start_date") val startDate: String? = null,
     @SerialName("due_date") val dueDate: String? = null,
@@ -34,6 +35,7 @@ data class ExpenseCreateOutcomeDto(
 data class ExpenseUpdateDto(
     val description: String,
     @SerialName("amount_cents") val amountCents: Int,
+    @SerialName("monthly_interest_bps") val monthlyInterestBps: Int? = null,
     @SerialName("expense_date") val expenseDate: String,
     @SerialName("due_date") val dueDate: String? = null,
     @SerialName("category_id") val categoryId: String,
@@ -57,4 +59,12 @@ data class ExpenseCoverRequestDto(
 data class ExpensePayDto(
     @SerialName("allow_advance") val allowAdvance: Boolean = false,
     @SerialName("amount_cents") val amountCents: Int? = null,
+)
+
+@Serializable
+data class ExpenseAdvanceQuoteDto(
+    @SerialName("expense_id") val expenseId: String,
+    @SerialName("nominal_amount_cents") val nominalAmountCents: Int,
+    @SerialName("settlement_amount_cents") val settlementAmountCents: Int,
+    @SerialName("discount_cents") val discountCents: Int,
 )

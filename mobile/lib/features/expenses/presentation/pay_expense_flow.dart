@@ -53,11 +53,17 @@ Future<void> confirmAndPayExpenseById(
       earlyCheckReference,
       now,
     )) {
+      final repo = ref.read(expensesRepositoryProvider);
+      final quote = await repo.quoteAdvancePayment(expenseId);
+      final quoteMsg =
+          'Total nominal: ${formatBrlFromCents(quote.nominalAmountCents)}\n'
+          'Pagamento antecipado: ${formatBrlFromCents(quote.settlementAmountCents)}\n'
+          'Desconto: ${formatBrlFromCents(quote.discountCents)}';
       final earlyOk = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
           title: Text(l10n.expensePayEarlyTitle),
-          content: Text(l10n.expensePayEarlyBody),
+          content: Text('${l10n.expensePayEarlyBody}\n\n$quoteMsg'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
@@ -99,7 +105,20 @@ Future<void> confirmAndPayExpenseById(
   if (ok != true || !context.mounted) return;
   await HapticFeedback.lightImpact();
   try {
-    await ref.read(expensesRepositoryProvider).payExpense(expenseId);
+    if (earlyCheckReference != null &&
+        expenseReferenceMonthIsAfterCurrentCalendarMonth(
+          earlyCheckReference,
+          DateTime.now(),
+        )) {
+      final repo = ref.read(expensesRepositoryProvider);
+      final quote = await repo.quoteAdvancePayment(expenseId);
+      await repo.payExpenseAdvanced(
+        expenseId,
+        amountCents: quote.settlementAmountCents,
+      );
+    } else {
+      await ref.read(expensesRepositoryProvider).payExpense(expenseId);
+    }
     ref.invalidate(dashboardOverviewProvider);
     ref.invalidate(expensesListProvider);
     ref.invalidate(toPayListProvider);

@@ -21,6 +21,8 @@ from app.models.family_receivable import FamilyReceivable
 from app.models.user import User
 from app.schemas.dashboard import ExpenseStatus
 from app.schemas.expense import (
+    ExpenseAdvanceQuoteRequest,
+    ExpenseAdvanceQuoteResponse,
     ExpenseCreate,
     ExpenseCreateOutcome,
     ExpensePayRequest,
@@ -29,6 +31,7 @@ from app.schemas.expense import (
     ExpenseUpdate,
 )
 from app.schemas.receivable import ExpenseCoverRequest
+from app.services.expense_finance import present_value_of_single_installment
 from app.services.expense_share import ExpenseShareValidationError, normalize_expense_share
 from app.services.expense_splits import (
     ExpenseSplitValidationError,
@@ -126,6 +129,7 @@ def _to_response(
         is_mine=e.owner_user_id == viewer_id,
         description=e.description,
         amount_cents=int(e.amount_cents),
+        monthly_interest_bps=e.monthly_interest_bps,
         expense_date=e.expense_date,
         due_date=e.due_date,
         status=e.status,
@@ -269,6 +273,7 @@ def _ensure_recurring_generated(db: Session, owner_user_id: uuid.UUID, until: da
                     owner_user_id=a.owner_user_id,
                     description=a.description,
                     amount_cents=int(a.amount_cents),
+                    monthly_interest_bps=a.monthly_interest_bps,
                     expense_date=next_day,
                     due_date=generated_due,
                     status=ExpenseStatus.PENDING.value,
@@ -522,6 +527,7 @@ def create_expense(
             owner_user_id=user.id,
             description=body.description.strip(),
             amount_cents=body.amount_cents,
+            monthly_interest_bps=body.monthly_interest_bps,
             expense_date=first_occurrence_date,
             due_date=body.due_date,
             status=row_status,
@@ -583,6 +589,7 @@ def create_expense(
             owner_user_id=user.id,
             description=body.description.strip(),
             amount_cents=body.amount_cents,
+            monthly_interest_bps=body.monthly_interest_bps,
             expense_date=ed,
             due_date=dd,
             status=row_status,
@@ -903,6 +910,43 @@ def _cancel_open_receivables_for_share(db: Session, share_id: uuid.UUID) -> list
     return open_rows
 
 
+def _compute_advance_quote(expense: Expense, settlement_date: date) -> tuple[int, int, int]:
+    nominal = int(expense.amount_cents)
+    if expense.monthly_interest_bps is None:
+        return nominal, nominal, 0
+    settlement = present_value_of_single_installment(
+        installment_cents=nominal,
+        monthly_interest_bps=int(expense.monthly_interest_bps),
+        settlement_date=settlement_date,
+        due_date=expense.due_date or expense.expense_date,
+    )
+    discount = max(0, nominal - settlement)
+    return nominal, settlement, discount
+
+
+@router.post("/{expense_id}/advance-quote", response_model=ExpenseAdvanceQuoteResponse)
+def advance_quote(
+    expense_id: uuid.UUID,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+    body: ExpenseAdvanceQuoteRequest | None = None,
+) -> ExpenseAdvanceQuoteResponse:
+    e = _get_visible_in_family(db, expense_id, user.id)
+    if e is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Despesa não encontrada")
+    settlement_date = (body.settlement_date if body is not None else None) or date.today()
+    nominal, settlement, discount = _compute_advance_quote(e, settlement_date)
+    return ExpenseAdvanceQuoteResponse(
+        expense_id=e.id,
+        installment_group_id=e.installment_group_id,
+        settlement_date=settlement_date,
+        due_date=e.due_date or e.expense_date,
+        nominal_amount_cents=nominal,
+        settlement_amount_cents=settlement,
+        discount_cents=discount,
+    )
+
+
 @router.post("/{expense_id}/pay", response_model=ExpenseResponse)
 def pay_expense(
     expense_id: uuid.UUID,
@@ -1003,6 +1047,9 @@ def pay_expense(
     now = datetime.now(UTC)
     if req.amount_cents is not None:
         e.amount_cents = int(req.amount_cents)
+    elif req.allow_advance and e.monthly_interest_bps is not None:
+        _, settlement, _ = _compute_advance_quote(e, now.date())
+        e.amount_cents = settlement
     e.status = ExpenseStatus.PAID.value
     e.paid_at = now
     paid_date_tag = now.date().strftime("%d/%m/%Y")

@@ -29,6 +29,7 @@ def test_expense_create_accepts_installment_total_up_to_999() -> None:
         amount_cents=1000,
         expense_date=date(2026, 4, 1),
         due_date=date(2026, 4, 1),
+        monthly_interest_bps=450,
         category_id=uuid.uuid4(),
         installment_total=999,
     )
@@ -42,6 +43,19 @@ def test_expense_create_rejects_installment_total_above_999() -> None:
             amount_cents=1000,
             expense_date=date(2026, 4, 1),
             due_date=date(2026, 4, 1),
+            monthly_interest_bps=450,
             category_id=uuid.uuid4(),
             installment_total=1000,
+        )
+
+
+def test_expense_create_rejects_installments_without_monthly_interest() -> None:
+    with pytest.raises(ValidationError):
+        ExpenseCreate(
+            description="Plano sem juros",
+            amount_cents=1000,
+            expense_date=date(2026, 4, 1),
+            due_date=date(2026, 4, 1),
+            category_id=uuid.uuid4(),
+            installment_total=12,
         )

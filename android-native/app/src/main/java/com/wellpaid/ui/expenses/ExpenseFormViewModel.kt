@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
@@ -50,6 +51,7 @@ data class ExpenseFormUiState(
     val categories: List<CategoryDto> = emptyList(),
     val description: String = "",
     val amountText: String = "",
+    val monthlyInterestText: String = "",
     val expenseDate: String = "",
     val dueDate: String = "",
     val categoryId: String? = null,
@@ -81,6 +83,8 @@ data class ExpenseFormUiState(
     val showPayConfirm: Boolean = false,
     val payAllowAdvance: Boolean = false,
     val payAmountText: String = "",
+    val payNominalCents: Int? = null,
+    val payDiscountCents: Int? = null,
 )
 
 @HiltViewModel
@@ -145,6 +149,9 @@ class ExpenseFormViewModel @Inject constructor(
                                 loadedExpense = e,
                                 description = e.description,
                                 amountText = centsToBrlInput(e.amountCents),
+                                monthlyInterestText = e.monthlyInterestBps?.let {
+                                    BigDecimal(it).divide(BigDecimal(100)).toPlainString()
+                                } ?: "",
                                 expenseDate = e.expenseDate,
                                 dueDate = e.dueDate.orEmpty(),
                                 hasDueDate = !e.dueDate.isNullOrBlank(),
@@ -357,6 +364,10 @@ class ExpenseFormViewModel @Inject constructor(
         }
     }
 
+    fun setMonthlyInterestText(value: String) {
+        _uiState.update { it.copy(monthlyInterestText = value) }
+    }
+
     fun setExpenseDate(value: String) {
         _uiState.update { it.copy(expenseDate = value) }
     }
@@ -531,6 +542,8 @@ class ExpenseFormViewModel @Inject constructor(
                 showPayConfirm = true,
                 payAllowAdvance = false,
                 payAmountText = centsToBrlInput(e.amountCents),
+                payNominalCents = e.amountCents,
+                payDiscountCents = 0,
                 errorMessage = null,
             )
         }
@@ -541,7 +554,27 @@ class ExpenseFormViewModel @Inject constructor(
     }
 
     fun setPayAllowAdvance(value: Boolean) {
-        _uiState.update { it.copy(payAllowAdvance = value) }
+        if (!value) {
+            _uiState.update { it.copy(payAllowAdvance = false, payDiscountCents = 0) }
+            return
+        }
+        val id = expenseId ?: return
+        viewModelScope.launch {
+            runCatching { expensesApi.quoteAdvancePayment(id) }
+                .onSuccess { q ->
+                    _uiState.update {
+                        it.copy(
+                            payAllowAdvance = true,
+                            payAmountText = centsToBrlInput(q.settlementAmountCents),
+                            payNominalCents = q.nominalAmountCents,
+                            payDiscountCents = q.discountCents,
+                        )
+                    }
+                }
+                .onFailure {
+                    _uiState.update { it.copy(payAllowAdvance = true) }
+                }
+        }
     }
 
     fun setPayAmountText(value: String) {
@@ -570,6 +603,17 @@ class ExpenseFormViewModel @Inject constructor(
             _uiState.update { it.copy(errorMessage = appContext.getString(R.string.expense_error_amount)) }
             return
         }
+        val monthlyInterestBps = run {
+            val raw = s.monthlyInterestText.trim().replace("%", "").replace(',', '.')
+            if (raw.isBlank()) null else {
+                val d = raw.toBigDecimalOrNull()
+                if (d == null || d < BigDecimal.ZERO || d > BigDecimal(100)) {
+                    _uiState.update { it.copy(errorMessage = "Taxa de juro mensal inválida (0 a 100).") }
+                    return
+                }
+                d.multiply(BigDecimal(100)).toInt()
+            }
+        }
         val dueParsed = s.dueDate.trim().takeIf { it.isNotEmpty() }?.let { parseIsoDate(it) }
         if (s.dueDate.isNotBlank() && dueParsed == null) {
             _uiState.update { it.copy(errorMessage = appContext.getString(R.string.expense_error_due_date)) }
@@ -591,6 +635,10 @@ class ExpenseFormViewModel @Inject constructor(
         if (expenseId == null) {
             if (s.expenseKind == NewExpenseKind.INSTALLMENTS && s.installmentTotal < 2) {
                 _uiState.update { it.copy(errorMessage = appContext.getString(R.string.expense_error_installments)) }
+                return
+            }
+            if (s.expenseKind == NewExpenseKind.INSTALLMENTS && monthlyInterestBps == null) {
+                _uiState.update { it.copy(errorMessage = "Parcelamento exige juro mensal (%).") }
                 return
             }
             if (s.expenseKind == NewExpenseKind.RECURRING) {
@@ -671,6 +719,7 @@ class ExpenseFormViewModel @Inject constructor(
                         ExpenseCreateDto(
                             description = desc,
                             amountCents = cents,
+                            monthlyInterestBps = monthlyInterestBps,
                             expenseDate = expenseDateStr,
                             startDate = startOut,
                             dueDate = dueOut,
@@ -698,6 +747,7 @@ class ExpenseFormViewModel @Inject constructor(
                         ExpenseUpdateDto(
                             description = desc,
                             amountCents = cents,
+                            monthlyInterestBps = monthlyInterestBps,
                             expenseDate = expenseDateStr,
                             dueDate = dueParsed?.format(DateTimeFormatter.ISO_LOCAL_DATE),
                             categoryId = cat,
@@ -736,7 +786,9 @@ class ExpenseFormViewModel @Inject constructor(
         val id = expenseId ?: return
         val current = _uiState.value.loadedExpense ?: return
         viewModelScope.launch {
-            val payAmountCents = if (!current.recurringSeriesId.isNullOrBlank()) {
+            val payAmountCents = if (_uiState.value.payAllowAdvance) {
+                runCatching { expensesApi.quoteAdvancePayment(id).settlementAmountCents }.getOrNull()
+            } else if (!current.recurringSeriesId.isNullOrBlank()) {
                 val txt = _uiState.value.payAmountText.trim()
                 if (txt.isBlank()) null else parseBrlToCents(txt)
             } else {

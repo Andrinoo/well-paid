@@ -14,6 +14,7 @@ SplitMode = Literal["amount", "percent"]
 class ExpenseCreate(BaseModel):
     description: str = Field(min_length=1, max_length=500)
     amount_cents: int = Field(gt=0)
+    monthly_interest_bps: int | None = Field(default=None, ge=0, le=10000)
     expense_date: date
     start_date: date | None = None
     due_date: date | None = None
@@ -50,6 +51,8 @@ class ExpenseCreate(BaseModel):
             raise ValueError(
                 "Parceladas/recorrentes exigem data de vencimento (primeira competência)."
             )
+        if self.installment_total > 1 and self.monthly_interest_bps is None:
+            raise ValueError("Parceladas exigem monthly_interest_bps para cálculo de antecipação.")
         if not self.is_shared and self.shared_with_user_id is not None:
             raise ValueError("shared_with_user_id exige is_shared true")
         if self.is_shared and self.shared_with_user_id is not None:
@@ -61,6 +64,7 @@ class ExpenseCreate(BaseModel):
 class ExpenseUpdate(BaseModel):
     description: str | None = Field(default=None, min_length=1, max_length=500)
     amount_cents: int | None = Field(default=None, gt=0)
+    monthly_interest_bps: int | None = Field(default=None, ge=0, le=10000)
     expense_date: date | None = None
     due_date: date | None = None
     category_id: uuid.UUID | None = None
@@ -103,6 +107,7 @@ class ExpenseResponse(BaseModel):
     is_mine: bool = True
     description: str
     amount_cents: int
+    monthly_interest_bps: int | None = None
     expense_date: date
     due_date: date | None
     status: str
@@ -186,6 +191,20 @@ class ExpenseCreateOutcome(BaseModel):
 class ExpensePayRequest(BaseModel):
     allow_advance: bool = False
     amount_cents: int | None = Field(default=None, gt=0)
+
+
+class ExpenseAdvanceQuoteRequest(BaseModel):
+    settlement_date: date | None = None
+
+
+class ExpenseAdvanceQuoteResponse(BaseModel):
+    expense_id: uuid.UUID
+    installment_group_id: uuid.UUID | None
+    settlement_date: date
+    due_date: date
+    nominal_amount_cents: int
+    settlement_amount_cents: int
+    discount_cents: int
 
 
 class ExpenseShareDeclineRequest(BaseModel):

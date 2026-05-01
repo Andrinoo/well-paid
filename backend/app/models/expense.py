@@ -21,6 +21,7 @@ class Expense(Base, TimestampMixin):
     )
     description: Mapped[str] = mapped_column(String(500))
     amount_cents: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    monthly_interest_bps: Mapped[int | None] = mapped_column(Integer, nullable=True)
     expense_date: Mapped[date] = mapped_column(Date, nullable=False)
     due_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="pending")
