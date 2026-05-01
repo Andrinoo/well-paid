@@ -496,6 +496,10 @@ class _DetailBody extends ConsumerWidget {
               l10n.expenseInstallmentsRow,
               '${e.installmentNumber} de ${e.installmentTotal}',
             ),
+          if (e.isPending && e.monthlyInterestBps != null) ...[
+            const SizedBox(height: 8),
+            _AdvanceQuoteTile(expenseId: expenseId),
+          ],
           if (rec != null)
             _row(context, l10n.expenseRecurrence, rec),
           if (e.isShared)
@@ -777,6 +781,47 @@ class _DetailBody extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _AdvanceQuoteTile extends ConsumerWidget {
+  const _AdvanceQuoteTile({required this.expenseId});
+
+  final String expenseId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final quoteAsync = ref.watch(expenseAdvanceQuoteProvider(expenseId));
+    return quoteAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (q) => Material(
+        color: WellPaidColors.creamMuted.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Se antecipar hoje',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: WellPaidColors.navy,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Paga ${formatBrlFromCents(q.settlementAmountCents)} (desconto ${formatBrlFromCents(q.discountCents)})',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: WellPaidColors.navy.withValues(alpha: 0.9),
+                    ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

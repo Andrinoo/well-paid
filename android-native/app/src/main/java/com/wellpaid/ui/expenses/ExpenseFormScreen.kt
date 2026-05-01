@@ -610,6 +610,21 @@ fun ExpenseFormScreen(
                     )
                     Spacer(Modifier.height(8.dp))
                 }
+                if (state.loadedExpense?.status == "pending" && (state.advanceSettlementCents ?: 0) > 0) {
+                    Text(
+                        text = "Se antecipar hoje: ${formatBrlFromCents(state.advanceSettlementCents ?: 0)}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = WellPaidNavy,
+                    )
+                    if ((state.advanceDiscountCents ?: 0) > 0) {
+                        Text(
+                            text = "Desconto: ${formatBrlFromCents(state.advanceDiscountCents ?: 0)}",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = WellPaidNavy.copy(alpha = 0.78f),
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
+                }
 
                 WellPaidDatePickerField(
                     label = { Text(stringResource(R.string.expense_field_expense_date)) },

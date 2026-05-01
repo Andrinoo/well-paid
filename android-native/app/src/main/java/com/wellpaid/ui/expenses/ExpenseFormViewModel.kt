@@ -85,6 +85,8 @@ data class ExpenseFormUiState(
     val payAmountText: String = "",
     val payNominalCents: Int? = null,
     val payDiscountCents: Int? = null,
+    val advanceSettlementCents: Int? = null,
+    val advanceDiscountCents: Int? = null,
 )
 
 @HiltViewModel
@@ -142,6 +144,7 @@ class ExpenseFormViewModel @Inject constructor(
             } else {
                 runCatching { expensesApi.getExpense(id) }
                     .onSuccess { e ->
+                        val advanceQuote = runCatching { expensesApi.quoteAdvancePayment(id) }.getOrNull()
                         val split = splitTextsForExpenseEdit(e)
                         _uiState.update {
                             it.copy(
@@ -167,6 +170,8 @@ class ExpenseFormViewModel @Inject constructor(
                                 peerShareText = split.peerShareText,
                                 coverSettleByIso = LocalDate.now().plusMonths(1)
                                     .format(DateTimeFormatter.ISO_LOCAL_DATE),
+                                advanceSettlementCents = advanceQuote?.settlementAmountCents,
+                                advanceDiscountCents = advanceQuote?.discountCents,
                                 errorMessage = null,
                             )
                         }

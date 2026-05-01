@@ -92,3 +92,8 @@ final expenseDetailProvider =
     FutureProvider.autoDispose.family<ExpenseItem, String>(
   (ref, id) => ref.watch(expensesRepositoryProvider).getExpense(id),
 );
+
+final expenseAdvanceQuoteProvider =
+    FutureProvider.autoDispose.family<ExpenseAdvanceQuote, String>(
+  (ref, id) => ref.watch(expensesRepositoryProvider).quoteAdvancePayment(id),
+);
