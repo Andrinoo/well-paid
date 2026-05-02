@@ -1,0 +1,871 @@
+{
+  "@@locale": "en",
+  "appTitle": "Well Paid",
+  "settingsTitle": "Settings",
+  "settingsLanguageTitle": "Interface language",
+  "settingsLanguageSubtitle": "App text in Brazilian Portuguese or US English.",
+  "langPortugueseBrazil": "Portuguese (Brazil)",
+  "langEnglishUS": "English (US)",
+  "settingsLanguageUpdated": "Language updated.",
+  "save": "Save",
+  "cancel": "Cancel",
+  "ok": "OK",
+  "copy": "Copy",
+  "confirm": "Confirm",
+  "delete": "Delete",
+  "close": "Close",
+  "errorGeneric": "Error.",
+  "dioRequestTimeout": "Request timed out. Check that the backend is running and the API URL is correct.",
+  "dioConnectionFailed": "Could not reach the server. On Android emulator use 10.0.2.2; on Windows or iOS use 127.0.0.1 (--dart-define=API_BASE_URL=…).",
+  "dioNetworkFallback": "Network error",
+  "tryAgain": "Try again",
+  "requiredField": "Required",
+  "valueInvalid": "Invalid amount.",
+  "homeDashboardTitle": "Dashboard",
+  "tooltipSettings": "Settings",
+  "tooltipSecurity": "Security",
+  "tooltipFamily": "Family",
+  "tooltipRefreshDashboard": "Refresh dashboard",
+  "tooltipLogout": "Log out",
+  "navHome": "Home",
+  "navExpenses": "Expenses",
+  "navIncomes": "Income",
+  "navGoals": "Goals",
+  "navReserve": "Reserve",
+  "navQuickPanelToggleHint": "Pull up or tap for To pay and Shopping lists shortcuts",
+  "menuMoreTooltip": "More options",
+  "logoutConfirmTitle": "Log out?",
+  "logoutConfirmBody": "You will need to sign in again to access your account.",
+  "homeQuickExpenses": "Expenses",
+  "homeQuickIncomes": "Income",
+  "homeQuickGoals": "Goals",
+  "homeQuickReserve": "Reserve",
+  "homeDashboardError": "Could not load the dashboard.",
+  "authLoginTitle": "Sign in",
+  "authEmail": "Email",
+  "authPassword": "Password",
+  "authShowPassword": "Show password",
+  "authHidePassword": "Hide password",
+  "authPasswordRequired": "Enter your password",
+  "authRememberCredentials": "Remember email and password on this device",
+  "authForgotPassword": "Forgot password?",
+  "authEnter": "Sign in",
+  "authLoginError": "Could not sign in",
+  "authNoAccountYet": "No account yet?",
+  "authCreateAccount": "Create account",
+  "authCopyright": "Copyright © 2026 Andrino Cabral. All rights reserved.",
+  "authRegisterTitle": "Create account",
+  "authRegisterSubtitle": "Get started in a few steps.",
+  "authRegisterError": "Could not register",
+  "authPasswordPolicyHint": "Min. 8 characters, 1 uppercase, 1 number, and 1 special character.",
+  "authPasswordRulesError": "Password does not meet the rules",
+  "authNameOptional": "Name (optional)",
+  "authPhoneOptional": "Phone (optional)",
+  "authConfirmPassword": "Confirm password",
+  "authConfirmPasswordRequired": "Confirm your password",
+  "authPasswordMismatch": "Passwords do not match",
+  "authRegisterButton": "Register",
+  "authVerifyEmailTitle": "Confirm email",
+  "authVerifyEmailSubtitle": "Enter the 6-digit code we sent to your email.",
+  "authVerifyEmailFromLink": "Confirming your email…",
+  "authVerificationCodeLabel": "Code",
+  "authVerificationCodeHint": "000000",
+  "authVerificationCodeError": "Enter all 6 digits",
+  "authVerifyEmailButton": "Confirm and sign in",
+  "authResendVerification": "Resend code",
+  "authVerifyEmailSuccess": "Email confirmed. Welcome!",
+  "authVerifyEmailError": "Could not confirm",
+  "authResendVerificationError": "Could not resend",
+  "authVerifyEmailAction": "Confirm email",
+  "authDevVerificationHint": "Link token:\n{token}\n\nCode:\n{code}",
+  "@authDevVerificationHint": {
+    "placeholders": {
+      "token": {"type": "String"},
+      "code": {"type": "String"}
+    }
+  },
+  "authAlreadyHaveAccount": "I already have an account — sign in",
+  "authEmailRequired": "Enter your email",
+  "authEmailInvalid": "Invalid email",
+  "authForgotTitle": "Reset password",
+  "authForgotSubtitle": "Enter your email to receive instructions.",
+  "authForgotBody": "We will send a code to reset your password in the app. If you do not see the email, check spam.",
+  "authForgotSend": "Send instructions",
+  "authForgotError": "Could not send request",
+  "authBackToLogin": "Back to sign in",
+  "authDevModeTitle": "Development mode",
+  "authDevTokenHint": "The backend returned a test token. Save it and use it on the next screen.\n\n{token}",
+  "@authDevTokenHint": {
+    "placeholders": {
+      "token": {"type": "String"}
+    }
+  },
+  "tokenCopied": "Token copied",
+  "dashMonthSummary": "Month summary",
+  "dashIncome": "Income",
+  "dashExpenses": "Expenses",
+  "dashBalance": "Balance",
+  "dashByCategory": "Spending by category",
+  "dashHomeChartTabCategory": "Categories",
+  "dashHomeChartTabCashflow": "Cash flow",
+  "dashPendingThisMonthTitle": "Bills to pay",
+  "dashPendingThisMonthSubtitle": "Tap to review and settle",
+  "chartViewCategoryExpenses": "View expenses in this category",
+  "chartRegisterExpenseCta": "Add expense",
+  "expenseListFilteredByCategory": "Filtered by category",
+  "expenseListClearCategoryFilter": "Clear",
+  "dashToPay": "To pay",
+  "toPayScreenSubtitle": "All pending expenses in chronological order by due date. Installments appear as separate lines. Colors show how close the due date is.",
+  "toPayViewAllExpenses": "All expenses",
+  "toPayDueOn": "Due {date}",
+  "@toPayDueOn": {
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  },
+  "toPayCompetenceOn": "Booked {date} (no due date)",
+  "@toPayCompetenceOn": {
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  },
+  "toPayProjectedHint": "Scheduled — will appear as a charge a few days before the due date.",
+  "toPayOfflineCacheBanner": "Showing saved data — the list may be incomplete until you are back online.",
+  "toPayPendingTotal": "Pending total: {amount}",
+  "@toPayPendingTotal": {
+    "placeholders": {
+      "amount": {"type": "String"}
+    }
+  },
+  "toPayFilterAll": "All",
+  "toPayFilterOverdue": "Overdue",
+  "toPayFilterThisWeek": "This week",
+  "toPaySectionOverdue": "Overdue",
+  "toPaySectionThisWeek": "Due this week",
+  "toPaySectionLater": "Later",
+  "toPayFilterEmpty": "Nothing matches this filter.",
+  "toPayLegendTitle": "Due date colors",
+  "toPayLegendOverdue": "Past due date",
+  "toPayLegendDueToday": "Due today",
+  "toPayLegendDueSoon": "Due in 1–3 days",
+  "toPayLegendUpcoming": "Due in 4–10 days",
+  "toPayLegendSafe": "Due in 11 or more days",
+  "toPayQuickPaySwitchTooltip": "Turn on to confirm payment; the list updates after success. If something fails, the switch turns off again.",
+  "expenseListNextInstallmentLine": "Next: {date}",
+  "@expenseListNextInstallmentLine": {
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  },
+  "expenseTagPar": "PAR",
+  "expenseTagParA11y": "Installment plan",
+  "expenseTagRec": "REC",
+  "expenseTagRecA11y": "Recurring expense",
+  "expenseNextDueSectionTitle": "Next occurrence",
+  "expenseNextDueCompetenceLine": "Booking date: {date}",
+  "@expenseNextDueCompetenceLine": {
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  },
+  "expenseNextDueDateLine": "Due: {date}",
+  "@expenseNextDueDateLine": {
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  },
+  "expenseInstallmentNextSectionTitle": "Next installment",
+  "expenseInstallmentLastSectionTitle": "Last installment",
+  "expensePayEarlyTitle": "Pay in advance?",
+  "expensePayEarlyBody": "This expense is for a month after the current one. Are you sure you want to mark it as paid now?",
+  "dashNothingPending": "Nothing pending.",
+  "dashPendingTotal": "Total pending",
+  "dashSeeAll": "See all",
+  "dashUpcomingDue": "Upcoming due dates",
+  "dashNoUpcomingInNextMonth": "No bills due in the next month.",
+  "dashSeeMore": "See more",
+  "dashGoals": "Goals",
+  "dashNoActiveGoals": "No active goals right now.",
+  "dashSeeGoals": "View goals",
+  "dashEmergencyReserve": "Emergency reserve",
+  "dashEmergencyReserveBalance": "Balance saved",
+  "dashEmergencyReserveMonthly": "Monthly target",
+  "dashEmergencyReserveTimesTarget": "target multiple",
+  "dashEmergencyReserveAnnualProgress": "{percent}% of yearly goal",
+  "@dashEmergencyReserveAnnualProgress": {
+    "placeholders": {
+      "percent": {"type": "int"}
+    }
+  },
+  "dashEmergencyReserveMomentum": "Keep going",
+  "dashEmergencyReserveAnnualDone": "Yearly goal reached",
+  "dashEmergencyReserveStageFirst": "First step",
+  "dashEmergencyReserveStageStart": "Good pace",
+  "dashEmergencyReserveStageMid": "Halfway there",
+  "dashEmergencyReserveStageStrong": "Final stretch",
+  "dashEmergencyReserveStageDone": "Yearly goal reached",
+  "dashEmergencyReserveFootnote": "Each calendar month adds your target to this balance (in-app record; not your bank balance).",
+  "dashEmergencyReserveConfigure": "Configure",
+  "emergencyReserveTitle": "Emergency reserve",
+  "emergencyReserveIntro": "Set how much you plan to set aside per month. The balance increases automatically each calendar month from when you enable the target.",
+  "emergencyReserveMonthlyLabel": "Monthly amount (R$)",
+  "emergencyReserveQuickPickTitle": "Quick picks",
+  "emergencyReserveSave": "Save",
+  "emergencyReserveSavedSnackbar": "Reserve target updated.",
+  "emergencyReserveError": "Could not save.",
+  "emergencyReserveAccrualListTitle": "Monthly credits",
+  "emergencyReserveAccrualListEmpty": "No monthly credits yet.",
+  "emergencyReserveAccrualListCredit": "Credit applied",
+  "emergencyReserveAccrualEdit": "Edit credit",
+  "emergencyReserveAccrualDelete": "Remove credit",
+  "emergencyReserveAccrualDeleteTitle": "Remove credit for {month}?",
+  "@emergencyReserveAccrualDeleteTitle": {
+    "placeholders": {
+      "month": {"type": "String"}
+    }
+  },
+  "emergencyReserveAccrualDeleteBody": "The balance will be adjusted. This month will not get automatic credit again (you can add it back manually).",
+  "emergencyReserveAccrualDeleteConfirm": "Remove",
+  "emergencyReserveAccrualEditTitle": "Credit for {month}",
+  "@emergencyReserveAccrualEditTitle": {
+    "placeholders": {
+      "month": {"type": "String"}
+    }
+  },
+  "emergencyReserveAccrualUpdatedSnackbar": "Credit updated.",
+  "emergencyReserveAccrualRemovedSnackbar": "Credit removed.",
+  "emergencyReserveResetAction": "Clear reserve and history",
+  "emergencyReserveResetTitle": "Clear everything?",
+  "emergencyReserveResetBody": "Removes the target, balance, and all monthly credits. This cannot be undone.",
+  "emergencyReserveResetConfirm": "Clear",
+  "emergencyReserveResetSuccess": "Reserve cleared.",
+  "reserveMilestoneBannerQuarter": "You’ve reached a quarter of your reserve’s yearly goal — nice pace.",
+  "reserveMilestoneBannerHalf": "Halfway through your saving year for the reserve.",
+  "reserveMilestoneBannerAlmost": "Almost there: just a little left to hit the reserve’s yearly goal.",
+  "reserveMilestoneBannerComplete": "Yearly reserve goal reached. Strong consistency.",
+  "settingsEmergencyReserve": "Emergency reserve",
+  "settingsNotificationsSection": "Notifications",
+  "settingsGoalStallReminderTitle": "Stalled goals reminder",
+  "settingsGoalStallReminderSubtitle": "A local notification if you have not updated a goal for about 3 weeks (based on last update time).",
+  "settingsGoalStallPermissionDenied": "Enable notifications in system settings to receive the reminder.",
+  "goalStallNotifTitle": "Goals without recent activity",
+  "goalStallNotifBodySingle": "“{name}” — it’s been a while without an update. Time to check in?",
+  "@goalStallNotifBodySingle": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "goalStallNotifBodyTwo": "“{a}” and “{b}” — goals without updates for a while.",
+  "@goalStallNotifBodyTwo": {
+    "placeholders": {
+      "a": {"type": "String"},
+      "b": {"type": "String"}
+    }
+  },
+  "goalStallNotifBodyMany": "“{first}” and {count} more — don’t forget your goals.",
+  "@goalStallNotifBodyMany": {
+    "placeholders": {
+      "first": {"type": "String"},
+      "count": {"type": "int"}
+    }
+  },
+  "dashMarkPaidTooltip": "Mark as paid",
+  "dashDueShort": "Due",
+  "dashDueVerb": "Due",
+  "dashFamilySuffix": " · Family",
+  "dashGoalFamilySuffix": " (family)",
+  "dashPendingItemA11y": "{description}, {amount}, due {due}",
+  "@dashPendingItemA11y": {
+    "placeholders": {
+      "description": {"type": "String"},
+      "amount": {"type": "String"},
+      "due": {"type": "String"}
+    }
+  },
+  "periodSummaryA11y": "Summary period, {label}",
+  "@periodSummaryA11y": {
+    "placeholders": {
+      "label": {"type": "String"}
+    }
+  },
+  "periodPrevMonth": "Previous month",
+  "periodNextMonth": "Next month",
+  "chartTotalExpenses": "Total expenses",
+  "chartNoExpensesThisMonth": "No expenses\nthis month.",
+  "chartNoExpensesRegistered": "No expenses recorded\nthis month.",
+  "chartSemanticsWithData": "Category spending chart, total {total}",
+  "@chartSemanticsWithData": {
+    "placeholders": {
+      "total": {"type": "String"}
+    }
+  },
+  "chartSemanticsNoData": "Category spending chart, no data this month",
+  "chartCategoriesHint": "Categories appear when there are expenses this month.",
+  "chartDonutTapHint": "Slice or grid — tap to highlight.",
+  "chartDonutSelectedHeading": "Selected category",
+  "chartDonutPctOfTotal": "{pct}% of total",
+  "@chartDonutPctOfTotal": {
+    "placeholders": {
+      "pct": {"type": "int"}
+    }
+  },
+  "chartCategoryOther": "Other",
+  "goalsTitle": "Goals",
+  "goalsRefresh": "Refresh",
+  "goalsLoadError": "Could not load goals.",
+  "goalsEmpty": "No active goals yet.",
+  "goalsAddTooltip": "New goal",
+  "goalsAggregateTitle": "Overview",
+  "goalsAggregateLine": "{count} active goals · {saved} of {target}",
+  "@goalsAggregateLine": {
+    "placeholders": {
+      "count": {"type": "int"},
+      "saved": {"type": "String"},
+      "target": {"type": "String"}
+    }
+  },
+  "goalsScreenHint": "Visible progress and combined totals help reinforce saving habits.",
+  "goalMilestoneBannerQuarter": "You’ve reached a quarter of the goal — nice pace.",
+  "goalMilestoneBannerHalf": "Halfway there. Keep the momentum.",
+  "goalMilestoneBannerAlmost": "Almost there: just a little left to hit the goal.",
+  "goalMilestoneBannerComplete": "Goal reached. Well done staying consistent.",
+  "goalMilestoneChipQuarter": "25%",
+  "goalMilestoneChipHalf": "50%",
+  "goalMilestoneChipAlmost": "90%",
+  "goalMilestoneChipComplete": "OK",
+  "newGoalTitle": "New goal",
+  "goalFormTitleLabel": "Goal name",
+  "goalFormTargetLabel": "Target amount",
+  "goalFormIntro": "Set a target in your currency. You can track progress later.",
+  "goalFormSave": "Create goal",
+  "goalFormCreatedSnackbar": "Goal created.",
+  "goalSaveError": "Could not save the goal.",
+  "goalFormInitialLabel": "Already saved (optional)",
+  "goalFormInitialHint": "How much you already have toward this goal when you create it.",
+  "goalDetailTitle": "Goal",
+  "goalRemaining": "Remaining",
+  "goalCompleted": "Goal reached",
+  "goalContribute": "Add amount",
+  "goalContributeTitle": "Contribution",
+  "goalContributeAmountLabel": "Amount",
+  "goalContributeNoteLabel": "Note (optional)",
+  "goalContributeSaved": "Contribution saved.",
+  "goalContributeError": "Could not save contribution.",
+  "goalContributionsTitle": "History",
+  "goalContributionsEmpty": "No contributions yet.",
+  "goalContributionsOwnerOnly": "Contribution history is only visible to the person who created the goal.",
+  "goalArchive": "Archive",
+  "goalArchiveTitle": "Archive goal?",
+  "goalArchiveBody": "The goal will no longer count as active. You can reactivate it later.",
+  "goalArchivedSnackbar": "Goal archived.",
+  "goalDelete": "Delete",
+  "goalDeleteTitle": "Delete goal?",
+  "goalDeleteBody": "You can only delete when the saved balance is zero.",
+  "goalDeletedSnackbar": "Goal deleted.",
+  "goalInactiveBadge": "Archived",
+  "goalReactivate": "Reactivate",
+  "goalReactivatedSnackbar": "Goal reactivated.",
+  "goalLinearPaceCardTitle": "Pace and forecast",
+  "goalLinearPaceAvgPerMonth": "Average pace so far: {amount}/mo",
+  "@goalLinearPaceAvgPerMonth": {
+    "placeholders": {
+      "amount": {"type": "String"}
+    }
+  },
+  "goalLinearPaceEta": "At this pace: goal ~by {monthYear}",
+  "@goalLinearPaceEta": {
+    "placeholders": {
+      "monthYear": {"type": "String"}
+    }
+  },
+  "goalLinearPaceDisclaimer": "Simple estimate from what you’ve saved so far and the goal’s creation date; real pace may vary.",
+  "goalLinearPaceListHint": "~{amount}/mo · goal ~{monthYear}",
+  "@goalLinearPaceListHint": {
+    "placeholders": {
+      "amount": {"type": "String"},
+      "monthYear": {"type": "String"}
+    }
+  },
+  "goalLinearPaceInsufficientHistory": "Not enough history yet to estimate pace.",
+  "expensePayConfirmTitle": "Mark as paid?",
+  "expensePayConflict": "This expense can no longer be paid (for example, it is already paid).",
+  "expensePayInstallmentLine": "Installment {current} of {total}",
+  "@expensePayInstallmentLine": {
+    "placeholders": {
+      "current": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
+  "expensesTitle": "Expenses",
+  "expensesRefresh": "Refresh",
+  "expensesNew": "New",
+  "expensesNewLong": "New expense",
+  "expensesRefreshList": "Refresh list",
+  "expensesFilterAll": "All",
+  "expensesFilterPending": "Pending",
+  "expensesFilterPaid": "Paid",
+  "expensesLoadError": "Could not load.",
+  "expensesEmpty": "No expenses for this filter.",
+  "expensePay": "Pay",
+  "expenseMarkedPaid": "Marked as paid.",
+  "expensePayError": "Could not pay.",
+  "expenseTileFamilyCategory": "{category} · Family",
+  "@expenseTileFamilyCategory": {
+    "placeholders": {
+      "category": {"type": "String"}
+    }
+  },
+  "expenseTileDateLine": "Date {date} · {status}",
+  "@expenseTileDateLine": {
+    "placeholders": {
+      "date": {"type": "String"},
+      "status": {"type": "String"}
+    }
+  },
+  "expenseStatusPending": "Pending",
+  "expenseStatusPaid": "Paid",
+  "expenseInstallmentChip": "Installment {n}/{total}",
+  "@expenseInstallmentChip": {
+    "placeholders": {
+      "n": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
+  "expenseRecurringMonthly": "Recurring · monthly",
+  "expenseRecurringWeekly": "Recurring · weekly",
+  "expenseRecurringYearly": "Recurring · yearly",
+  "expenseSharedWith": "Shared · {name}",
+  "@expenseSharedWith": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "expenseShared": "Shared",
+  "expenseTitle": "Expense",
+  "expenseLoadError": "Could not load.",
+  "expenseCompetence": "Date (period)",
+  "expenseDue": "Due date",
+  "expenseStatusLabel": "Status",
+  "expenseInstallmentsRow": "Installments",
+  "expenseRecurrence": "Recurrence",
+  "expenseShare": "Sharing",
+  "expenseShareWith": "With {name}",
+  "@expenseShareWith": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "expenseShareFamily": "Family",
+  "expenseMarkPaid": "Mark as paid",
+  "expenseEdit": "Edit",
+  "expenseDelete": "Delete",
+  "expenseReadOnlyBanner": "Another family member’s expense — view only.",
+  "expenseDeleteError": "Could not delete.",
+  "expDelInstallmentTitle": "Delete installment plan",
+  "expDelInstallmentPaidBody": "This plan has paid installments. Delete the full history or only future pending installments?",
+  "expDelInstallmentMaybePaidBody": "If any installments are paid, you can keep history and delete only future pending ones, or delete the whole plan.",
+  "expDelFutureOnly": "Future pending only",
+  "expDelAllIncludingPaid": "Everything (including paid)",
+  "expDelInstallmentSimpleTitle": "Delete installment plan?",
+  "expDelInstallmentSimpleBody": "All {total} installments will be deleted.",
+  "@expDelInstallmentSimpleBody": {
+    "placeholders": {
+      "total": {"type": "int"}
+    }
+  },
+  "expDelRecurringTitle": "Delete recurrence",
+  "expDelRecurringBody": "You can cancel only future pending occurrences (after today), or end the series: remove all pending and unlink paid items from the series (they stay as normal expenses).",
+  "expDelCloseSeries": "End series",
+  "expDelRecurringOccurrenceTitle": "Delete recurring expense",
+  "expDelRecurringOccurrenceBody": "Delete only this period or apply to the whole series?",
+  "expDelThisOnly": "This one only",
+  "expDelWholeSeries": "Whole series",
+  "expDelRemoveFromRecurrenceTitle": "Remove from recurrence",
+  "expDelRemoveOccurrenceTitle": "Delete occurrence?",
+  "expDelPaidUnlinkBody": "This expense is already paid: it will not be removed from history, only detached from the recurring series.",
+  "expDelPendingDeleteBody": "This pending line will be deleted; the rest of the series stays.",
+  "expDelSeriesScopeTitle": "Series scope",
+  "expDelSeriesScopeBody": "Cancel only future pending occurrences (after today), or end the entire series (pending + unlink paid from the series history)?",
+  "expDelSingleTitle": "Delete expense?",
+  "expDelSingleBody": "This action cannot be undone.",
+  "expDelSuccessInstallmentFuture": "Future installments cancelled.",
+  "expDelSuccessInstallmentAll": "Plan deleted.",
+  "expDelSuccessOccurrence": "Occurrence deleted.",
+  "expDelSuccessOccurrenceUnlink": "Removed from recurrence.",
+  "expDelSuccessRecurringFuture": "Future pending cancelled.",
+  "expDelSuccessRecurringClose": "Recurrence ended.",
+  "expDelSuccessSingle": "Expense deleted.",
+  "newExpenseTitle": "New expense",
+  "editExpenseTitle": "Edit expense",
+  "expenseSaveError": "Could not save.",
+  "expenseChangesSaved": "Changes saved.",
+  "expenseEditOwnerOnly": "Only the owner can edit this expense.",
+  "incomesTitle": "Income",
+  "newIncomeTitle": "New income",
+  "editIncomeTitle": "Edit income",
+  "incomeEditOwnerOnly": "Only the owner can edit this income.",
+  "incomeSaveError": "Could not save.",
+  "incomeSaved": "Saved.",
+  "incomeDetailTitle": "Income",
+  "incomesAddLong": "Add income",
+  "incomesRefresh": "Refresh",
+  "incomesRefreshList": "Refresh list",
+  "incomesLoadError": "Could not load.",
+  "incomesEmpty": "No income this month.",
+  "incomesListHint": "Amounts in BRL with exact cents; the month follows the income date.",
+  "incomeTileDateLine": "Date {date}",
+  "@incomeTileDateLine": {
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  },
+  "familyTitle": "Family",
+  "securityTitle": "Security",
+  "unlockTitle": "Unlock",
+  "resetPasswordTitle": "Reset password",
+  "categoryLabel": "Category",
+  "noneDash": "—",
+  "secAppTitle": "App security",
+  "secSetPinTitle": "Set app PIN",
+  "secNewPinTitle": "New PIN",
+  "secPinField": "PIN (4–6 digits)",
+  "secRepeatPinField": "Repeat PIN",
+  "secPinInvalidOrMismatch": "Invalid PINs or they do not match.",
+  "secPinSavedSnackbar": "App PIN saved.",
+  "secDisablePinTitle": "Disable PIN",
+  "secCurrentPinField": "Current PIN",
+  "secWrongPin": "Incorrect PIN.",
+  "secPinDisabledSnackbar": "PIN lock disabled.",
+  "secLockWithPin": "Lock with PIN",
+  "secLockPinOnSub": "When minimized, the app asks for the PIN when you return.",
+  "secLockPinOffSub": "Off — only your online session (login) protects the app.",
+  "secBiometricTitle": "Unlock with face or fingerprint",
+  "secBiometricOnSub": "Uses Face ID, face unlock, or fingerprint — your device picks the method you enrolled with.",
+  "secBiometricOffSub": "This device does not expose biometrics or face unlock to the app.",
+  "secChangePin": "Change PIN",
+  "unlockIntro": "Enter your app PIN to continue.",
+  "unlockPinLabel": "PIN",
+  "unlockUseBiometric": "Use biometrics",
+  "unlockUseFaceRecognition": "Use face recognition",
+  "unlockUseFingerprint": "Use fingerprint",
+  "unlockUseBiometricMixed": "Use face or fingerprint",
+  "authResetSubtitle": "Paste the code you received by email.",
+  "authResetTokenLabel": "Recovery code",
+  "authResetTokenHint": "Paste the full token",
+  "authResetTokenError": "Paste the code you received by email",
+  "authNewPassword": "New password",
+  "authConfirmNewPassword": "Confirm new password",
+  "authSaveNewPassword": "Save new password",
+  "authResetSuccess": "Password updated. You can sign in.",
+  "authResetError": "Could not reset password",
+  "authRequestNewCode": "Request a new code",
+  "shareFamilyTitle": "Share with family",
+  "shareFamilySubOn": "Visible to the household; you can choose who to split with.",
+  "shareFamilySubOff": "Join a family (invite) to use sharing.",
+  "shareSplitWith": "Split with",
+  "shareWholeFamily": "Whole family",
+  "expFormDescription": "Description",
+  "expFormAmountInstallment": "Installment amount (R$)",
+  "expFormAmount": "Amount (R$)",
+  "expFormKindSingle": "One-off",
+  "expFormKindInstallments": "Installments",
+  "expFormKindRecurring": "Recurring",
+  "expFormInstallmentsLabel": "Installments (monthly period)",
+  "expFormInstallmentsHint": "1 to 24",
+  "expFormInstallmentRangeError": "Use 1 to 24",
+  "expFormInstallmentInvalid": "Invalid number",
+  "expFormRecurringFrequency": "Frequency",
+  "expFormRecurringChoose": "Choose…",
+  "expFormRecurringHelp": "Fixed bills (utilities, internet, subscriptions): the app creates pending lines per month when you open the list. Changing the amount on the main line updates only future pending occurrences; history keeps old values.",
+  "expFormMarkPaid": "Already paid",
+  "expFormHasDueDate": "Has due date",
+  "expFormHasDueDateSub": "Bills / dashboard reminders",
+  "expFormExpenseDate": "Expense date (period)",
+  "expFormDueDate": "Due date",
+  "expFormChooseDate": "Choose…",
+  "expFormCategoriesLoadError": "Could not load categories.",
+  "expFormPickCategory": "Choose a category.",
+  "expFormCreateError": "Could not create.",
+  "expFormPlanCreated": "Plan: {count} installments created.",
+  "@expFormPlanCreated": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "expFormPlanCreatedRef": "Plan: {count} installments (ref. {ref}).",
+  "@expFormPlanCreatedRef": {
+    "placeholders": {
+      "count": {"type": "int"},
+      "ref": {"type": "String"}
+    }
+  },
+  "expFormCreated": "Expense created.",
+  "expFormPickDue": "Choose the due date.",
+  "expFormRecurringFreqRequired": "Choose recurrence frequency.",
+  "expEditDescription": "Description",
+  "expEditAmount": "Amount (R$)",
+  "expEditExpenseDate": "Expense date",
+  "expEditDueOptional": "Due date (optional)",
+  "expEditState": "Status",
+  "expEditRecurrenceMeta": "Recurrence (metadata)",
+  "expEditRecurrenceNone": "None",
+  "expEditInstallmentBanner": "Installment {n} of {total}. Changes apply only to this line.",
+  "@expEditInstallmentBanner": {
+    "placeholders": {
+      "n": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
+  "expEditRecurringAnchorBanner": "Recurrence: when you change the amount, only generated future pending lines (date after today) update; past months keep historical values.",
+  "incFormDescription": "Description",
+  "incFormAmount": "Amount (R$)",
+  "incFormIncomeDate": "Income date",
+  "incFormNotes": "Notes (optional)",
+  "incDetailLoadError": "Error.",
+  "familyLoadError": "Error.",
+  "familySaveError": "Could not save.",
+  "saveChanges": "Save changes",
+  "expFormAmountHint": "e.g. 12.50",
+  "expFormInstallmentNeedAmountLine": "Enter each installment amount. Total = installment × {count}.",
+  "@expFormInstallmentNeedAmountLine": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "expFormInstallmentPlanTotalLine": "Plan total: {total} ({count} × {installment}).",
+  "@expFormInstallmentPlanTotalLine": {
+    "placeholders": {
+      "total": {"type": "String"},
+      "count": {"type": "int"},
+      "installment": {"type": "String"}
+    }
+  },
+  "expFormFreqMonthly": "Monthly",
+  "expFormFreqWeekly": "Weekly",
+  "expFormFreqYearly": "Yearly",
+  "incFormIntro": "Record real inflows (salary, extras, etc.). The month balance on the dashboard sums income in this period.",
+  "incFormDescHint": "e.g. April salary, Client X fees",
+  "incFormAmountHint": "e.g. 3,500.00",
+  "incFormIncomeDateCompetence": "Income date (period)",
+  "incFormPickCategory": "Choose an income type.",
+  "incFormCreatedSnackbar": "Income saved.",
+  "incFormSaveButton": "Save income",
+  "incFormCategoriesLoadError": "Could not load income types.",
+  "incFormNotesHint": "Source, reference, tax ID… — for your household only",
+  "incFormCategoryLabel": "Income type",
+  "incomeDeleteTitle": "Delete income?",
+  "incomeDeletedSnackbar": "Deleted.",
+  "incomeReadOnlyBanner": "Another household member’s income — view only.",
+  "incomeDetailTypeLabel": "Type",
+  "incomeDetailDateCompetenceLabel": "Date (period)",
+  "incomeDetailNotesLabel": "Notes",
+  "incomeDeleteError": "Could not delete.",
+  "unlockPinTooShort": "PIN must be at least 4 digits",
+  "unlockBioReason": "Confirm your identity to unlock Well Paid",
+  "unlockBioUnavailable": "Biometrics unavailable",
+  "famLeaveTitle": "Leave family",
+  "famLeaveBody": "If you are the only member, the family will be removed. If you are the owner, ownership passes to another member.",
+  "famExitAction": "Leave",
+  "famRemoveMemberTitle": "Remove member",
+  "famRemoveMemberConfirm": "Remove {email}?",
+  "@famRemoveMemberConfirm": {
+    "placeholders": {
+      "email": {"type": "String"}
+    }
+  },
+  "famRenameTitle": "Family name",
+  "famNameField": "Name",
+  "famInviteTitle": "Invite",
+  "famInviteValidUntil": "Valid until {date}",
+  "@famInviteValidUntil": {
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  },
+  "famCopyTokenButton": "Copy token",
+  "famNoFamilyIntro": "Create a family or join with an invite (token or QR).",
+  "famCreateNameOptional": "Family name (optional)",
+  "famJoinSectionTitle": "Join with invite",
+  "famJoinTokenField": "Paste invite token",
+  "famCreate": "Create family",
+  "famJoin": "Join family",
+  "famInviteQr": "Generate invite (QR)",
+  "famLeave": "Leave family",
+  "famMembersSection": "Members",
+  "famMemberCount": "{current} / {max} members",
+  "@famMemberCount": {
+    "placeholders": {
+      "current": {"type": "int"},
+      "max": {"type": "int"}
+    }
+  },
+  "famRoleOwner": "Owner",
+  "famRoleMember": "Member",
+  "famYouSuffix": " (you)",
+  "famEditNameTooltip": "Edit name",
+  "dashCashflowTitle": "Monthly history",
+  "dashCashflowChartOptions": "Period & forecast",
+  "dashCashflowDynamicMode": "Dynamic mode",
+  "dashCashflowStartMonth": "Start",
+  "dashCashflowEndMonth": "End",
+  "dashCashflowForecastMonths": "Forecast months",
+  "dashCashflowApply": "Apply",
+  "dashCashflowLegendIncome": "Income",
+  "dashCashflowLegendExpensePaid": "Paid expenses",
+  "dashCashflowLegendExpenseForecast": "Forecast expenses",
+  "dashCashflowEmpty": "No data for this period.",
+  "dashCashflowTouchChartHint": "Tap the chart to pick a month. Default: month with the most activity.",
+  "dashCashflowInsightPeakPaid": "Peak paid spending: {month} · {amount}",
+  "@dashCashflowInsightPeakPaid": {
+    "placeholders": {
+      "month": {"type": "String"},
+      "amount": {"type": "String"}
+    }
+  },
+  "dashCashflowError": "Could not load monthly history.",
+  "dashCashflowFooterForecastTotal": "Forecast total: {amount}",
+  "@dashCashflowFooterForecastTotal": {
+    "placeholders": {
+      "amount": {"type": "String"}
+    }
+  },
+  "dashCashflowFooterBalance": "Period balance: {amount}",
+  "@dashCashflowFooterBalance": {
+    "placeholders": {
+      "amount": {"type": "String"}
+    }
+  },
+  "dashCashflowSemantics": "Monthly income and expenses chart",
+  "dashCashflowLoadedPoints": "{count} months in range",
+  "@dashCashflowLoadedPoints": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "dashCashflowRangeInvalid": "Start month cannot be after end month.",
+  "dashCashflowA11yPickStartMonth": "Choose start month of the range",
+  "dashCashflowA11yPickEndMonth": "Choose end month of the range",
+  "dashCashflowA11yForecastDropdown": "Number of forecast months after the range",
+  "dashCashflowA11yForecastDecrease": "Show fewer forecast months",
+  "dashCashflowA11yForecastIncrease": "Show more forecast months",
+  "dashCashflowA11yApply": "Apply filters to monthly history",
+  "dashCashflowA11ySeriesToggle": "{name}. Tap to show or hide on the chart.",
+  "@dashCashflowA11ySeriesToggle": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "dashCashflowA11ySummary": "Period totals. Forecast: {forecast}. Balance: {balance}.",
+  "@dashCashflowA11ySummary": {
+    "placeholders": {
+      "forecast": {"type": "String"},
+      "balance": {"type": "String"}
+    }
+  },
+  "dashCashflowDynamicWindowTooltip": "On: chart uses the server’s rolling window (recent months, not tied only to the header month). Off: fixed 6 months — from the header month back 5 months. Right: how many future months show forecast spending (works in both modes).",
+  "dashCashflowBarRollingLabel": "Auto",
+  "dashCashflowBarFixedLabel": "Header",
+  "dashCashflowForecastBarShort": "Ahead",
+  "dashCashflowForecastBarTooltip": "Future months on the axis with forecast spending (beyond the loaded history).",
+  "dashCashflowInsightPeakIncome": "Peak income: {month} · {amount}",
+  "@dashCashflowInsightPeakIncome": {
+    "placeholders": {
+      "month": {"type": "String"},
+      "amount": {"type": "String"}
+    }
+  },
+  "dashHomeCategoriesFootnote": "Category totals match the month selected in the header.",
+  "shoppingListsTitle": "Shopping lists",
+  "shoppingListsMenuLabel": "Shopping lists",
+  "shoppingListsActiveSection": "Planning",
+  "shoppingListsHistorySection": "History",
+  "shoppingListsEmpty": "No lists yet. Create one to plan items and add prices in the store.",
+  "shoppingListsNewList": "New list",
+  "shoppingListUntitled": "Untitled list",
+  "shoppingListItemsCount": "{count} items",
+  "@shoppingListItemsCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "shoppingListSubtotal": "Subtotal: {amount}",
+  "@shoppingListSubtotal": {
+    "placeholders": {
+      "amount": {"type": "String"}
+    }
+  },
+  "shoppingListNoPriceYet": "No price yet (add in store)",
+  "shoppingListAddItem": "Add item",
+  "shoppingListItemLabelHint": "Item description",
+  "shoppingListItemQuantity": "Quantity",
+  "shoppingListItemAmountOptional": "Unit price (optional)",
+  "shoppingListDeleteItem": "Remove item",
+  "shoppingListConfirmDeleteDraftTitle": "Delete list?",
+  "shoppingListConfirmDeleteDraftBody": "This draft list will be removed. This cannot be undone.",
+  "shoppingListComplete": "Check out",
+  "shoppingListCompleteTitle": "Create expense",
+  "shoppingListTotalOverrideHint": "Amount paid at store (optional — replaces sum and discount)",
+  "shoppingListDiscountHint": "Discount (optional — subtracts from line sum; not with manual total)",
+  "shoppingListDiscountOverrideConflict": "Fill either the manual total or the discount, not both.",
+  "shoppingListTotalMismatchTitle": "Total differs from line sum",
+  "shoppingListTotalMismatchBody": "You entered {manual} but the line subtotal is {subtotal}. The expense will use your amount. Continue?",
+  "@shoppingListTotalMismatchBody": {
+    "placeholders": {
+      "manual": { "type": "String" },
+      "subtotal": { "type": "String" }
+    }
+  },
+  "shoppingListDescriptionOptional": "Expense description (optional)",
+  "shoppingListMarkPaid": "Already paid",
+  "shoppingListExpenseFromListPaidNote": "The expense is saved as paid, with no installments or recurrence. Only the list name and total appear on the expense.",
+  "shoppingListExpenseDate": "Expense date",
+  "shoppingListViewExpense": "View expense",
+  "shoppingListAlignTotalToLinesButton": "Update expense to line sum",
+  "shoppingListAlignTotalSuccess": "Expense total updated to match the lines.",
+  "shoppingListCompletedOn": "Completed on {date}",
+  "@shoppingListCompletedOn": {
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  },
+  "shoppingListEditMetaTitle": "Title and store",
+  "shoppingListTitleOptional": "Title (optional)",
+  "shoppingListStoreOptional": "Store (optional)",
+  "shoppingListErrorLoad": "Could not load shopping lists.",
+  "shoppingListReadOnlyDraft": "Only the author can edit this draft list.",
+  "shoppingListCompletedEditHint": "You can fix amounts, quantities, and remove items. The list cannot be empty.",
+  "shoppingListNoItems": "No items yet. Add products to plan your trip.",
+  "shoppingListFooterEstimatedTotal": "Estimated total",
+  "shoppingListFooterEstimatedNote": "Sum of (unit price × quantity) for lines with a price.",
+  "shoppingListFooterUnitsSummary": "{unitCount} items total",
+  "@shoppingListFooterUnitsSummary": {
+    "placeholders": {
+      "unitCount": { "type": "int" }
+    }
+  },
+  "shoppingListFooterAddItemCompleted": "You can still add items to this completed list.",
+  "shoppingListInlineAmountHint": "Unit",
+  "shoppingListEditLabelTitle": "Item name",
+  "shoppingListConfirmRemoveItemTitle": "Remove item?",
+  "shoppingListConfirmRemoveItemBody": "This product will be removed from the list.",
+  "shoppingListEditItemTitle": "Edit item",
+  "shoppingListCompleteSuccess": "Expense saved. The list is now in history.",
+  "shoppingListFlushDraftError": "Could not sync list items. Check your connection and try again.",
+  "shoppingListCompleteInProgress": "Syncing and completing…",
+  "pcNavAnnouncements": "Announcements",
+  "pcNavReceivables": "Receivables",
+  "pcNavInvestments": "Investments",
+  "pcInstallmentPlanTitle": "Installment plan",
+  "pcEmergencyPlanTitle": "Reserve plan",
+  "pcDisplayNameTitle": "Display name",
+  "pcManageCategoriesTitle": "Expense categories",
+  "pcAnnouncementsEmpty": "No active announcements.",
+  "pcReceivablesEmpty": "Nothing to receive.",
+  "pcInvestmentsTitle": "Investments",
+  "pcInvestmentsAddPrincipal": "Add principal",
+  "pcInvestmentsPrincipalHint": "Amount to add (R$)",
+  "pcPlansTitle": "Reserve plans",
+  "pcPlansEmpty": "No extra plans. Use simple reserve or create via API.",
+  "pcPlanMonthsTitle": "Plan months",
+  "pcShoppingListNewRouteTitle": "New list"
+}

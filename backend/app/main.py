@@ -134,9 +134,12 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_handler)
 app.add_middleware(SlowAPIMiddleware)
 
 _origins = settings.cors_origins_list
+# Regex extra: Flutter web (Chrome) usa Origin http://localhost:PORT ou 127.0.0.1 — útil se
+# no painel Vercel CORS_ORIGINS não estiver "*" e falharem preflight OPTIONS.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_origins,
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1|\[::1\])(:\d+)?",
     allow_credentials=_origins != ["*"],
     allow_methods=["*"],
     allow_headers=["*"],

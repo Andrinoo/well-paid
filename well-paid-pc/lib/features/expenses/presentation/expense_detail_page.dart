@@ -1,0 +1,841 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../core/date/calendar_month.dart';
+import '../../../core/format/brl_cents.dart';
+import '../../../core/l10n/context_l10n.dart';
+import '../../../core/network/dio_client.dart';
+import '../../../core/theme/well_paid_colors.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../dashboard/application/dashboard_providers.dart';
+import '../../dashboard/presentation/due_urgency.dart';
+import '../application/expenses_providers.dart';
+import '../domain/expense_delete_options.dart';
+import '../domain/expense_item.dart';
+import 'expense_recurring_label.dart';
+import 'pay_expense_flow.dart';
+import 'widgets/expense_type_tags.dart';
+
+typedef _DeleteParams = ({
+  ExpenseDeleteTarget target,
+  ExpenseDeleteScope scope,
+});
+
+class ExpenseDetailPage extends ConsumerWidget {
+  const ExpenseDetailPage({super.key, required this.expenseId});
+
+  final String expenseId;
+
+  static String _dmY(DateTime d) =>
+      '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final async = ref.watch(expenseDetailProvider(expenseId));
+
+    return async.when(
+      loading: () => Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(PhosphorIconsRegular.arrowLeft),
+            onPressed: () => context.pop(),
+          ),
+          title: Text(l10n.expenseTitle),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, _) => Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(PhosphorIconsRegular.arrowLeft),
+            onPressed: () => context.pop(),
+          ),
+          title: Text(l10n.expenseTitle),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(
+              messageFromDio(e, l10n) ?? l10n.expenseLoadError,
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      ),
+      data: (e) => _DetailBody(expenseId: expenseId, e: e, readOnly: !e.isMine),
+    );
+  }
+}
+
+class _DetailBody extends ConsumerWidget {
+  const _DetailBody({
+    required this.expenseId,
+    required this.e,
+    required this.readOnly,
+  });
+
+  final String expenseId;
+  final ExpenseItem e;
+  final bool readOnly;
+
+  Future<void> _pay(BuildContext context, WidgetRef ref) async {
+    await confirmAndPayExpense(
+      context,
+      ref,
+      expense: e,
+      onPaid: (r) => r.invalidate(expenseDetailProvider(expenseId)),
+    );
+  }
+
+  Future<_DeleteParams?> _pickDeleteParams(
+    BuildContext context,
+    AppLocalizations l10n,
+  ) async {
+    if (e.isInstallmentPlan && e.installmentGroupId != null) {
+      if (e.installmentPlanHasPaid != false) {
+        return showDialog<_DeleteParams>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(l10n.expDelInstallmentTitle),
+            content: Text(
+              e.installmentPlanHasPaid == true
+                  ? l10n.expDelInstallmentPaidBody
+                  : l10n.expDelInstallmentMaybePaidBody,
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(l10n.cancel),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(
+                  ctx,
+                  (
+                    target: ExpenseDeleteTarget.series,
+                    scope: ExpenseDeleteScope.futureUnpaid,
+                  ),
+                ),
+                child: Text(l10n.expDelFutureOnly),
+              ),
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFFB71C1C),
+                ),
+                onPressed: () => Navigator.pop(
+                  ctx,
+                  (
+                    target: ExpenseDeleteTarget.series,
+                    scope: ExpenseDeleteScope.all,
+                  ),
+                ),
+                child: Text(l10n.expDelAllIncludingPaid),
+              ),
+            ],
+          ),
+        );
+      }
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(l10n.expDelInstallmentSimpleTitle),
+          content: Text(l10n.expDelInstallmentSimpleBody(e.installmentTotal)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFB71C1C),
+              ),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(l10n.delete),
+            ),
+          ],
+        ),
+      );
+      if (ok != true) return null;
+      return (
+        target: ExpenseDeleteTarget.series,
+        scope: ExpenseDeleteScope.all,
+      );
+    }
+
+    if (e.belongsToRecurringSeries) {
+      if (e.isRecurringAnchor) {
+        return showDialog<_DeleteParams>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(l10n.expDelRecurringTitle),
+            content: Text(l10n.expDelRecurringBody),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(l10n.cancel),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(
+                  ctx,
+                  (
+                    target: ExpenseDeleteTarget.series,
+                    scope: ExpenseDeleteScope.futureUnpaid,
+                  ),
+                ),
+                child: Text(l10n.expDelFutureOnly),
+              ),
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFFB71C1C),
+                ),
+                onPressed: () => Navigator.pop(
+                  ctx,
+                  (
+                    target: ExpenseDeleteTarget.series,
+                    scope: ExpenseDeleteScope.all,
+                  ),
+                ),
+                child: Text(l10n.expDelCloseSeries),
+              ),
+            ],
+          ),
+        );
+      }
+
+      final area = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(l10n.expDelRecurringOccurrenceTitle),
+          content: Text(l10n.expDelRecurringOccurrenceBody),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(l10n.cancel),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, 'one'),
+              child: Text(l10n.expDelThisOnly),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, 'series'),
+              child: Text(l10n.expDelWholeSeries),
+            ),
+          ],
+        ),
+      );
+      if (area == null || !context.mounted) return null;
+      if (area == 'one') {
+        final paid = !e.isPending;
+        final ok = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(
+              paid
+                  ? l10n.expDelRemoveFromRecurrenceTitle
+                  : l10n.expDelRemoveOccurrenceTitle,
+            ),
+            content: Text(
+              paid ? l10n.expDelPaidUnlinkBody : l10n.expDelPendingDeleteBody,
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(l10n.cancel),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text(l10n.confirm),
+              ),
+            ],
+          ),
+        );
+        if (ok != true) return null;
+        return (
+          target: ExpenseDeleteTarget.occurrence,
+          scope: ExpenseDeleteScope.all,
+        );
+      }
+
+      return showDialog<_DeleteParams>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(l10n.expDelSeriesScopeTitle),
+          content: Text(l10n.expDelSeriesScopeBody),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(l10n.cancel),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(
+                ctx,
+                (
+                  target: ExpenseDeleteTarget.series,
+                  scope: ExpenseDeleteScope.futureUnpaid,
+                ),
+              ),
+              child: Text(l10n.expDelFutureOnly),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFB71C1C),
+              ),
+              onPressed: () => Navigator.pop(
+                ctx,
+                (
+                  target: ExpenseDeleteTarget.series,
+                  scope: ExpenseDeleteScope.all,
+                ),
+              ),
+              child: Text(l10n.expDelCloseSeries),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.expDelSingleTitle),
+        content: Text(l10n.expDelSingleBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFB71C1C),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.delete),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return null;
+    return (target: ExpenseDeleteTarget.series, scope: ExpenseDeleteScope.all);
+  }
+
+  Future<void> _delete(BuildContext context, WidgetRef ref) async {
+    final l10n = context.l10n;
+    final params = await _pickDeleteParams(context, l10n);
+    if (params == null || !context.mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(expensesRepositoryProvider).deleteExpense(
+            e.id,
+            target: params.target,
+            scope: params.scope,
+          );
+      ref.invalidate(expensesListProvider);
+      ref.invalidate(toPayListProvider);
+      ref.invalidate(dashboardOverviewProvider);
+      ref.invalidate(expenseDetailProvider(expenseId));
+      if (context.mounted) {
+        final msg = _deleteSuccessMessage(params, l10n);
+        messenger.showSnackBar(SnackBar(content: Text(msg)));
+        context.pop();
+      }
+    } catch (err) {
+      if (context.mounted) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(messageFromDio(err, l10n) ?? l10n.expenseDeleteError),
+          ),
+        );
+      }
+    }
+  }
+
+  String _deleteSuccessMessage(_DeleteParams p, AppLocalizations l10n) {
+    if (e.isInstallmentPlan && e.installmentGroupId != null) {
+      return p.scope == ExpenseDeleteScope.futureUnpaid
+          ? l10n.expDelSuccessInstallmentFuture
+          : l10n.expDelSuccessInstallmentAll;
+    }
+    if (e.belongsToRecurringSeries) {
+      if (p.target == ExpenseDeleteTarget.occurrence) {
+        return e.isPending
+            ? l10n.expDelSuccessOccurrence
+            : l10n.expDelSuccessOccurrenceUnlink;
+      }
+      return p.scope == ExpenseDeleteScope.futureUnpaid
+          ? l10n.expDelSuccessRecurringFuture
+          : l10n.expDelSuccessRecurringClose;
+    }
+    return l10n.expDelSuccessSingle;
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final rec = expenseRecurringLabel(e, l10n);
+    final today = DateTime.now();
+    final DueUrgency? urgencyNextInstallment =
+        e.isInstallmentPlan && e.installmentNumber < e.installmentTotal
+            ? dueUrgencyFor(
+                e.dueDate != null
+                    ? addCalendarMonths(e.dueDate!, 1)
+                    : addCalendarMonths(e.expenseDate, 1),
+                today,
+              )
+            : null;
+    final DueUrgency? urgencyLastInstallment = e.isInstallmentPlan
+        ? dueUrgencyFor(
+            e.dueDate != null
+                ? addCalendarMonths(
+                    e.dueDate!,
+                    e.installmentTotal - e.installmentNumber,
+                  )
+                : addCalendarMonths(
+                    e.expenseDate,
+                    e.installmentTotal - e.installmentNumber,
+                  ),
+            today,
+          )
+        : null;
+    final DueUrgency? urgencyRecurringNext =
+        !e.isInstallmentPlan &&
+                e.recurringSeriesId != null &&
+                e.recurringSeriesId!.isNotEmpty
+            ? dueUrgencyFor(
+                e.dueDate != null
+                    ? addCalendarMonths(e.dueDate!, 1)
+                    : addCalendarMonths(e.expenseDate, 1),
+                today,
+              )
+            : null;
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(PhosphorIconsRegular.arrowLeft),
+          onPressed: () => context.pop(),
+        ),
+        title: Text(l10n.expenseTitle),
+        actions: [
+          if (!readOnly)
+            IconButton(
+              tooltip: l10n.expenseEdit,
+              icon: const Icon(PhosphorIconsRegular.pencilSimple),
+              onPressed: () => context.push('/expenses/$expenseId/edit'),
+            ),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          if (readOnly)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Material(
+                color: WellPaidColors.navy.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      Icon(PhosphorIconsRegular.info, color: WellPaidColors.navy.withValues(alpha: 0.8)),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          l10n.expenseReadOnlyBanner,
+                          style: TextStyle(
+                            color: WellPaidColors.navy.withValues(alpha: 0.85),
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          Text(
+            formatBrlFromCents(e.amountCents),
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: WellPaidColors.navy,
+                ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            e.description,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: WellPaidColors.navy,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Chip(
+            label: Text(e.categoryName),
+            backgroundColor: WellPaidColors.creamMuted,
+          ),
+          if (!e.isInstallmentPlan &&
+              e.recurringSeriesId != null &&
+              e.recurringSeriesId!.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            ExpenseTypeTags(item: e),
+          ],
+          const SizedBox(height: 16),
+          _row(context, l10n.expenseCompetence, ExpenseDetailPage._dmY(e.expenseDate)),
+          _dueRow(context, l10n, e, today),
+          _row(
+            context,
+            l10n.expenseStatusLabel,
+            e.isPending ? l10n.expenseStatusPending : l10n.expenseStatusPaid,
+          ),
+          if (e.isInstallmentPlan)
+            _row(
+              context,
+              l10n.expenseInstallmentsRow,
+              '${e.installmentNumber} de ${e.installmentTotal}',
+            ),
+          if (e.isInstallmentPlan && e.installmentGroupId != null) ...[
+            const SizedBox(height: 6),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () => context.push(
+                  '/installment-plan/${e.installmentGroupId}',
+                ),
+                icon: const Icon(PhosphorIconsRegular.stack, size: 18),
+                label: Text(l10n.pcInstallmentPlanTitle),
+              ),
+            ),
+          ],
+          if (e.isPending && e.monthlyInterestBps != null) ...[
+            const SizedBox(height: 8),
+            _AdvanceQuoteTile(expenseId: expenseId),
+          ],
+          if (rec != null)
+            _row(context, l10n.expenseRecurrence, rec),
+          if (e.isShared)
+            _row(
+              context,
+              l10n.expenseShare,
+              e.sharedWithLabel != null && e.sharedWithLabel!.isNotEmpty
+                  ? l10n.expenseShareWith(e.sharedWithLabel!)
+                  : l10n.expenseShareFamily,
+            ),
+          if (e.isInstallmentPlan) ...[
+            const SizedBox(height: 16),
+            Material(
+              color: WellPaidColors.creamMuted.withValues(alpha: 0.75),
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (e.installmentNumber < e.installmentTotal) ...[
+                      Text(
+                        l10n.expenseInstallmentNextSectionTitle,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              color: WellPaidColors.navy,
+                            ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        l10n.expenseInstallmentChip(
+                          e.installmentNumber + 1,
+                          e.installmentTotal,
+                        ),
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: WellPaidColors.navy.withValues(alpha: 0.9),
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        l10n.expenseNextDueCompetenceLine(
+                          ExpenseDetailPage._dmY(
+                            addCalendarMonths(e.expenseDate, 1),
+                          ),
+                        ),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: dueUrgencyOnLightBackground(
+                                urgencyNextInstallment!,
+                              ),
+                              fontWeight: FontWeight.w500,
+                            ),
+                      ),
+                      if (e.dueDate != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          l10n.expenseNextDueDateLine(
+                            ExpenseDetailPage._dmY(
+                              addCalendarMonths(e.dueDate!, 1),
+                            ),
+                          ),
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                fontWeight: dueUrgencyValueWeight(
+                                  urgencyNextInstallment!,
+                                ),
+                                color: dueUrgencyOnLightBackground(
+                                  urgencyNextInstallment,
+                                ),
+                              ),
+                        ),
+                      ],
+                      const SizedBox(height: 14),
+                    ],
+                    Text(
+                      l10n.expenseInstallmentLastSectionTitle,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: WellPaidColors.navy,
+                          ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      l10n.expenseInstallmentChip(
+                        e.installmentTotal,
+                        e.installmentTotal,
+                      ),
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: WellPaidColors.navy.withValues(alpha: 0.9),
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      l10n.expenseNextDueCompetenceLine(
+                        ExpenseDetailPage._dmY(
+                          addCalendarMonths(
+                            e.expenseDate,
+                            e.installmentTotal - e.installmentNumber,
+                          ),
+                        ),
+                      ),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: dueUrgencyOnLightBackground(
+                              urgencyLastInstallment!,
+                            ),
+                            fontWeight: FontWeight.w500,
+                          ),
+                    ),
+                    if (e.dueDate != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        l10n.expenseNextDueDateLine(
+                          ExpenseDetailPage._dmY(
+                            addCalendarMonths(
+                              e.dueDate!,
+                              e.installmentTotal - e.installmentNumber,
+                            ),
+                          ),
+                        ),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontWeight: dueUrgencyValueWeight(
+                                urgencyLastInstallment!,
+                              ),
+                              color: dueUrgencyOnLightBackground(
+                                urgencyLastInstallment,
+                              ),
+                            ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+          if (!e.isInstallmentPlan &&
+              e.recurringSeriesId != null &&
+              e.recurringSeriesId!.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Material(
+              color: WellPaidColors.creamMuted.withValues(alpha: 0.75),
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.expenseNextDueSectionTitle,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: WellPaidColors.navy,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      l10n.expenseNextDueCompetenceLine(
+                        ExpenseDetailPage._dmY(
+                          addCalendarMonths(e.expenseDate, 1),
+                        ),
+                      ),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: dueUrgencyOnLightBackground(
+                              urgencyRecurringNext!,
+                            ),
+                            fontWeight: FontWeight.w500,
+                          ),
+                    ),
+                    if (e.dueDate != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        l10n.expenseNextDueDateLine(
+                          ExpenseDetailPage._dmY(
+                            addCalendarMonths(e.dueDate!, 1),
+                          ),
+                        ),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontWeight: dueUrgencyValueWeight(
+                                urgencyRecurringNext!,
+                              ),
+                              color: dueUrgencyOnLightBackground(
+                                urgencyRecurringNext,
+                              ),
+                            ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 32),
+          if (!readOnly && e.isPending) ...[
+            FilledButton.icon(
+              onPressed: () => unawaited(_pay(context, ref)),
+              icon: const Icon(PhosphorIconsRegular.wallet),
+              label: Text(l10n.expenseMarkPaid),
+            ),
+            const SizedBox(height: 12),
+          ],
+          if (!readOnly) ...[
+            OutlinedButton.icon(
+              onPressed: () => context.push('/expenses/$expenseId/edit'),
+              icon: const Icon(PhosphorIconsRegular.pencilSimple),
+              label: Text(l10n.expenseEdit),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () => unawaited(_delete(context, ref)),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFFB71C1C),
+                side: const BorderSide(color: Color(0xFFB71C1C)),
+              ),
+              icon: const Icon(PhosphorIconsRegular.trash),
+              label: Text(l10n.expenseDelete),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  static Widget _dueRow(
+    BuildContext context,
+    AppLocalizations l10n,
+    ExpenseItem e,
+    DateTime today,
+  ) {
+    if (e.dueDate == null) {
+      return _row(
+        context,
+        l10n.expenseDue,
+        l10n.noneDash,
+        valueColor: WellPaidColors.navy.withValues(alpha: 0.55),
+        valueWeight: FontWeight.w500,
+      );
+    }
+    final due = e.dueDate!;
+    final u = dueUrgencyFor(due, today);
+    return _row(
+      context,
+      l10n.expenseDue,
+      ExpenseDetailPage._dmY(due),
+      valueColor: e.isPending
+          ? dueUrgencyOnLightBackground(u)
+          : WellPaidColors.navy,
+      valueWeight:
+          e.isPending ? dueUrgencyValueWeight(u) : FontWeight.w600,
+    );
+  }
+
+  static Widget _row(
+    BuildContext context,
+    String k,
+    String v, {
+    Color? valueColor,
+    FontWeight? valueWeight,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 140,
+            child: Text(
+              k,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: WellPaidColors.navy.withValues(alpha: 0.65),
+                  ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              v,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: valueWeight ?? FontWeight.w600,
+                    color: valueColor ?? WellPaidColors.navy,
+                  ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AdvanceQuoteTile extends ConsumerWidget {
+  const _AdvanceQuoteTile({required this.expenseId});
+
+  final String expenseId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final quoteAsync = ref.watch(expenseAdvanceQuoteProvider(expenseId));
+    return quoteAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (q) => Material(
+        color: WellPaidColors.creamMuted.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Se antecipar hoje',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: WellPaidColors.navy,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Paga ${formatBrlFromCents(q.settlementAmountCents)} (desconto ${formatBrlFromCents(q.discountCents)})',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: WellPaidColors.navy.withValues(alpha: 0.9),
+                    ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
