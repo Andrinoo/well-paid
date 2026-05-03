@@ -86,3 +86,4 @@ docs/        # Documentação do produto (contratos API, fluxos UI, plano mestre
 - **`docs/ANDROID_API_BACKEND_CONTRACT.md`** — mapeamento DTO Android ↔ API FastAPI.
 - **`docs/E2E_QA_CHECKLIST.md`** — QA manual E2E, rollout, NFR e notas de segurança/ API.
 - **`docs/INCOME_YIELD_HYBRID_ARCHITECTURE.md`** — esboço de ingestão híbrida e histórico (roadmap, não requisito de implementação imediata).
+- **`docs/TUTORIAL_RELEASE_ANDROID_GITHUB.md`** — tutorial: segredos `gh`, workflow do APK no GitHub Releases, `android-update.json` e actualização na app.
