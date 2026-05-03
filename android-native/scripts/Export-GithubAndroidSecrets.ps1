@@ -39,7 +39,7 @@ $androidRoot = Join-Path $repoRoot "android-native"
 $propsPath = Join-Path $androidRoot "keystore.properties"
 
 if (-not (Test-Path -LiteralPath $propsPath)) {
-    Write-Error "Não encontrei $propsPath. Cria o keystore.properties e volta a correr o script."
+    Write-Error "Nao encontrei $propsPath. Cria o keystore.properties e volta a correr o script."
 }
 
 $props = @{}
@@ -67,7 +67,7 @@ $jksPath = if ([IO.Path]::IsPathRooted($storeRel)) {
 }
 
 if (-not (Test-Path -LiteralPath $jksPath)) {
-    Write-Error "Não encontrei o keystore: $jksPath (storeFile=$storeRel)"
+    Write-Error "Nao encontrei o keystore: $jksPath (storeFile=$storeRel)"
 }
 
 $bytes = [IO.File]::ReadAllBytes($jksPath)
@@ -105,7 +105,7 @@ function Invoke-GhSecretSet {
     $gh = (Get-Command gh -ErrorAction Stop).Source
     $Value | & $gh secret set $Name --repo $Slug
     if ($LASTEXITCODE -ne 0) {
-        throw "gh secret set $Name falhou (exit $LASTEXITCODE)."
+        throw "gh secret set $Name failed (exit $LASTEXITCODE)."
     }
 }
 
@@ -118,19 +118,19 @@ $useGh = -not $ClipboardOnly -and (Test-GhCli) -and -not [string]::IsNullOrWhite
 
 if ($useGh) {
     if (-not (Test-GhAuth)) {
-        Write-Warning "gh não está autenticado. Corre: gh auth login   — a usar modo área de transferência."
+        Write-Warning "gh nao esta autenticado. Corre: gh auth login. A usar modo area de transferencia."
         $useGh = $false
     }
 }
 
 if ($useGh) {
-    Write-Host "Modo: GitHub CLI (repo $slug)." -ForegroundColor Cyan
+    Write-Host ('Modo: GitHub CLI (repo {0}).' -f $slug) -ForegroundColor Cyan
     Write-Host "A enviar segredos para GitHub..." -ForegroundColor Green
     Invoke-GhSecretSet -Slug $slug -Name "ANDROID_KEYSTORE_BASE64" -Value $b64
     Invoke-GhSecretSet -Slug $slug -Name "ANDROID_KEYSTORE_PASSWORD" -Value $props["storePassword"]
     Invoke-GhSecretSet -Slug $slug -Name "ANDROID_KEY_PASSWORD" -Value $props["keyPassword"]
     Invoke-GhSecretSet -Slug $slug -Name "ANDROID_KEY_ALIAS" -Value $props["keyAlias"]
-    Write-Host "Concluído: os 4 secrets foram definidos em $slug" -ForegroundColor Green
+    Write-Host ('Concluido: os 4 secrets foram definidos em {0}.' -f $slug) -ForegroundColor Green
 } else {
     Write-Host ""
     Write-Host "Modo: area de transferencia (cria os 4 secrets manualmente no GitHub)." -ForegroundColor Yellow
@@ -140,21 +140,21 @@ if ($useGh) {
     if ([string]::IsNullOrWhiteSpace($slug) -and -not $ClipboardOnly) {
         Write-Warning "Nao detecei repo GitHub em origin (ou falta gh). Usa -Repo 'Dono/repo' ou instala/auth gh."
     }
-    Write-Host "GitHub: Settings -> Secrets and variables -> Actions -> New repository secret (nome exacto, uma vez por secret)." -ForegroundColor White
+    Write-Host 'GitHub: Settings -> Secrets and variables -> Actions -> New repository secret (nome exacto, uma vez por secret).' -ForegroundColor White
     Write-Host ""
     Set-Clipboard -Text $b64
     Write-Host ""
     $lenMsg = 'OK: ANDROID_KEYSTORE_BASE64 na area de transferencia ({0} caracteres).' -f $b64.Length
     Write-Host $lenMsg -ForegroundColor Green
-    Write-Host "1) New repository secret: ANDROID_KEYSTORE_BASE64 = colar (ja na area de transferencia)."
+    Write-Host 'Passo 1: New repository secret ANDROID_KEYSTORE_BASE64 - colar valor ja na area de transferencia.'
     Write-Host ""
 
     function Copy-SecretToClipboard {
         param([string] $Label, [string] $Value)
-        Write-Host "New repository secret: $Label - Enter para copiar (valor nao mostrado)..."
+        Write-Host ('New repository secret: {0} - Enter para copiar (valor nao mostrado)...' -f $Label)
         Read-Host | Out-Null
         Set-Clipboard -Text $Value
-        Write-Host "  Copiado: cola como $Label" -ForegroundColor Cyan
+        Write-Host ('  Copiado: cola como {0}' -f $Label) -ForegroundColor Cyan
         Write-Host ""
     }
 
@@ -163,5 +163,5 @@ if ($useGh) {
     Copy-SecretToClipboard -Label "ANDROID_KEY_ALIAS" -Value $props["keyAlias"]
 }
 
-Write-Host "Depois: Actions -> Android APK release -> Run workflow -> release_tag = v0.1.xx" -ForegroundColor Yellow
+Write-Host 'Depois: Actions -> Android APK release -> Run workflow -> release_tag = v0.1.xx' -ForegroundColor Yellow
 Write-Host ""
