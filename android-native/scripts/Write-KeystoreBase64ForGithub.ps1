@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Grava o Base64 do .jks (keystore.properties) num ficheiro de texto UMA linha — para colar no secret GitHub sem depender do clipboard.
+  Grava o Base64 do .jks (keystore.properties) num ficheiro de texto UMA linha, para colar no secret GitHub sem depender do clipboard.
 
   O GitHub web as vezes trunca colagens longas; abre o ficheiro no VS Code, Ctrl+A, Ctrl+C, cola no secret e confirma que o tamanho bate.
 
@@ -50,5 +50,5 @@ Write-Host "  $outFile" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Confirma no VS Code (barra de estado ou (Get-Content -Raw).Length) = $len" -ForegroundColor Yellow
 Write-Host "GitHub: Settings -> Secrets -> ANDROID_KEYSTORE_BASE64 -> Update -> apaga tudo -> cola do ficheiro (Ctrl+A no ficheiro, Ctrl+C)." -ForegroundColor White
-Write-Host "Este ficheiro esta no .gitignore — nao faz commit." -ForegroundColor DarkGray
+Write-Host "Este ficheiro esta no .gitignore - nao faz commit." -ForegroundColor DarkGray
 Write-Host ""
