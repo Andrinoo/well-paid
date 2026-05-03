@@ -73,9 +73,17 @@ jobs:
             Write-Host "Sem secret ANDROID_KEYSTORE_BASE64: não escrevo keystore.properties (release pode usar assinatura de debug)."
             exit 0
           }
-          [IO.File]::WriteAllBytes(
-            (Join-Path $PWD "release-ci.jks"),
-            [Convert]::FromBase64String($Env:ANDROID_KEYSTORE_BASE64))
+          # Colagens no GitHub UI ou Notepad muitas vezes trazem quebras de linha / espaços no meio do Base64.
+          $b64 = ($Env:ANDROID_KEYSTORE_BASE64.Trim() -replace '\s+', '')
+          try {
+            $bytes = [Convert]::FromBase64String($b64)
+          } catch {
+            Write-Host "ANDROID_KEYSTORE_BASE64 invalido (apos remover espacos): $($b64.Length) chars. Erro: $($_.Exception.Message)"
+            Write-Host "Gera de novo uma linha so: [Convert]::ToBase64String([IO.File]::ReadAllBytes('...jks')) | Set-Clipboard ; cola no secret sem aspas nem quebras de linha."
+            Write-Host "Ou corre android-native/scripts/Export-GithubAndroidSecrets.ps1 com gh."
+            exit 1
+          }
+          [IO.File]::WriteAllBytes((Join-Path $PWD "release-ci.jks"), $bytes)
           @"
           storePassword=$Env:SP
           keyPassword=$Env:KP

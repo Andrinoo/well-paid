@@ -71,7 +71,8 @@ if (-not (Test-Path -LiteralPath $jksPath)) {
 }
 
 $bytes = [IO.File]::ReadAllBytes($jksPath)
-$b64 = [Convert]::ToBase64String($bytes)
+# Uma linha continua; evita newline final se `gh secret set` ler stdin com \n extra.
+$b64 = [Convert]::ToBase64String($bytes).Trim()
 
 function Get-GitHubRepoSlug {
     param([string] $Root)
