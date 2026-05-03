@@ -1,8 +1,9 @@
 <#
 .SYNOPSIS
-  Gera um ficheiro de texto com todos os valores para colar nos secrets do GitHub (PART1, PART2, passwords, alias).
+  Gera UM ficheiro de texto com todos os valores para os secrets do GitHub:
+  ANDROID_KEYSTORE_BASE64 (linha completa) + passwords + alias.
 
-  O ficheiro fica em android-native/ e esta no .gitignore. APAGA-O depois de usar. NUNCA facas commit.
+  Usa Repository secrets (nao Variables). APAGA o ficheiro depois. NUNCA facas commit.
 
 .EXAMPLE
   cd "D:\Projects\Well Paid"
@@ -10,7 +11,7 @@
 #>
 [CmdletBinding()]
 param(
-    [string] $OutFileName = "gh-github-secrets-PASTE-AQUI.txt"
+    [string] $OutFileName = "gh-github-secrets-folha-unica.txt"
 )
 
 Set-StrictMode -Version Latest
@@ -20,7 +21,6 @@ $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..\..") | Select-Object -Expa
 $androidRoot = Join-Path $repoRoot "android-native"
 $propsPath = Join-Path $androidRoot "keystore.properties"
 $outPath = Join-Path $androidRoot $OutFileName
-$splitAt = 2500
 
 if (-not (Test-Path -LiteralPath $propsPath)) {
     Write-Error "Nao encontrei $propsPath"
@@ -48,8 +48,11 @@ if (-not (Test-Path -LiteralPath $jksPath)) {
 }
 
 $b64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes($jksPath)).Trim()
-$p1 = if ($b64.Length -le $splitAt) { $b64 } else { $b64.Substring(0, $splitAt) }
-$p2 = if ($b64.Length -le $splitAt) { "" } else { $b64.Substring($splitAt) }
+try {
+    [void][Convert]::FromBase64String($b64)
+} catch {
+    Write-Error "Base64 gerado invalido: $($_.Exception.Message)"
+}
 
 $sp = $props["storePassword"]
 $kp = $props["keyPassword"]
@@ -57,21 +60,15 @@ $ka = $props["keyAlias"]
 
 $lines = @(
     "================================================================================",
-    "APAGA ESTE FICHEIRO DEPOIS DE COLAR NO GITHUB. NAO COMMITES. Contem segredos.",
-    "GitHub: Settings -> Secrets and variables -> Actions -> New repository secret",
-    "Nomes dos secrets tem de ser EXACTOS (case sensitive).",
+    "FOLHA UNICA - todos os secrets GitHub (Actions -> Repository SECRETS, nao Variables).",
+    "APAGA este ficheiro depois de colar. NAO COMMITES.",
     "================================================================================",
     "",
-    "Copia o texto ENTRE as linhas VALUE_START e VALUE_END (sem essas linhas) para o secret indicado.",
+    "Copia SO o texto entre VALUE_START e VALUE_END (sem essas linhas) para cada secret.",
     "",
-    "--- SECRET: ANDROID_KEYSTORE_BASE64_PART1 ---",
+    "--- SECRET: ANDROID_KEYSTORE_BASE64 ---",
     "VALUE_START",
-    $p1,
-    "VALUE_END",
-    "",
-    "--- SECRET: ANDROID_KEYSTORE_BASE64_PART2 ---",
-    "VALUE_START",
-    $p2,
+    $b64,
     "VALUE_END",
     "",
     "--- SECRET: ANDROID_KEYSTORE_PASSWORD ---",
@@ -90,9 +87,9 @@ $lines = @(
     "VALUE_END",
     "",
     "================================================================================",
-    "Opcional: remove o secret ANDROID_KEYSTORE_BASE64 se existir (valor truncado).",
-    "O workflow usa PART1+PART2 quando PART1 nao esta vazio.",
-    "Base64 total: $($b64.Length) chars | PART1: $($p1.Length) | PART2: $($p2.Length)",
+    "Opcional: remove ANDROID_KEYSTORE_BASE64_PART1 e PART2 se ja nao precisares.",
+    "Se a colagem do Base64 truncar no browser, usa gh secret set ou Write-KeystoreBase64ForGithub.ps1 (part1/part2).",
+    "Base64: $($b64.Length) caracteres (validado localmente).",
     "================================================================================"
 )
 
@@ -101,8 +98,8 @@ $body = $lines -join "`r`n"
 [IO.File]::WriteAllText($outPath, $body, $utf8NoBom)
 
 Write-Host ""
-Write-Host "OK: ficheiro gerado (contem segredos - apaga depois):" -ForegroundColor Green
+Write-Host "OK: folha unica gerada ($($b64.Length) chars Base64):" -ForegroundColor Green
 Write-Host "  $outPath" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "Abre no VS Code e copia cada bloco entre VALUE_START e VALUE_END para o secret indicado." -ForegroundColor Yellow
+Write-Host "4 secrets: ANDROID_KEYSTORE_BASE64 + PASSWORD + KEY_PASSWORD + KEY_ALIAS" -ForegroundColor Yellow
 Write-Host ""
