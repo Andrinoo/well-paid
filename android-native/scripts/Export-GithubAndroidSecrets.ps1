@@ -126,7 +126,14 @@ if ($useGh) {
 if ($useGh) {
     Write-Host ('Modo: GitHub CLI (repo {0}).' -f $slug) -ForegroundColor Cyan
     Write-Host "A enviar segredos para GitHub..." -ForegroundColor Green
-    Invoke-GhSecretSet -Slug $slug -Name "ANDROID_KEYSTORE_BASE64" -Value $b64
+    $splitAt = 2500
+    if ($b64.Length -gt $splitAt) {
+        Invoke-GhSecretSet -Slug $slug -Name "ANDROID_KEYSTORE_BASE64_PART1" -Value ($b64.Substring(0, $splitAt))
+        Invoke-GhSecretSet -Slug $slug -Name "ANDROID_KEYSTORE_BASE64_PART2" -Value ($b64.Substring($splitAt))
+        Write-Host ('Base64 enviado em PART1 + PART2 (cortado a {0} + resto). Remove ANDROID_KEYSTORE_BASE64 no GitHub se estiver truncado.' -f $splitAt) -ForegroundColor Yellow
+    } else {
+        Invoke-GhSecretSet -Slug $slug -Name "ANDROID_KEYSTORE_BASE64" -Value $b64
+    }
     Invoke-GhSecretSet -Slug $slug -Name "ANDROID_KEYSTORE_PASSWORD" -Value $props["storePassword"]
     Invoke-GhSecretSet -Slug $slug -Name "ANDROID_KEY_PASSWORD" -Value $props["keyPassword"]
     Invoke-GhSecretSet -Slug $slug -Name "ANDROID_KEY_ALIAS" -Value $props["keyAlias"]

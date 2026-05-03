@@ -2,7 +2,7 @@
 .SYNOPSIS
   Grava o Base64 do .jks (keystore.properties) num ficheiro de texto UMA linha, para colar no secret GitHub sem depender do clipboard.
 
-  O GitHub web as vezes trunca colagens longas; abre o ficheiro no VS Code, Ctrl+A, Ctrl+C, cola no secret e confirma que o tamanho bate.
+  Gera tambem part1/part2 (2500+resto) para dois secrets se a colagem no GitHub truncar (~500 chars).
 
 .EXAMPLE
   cd "D:\Projects\Well Paid"
@@ -18,6 +18,9 @@ $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..\..") | Select-Object -Expa
 $androidRoot = Join-Path $repoRoot "android-native"
 $propsPath = Join-Path $androidRoot "keystore.properties"
 $outFile = Join-Path $androidRoot "gh-keystore-base64-for-github.txt"
+$part1File = Join-Path $androidRoot "gh-keystore-base64-part1-for-github.txt"
+$part2File = Join-Path $androidRoot "gh-keystore-base64-part2-for-github.txt"
+$splitAt = 2500
 
 if (-not (Test-Path -LiteralPath $propsPath)) {
     Write-Error "Nao encontrei $propsPath"
@@ -43,12 +46,23 @@ $b64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes($jksPath)).Trim()
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 [IO.File]::WriteAllText($outFile, $b64, $utf8NoBom)
 
+$p1 = if ($b64.Length -le $splitAt) { $b64 } else { $b64.Substring(0, $splitAt) }
+$p2 = if ($b64.Length -le $splitAt) { "" } else { $b64.Substring($splitAt) }
+[IO.File]::WriteAllText($part1File, $p1, $utf8NoBom)
+[IO.File]::WriteAllText($part2File, $p2, $utf8NoBom)
+
 $len = $b64.Length
 Write-Host ""
 Write-Host "OK: escrevi $len caracteres em:" -ForegroundColor Green
 Write-Host "  $outFile" -ForegroundColor Cyan
+Write-Host "  $part1File ($($p1.Length) chars)" -ForegroundColor Cyan
+Write-Host "  $part2File ($($p2.Length) chars)" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "Confirma no VS Code (barra de estado ou (Get-Content -Raw).Length) = $len" -ForegroundColor Yellow
-Write-Host "GitHub: Settings -> Secrets -> ANDROID_KEYSTORE_BASE64 -> Update -> apaga tudo -> cola do ficheiro (Ctrl+A no ficheiro, Ctrl+C)." -ForegroundColor White
-Write-Host "Este ficheiro esta no .gitignore - nao faz commit." -ForegroundColor DarkGray
+Write-Host "Se o GitHub truncar colagens longas, usa DOIS secrets (PART1 depois PART2, sem espaco entre eles no CI):" -ForegroundColor Yellow
+Write-Host "  ANDROID_KEYSTORE_BASE64_PART1 = conteudo de part1 (ficheiro acima)" -ForegroundColor White
+Write-Host "  ANDROID_KEYSTORE_BASE64_PART2 = conteudo de part2" -ForegroundColor White
+Write-Host "Podes apagar ou esvaziar ANDROID_KEYSTORE_BASE64 se tinha valor errado; o workflow prefere PART1+PART2." -ForegroundColor DarkGray
+Write-Host ""
+Write-Host "Passwords: cola storePassword / keyPassword / keyAlias nos outros 3 secrets." -ForegroundColor White
+Write-Host "Ficheiros estao no .gitignore - nao faz commit." -ForegroundColor DarkGray
 Write-Host ""

@@ -6,11 +6,10 @@
 # Disparo B — por tag: git tag v0.1.41 && git push origin v0.1.41
 #   Compila no commit da tag e anexa o APK à release dessa tag.
 #
-# Assinatura release (opcional): segredos no repositório GitHub → Settings → Secrets and variables → Actions
-#   ANDROID_KEYSTORE_BASE64  — ficheiro .jks em Base64 (uma linha)
-#   ANDROID_KEYSTORE_PASSWORD
-#   ANDROID_KEY_PASSWORD
-#   ANDROID_KEY_ALIAS
+# Assinatura release (opcional): Settings -> Secrets and variables -> Actions
+#   ANDROID_KEYSTORE_BASE64  — Base64 do .jks numa linha (se a UI truncar, usa PART1+PART2 em vez disto)
+#   ANDROID_KEYSTORE_BASE64_PART1 + ANDROID_KEYSTORE_BASE64_PART2 — metades consecutivas (PART1+PART2 = Base64 completo)
+#   ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_PASSWORD, ANDROID_KEY_ALIAS
 # Sem estes segredos, o job não grava keystore.properties no CI — o release pode usar assinatura de debug.
 # Para produção, define os quatro segredos (não uses `if: secrets.*` no YAML; o GitHub não permite).
 #
@@ -65,27 +64,35 @@ jobs:
         shell: pwsh
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_BASE64_PART1: ${{ secrets.ANDROID_KEYSTORE_BASE64_PART1 }}
+          ANDROID_KEYSTORE_BASE64_PART2: ${{ secrets.ANDROID_KEYSTORE_BASE64_PART2 }}
           SP: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KP: ${{ secrets.ANDROID_KEY_PASSWORD }}
           KA: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: |
-          if ([string]::IsNullOrWhiteSpace($Env:ANDROID_KEYSTORE_BASE64)) {
-            Write-Host "Sem secret ANDROID_KEYSTORE_BASE64: não escrevo keystore.properties (release pode usar assinatura de debug)."
+          $p1 = if ($null -ne $Env:ANDROID_KEYSTORE_BASE64_PART1) { ($Env:ANDROID_KEYSTORE_BASE64_PART1.Trim() -replace '\s+', '') } else { '' }
+          $p2 = if ($null -ne $Env:ANDROID_KEYSTORE_BASE64_PART2) { ($Env:ANDROID_KEYSTORE_BASE64_PART2.Trim() -replace '\s+', '') } else { '' }
+          $single = if ($null -ne $Env:ANDROID_KEYSTORE_BASE64) { ($Env:ANDROID_KEYSTORE_BASE64.Trim() -replace '\s+', '') } else { '' }
+          $b64 = ''
+          if ($p1.Length -gt 0) {
+            $b64 = $p1 + $p2
+            Write-Host "A usar secrets ANDROID_KEYSTORE_BASE64_PART1 + PART2 (total $($b64.Length) caracteres)."
+          } elseif ($single.Length -gt 0) {
+            $b64 = $single
+            Write-Host "A usar secret ANDROID_KEYSTORE_BASE64 ($($b64.Length) caracteres)."
+          } else {
+            Write-Host "Sem Base64 do keystore nos secrets: nao escrevo keystore.properties (release pode usar assinatura de debug)."
             exit 0
           }
-          # Colagens no GitHub UI ou Notepad muitas vezes trazem quebras de linha / espaços no meio do Base64.
-          $b64 = ($Env:ANDROID_KEYSTORE_BASE64.Trim() -replace '\s+', '')
           if ($b64.Length -lt 1200) {
-            Write-Host "AVISO: ANDROID_KEYSTORE_BASE64 tem so $($b64.Length) caracteres. Um .jks tipico em Base64 costuma ter 2500+ (ex.: ~3700). Se for muito curto, quase de certeza nao e o ficheiro completo ou colaste outra coisa no secret."
+            Write-Host "AVISO: Base64 combinado tem so $($b64.Length) caracteres. Um .jks tipico costuma 2500+. Cola PART1+PART2 (scripts\\Write-KeystoreBase64ForGithub.ps1) ou corrige o secret."
           }
           try {
             $bytes = [Convert]::FromBase64String($b64)
           } catch {
-            Write-Host "ANDROID_KEYSTORE_BASE64 invalido (apos remover espacos): $($b64.Length) chars. Erro: $($_.Exception.Message)"
-            Write-Host "No GitHub: apaga o valor antigo do secret, gera de novo no PC e cola UMA vez o Base64 inteiro (confirma no fim do campo que o tamanho bate com o gerado)."
-            Write-Host "PC: [Convert]::ToBase64String([IO.File]::ReadAllBytes('caminho\\ficheiro.jks')).Trim() | Set-Clipboard"
-            Write-Host "Ou: Get-Content .\\b64.txt -Raw | gh secret set ANDROID_KEYSTORE_BASE64 --repo OWNER/REPO"
-            Write-Host "Ou corre Export-GithubAndroidSecrets.ps1 com gh (sem -ClipboardOnly)."
+            Write-Host "Base64 invalido ($($b64.Length) chars): $($_.Exception.Message)"
+            Write-Host "Cria ANDROID_KEYSTORE_BASE64_PART1 e PART2 (metades do ficheiro gh-keystore-base64-part*-for-github.txt) ou um unico ANDROID_KEYSTORE_BASE64 correcto."
+            Write-Host "Confirma ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_PASSWORD, ANDROID_KEY_ALIAS no GitHub."
             exit 1
           }
           [IO.File]::WriteAllBytes((Join-Path $PWD "release-ci.jks"), $bytes)
