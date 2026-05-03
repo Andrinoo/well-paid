@@ -1,0 +1,135 @@
+# Compila o APK release (android-native) e publica no GitHub Releases.
+#
+# Disparo A — manual: Actions → "Android APK release" → Run workflow → preencher release_tag (ex.: v0.1.41).
+#   Cria a tag no commit actual se ainda não existir e anexa o APK.
+#
+# Disparo B — por tag: git tag v0.1.41 && git push origin v0.1.41
+#   Compila no commit da tag e anexa o APK à release dessa tag.
+#
+# Assinatura release (opcional): segredos no repositório GitHub → Settings → Secrets and variables → Actions
+#   ANDROID_KEYSTORE_BASE64  — ficheiro .jks em Base64 (uma linha)
+#   ANDROID_KEYSTORE_PASSWORD
+#   ANDROID_KEY_PASSWORD
+#   ANDROID_KEY_ALIAS
+# Sem estes segredos, não existe keystore.properties no CI — o release fica sem signingConfig explícito
+# (o AGP pode assinar com a chave de debug; para produção configura os segredos).
+#
+# Depois do release: actualiza backend/app/static/android-update.json com version_code e apk_url HTTPS do asset.
+
+name: Android APK release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Tag da release (ex.: v0.1.41). Criada no HEAD actual se não existir."
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-release-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            android-native/.gradle
+          key: ${{ runner.os }}-gradle-${{ hashFiles('android-native/**/*.gradle.kts', 'android-native/**/*.properties', 'android-native/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Decode keystore (optional)
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        working-directory: android-native
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        shell: pwsh
+        run: |
+          [IO.File]::WriteAllBytes(
+            (Join-Path $PWD "release-ci.jks"),
+            [Convert]::FromBase64String($Env:ANDROID_KEYSTORE_BASE64))
+
+      - name: Write keystore.properties (optional)
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        working-directory: android-native
+        env:
+          SP: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KP: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          KA: ${{ secrets.ANDROID_KEY_ALIAS }}
+        shell: pwsh
+        run: |
+          @"
+          storePassword=$Env:SP
+          keyPassword=$Env:KP
+          keyAlias=$Env:KA
+          storeFile=release-ci.jks
+          "@ | Set-Content -Path keystore.properties -Encoding ascii
+
+      - name: Assemble release APK
+        working-directory: android-native
+        shell: pwsh
+        run: .\gradlew.bat :app:assembleRelease --no-daemon --stacktrace
+
+      - name: Resolve release tag and copy APK
+        id: meta
+        shell: pwsh
+        run: |
+          $root = $Env:GITHUB_WORKSPACE
+          $tag = if ($Env:GITHUB_EVENT_NAME -eq 'workflow_dispatch') {
+            '${{ github.event.inputs.release_tag }}'.Trim()
+          } else {
+            $Env:GITHUB_REF_NAME
+          }
+          if ([string]::IsNullOrWhiteSpace($tag)) { throw "Tag vazia." }
+          if ($tag -notmatch '^v') { throw "Use tag no formato v0.1.xx (ex.: v0.1.41)." }
+          $src = Join-Path $root "android-native\app\build\outputs\apk\release\app-release.apk"
+          if (-not (Test-Path $src)) { throw "APK não encontrado: $src" }
+          $rel = "wellpaid-$tag.apk"
+          $dest = Join-Path $root $rel
+          Copy-Item -LiteralPath $src -Destination $dest -Force
+          @(
+            "release_tag=$tag",
+            "asset_path=$rel"
+          ) | Set-Content -Path $Env:GITHUB_OUTPUT -Encoding utf8NoBOM
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.release_tag }}
+          name: Well Paid ${{ steps.meta.outputs.release_tag }}
+          files: ${{ steps.meta.outputs.asset_path }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resumo (android-update.json)
+        shell: pwsh
+        run: |
+          $repo = "${{ github.repository }}"
+          $tag = "${{ steps.meta.outputs.release_tag }}"
+          $url = "https://github.com/$repo/releases/download/$tag/wellpaid-$tag.apk"
+          Add-Content -Path $Env:GITHUB_STEP_SUMMARY -Encoding utf8 -Value "## Próximo passo — manifesto da API"
+          Add-Content -Path $Env:GITHUB_STEP_SUMMARY -Encoding utf8 -Value ""
+          Add-Content -Path $Env:GITHUB_STEP_SUMMARY -Encoding utf8 -Value "Edita backend/app/static/android-update.json (deploy da API): version_code > app instalada; apk_url HTTPS ="
+          Add-Content -Path $Env:GITHUB_STEP_SUMMARY -Encoding utf8 -Value $url

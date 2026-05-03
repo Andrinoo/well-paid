@@ -36,21 +36,24 @@ Este plano serve como **mapa único** para onboarding, QA, auditoria ou para **r
 
 **Build Android:** `API_BASE_URL` via [`app/build.gradle.kts`](../android-native/app/build.gradle.kts); release com R8 + ProGuard em [`proguard-rules.pro`](../android-native/app/proguard-rules.pro); módulo opcional [`baselineprofile`](../android-native/baselineprofile) para perfis baseline.
 
-**Versão visível no APK (diretriz prioritária):** no **login** e em **Definições → Sobre**, a linha segue o composable [`WellPaidLoveVersionLine`](../android-native/app/src/main/java/com/wellpaid/ui/version/WellPaidLoveVersionLine.kt) (atualização contínua no ecrã):
+**Versão visível no APK (diretriz prioritária):** no **login** e em **Definições → Sobre**, a linha é **estática por build** (gravada no momento em que a APK é gerada), via `BuildConfig.VERSION_DISPLAY_LINE`:
 
-**`SIGLA:1.x(AAA)(dd/MM/yyyy)(D.H.M.S.mmmm)`**
+**`SIGLA:1.x(dd.MM.yyyy)(D.H.M.S.mmmm)`**
 
 | Bloco | Significado |
 |--------|------------|
 | **SIGLA** | `BuildConfig.VERSION_SIGLA` ← `wellpaid.version.sigla` em [`android-native/gradle.properties`](../android-native/gradle.properties) (defeito **`AN_CA_RBCCA`**). |
 | **1.x** | **x** = `versionCode` (`derivedVersionCode` = `alembicHead − 1` a partir do maior `NNN_*.py` em [`backend/alembic/versions`](../backend/alembic/versions)). Ex.: head **042** → `1.41`. |
-| **(AAA)** | Código Alembic de três dígitos: `BuildConfig.REVISION_CODE` (igual ao head, salvo override `wellpaid.revision.code` em `gradle.properties`). |
-| **(dd/MM/yyyy)** | **Data de hoje** (fuso `America/Sao_Paulo`, alinhada à âncora abaixo). |
-| **(D.H.M.S.mmmm)** | **Apenas números**, separados por ponto: dias, horas, minutos, segundos, milissegundos (milis com **4 dígitos**). Contagem de **tempo decorrido** desde a **âncora fixa** `10/02/2023 02:39` (America/São Paulo) — ver [`DaughterTogetherClock`](../android-native/app/src/main/java/com/wellpaid/ui/version/DaughterTogetherClock.kt). O relógio no ecrã actualiza a cada milissegundo. |
+| **(dd.MM.yyyy)** | Data de **calendário** do build da APK (fuso `America/Sao_Paulo`), só números com pontos — **sem** código Alembic nem hora na linha visível. |
+| **(D.H.M.S.mmmm)** | **Apenas números**, separados por ponto: dias, horas, minutos, segundos, milissegundos (milis com **4 dígitos**). Contagem calculada **uma única vez no build** desde a âncora fixa `10/02/2023 02:39` (America/São Paulo) — “tempo desde o nascimento”. |
 
-**Exemplo de leitura:** `AN_CA_RBCCA:1.41(042)(03/05/2026)(1247.14.33.12.0008)` — build 1.41, Alembic 042, hoje 03/05/2026, e desde a âncora passaram 1247 dias, 14 h, 33 m, 12 s, 0008 ms (nomes dos períodos **não** aparecem na UI).
+**Exemplo de leitura:** `AN_CA_RBCCA:1.41(03.05.2026)(1247.14.33.12.0008)` — build 1.41, data do build em `dd.MM.yyyy`, e elapsed desde a âncora (nomes dos períodos **não** aparecem na UI).
 
-**Nota:** alterar só esta lógica ou `gradle.properties` **não** exige nova migração Alembic; schema novo exige `NNN_*.py`. A actualização em tempo real tem custo de CPU ligeiro; ajustar o `delay` em `WellPaidLoveVersionLine` se for necessário reduzir frequência.
+O código Alembic continua disponível em `BuildConfig.REVISION_CODE` (e no `versionCode`), mas **não** entra na string mostrada ao utilizador.
+
+**APK sideload sem site próprio (GitHub Releases + API):** a app consulta `{API_BASE_URL}/android-update.json` (origem versionada em [`backend/app/static/android-update.json`](../backend/app/static/android-update.json)). O campo `apk_url` deve ser um link **HTTPS** para o ficheiro `.apk` (por exemplo o URL de download de um asset numa **Release** do GitHub). O workflow CI [`.github/workflows/android-apk-release.yml`](../.github/workflows/android-apk-release.yml) compila `assembleRelease` (runner `windows-latest`, `gradlew.bat`) e publica `wellpaid-<tag>.apk` ao fazer **push** de uma tag `v*` ou ao correr **Actions → Android APK release** com o input `release_tag`. Segredos opcionais de assinatura: ver comentários no YAML.
+
+**Nota:** alterar só esta lógica ou `gradle.properties` **não** exige nova migração Alembic; schema novo exige `NNN_*.py`.
 
 ---
 

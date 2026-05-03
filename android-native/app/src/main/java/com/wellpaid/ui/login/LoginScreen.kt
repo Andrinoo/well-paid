@@ -72,6 +72,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wellpaid.BuildConfig
 import com.wellpaid.R
 import com.wellpaid.ui.theme.LoginBg
 import com.wellpaid.ui.theme.LoginButtonGradient
@@ -82,7 +83,6 @@ import com.wellpaid.ui.theme.LoginFooter
 import com.wellpaid.ui.theme.LoginGold
 import com.wellpaid.ui.theme.LoginGoldDeep
 import com.wellpaid.ui.theme.LoginGoldMuted
-import com.wellpaid.ui.version.WellPaidLoveVersionLine
 import com.wellpaid.ui.theme.LoginOnCard
 import com.wellpaid.ui.theme.LoginOnCardMuted
 import com.wellpaid.ui.theme.WellPaidLoginTheme
@@ -433,14 +433,15 @@ fun LoginScreen(
                             textAlign = TextAlign.Center,
                             modifier = Modifier.fillMaxWidth(),
                         )
-                        WellPaidLoveVersionLine(
+                        Text(
+                            text = BuildConfig.VERSION_DISPLAY_LINE,
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 7.sp, lineHeight = 8.sp),
+                            color = LoginFooter.copy(alpha = 0.65f),
+                            textAlign = TextAlign.Center,
                             modifier =
                                 Modifier
                                     .fillMaxWidth()
                                     .padding(top = 4.dp),
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 7.sp, lineHeight = 8.sp),
-                            color = LoginFooter.copy(alpha = 0.65f),
-                            textAlign = TextAlign.Center,
                         )
                     }
                 }

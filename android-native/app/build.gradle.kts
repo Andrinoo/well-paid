@@ -1,4 +1,8 @@
 import java.text.SimpleDateFormat
+import java.time.Duration
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.Locale
 import java.util.Properties
@@ -81,11 +85,41 @@ val alembicHead = detectAlembicHead()
 val derivedVersionCode = (alembicHead - 1).coerceAtLeast(1)
 val derivedVersionName = "0.1.$derivedVersionCode"
 val derivedRevisionCode = alembicHead.toString().padStart(3, '0')
+val revisionCodeForDisplay =
+    (project.findProperty("wellpaid.revision.code") as String?)?.trim()?.takeIf { it.isNotEmpty() }
+        ?: derivedRevisionCode
 
-/** Sigla da linha de versão — texto completo em tempo real em `WellPaidLoveVersionLine`. */
+/** Sigla da linha de versão. */
 val wellpaidVersionSigla =
     (project.findProperty("wellpaid.version.sigla") as String?)?.trim()?.takeIf { it.isNotEmpty() }
         ?: "AN_CA_RBCCA"
+
+val versionZone: ZoneId = ZoneId.of("America/Sao_Paulo")
+val versionMomentAtBuild: LocalDateTime = LocalDateTime.now(versionZone)
+/** Data do build da APK (só calendário), formato `dd.MM.yyyy` — sem Alembic na linha visível. */
+val versionBuildDateDots =
+    versionMomentAtBuild.format(DateTimeFormatter.ofPattern("dd.MM.yyyy"))
+val daughterAnchorMoment: LocalDateTime = LocalDateTime.of(2023, 2, 10, 2, 39, 0)
+val elapsedSinceAnchorAtBuildMs =
+    Duration.between(
+        daughterAnchorMoment.atZone(versionZone).toInstant(),
+        versionMomentAtBuild.atZone(versionZone).toInstant(),
+    ).toMillis().coerceAtLeast(0L)
+fun formatElapsedNumericFromMillis(totalMs: Long): String {
+    var rem = totalMs
+    val days = rem / 86_400_000L
+    rem %= 86_400_000L
+    val hours = rem / 3_600_000L
+    rem %= 3_600_000L
+    val minutes = rem / 60_000L
+    rem %= 60_000L
+    val seconds = rem / 1_000L
+    val millis = (rem % 1_000L).toInt()
+    return "$days.$hours.$minutes.$seconds.${millis.toString().padStart(4, '0')}"
+}
+val elapsedSinceAnchorAtBuild = formatElapsedNumericFromMillis(elapsedSinceAnchorAtBuildMs)
+val versionDisplayLine =
+    "$wellpaidVersionSigla:1.$derivedVersionCode($versionBuildDateDots)($elapsedSinceAnchorAtBuild)"
 
 android {
     namespace = "com.wellpaid"
@@ -98,13 +132,11 @@ android {
         // Alinha automaticamente com Alembic head (ex.: 040 -> versionCode 39, versionName 0.1.39).
         versionCode = derivedVersionCode
         versionName = derivedVersionName
-        val revisionPrefix =
-            (project.findProperty("wellpaid.revision.code") as String?)?.trim()?.takeIf { it.isNotEmpty() }
-                ?: derivedRevisionCode
         val buildStamp = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss", Locale.US).format(Date())
-        buildConfigField("String", "REVISION_CODE", "\"${escapeBuildConfigString(revisionPrefix)}\"")
+        buildConfigField("String", "REVISION_CODE", "\"${escapeBuildConfigString(revisionCodeForDisplay)}\"")
         buildConfigField("String", "BUILD_TIMESTAMP", "\"${escapeBuildConfigString(buildStamp)}\"")
         buildConfigField("String", "VERSION_SIGLA", "\"${escapeBuildConfigString(wellpaidVersionSigla)}\"")
+        buildConfigField("String", "VERSION_DISPLAY_LINE", "\"${escapeBuildConfigString(versionDisplayLine)}\"")
     }
 
     signingConfigs {
