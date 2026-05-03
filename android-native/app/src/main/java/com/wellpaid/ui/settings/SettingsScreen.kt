@@ -37,6 +37,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -521,6 +522,7 @@ fun SettingsScreen(
                     SettingsNavRow(
                         icon = Icons.Outlined.Download,
                         title = stringResource(R.string.settings_tile_check_updates),
+                        titleColor = MaterialTheme.colorScheme.primary,
                         enabled =
                             appUpdate.busy == AppUpdateBusy.IDLE,
                         trailingContent = {
@@ -675,6 +677,7 @@ private fun SettingsNavRow(
     title: String,
     onClick: () -> Unit,
     enabled: Boolean = true,
+    titleColor: Color? = null,
     trailingContent: @Composable (() -> Unit)? = null,
 ) {
     ListItem(
@@ -683,6 +686,7 @@ private fun SettingsNavRow(
                 title,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Medium,
+                color = titleColor ?: LocalContentColor.current,
             )
         },
         leadingContent = {
