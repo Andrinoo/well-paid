@@ -75,12 +75,17 @@ jobs:
           }
           # Colagens no GitHub UI ou Notepad muitas vezes trazem quebras de linha / espaços no meio do Base64.
           $b64 = ($Env:ANDROID_KEYSTORE_BASE64.Trim() -replace '\s+', '')
+          if ($b64.Length -lt 1200) {
+            Write-Host "AVISO: ANDROID_KEYSTORE_BASE64 tem so $($b64.Length) caracteres. Um .jks tipico em Base64 costuma ter 2500+ (ex.: ~3700). Se for muito curto, quase de certeza nao e o ficheiro completo ou colaste outra coisa no secret."
+          }
           try {
             $bytes = [Convert]::FromBase64String($b64)
           } catch {
             Write-Host "ANDROID_KEYSTORE_BASE64 invalido (apos remover espacos): $($b64.Length) chars. Erro: $($_.Exception.Message)"
-            Write-Host "Gera de novo uma linha so: [Convert]::ToBase64String([IO.File]::ReadAllBytes('...jks')) | Set-Clipboard ; cola no secret sem aspas nem quebras de linha."
-            Write-Host "Ou corre android-native/scripts/Export-GithubAndroidSecrets.ps1 com gh."
+            Write-Host "No GitHub: apaga o valor antigo do secret, gera de novo no PC e cola UMA vez o Base64 inteiro (confirma no fim do campo que o tamanho bate com o gerado)."
+            Write-Host "PC: [Convert]::ToBase64String([IO.File]::ReadAllBytes('caminho\\ficheiro.jks')).Trim() | Set-Clipboard"
+            Write-Host "Ou: Get-Content .\\b64.txt -Raw | gh secret set ANDROID_KEYSTORE_BASE64 --repo OWNER/REPO"
+            Write-Host "Ou corre Export-GithubAndroidSecrets.ps1 com gh (sem -ClipboardOnly)."
             exit 1
           }
           [IO.File]::WriteAllBytes((Join-Path $PWD "release-ci.jks"), $bytes)
