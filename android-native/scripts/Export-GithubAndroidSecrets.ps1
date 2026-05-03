@@ -142,7 +142,7 @@ if ($useGh) {
     }
     Write-Host 'GitHub: Settings -> Secrets and variables -> Actions -> New repository secret (nome exacto, uma vez por secret).' -ForegroundColor White
     Write-Host ""
-    Set-Clipboard -Text $b64
+    $b64 | Set-Clipboard
     Write-Host ""
     $lenMsg = 'OK: ANDROID_KEYSTORE_BASE64 na area de transferencia ({0} caracteres).' -f $b64.Length
     Write-Host $lenMsg -ForegroundColor Green
@@ -153,7 +153,7 @@ if ($useGh) {
         param([string] $Label, [string] $Value)
         Write-Host ('New repository secret: {0} - Enter para copiar (valor nao mostrado)...' -f $Label)
         Read-Host | Out-Null
-        Set-Clipboard -Text $Value
+        $Value | Set-Clipboard
         Write-Host ('  Copiado: cola como {0}' -f $Label) -ForegroundColor Cyan
         Write-Host ""
     }
