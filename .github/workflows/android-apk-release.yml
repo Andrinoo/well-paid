@@ -84,17 +84,17 @@ jobs:
             Write-Host "Sem Base64 do keystore nos secrets: nao escrevo keystore.properties (release pode usar assinatura de debug)."
             exit 0
           }
-          if ($b64.Length -lt 1200) {
-            Write-Host "AVISO: Base64 combinado tem so $($b64.Length) caracteres. Um .jks tipico costuma 2500+."
-          }
+          # Falha antes de FromBase64String: secrets PART* e passwords aparecem como null no debug se nao existirem no repo.
           if ($p1.Length -eq 0 -and $b64.Length -gt 0 -and $b64.Length -lt 1200) {
-            Write-Host "ERRO: ANDROID_KEYSTORE_BASE64_PART1 e PART2 estao vazios no repo, por isso o CI usa so ANDROID_KEYSTORE_BASE64 ($($b64.Length) chars) — valor truncado ou errado."
-            Write-Host "No GitHub -> Settings -> Secrets -> Actions:"
-            Write-Host "  Cria ANDROID_KEYSTORE_BASE64_PART1 = conteudo de gh-keystore-base64-part1-for-github.txt (corre Write-KeystoreBase64ForGithub.ps1 no PC)."
-            Write-Host "  Cria ANDROID_KEYSTORE_BASE64_PART2 = conteudo de gh-keystore-base64-part2-for-github.txt"
-            Write-Host "  Nomes exactos (case sensitive). Depois apaga o secret ANDROID_KEYSTORE_BASE64 ou cola la o ficheiro completo gh-keystore-base64-for-github.txt."
-            Write-Host "  Preenche tambem ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_PASSWORD, ANDROID_KEY_ALIAS."
+            Write-Host "ERRO: Base64 com $($b64.Length) chars (truncado ou errado) e ANDROID_KEYSTORE_BASE64_PART1/PART2 nao existem no repositorio."
+            Write-Host "No GitHub: Settings - Secrets and variables - Actions (deste repo, nao Environment a menos que uses)."
+            Write-Host "Cria: ANDROID_KEYSTORE_BASE64_PART1, ANDROID_KEYSTORE_BASE64_PART2 (ficheiros part1/part2 do PC; Write-KeystoreBase64ForGithub.ps1)."
+            Write-Host "Cria: ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_PASSWORD, ANDROID_KEY_ALIAS (igual a keystore.properties)."
+            Write-Host "Opcional: apaga ANDROID_KEYSTORE_BASE64 se so tiver lixo truncado."
             exit 1
+          }
+          if ($b64.Length -lt 1200) {
+            Write-Host "AVISO: Base64 combinado tem so $($b64.Length) caracteres."
           }
           try {
             $bytes = [Convert]::FromBase64String($b64)
