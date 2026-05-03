@@ -1,6 +1,6 @@
 {
   "version_code": 41,
   "version_name": "0.1.41",
-  "apk_url": "",
-  "release_notes": "Quando publicares um APK no GitHub Releases (ex. wellpaid-v0.1.41.apk), preenche apk_url com o URL HTTPS de download e sobe version_code acima da versao instalada."
+  "apk_url": "https://github.com/Andrinoo/well-paid/releases/download/v0.1.41T/wellpaid-v0.1.41T.apk",
+  "release_notes": "Release v0.1.41T (GitHub Actions). APK: https://github.com/Andrinoo/well-paid/releases/download/v0.1.41T/wellpaid-v0.1.41T.apk"
 }
