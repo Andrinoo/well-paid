@@ -5,6 +5,8 @@
 /local.properties
 keystore.properties
 *.jks
+# Nome usado no GitHub Actions após descodificar ANDROID_KEYSTORE_BASE64 — nunca versionar.
+release-ci.jks
 /.idea/
 *.iml
 .DS_Store
