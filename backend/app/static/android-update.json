@@ -1,6 +1,6 @@
 {
   "version_code": 42,
   "version_name": "0.1.42",
-  "apk_url": "",
-  "release_notes": "Corre Android APK release com tag v0.1.42 — o workflow preenche apk_url apos publicar o APK."
+  "apk_url": "https://github.com/Andrinoo/well-paid/releases/download/v0.1.42/wellpaid-v0.1.42.apk",
+  "release_notes": "Release v0.1.42 (GitHub Actions). APK: https://github.com/Andrinoo/well-paid/releases/download/v0.1.42/wellpaid-v0.1.42.apk"
 }
