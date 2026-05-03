@@ -19,3 +19,5 @@ captures/
 gh-keystore-base64-for-github.txt
 gh-keystore-base64-part1-for-github.txt
 gh-keystore-base64-part2-for-github.txt
+# Folha com todos os secrets para colar no GitHub (apagar depois; nunca commit).
+gh-github-secrets-PASTE-AQUI.txt
