@@ -1,19 +1,36 @@
 <#
 .SYNOPSIS
-  Prepara os valores para colar nos GitHub Actions secrets (assinatura release do workflow android-apk-release).
+  Envia os 4 segredos de assinatura Android para o GitHub Actions (ou copia para a área de transferência).
 
 .DESCRIPTION
-  Lê android-native/keystore.properties (não versionado) e o ficheiro .jks referenciado por storeFile.
-  - ANDROID_KEYSTORE_BASE64 → copia para a área de transferência (uma linha).
-  - Os outros três segredos: cola um de cada vez com confirmação (clipboard), para não aparecerem no ecrã.
+  Lê android-native/keystore.properties e o .jks referenciado por storeFile.
 
-  No GitHub: Settings → Secrets and variables → Actions → New repository secret
-  Nomes exactos: ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_PASSWORD, ANDROID_KEY_ALIAS
+  Modo A (preferido): se o GitHub CLI (`gh`) estiver instalado e autenticado (`gh auth login`),
+  corre `gh secret set` para o repositório remoto origin (GitHub).
+
+  Modo B: se `gh` não existir ou falhar autenticação, usa a área de transferência como antes.
+
+  Nomes dos segredos: ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_PASSWORD, ANDROID_KEY_ALIAS
+
+.PARAMETER Repo
+  Override `don/repo` (por defeito detecta a partir de `git remote get-url origin`).
+
+.PARAMETER ClipboardOnly
+  Não tenta `gh`; só preenche a área de transferência.
 
 .EXAMPLE
   cd "D:\Projects\Well Paid"
   powershell -ExecutionPolicy Bypass -File .\android-native\scripts\Export-GithubAndroidSecrets.ps1
+
+.EXAMPLE
+  powershell -ExecutionPolicy Bypass -File .\android-native\scripts\Export-GithubAndroidSecrets.ps1 -Repo "Andrinoo/well-paid"
 #>
+[CmdletBinding()]
+param(
+    [string] $Repo = "",
+    [switch] $ClipboardOnly
+)
+
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
@@ -22,7 +39,7 @@ $androidRoot = Join-Path $repoRoot "android-native"
 $propsPath = Join-Path $androidRoot "keystore.properties"
 
 if (-not (Test-Path -LiteralPath $propsPath)) {
-    Write-Error "Não encontrei $propsPath. Cria o keystore.properties (como no teu PC de release) e volta a correr o script."
+    Write-Error "Não encontrei $propsPath. Cria o keystore.properties e volta a correr o script."
 }
 
 $props = @{}
@@ -55,27 +72,86 @@ if (-not (Test-Path -LiteralPath $jksPath)) {
 
 $bytes = [IO.File]::ReadAllBytes($jksPath)
 $b64 = [Convert]::ToBase64String($bytes)
-Set-Clipboard -Text $b64
 
-Write-Host ""
-Write-Host "OK: ANDROID_KEYSTORE_BASE64 está na área de transferência (${($b64.Length)} caracteres)." -ForegroundColor Green
-Write-Host "1) GitHub → repo well-paid → Settings → Secrets and variables → Actions → New secret"
-Write-Host "   Nome: ANDROID_KEYSTORE_BASE64   Valor: Ctrl+V"
-Write-Host ""
-
-function Copy-SecretToClipboard {
-    param([string]$Label, [string]$Value)
-    Write-Host "Próximo: $Label — Enter para copiar para a área de transferência (o valor não é mostrado)..."
-    Read-Host | Out-Null
-    Set-Clipboard -Text $Value
-    Write-Host "  Copiado. Cola no GitHub como secret $Label e grava." -ForegroundColor Cyan
-    Write-Host ""
+function Get-GitHubRepoSlug {
+    param([string] $Root)
+    $git = Get-Command git -ErrorAction SilentlyContinue
+    if (-not $git) { return $null }
+    $url = & git -C $Root remote get-url origin 2>$null
+    if ([string]::IsNullOrWhiteSpace($url)) { return $null }
+    if ($url -match 'github\.com[:/]([^/]+)/([^/.]+)') {
+        return "$($Matches[1])/$($Matches[2])"
+    }
+    return $null
 }
 
-Copy-SecretToClipboard -Label "ANDROID_KEYSTORE_PASSWORD" -Value $props["storePassword"]
-Copy-SecretToClipboard -Label "ANDROID_KEY_PASSWORD" -Value $props["keyPassword"]
-Copy-SecretToClipboard -Label "ANDROID_KEY_ALIAS" -Value $props["keyAlias"]
+function Test-GhCli {
+    return $null -ne (Get-Command gh -ErrorAction SilentlyContinue)
+}
 
-Write-Host "Quando os 4 segredos estiverem criados, dispara o workflow:" -ForegroundColor Yellow
-Write-Host "  Actions → Android APK release → Run workflow → release_tag = v0.1.xx (igual ao versionName que queres publicar)"
+function Test-GhAuth {
+    $gh = (Get-Command gh -ErrorAction Stop).Source
+    $null = & $gh auth status 2>&1
+    return $LASTEXITCODE -eq 0
+}
+
+function Invoke-GhSecretSet {
+    param(
+        [Parameter(Mandatory)] [string] $Slug,
+        [Parameter(Mandatory)] [string] $Name,
+        [Parameter(Mandatory)] [string] $Value
+    )
+    $gh = (Get-Command gh -ErrorAction Stop).Source
+    $Value | & $gh secret set $Name --repo $Slug
+    if ($LASTEXITCODE -ne 0) {
+        throw "gh secret set $Name falhou (exit $LASTEXITCODE)."
+    }
+}
+
+$slug = $Repo.Trim()
+if ([string]::IsNullOrWhiteSpace($slug)) {
+    $slug = Get-GitHubRepoSlug -Root $repoRoot
+}
+
+$useGh = -not $ClipboardOnly -and (Test-GhCli) -and -not [string]::IsNullOrWhiteSpace($slug)
+
+if ($useGh) {
+    if (-not (Test-GhAuth)) {
+        Write-Warning "gh não está autenticado. Corre: gh auth login   — a usar modo área de transferência."
+        $useGh = $false
+    }
+}
+
+if ($useGh) {
+    Write-Host "A enviar segredos para GitHub (repo: $slug)..." -ForegroundColor Green
+    Invoke-GhSecretSet -Slug $slug -Name "ANDROID_KEYSTORE_BASE64" -Value $b64
+    Invoke-GhSecretSet -Slug $slug -Name "ANDROID_KEYSTORE_PASSWORD" -Value $props["storePassword"]
+    Invoke-GhSecretSet -Slug $slug -Name "ANDROID_KEY_PASSWORD" -Value $props["keyPassword"]
+    Invoke-GhSecretSet -Slug $slug -Name "ANDROID_KEY_ALIAS" -Value $props["keyAlias"]
+    Write-Host "Concluído: os 4 secrets foram definidos em $slug" -ForegroundColor Green
+} else {
+    if ([string]::IsNullOrWhiteSpace($slug) -and -not $ClipboardOnly) {
+        Write-Warning "Não detecei repo GitHub em origin (ou falta gh). Usa -Repo 'Dono/repo' ou -ClipboardOnly."
+    }
+    Set-Clipboard -Text $b64
+    Write-Host ""
+    Write-Host "OK: ANDROID_KEYSTORE_BASE64 na área de transferência (${($b64.Length)} caracteres)." -ForegroundColor Green
+    Write-Host "GitHub → Settings → Secrets → Actions → colar cada secret."
+    Write-Host ""
+
+    function Copy-SecretToClipboard {
+        param([string] $Label, [string] $Value)
+        Write-Host "Próximo: $Label — Enter para copiar (valor não mostrado)..."
+        Read-Host | Out-Null
+        Set-Clipboard -Text $Value
+        Write-Host "  Copiado: cola como $Label" -ForegroundColor Cyan
+        Write-Host ""
+    }
+
+    Copy-SecretToClipboard -Label "ANDROID_KEYSTORE_PASSWORD" -Value $props["storePassword"]
+    Copy-SecretToClipboard -Label "ANDROID_KEY_PASSWORD" -Value $props["keyPassword"]
+    Copy-SecretToClipboard -Label "ANDROID_KEY_ALIAS" -Value $props["keyAlias"]
+}
+
+Write-Host "Disparar build: Actions → Android APK release → Run workflow → release_tag = v0.1.xx" -ForegroundColor Yellow
 Write-Host ""
