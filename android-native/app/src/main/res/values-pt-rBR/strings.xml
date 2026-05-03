@@ -528,6 +528,8 @@
     <string name="settings_app_update_download_install">Descarregar e instalar</string>
     <string name="settings_app_update_need_install_permission">Permite instalar apps desta origem para o Well Paid nas definições do sistema e volta a tocar em Descarregar e instalar.</string>
     <string name="settings_app_update_open_install_settings">Abrir definições de instalação</string>
+    <string name="settings_app_update_download_failed_404">O descarregamento falhou: ficheiro não encontrado (HTTP 404). O apk_url no servidor pode estar errado ou ainda não existe uma GitHub Release com esse APK. Corre o workflow Android APK release no GitHub e actualiza o android-update.json.</string>
+    <string name="settings_app_update_download_failed_http">O descarregamento falhou (HTTP %1$d). Verifica o link do APK no manifesto do servidor.</string>
     <string name="settings_version_section">Compilação</string>
     <string name="main_back_to_home">Voltar ao início</string>
     <string name="settings_language_section">Idioma da interface</string>

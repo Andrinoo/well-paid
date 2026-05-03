@@ -44,7 +44,7 @@ object AppUpdateInstaller {
         val request = Request.Builder().url(url).build()
         client.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
-                error("HTTP ${response.code}")
+                error("HTTP_NOT_OK:${response.code}")
             }
             val body = response.body ?: error("empty body")
             body.byteStream().use { input ->

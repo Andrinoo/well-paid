@@ -217,7 +217,20 @@ class SettingsViewModel @Inject constructor(
                 }
             }.onFailure { e ->
                 _appUpdateState.update { it.copy(busy = AppUpdateBusy.IDLE) }
-                snackbarChannel.send(e.message?.take(160) ?: appContext.getString(R.string.login_error_network))
+                val raw = e.message
+                val msg =
+                    when {
+                        raw?.startsWith("HTTP_NOT_OK:") == true -> {
+                            val code = raw.removePrefix("HTTP_NOT_OK:").toIntOrNull() ?: 0
+                            if (code == 404) {
+                                appContext.getString(R.string.settings_app_update_download_failed_404)
+                            } else {
+                                appContext.getString(R.string.settings_app_update_download_failed_http, code)
+                            }
+                        }
+                        else -> raw?.take(160)?.ifBlank { null } ?: appContext.getString(R.string.login_error_network)
+                    }
+                snackbarChannel.send(msg)
             }
         }
     }

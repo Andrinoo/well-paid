@@ -529,6 +529,8 @@
     <string name="settings_app_update_download_install">Download &amp; install</string>
     <string name="settings_app_update_need_install_permission">Allow installs from this source for Well Paid in system settings, then tap Download &amp; install again.</string>
     <string name="settings_app_update_open_install_settings">Open install settings</string>
+    <string name="settings_app_update_download_failed_404">Download failed: file not found (HTTP 404). The APK URL in the server manifest may be wrong, or the GitHub Release does not exist yet — run the Android APK release workflow and update android-update.json.</string>
+    <string name="settings_app_update_download_failed_http">Download failed (HTTP %1$d). Check the APK link in the server manifest.</string>
     <string name="settings_version_section">Build</string>
     <string name="main_back_to_home">Back to home</string>
     <string name="settings_language_section">Interface language</string>
