@@ -147,6 +147,7 @@ if ($useGh) {
     $lenMsg = 'OK: ANDROID_KEYSTORE_BASE64 na area de transferencia ({0} caracteres).' -f $b64.Length
     Write-Host $lenMsg -ForegroundColor Green
     Write-Host 'Passo 1: New repository secret ANDROID_KEYSTORE_BASE64 - colar valor ja na area de transferencia.'
+    Write-Host 'Se o GitHub truncar a colagem, corre: scripts\Write-KeystoreBase64ForGithub.ps1 (cria gh-keystore-base64-for-github.txt no android-native).'
     Write-Host ""
 
     function Copy-SecretToClipboard {

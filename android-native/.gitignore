@@ -15,3 +15,5 @@ captures/
 *.aab
 *.keystore
 !debug.keystore
+# Base64 gerado localmente para colar no secret GitHub (nunca versionar).
+gh-keystore-base64-for-github.txt
