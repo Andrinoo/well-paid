@@ -1,6 +1,6 @@
 {
-  "version_code": 41,
-  "version_name": "0.1.41",
+  "version_code": 42,
+  "version_name": "0.1.42-teste-ota",
   "apk_url": "https://github.com/Andrinoo/well-paid/releases/download/v0.1.41/wellpaid-v0.1.41.apk",
-  "release_notes": "Well Paid 0.1.41 — atualizacao da aplicacao."
+  "release_notes": "Teste OTA: manifesto simbolico (versionCode 42). O APK e o da release v0.1.41 — serve para validar Procurar atualizacoes e o download; depois repoe version_code ao valor real do proximo APK."
 }
