@@ -11,8 +11,8 @@
 #   ANDROID_KEYSTORE_PASSWORD
 #   ANDROID_KEY_PASSWORD
 #   ANDROID_KEY_ALIAS
-# Sem estes segredos, não existe keystore.properties no CI — o release fica sem signingConfig explícito
-# (o AGP pode assinar com a chave de debug; para produção configura os segredos).
+# Sem estes segredos, o job não grava keystore.properties no CI — o release pode usar assinatura de debug.
+# Para produção, define os quatro segredos (não uses `if: secrets.*` no YAML; o GitHub não permite).
 #
 # Depois do release: actualiza backend/app/static/android-update.json com version_code e apk_url HTTPS do asset.
 
@@ -59,26 +59,23 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - name: Decode keystore (optional)
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+      # Não usar `if: secrets.*` — o linter/GitHub rejeita `secrets` em expressões `if`.
+      - name: Prepare release keystore (optional)
         working-directory: android-native
+        shell: pwsh
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-        shell: pwsh
-        run: |
-          [IO.File]::WriteAllBytes(
-            (Join-Path $PWD "release-ci.jks"),
-            [Convert]::FromBase64String($Env:ANDROID_KEYSTORE_BASE64))
-
-      - name: Write keystore.properties (optional)
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
-        working-directory: android-native
-        env:
           SP: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KP: ${{ secrets.ANDROID_KEY_PASSWORD }}
           KA: ${{ secrets.ANDROID_KEY_ALIAS }}
-        shell: pwsh
         run: |
+          if ([string]::IsNullOrWhiteSpace($Env:ANDROID_KEYSTORE_BASE64)) {
+            Write-Host "Sem secret ANDROID_KEYSTORE_BASE64: não escrevo keystore.properties (release pode usar assinatura de debug)."
+            exit 0
+          }
+          [IO.File]::WriteAllBytes(
+            (Join-Path $PWD "release-ci.jks"),
+            [Convert]::FromBase64String($Env:ANDROID_KEYSTORE_BASE64))
           @"
           storePassword=$Env:SP
           keyPassword=$Env:KP
