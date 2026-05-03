@@ -7,6 +7,9 @@ env.txt
 *.jks
 *.keystore
 keystore.properties
+# Textos gerados para colar Base64/secrets no GitHub (scripts locais)
+android-native/gh-keystore-base64*.txt
+android-native/gh-github-secrets*.txt
 
 # IDE / tooling local
 .idea/
