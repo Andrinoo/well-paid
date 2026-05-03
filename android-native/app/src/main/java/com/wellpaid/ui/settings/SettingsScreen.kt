@@ -25,6 +25,7 @@ import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Category
 import androidx.compose.material.icons.outlined.Groups
+import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Person
@@ -36,6 +37,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -44,6 +47,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -97,9 +101,17 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val profile by viewModel.uiState.collectAsStateWithLifecycle()
+    val appUpdate by viewModel.appUpdateState.collectAsStateWithLifecycle()
+    val snackHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
     LaunchedEffect(viewModel) {
         viewModel.loggedOutEvents.collect {
             onLoggedOut()
+        }
+    }
+    LaunchedEffect(viewModel) {
+        viewModel.snackbarMessages.collect { msg ->
+            snackHostState.showSnackbar(msg)
         }
     }
     LaunchedEffect(Unit) {
@@ -115,12 +127,11 @@ fun SettingsScreen(
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
-    val snackHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        snackbarHost = { SnackbarHost(snackHostState) },
-        topBar = {
+    Box(modifier = modifier.fillMaxSize()) {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            snackbarHost = { SnackbarHost(snackHostState) },
+            topBar = {
             CenterAlignedTopAppBar(
                 modifier = Modifier.height(68.dp),
                 colors = wellPaidCenterTopAppBarColors(),
@@ -483,7 +494,7 @@ fun SettingsScreen(
                         },
                         supportingContent = {
                             Text(
-                                BuildConfig.VERSION_NAME,
+                                BuildConfig.VERSION_DISPLAY_LINE,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -498,11 +509,36 @@ fun SettingsScreen(
                         },
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     )
-                    Text(
-                        text = "${BuildConfig.REVISION_CODE}:WP_VER: ${BuildConfig.VERSION_NAME} \"${BuildConfig.BUILD_TIMESTAMP}\"",
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, lineHeight = 12.sp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
+                    if (BuildConfig.DEBUG) {
+                        Text(
+                            text = "rev ${BuildConfig.REVISION_CODE} · ${BuildConfig.VERSION_NAME} · ${BuildConfig.BUILD_TIMESTAMP}",
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, lineHeight = 12.sp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
+                        )
+                    }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+                    SettingsNavRow(
+                        icon = Icons.Outlined.Download,
+                        title = stringResource(R.string.settings_tile_check_updates),
+                        enabled =
+                            appUpdate.busy == AppUpdateBusy.IDLE,
+                        trailingContent = {
+                            if (appUpdate.busy == AppUpdateBusy.CHECKING) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(22.dp),
+                                    strokeWidth = 2.dp,
+                                )
+                            } else {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                )
+                            }
+                        },
+                        onClick = { viewModel.checkForUpdates() },
                     )
                     if (BuildConfig.DEBUG) {
                         Text(
@@ -527,6 +563,71 @@ fun SettingsScreen(
                 SettingsLogoutRow(onClick = { viewModel.logout() })
             }
         }
+        appUpdate.updateOffer?.let { offer ->
+            AlertDialog(
+                onDismissRequest = { viewModel.dismissUpdateOffer() },
+                title = {
+                    Text(stringResource(R.string.settings_app_update_dialog_title))
+                },
+                text = {
+                    Column {
+                        Text(
+                            stringResource(R.string.settings_app_update_dialog_body, offer.versionName),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        offer.releaseNotes?.trim()?.takeIf { it.isNotEmpty() }?.let { notes ->
+                            Spacer(Modifier.height(10.dp))
+                            Text(
+                                stringResource(R.string.settings_app_update_dialog_notes),
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                            Text(
+                                notes,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        if (appUpdate.needsInstallPermissionHint) {
+                            Spacer(Modifier.height(10.dp))
+                            Text(
+                                stringResource(R.string.settings_app_update_need_install_permission),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            TextButton(
+                                onClick = { viewModel.openInstallFromUnknownSourcesSettings() },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(stringResource(R.string.settings_app_update_open_install_settings))
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = { viewModel.downloadOfferedUpdate() },
+                        enabled = appUpdate.busy != AppUpdateBusy.DOWNLOADING,
+                    ) {
+                        if (appUpdate.busy == AppUpdateBusy.DOWNLOADING) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp,
+                            )
+                        } else {
+                            Text(stringResource(R.string.settings_app_update_download_install))
+                        }
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { viewModel.dismissUpdateOffer() }) {
+                        Text(stringResource(R.string.common_cancel))
+                    }
+                },
+            )
+        }
+    }
     }
 }
 
@@ -573,6 +674,8 @@ private fun SettingsNavRow(
     icon: ImageVector,
     title: String,
     onClick: () -> Unit,
+    enabled: Boolean = true,
+    trailingContent: @Composable (() -> Unit)? = null,
 ) {
     ListItem(
         headlineContent = {
@@ -590,7 +693,7 @@ private fun SettingsNavRow(
                 tint = MaterialTheme.colorScheme.primary,
             )
         },
-        trailingContent = {
+        trailingContent = trailingContent ?: {
             Icon(
                 Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
@@ -600,7 +703,7 @@ private fun SettingsNavRow(
         },
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
         modifier = Modifier
-            .clickable(onClick = onClick)
+            .clickable(enabled = enabled, onClick = onClick)
             .fillMaxWidth(),
     )
 }

@@ -434,7 +434,7 @@ fun LoginScreen(
                             modifier = Modifier.fillMaxWidth(),
                         )
                         Text(
-                            text = "${BuildConfig.REVISION_CODE}:WP_VER: ${BuildConfig.VERSION_NAME} \"${BuildConfig.BUILD_TIMESTAMP}\"",
+                            text = stringResource(R.string.login_version, BuildConfig.VERSION_DISPLAY_LINE),
                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 7.sp),
                             lineHeight = 8.sp,
                             color = LoginFooter.copy(alpha = 0.65f),

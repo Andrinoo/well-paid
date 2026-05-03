@@ -2,7 +2,7 @@
 
 Documento único no repositório que agrega o **plano mestre**, os **planos temáticos** exportados do Cursor (perfil local), e os ficheiros de **contrato API**, **checklist QA** e **índice da raiz**.
 
-- **Consolidado em:** 2026-04-19
+- **Consolidado em:** 2026-05-03
 - **Originais Cursor:** `%USERPROFILE%\.cursor\plans\*.plan.md` (não versionados no Git; sincronizar manualmente quando alterar planos no IDE).
 - **Ficheiros modulares em** [`docs/`](./): mantêm-se como fontes editáveis; este ficheiro é uma **agregação**.
 
@@ -35,6 +35,18 @@ Este plano serve como **mapa único** para onboarding, QA, auditoria ou para **r
 | Legacy (Flask) | [`app.py`](../app.py) | Aplicação web monolítica; rotas HTML e fluxos antigos; **não** substitui o contrato principal do cliente Android moderno. |
 
 **Build Android:** `API_BASE_URL` via [`app/build.gradle.kts`](../android-native/app/build.gradle.kts); release com R8 + ProGuard em [`proguard-rules.pro`](../android-native/app/proguard-rules.pro); módulo opcional [`baselineprofile`](../android-native/baselineprofile) para perfis baseline.
+
+**Versão visível no APK (diretriz):** no **login** e em **Definições → Sobre**, a linha de versão segue **`SIGLA:1.x(dd/MM/yyyy)`** (ex.: `AN_CA_RBCCA:1.41(03/05/2026)`).
+
+| Elemento | Origem |
+|----------|--------|
+| **SIGLA** | Propriedade `wellpaid.version.sigla` em [`android-native/gradle.properties`](../android-native/gradle.properties); por defeito **`AN_CA_RBCCA`**. |
+| **1.x** | O **x** é o `versionCode` da app (`derivedVersionCode`), alinhado ao Alembic: maior prefixo `NNN` em [`backend/alembic/versions`](../backend/alembic/versions) nos ficheiros `NNN_*.py` define `alembicHead`; Gradle usa `versionCode = max(NNN) - 1` e `versionName = 0.1.{versionCode}`. Ex.: revisão **042** → `1.41` na linha visível e `versionCode` **41**. |
+| **dd/MM/yyyy** | Data do **build** da APK (hora local da máquina de build no momento do Gradle). |
+
+Constante gerada: **`BuildConfig.VERSION_DISPLAY_LINE`** em [`android-native/app/build.gradle.kts`](../android-native/app/build.gradle.kts). Opcional: `wellpaid.revision.code` (três dígitos) para forçar `BuildConfig.REVISION_CODE` quando necessário; se omitido, usa o mesmo `alembicHead` automático.
+
+**Nota:** alterar só texto de versão ou Gradle **não** implica nova migração Alembic; só mudanças de schema na base exigem novo `NNN_*.py`.
 
 ---
 

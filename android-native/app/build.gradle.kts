@@ -82,6 +82,15 @@ val derivedVersionCode = (alembicHead - 1).coerceAtLeast(1)
 val derivedVersionName = "0.1.$derivedVersionCode"
 val derivedRevisionCode = alembicHead.toString().padStart(3, '0')
 
+/** Sigla + versão visível + data do build — ver `docs/WELL_PAID_DOCUMENTACAO_UNIFICADA.md` (versão Android). */
+val wellpaidVersionSigla =
+    (project.findProperty("wellpaid.version.sigla") as String?)?.trim()?.takeIf { it.isNotEmpty() }
+        ?: "AN_CA_RBCCA"
+val buildDateDisplayBr =
+    SimpleDateFormat("dd/MM/yyyy", Locale.forLanguageTag("pt-BR")).format(Date())
+/** Formato: AN_CA_RBCCA:1.41(03/05/2026) — o segmento 1.x alinha com `versionCode` derivado do Alembic. */
+val versionDisplayLine = "$wellpaidVersionSigla:1.$derivedVersionCode($buildDateDisplayBr)"
+
 android {
     namespace = "com.wellpaid"
     compileSdk = 35
@@ -99,6 +108,7 @@ android {
         val buildStamp = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss", Locale.US).format(Date())
         buildConfigField("String", "REVISION_CODE", "\"${escapeBuildConfigString(revisionPrefix)}\"")
         buildConfigField("String", "BUILD_TIMESTAMP", "\"${escapeBuildConfigString(buildStamp)}\"")
+        buildConfigField("String", "VERSION_DISPLAY_LINE", "\"${escapeBuildConfigString(versionDisplayLine)}\"")
     }
 
     signingConfigs {
@@ -206,6 +216,8 @@ dependencies {
     implementation("androidx.compose.material:material")
     implementation("androidx.compose.material:material-icons-core")
     implementation("androidx.compose.material:material-icons-extended")
+    // Tabler Icons (MIT) — conjunto grande; só navegação principal.
+    implementation("io.github.ardasoyturk.compose.icons:tabler-icons:2.0.7")
     implementation("androidx.biometric:biometric:1.1.0")
     implementation("androidx.lifecycle:lifecycle-process:2.8.7")
     implementation("androidx.datastore:datastore-preferences:1.1.1")
