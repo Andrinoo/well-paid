@@ -1,5 +1,6 @@
 package com.wellpaid.core.network
 
+import android.util.Log
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
@@ -17,7 +18,9 @@ object WellPaidRetrofit {
 
     fun createLoggingInterceptor(debug: Boolean): HttpLoggingInterceptor? {
         if (!debug) return null
-        return HttpLoggingInterceptor().apply {
+        // Use DEBUG so Logcat default (Info+) stays readable; filter tag OkHttp for HTTP traces.
+        val logger = HttpLoggingInterceptor.Logger { message -> Log.d("OkHttp", message) }
+        return HttpLoggingInterceptor(logger).apply {
             level = HttpLoggingInterceptor.Level.BASIC
         }
     }

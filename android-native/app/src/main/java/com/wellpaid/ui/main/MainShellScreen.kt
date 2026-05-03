@@ -25,19 +25,20 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.CreditCard
-import androidx.compose.material.icons.filled.Flag
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Savings
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Payments
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
+import compose.icons.tablericons.OutlineGroup
+import compose.icons.tablericons.outline.Flag
+import compose.icons.tablericons.outline.Home
+import compose.icons.tablericons.outline.Pig
+import compose.icons.tablericons.outline.Shield
+import compose.icons.tablericons.outline.Wallet
+import compose.icons.tablericons.outline.`Credit-card`
+import compose.icons.tablericons.outline.`Layout-list`
+import compose.icons.tablericons.outline.`Shopping-cart`
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -185,11 +186,11 @@ fun MainShellScreen(
     }
 
     val tabs = listOf(
-        MainTab(R.string.tab_home, Icons.Filled.Home),
-        MainTab(R.string.tab_expenses, Icons.AutoMirrored.Filled.List),
-        MainTab(R.string.tab_incomes, Icons.Filled.Payments),
-        MainTab(R.string.tab_goals, Icons.Filled.Flag),
-        MainTab(R.string.tab_emergency, Icons.Filled.Shield),
+        MainTab(R.string.tab_home, OutlineGroup.Home),
+        MainTab(R.string.tab_expenses, OutlineGroup.`Layout-list`),
+        MainTab(R.string.tab_incomes, OutlineGroup.Wallet),
+        MainTab(R.string.tab_goals, OutlineGroup.Flag),
+        MainTab(R.string.tab_emergency, OutlineGroup.Shield),
     )
 
     Scaffold(
@@ -272,8 +273,10 @@ fun MainShellScreen(
                                     shortcutsExpanded = false
                                 },
                                 icon = {
-                                    Icon(
-                                        imageVector = Icons.Filled.CreditCard,
+                                    ShortcutBottomNavIcon(
+                                        shortcutIndex = 0,
+                                        selected = selectedQuickShortcut == 0,
+                                        imageVector = OutlineGroup.`Credit-card`,
                                         contentDescription = null,
                                     )
                                 },
@@ -300,8 +303,10 @@ fun MainShellScreen(
                                     onOpenShoppingLists()
                                 },
                                 icon = {
-                                    Icon(
-                                        imageVector = Icons.Filled.ShoppingCart,
+                                    ShortcutBottomNavIcon(
+                                        shortcutIndex = 1,
+                                        selected = selectedQuickShortcut == 1,
+                                        imageVector = OutlineGroup.`Shopping-cart`,
                                         contentDescription = null,
                                     )
                                 },
@@ -328,8 +333,10 @@ fun MainShellScreen(
                                     onOpenInvestments()
                                 },
                                 icon = {
-                                    Icon(
-                                        imageVector = Icons.Filled.Savings,
+                                    ShortcutBottomNavIcon(
+                                        shortcutIndex = 2,
+                                        selected = selectedQuickShortcut == 2,
+                                        imageVector = OutlineGroup.Pig,
                                         contentDescription = null,
                                     )
                                 },
@@ -430,7 +437,9 @@ fun MainShellScreen(
                                 selected = selectedTab == index,
                                 onClick = { selectedTab = index },
                                 icon = {
-                                    Icon(
+                                    MainBottomNavIcon(
+                                        tabIndex = index,
+                                        selected = selectedTab == index,
                                         imageVector = tab.icon,
                                         contentDescription = label,
                                     )
@@ -464,9 +473,14 @@ fun MainShellScreen(
                 .fillMaxSize()
                 .padding(contentPadding)
                 .then(
-                    if (selectedTab == 0) Modifier else Modifier
-                        .wellPaidScreenHorizontalPadding()
-                        .padding(vertical = 8.dp),
+                    when (selectedTab) {
+                        0 -> Modifier
+                        // Despesas: conteúdo até à largura do ecrã (padding só dentro do ecrã).
+                        1 -> Modifier.padding(vertical = 8.dp)
+                        else -> Modifier
+                            .wellPaidScreenHorizontalPadding()
+                            .padding(vertical = 8.dp)
+                    },
                 ),
             contentAlignment = Alignment.TopStart,
         ) {

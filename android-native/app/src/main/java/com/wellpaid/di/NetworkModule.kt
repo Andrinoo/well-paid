@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.pm.ApplicationInfo
 import com.wellpaid.BuildConfig
 import com.wellpaid.core.model.auth.TokenStorage
+import com.wellpaid.core.network.AppUpdateApi
 import com.wellpaid.core.network.CategoriesApi
 import com.wellpaid.core.network.DashboardApi
 import com.wellpaid.core.network.AnnouncementsApi
@@ -67,6 +68,12 @@ object NetworkModule {
     fun provideAuthApi(@Named("refresh") client: OkHttpClient): AuthApi =
         WellPaidRetrofit.createRetrofit(BuildConfig.API_BASE_URL, client)
             .create(AuthApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideAppUpdateApi(@Named("refresh") client: OkHttpClient): AppUpdateApi =
+        WellPaidRetrofit.createRetrofit(BuildConfig.API_BASE_URL, client)
+            .create(AppUpdateApi::class.java)
 
     @Provides
     @Singleton

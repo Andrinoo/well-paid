@@ -66,6 +66,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -77,6 +78,7 @@ import com.wellpaid.R
 import com.wellpaid.data.UiPreferencesRepository
 import com.wellpaid.locale.AppLocalePreferences
 import com.wellpaid.ui.theme.wellPaidCenterTopAppBarColors
+import com.wellpaid.ui.version.WellPaidLoveVersionLine
 import com.wellpaid.ui.theme.wellPaidScreenHorizontalPadding
 import java.util.Locale
 import kotlinx.coroutines.delay
@@ -493,10 +495,10 @@ fun SettingsScreen(
                             )
                         },
                         supportingContent = {
-                            Text(
-                                BuildConfig.VERSION_DISPLAY_LINE,
+                            WellPaidLoveVersionLine(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Start,
                             )
                         },
                         leadingContent = {

@@ -1,8 +1,10 @@
+import json
 import logging
 import asyncio
 import time
 import uuid
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -107,6 +109,26 @@ def root() -> dict[str, str]:
         "health": "/health",
         "docs": "/docs",
     }
+
+
+_ANDROID_UPDATE_JSON = Path(__file__).resolve().parent / "static" / "android-update.json"
+
+
+@app.get("/android-update.json")
+def android_update_manifest() -> dict:
+    """Manifesto para a app Android (sideload): última versão e URL do APK HTTPS."""
+    if not _ANDROID_UPDATE_JSON.is_file():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="android-update.json não configurado no servidor.",
+        )
+    try:
+        return json.loads(_ANDROID_UPDATE_JSON.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"android-update.json inválido: {e}",
+        ) from e
 
 
 @app.post("/")

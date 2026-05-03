@@ -120,8 +120,15 @@ class ExpensesViewModel @Inject constructor(
     fun payExpense(expenseId: String) {
         viewModelScope.launch {
             runCatching { expensesApi.payExpense(expenseId) }
-                .onSuccess {
-                    refresh()
+                .onSuccess { updated ->
+                    _uiState.update { s ->
+                        s.copy(
+                            expenses = sortExpensesNewestFirst(
+                                s.expenses.map { if (it.id == updated.id) updated else it },
+                            ),
+                            errorMessage = null,
+                        )
+                    }
                 }
                 .onFailure { t ->
                     _uiState.update {

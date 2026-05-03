@@ -48,7 +48,7 @@ fun WellPaidPrimaryAddRow(
             modifier = Modifier
                 .weight(1f)
                 .height(52.dp),
-            shape = RoundedCornerShape(14.dp),
+            shape = RoundedCornerShape(8.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = WellPaidGold,
                 contentColor = WellPaidNavy,
@@ -66,7 +66,7 @@ fun WellPaidPrimaryAddRow(
             onClick = onRefresh,
             enabled = refreshEnabled,
             modifier = Modifier.size(52.dp),
-            shape = RoundedCornerShape(14.dp),
+            shape = RoundedCornerShape(8.dp),
         ) {
             Icon(
                 Icons.Filled.Refresh,

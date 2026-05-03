@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
@@ -21,9 +22,12 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -44,6 +48,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,12 +57,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import com.wellpaid.R
 import com.wellpaid.ui.components.WellPaidDatePickerField
 import com.wellpaid.ui.components.WellPaidMoneyDigitKeypadField
@@ -79,6 +88,14 @@ fun ExpenseFormScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val canShareExpense by viewModel.canShareExpenseState.collectAsStateWithLifecycle()
+    val familyModeEnabled by viewModel.familyModeEnabled.collectAsStateWithLifecycle()
+    var showExpenseHelp by remember { mutableStateOf(false) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            viewModel.refreshFamilyModeFromProfile()
+        }
+    }
     val canEdit = viewModel.canEditFields()
     val canPay = viewModel.canPay()
     val canDelete = viewModel.canDelete()
@@ -112,6 +129,17 @@ fun ExpenseFormScreen(
                         Icon(
                             Icons.Filled.Close,
                             contentDescription = stringResource(R.string.common_close),
+                            tint = Color.White,
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(
+                        onClick = { showExpenseHelp = true },
+                    ) {
+                        Icon(
+                            Icons.Outlined.Info,
+                            contentDescription = stringResource(R.string.expense_help_cd),
                             tint = Color.White,
                         )
                     }
@@ -337,27 +365,43 @@ fun ExpenseFormScreen(
                 }
                 Spacer(Modifier.height(8.dp))
 
-                WellPaidMoneyDigitKeypadField(
-                    valueText = state.amountText,
-                    onValueTextChange = { if (canEdit) viewModel.setAmountText(it) },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = canEdit,
-                    label = { Text(stringResource(R.string.expense_field_amount)) },
-                    placeholder = stringResource(R.string.expense_field_amount_hint),
-                    shape = fieldShape,
-                    colors = fieldColors,
-                )
-                Spacer(Modifier.height(6.dp))
                 if (isInst) {
-                    OutlinedTextField(
-                        value = state.monthlyInterestText,
-                        onValueChange = { if (canEdit) viewModel.setMonthlyInterestText(it) },
-                        label = { Text("Juro mensal (%)") },
-                        placeholder = { Text("Ex.: 4,5") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        WellPaidMoneyDigitKeypadField(
+                            valueText = state.amountText,
+                            onValueTextChange = { if (canEdit) viewModel.setAmountText(it) },
+                            modifier = Modifier.weight(1f),
+                            enabled = canEdit,
+                            label = { Text(stringResource(R.string.expense_field_amount)) },
+                            placeholder = stringResource(R.string.expense_field_amount_hint),
+                            shape = fieldShape,
+                            colors = fieldColors,
+                        )
+                        OutlinedTextField(
+                            value = state.monthlyInterestText,
+                            onValueChange = { if (canEdit) viewModel.setMonthlyInterestText(it) },
+                            label = { Text(stringResource(R.string.expense_field_monthly_interest)) },
+                            placeholder = { Text("Ex.: 4,5") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            modifier = Modifier.weight(1f),
+                            enabled = canEdit,
+                            singleLine = true,
+                            shape = fieldShape,
+                            colors = fieldColors,
+                        )
+                    }
+                    Spacer(Modifier.height(6.dp))
+                } else {
+                    WellPaidMoneyDigitKeypadField(
+                        valueText = state.amountText,
+                        onValueTextChange = { if (canEdit) viewModel.setAmountText(it) },
                         modifier = Modifier.fillMaxWidth(),
                         enabled = canEdit,
-                        singleLine = true,
+                        label = { Text(stringResource(R.string.expense_field_amount)) },
+                        placeholder = stringResource(R.string.expense_field_amount_hint),
                         shape = fieldShape,
                         colors = fieldColors,
                     )
@@ -409,34 +453,52 @@ fun ExpenseFormScreen(
                                 enabled = canEdit,
                             )
                         }
+                        Spacer(Modifier.height(8.dp))
                         if (state.hasDueDate) {
-                            Spacer(Modifier.height(6.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                WellPaidDatePickerField(
+                                    label = { Text(stringResource(R.string.expense_field_expense_date)) },
+                                    isoDate = state.expenseDate,
+                                    onIsoDateChange = { if (canEdit) viewModel.setExpenseDate(it) },
+                                    enabled = canEdit,
+                                    modifier = Modifier.weight(1f),
+                                    colors = fieldColors,
+                                    shape = fieldShape,
+                                    dense = true,
+                                )
+                                Column(Modifier.weight(1f)) {
+                                    WellPaidDatePickerField(
+                                        label = { Text(stringResource(R.string.expense_field_due_date)) },
+                                        isoDate = state.dueDate,
+                                        onIsoDateChange = { if (canEdit) viewModel.setDueDate(it) },
+                                        enabled = canEdit,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = fieldColors,
+                                        shape = fieldShape,
+                                        dense = true,
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.expense_field_due_optional),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = WellPaidNavy.copy(alpha = 0.58f),
+                                        modifier = Modifier.padding(start = 4.dp, top = 2.dp),
+                                    )
+                                }
+                            }
+                        } else {
                             WellPaidDatePickerField(
-                                label = { Text(stringResource(R.string.expense_field_due_date)) },
-                                isoDate = state.dueDate,
-                                onIsoDateChange = { if (canEdit) viewModel.setDueDate(it) },
+                                label = { Text(stringResource(R.string.expense_field_expense_date)) },
+                                isoDate = state.expenseDate,
+                                onIsoDateChange = { if (canEdit) viewModel.setExpenseDate(it) },
                                 enabled = canEdit,
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = fieldColors,
                                 shape = fieldShape,
                             )
-                            Text(
-                                text = stringResource(R.string.expense_field_due_optional),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = WellPaidNavy.copy(alpha = 0.58f),
-                                modifier = Modifier.padding(start = 4.dp, top = 2.dp),
-                            )
                         }
-                        Spacer(Modifier.height(8.dp))
-                        WellPaidDatePickerField(
-                            label = { Text(stringResource(R.string.expense_field_expense_date)) },
-                            isoDate = state.expenseDate,
-                            onIsoDateChange = { if (canEdit) viewModel.setExpenseDate(it) },
-                            enabled = canEdit,
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = fieldColors,
-                            shape = fieldShape,
-                        )
                     }
                     isInst -> {
                         Spacer(Modifier.height(8.dp))
@@ -584,75 +646,138 @@ fun ExpenseFormScreen(
                 )
                 Spacer(Modifier.height(8.dp))
 
-                WellPaidMoneyDigitKeypadField(
-                    valueText = state.amountText,
-                    onValueTextChange = { if (canEdit) viewModel.setAmountText(it) },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = canEdit,
-                    label = { Text(stringResource(R.string.expense_field_amount)) },
-                    placeholder = stringResource(R.string.expense_field_amount_hint),
-                    shape = fieldShape,
-                    colors = fieldColors,
-                )
-                Spacer(Modifier.height(8.dp))
                 if (state.loadedExpense?.installmentGroupId != null) {
-                    OutlinedTextField(
-                        value = state.monthlyInterestText,
-                        onValueChange = { if (canEdit) viewModel.setMonthlyInterestText(it) },
-                        label = { Text("Juro mensal (%)") },
-                        placeholder = { Text("Ex.: 4,5") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        WellPaidMoneyDigitKeypadField(
+                            valueText = state.amountText,
+                            onValueTextChange = { if (canEdit) viewModel.setAmountText(it) },
+                            modifier = Modifier.weight(1f),
+                            enabled = canEdit,
+                            label = { Text(stringResource(R.string.expense_field_amount)) },
+                            placeholder = stringResource(R.string.expense_field_amount_hint),
+                            shape = fieldShape,
+                            colors = fieldColors,
+                        )
+                        OutlinedTextField(
+                            value = state.monthlyInterestText,
+                            onValueChange = { if (canEdit) viewModel.setMonthlyInterestText(it) },
+                            label = { Text(stringResource(R.string.expense_field_monthly_interest)) },
+                            placeholder = { Text("Ex.: 4,5") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            modifier = Modifier.weight(1f),
+                            enabled = canEdit,
+                            singleLine = true,
+                            shape = fieldShape,
+                            colors = fieldColors,
+                        )
+                    }
+                } else {
+                    WellPaidMoneyDigitKeypadField(
+                        valueText = state.amountText,
+                        onValueTextChange = { if (canEdit) viewModel.setAmountText(it) },
                         modifier = Modifier.fillMaxWidth(),
                         enabled = canEdit,
-                        singleLine = true,
+                        label = { Text(stringResource(R.string.expense_field_amount)) },
+                        placeholder = stringResource(R.string.expense_field_amount_hint),
                         shape = fieldShape,
                         colors = fieldColors,
                     )
-                    Spacer(Modifier.height(8.dp))
                 }
+                Spacer(Modifier.height(8.dp))
                 if (state.loadedExpense?.status == "pending" && (state.advanceSettlementCents ?: 0) > 0) {
-                    Text(
-                        text = "Se antecipar hoje: ${formatBrlFromCents(state.advanceSettlementCents ?: 0)}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = WellPaidNavy,
-                    )
-                    if ((state.advanceDiscountCents ?: 0) > 0) {
-                        Text(
-                            text = "Desconto: ${formatBrlFromCents(state.advanceDiscountCents ?: 0)}",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = WellPaidNavy.copy(alpha = 0.78f),
-                        )
+                    val settle = formatBrlFromCents(state.advanceSettlementCents ?: 0)
+                    val disc = formatBrlFromCents(state.advanceDiscountCents ?: 0)
+                    val discountColor = Color(0xFF1B5E20)
+                    val settleContainer = MaterialTheme.colorScheme.primaryContainer
+                    val settleOn = MaterialTheme.colorScheme.onPrimaryContainer
+                    val hasDisc = (state.advanceDiscountCents ?: 0) > 0
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Card(
+                            modifier = if (hasDisc) Modifier.weight(1f) else Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = CardDefaults.cardColors(containerColor = settleContainer),
+                        ) {
+                            Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
+                                Text(
+                                    text = stringResource(R.string.expense_advance_today_label),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = settleOn.copy(alpha = 0.85f),
+                                )
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    text = settle,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = settleOn,
+                                )
+                            }
+                        }
+                        if (hasDisc) {
+                            Card(
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(14.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.65f),
+                                ),
+                            ) {
+                                Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
+                                    Text(
+                                        text = stringResource(R.string.expense_advance_discount_label),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = discountColor.copy(alpha = 0.85f),
+                                    )
+                                    Spacer(Modifier.height(4.dp))
+                                    Text(
+                                        text = disc,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = discountColor,
+                                    )
+                                }
+                            }
+                        }
                     }
                     Spacer(Modifier.height(8.dp))
                 }
 
-                WellPaidDatePickerField(
-                    label = { Text(stringResource(R.string.expense_field_expense_date)) },
-                    isoDate = state.expenseDate,
-                    onIsoDateChange = { if (canEdit) viewModel.setExpenseDate(it) },
-                    enabled = canEdit,
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = fieldColors,
-                    shape = fieldShape,
-                )
-                Spacer(Modifier.height(8.dp))
-
-                Column(Modifier.fillMaxWidth()) {
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
                     WellPaidDatePickerField(
-                        label = { Text(stringResource(R.string.expense_field_due_date)) },
-                        isoDate = state.dueDate,
-                        onIsoDateChange = { if (canEdit) viewModel.setDueDate(it) },
+                        label = { Text(stringResource(R.string.expense_field_expense_date)) },
+                        isoDate = state.expenseDate,
+                        onIsoDateChange = { if (canEdit) viewModel.setExpenseDate(it) },
                         enabled = canEdit,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.weight(1f),
                         colors = fieldColors,
                         shape = fieldShape,
+                        dense = true,
                     )
-                    Text(
-                        text = stringResource(R.string.expense_field_due_optional),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = WellPaidNavy.copy(alpha = 0.58f),
-                        modifier = Modifier.padding(start = 4.dp, top = 2.dp),
-                    )
+                    Column(Modifier.weight(1f)) {
+                        WellPaidDatePickerField(
+                            label = { Text(stringResource(R.string.expense_field_due_date)) },
+                            isoDate = state.dueDate,
+                            onIsoDateChange = { if (canEdit) viewModel.setDueDate(it) },
+                            enabled = canEdit,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = fieldColors,
+                            shape = fieldShape,
+                            dense = true,
+                        )
+                        Text(
+                            text = stringResource(R.string.expense_field_due_optional),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = WellPaidNavy.copy(alpha = 0.58f),
+                            modifier = Modifier.padding(start = 4.dp, top = 2.dp),
+                        )
+                    }
                 }
                 Spacer(Modifier.height(8.dp))
             }
@@ -698,7 +823,7 @@ fun ExpenseFormScreen(
                 )
             }
 
-            val showShareControls = !viewModel.isEditMode || canEdit
+            val showShareControls = (!viewModel.isEditMode || canEdit) && familyModeEnabled
             if (showShareControls) {
                 Spacer(Modifier.height(8.dp))
                 Row(
@@ -1054,6 +1179,31 @@ fun ExpenseFormScreen(
         }
     }
 
+    if (showExpenseHelp) {
+        AlertDialog(
+            onDismissRequest = { showExpenseHelp = false },
+            title = { Text(stringResource(R.string.expense_help_title)) },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .heightIn(max = 420.dp)
+                        .verticalScroll(rememberScrollState()),
+                ) {
+                    Text(
+                        text = stringResource(R.string.expense_help_body),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showExpenseHelp = false }) {
+                    Text(stringResource(R.string.common_ok))
+                }
+            },
+        )
+    }
+
     if (state.showDeleteConfirm) {
         val le = state.loadedExpense
         val isInst = le?.installmentGroupId != null
@@ -1182,10 +1332,16 @@ fun ExpenseFormScreen(
                         )
                     }
                     if ((state.payDiscountCents ?: 0) > 0) {
+                        val discPay = formatBrlFromCents(state.payDiscountCents ?: 0)
+                        val payDiscGreen = Color(0xFF1B5E20)
                         Text(
-                            text = "Desconto: ${formatBrlFromCents(state.payDiscountCents ?: 0)}",
+                            text = stringResource(
+                                R.string.expense_pay_discount_line,
+                                discPay,
+                            ),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = WellPaidNavy,
+                            fontWeight = FontWeight.SemiBold,
+                            color = payDiscGreen,
                         )
                     }
                 }

@@ -12,9 +12,11 @@ import com.wellpaid.core.model.expense.ExpenseDto
 import com.wellpaid.core.model.expense.ExpensePayDto
 import com.wellpaid.core.model.expense.ExpenseShareDeclineDto
 import com.wellpaid.core.model.expense.ExpenseUpdateDto
+import com.wellpaid.core.model.auth.TokenStorage
 import com.wellpaid.core.model.family.FamilyMemberDto
 import com.wellpaid.core.network.CategoriesApi
 import com.wellpaid.core.network.ExpensesApi
+import com.wellpaid.core.network.UserApi
 import com.wellpaid.data.FamilyMeRepository
 import com.wellpaid.util.ExpenseSplitFormMath
 import com.wellpaid.util.FastApiErrorMapper
@@ -96,6 +98,8 @@ class ExpenseFormViewModel @Inject constructor(
     private val expensesApi: ExpensesApi,
     private val categoriesApi: CategoriesApi,
     private val familyMeRepository: FamilyMeRepository,
+    private val userApi: UserApi,
+    private val tokenStorage: TokenStorage,
 ) : ViewModel() {
 
     private val expenseId: String? = savedStateHandle["expenseId"]
@@ -116,10 +120,27 @@ class ExpenseFormViewModel @Inject constructor(
                 initialValue = false,
             )
 
+    private val _familyModeEnabled = MutableStateFlow(false)
+    val familyModeEnabled: StateFlow<Boolean> = _familyModeEnabled.asStateFlow()
+
     val isEditMode: Boolean get() = expenseId != null
+
+    fun refreshFamilyModeFromProfile() {
+        viewModelScope.launch {
+            if (tokenStorage.getAccessToken().isNullOrBlank()) return@launch
+            runCatching { userApi.getCurrentUser() }
+                .onSuccess { dto -> _familyModeEnabled.value = dto.familyModeEnabled }
+        }
+    }
 
     init {
         viewModelScope.launch { familyMeRepository.refresh() }
+        viewModelScope.launch {
+            if (!tokenStorage.getAccessToken().isNullOrBlank()) {
+                runCatching { userApi.getCurrentUser() }
+                    .onSuccess { dto -> _familyModeEnabled.value = dto.familyModeEnabled }
+            }
+        }
         viewModelScope.launch {
             runCatching { categoriesApi.listCategories() }
                 .onSuccess { list ->

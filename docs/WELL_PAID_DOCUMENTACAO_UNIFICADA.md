@@ -36,17 +36,21 @@ Este plano serve como **mapa único** para onboarding, QA, auditoria ou para **r
 
 **Build Android:** `API_BASE_URL` via [`app/build.gradle.kts`](../android-native/app/build.gradle.kts); release com R8 + ProGuard em [`proguard-rules.pro`](../android-native/app/proguard-rules.pro); módulo opcional [`baselineprofile`](../android-native/baselineprofile) para perfis baseline.
 
-**Versão visível no APK (diretriz):** no **login** e em **Definições → Sobre**, a linha de versão segue **`SIGLA:1.x(dd/MM/yyyy)`** (ex.: `AN_CA_RBCCA:1.41(03/05/2026)`).
+**Versão visível no APK (diretriz prioritária):** no **login** e em **Definições → Sobre**, a linha segue o composable [`WellPaidLoveVersionLine`](../android-native/app/src/main/java/com/wellpaid/ui/version/WellPaidLoveVersionLine.kt) (atualização contínua no ecrã):
 
-| Elemento | Origem |
-|----------|--------|
-| **SIGLA** | Propriedade `wellpaid.version.sigla` em [`android-native/gradle.properties`](../android-native/gradle.properties); por defeito **`AN_CA_RBCCA`**. |
-| **1.x** | O **x** é o `versionCode` da app (`derivedVersionCode`), alinhado ao Alembic: maior prefixo `NNN` em [`backend/alembic/versions`](../backend/alembic/versions) nos ficheiros `NNN_*.py` define `alembicHead`; Gradle usa `versionCode = max(NNN) - 1` e `versionName = 0.1.{versionCode}`. Ex.: revisão **042** → `1.41` na linha visível e `versionCode` **41**. |
-| **dd/MM/yyyy** | Data do **build** da APK (hora local da máquina de build no momento do Gradle). |
+**`SIGLA:1.x(AAA)(dd/MM/yyyy)(D.H.M.S.mmmm)`**
 
-Constante gerada: **`BuildConfig.VERSION_DISPLAY_LINE`** em [`android-native/app/build.gradle.kts`](../android-native/app/build.gradle.kts). Opcional: `wellpaid.revision.code` (três dígitos) para forçar `BuildConfig.REVISION_CODE` quando necessário; se omitido, usa o mesmo `alembicHead` automático.
+| Bloco | Significado |
+|--------|------------|
+| **SIGLA** | `BuildConfig.VERSION_SIGLA` ← `wellpaid.version.sigla` em [`android-native/gradle.properties`](../android-native/gradle.properties) (defeito **`AN_CA_RBCCA`**). |
+| **1.x** | **x** = `versionCode` (`derivedVersionCode` = `alembicHead − 1` a partir do maior `NNN_*.py` em [`backend/alembic/versions`](../backend/alembic/versions)). Ex.: head **042** → `1.41`. |
+| **(AAA)** | Código Alembic de três dígitos: `BuildConfig.REVISION_CODE` (igual ao head, salvo override `wellpaid.revision.code` em `gradle.properties`). |
+| **(dd/MM/yyyy)** | **Data de hoje** (fuso `America/Sao_Paulo`, alinhada à âncora abaixo). |
+| **(D.H.M.S.mmmm)** | **Apenas números**, separados por ponto: dias, horas, minutos, segundos, milissegundos (milis com **4 dígitos**). Contagem de **tempo decorrido** desde a **âncora fixa** `10/02/2023 02:39` (America/São Paulo) — ver [`DaughterTogetherClock`](../android-native/app/src/main/java/com/wellpaid/ui/version/DaughterTogetherClock.kt). O relógio no ecrã actualiza a cada milissegundo. |
 
-**Nota:** alterar só texto de versão ou Gradle **não** implica nova migração Alembic; só mudanças de schema na base exigem novo `NNN_*.py`.
+**Exemplo de leitura:** `AN_CA_RBCCA:1.41(042)(03/05/2026)(1247.14.33.12.0008)` — build 1.41, Alembic 042, hoje 03/05/2026, e desde a âncora passaram 1247 dias, 14 h, 33 m, 12 s, 0008 ms (nomes dos períodos **não** aparecem na UI).
+
+**Nota:** alterar só esta lógica ou `gradle.properties` **não** exige nova migração Alembic; schema novo exige `NNN_*.py`. A actualização em tempo real tem custo de CPU ligeiro; ajustar o `delay` em `WellPaidLoveVersionLine` se for necessário reduzir frequência.
 
 ---
 
