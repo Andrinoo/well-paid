@@ -13,7 +13,7 @@
 # Sem estes segredos, o job não grava keystore.properties no CI — o release pode usar assinatura de debug.
 # Para produção, define os quatro segredos (não uses `if: secrets.*` no YAML; o GitHub não permite).
 #
-# Depois do release: actualiza backend/app/static/android-update.json com version_code e apk_url HTTPS do asset.
+# Depois do release: o job grava e faz push de backend/app/static/android-update.json (version_code, version_name, apk_url).
 
 name: Android APK release
 
@@ -40,6 +40,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -140,6 +142,26 @@ jobs:
             "asset_path=$rel"
           ) | Set-Content -Path $Env:GITHUB_OUTPUT -Encoding utf8NoBOM
 
+      - name: Read release APK version (output-metadata)
+        id: apkver
+        shell: pwsh
+        run: |
+          $metaPath = Join-Path $Env:GITHUB_WORKSPACE "android-native\app\build\outputs\apk\release\output-metadata.json"
+          if (-not (Test-Path $metaPath)) {
+            $dir = Join-Path $Env:GITHUB_WORKSPACE "android-native\app\build\outputs\apk\release"
+            if (Test-Path $dir) { Get-ChildItem -LiteralPath $dir | ForEach-Object { $_.Name } }
+            throw "Ficheiro em falta: $metaPath (o assembleRelease do AGP deve gerar output-metadata.json)."
+          }
+          $meta = Get-Content -LiteralPath $metaPath -Raw | ConvertFrom-Json
+          $el = @($meta.elements)[0]
+          if ($null -eq $el) { throw "output-metadata.json sem elements." }
+          $vc = [int]$el.versionCode
+          $vn = [string]$el.versionName.Trim()
+          if ($vc -lt 1) { throw "versionCode invalido: $vc" }
+          Add-Content -Path $Env:GITHUB_OUTPUT -Value "version_code=$vc"
+          Add-Content -Path $Env:GITHUB_OUTPUT -Value "version_name=$vn"
+          Write-Host "APK: versionCode=$vc versionName=$vn"
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -150,13 +172,54 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Sync android-update.json to default branch
+        shell: pwsh
+        env:
+          TAG: ${{ steps.meta.outputs.release_tag }}
+          VC: ${{ steps.apkver.outputs.version_code }}
+          VN: ${{ steps.apkver.outputs.version_name }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          $branch = if ([string]::IsNullOrWhiteSpace($Env:BRANCH)) { "main" } else { $Env:BRANCH.Trim() }
+          $apkUrl = "https://github.com/$Env:REPO/releases/download/$Env:TAG/wellpaid-$Env:TAG.apk"
+          $notes = "Release $Env:TAG (GitHub Actions). APK: $apkUrl"
+          $obj = [PSCustomObject]@{
+            version_code    = [int]$Env:VC
+            version_name    = $Env:VN
+            apk_url         = $apkUrl
+            release_notes   = $notes
+          }
+          $jsonText = ($obj | ConvertTo-Json -Depth 4)
+          $outRel = "backend/app/static/android-update.json"
+          $outAbs = Join-Path $Env:GITHUB_WORKSPACE $outRel
+          $utf8 = New-Object System.Text.UTF8Encoding $false
+          Set-Location $Env:GITHUB_WORKSPACE
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin $branch
+          git checkout $branch
+          git pull origin $branch --ff-only
+          [IO.File]::WriteAllText($outAbs, $jsonText + "`n", $utf8)
+          git add -- $outRel
+          if (git diff --staged --quiet) {
+            Write-Host "android-update.json ja igual ao calculado; nada a commitar."
+            exit 0
+          }
+          git commit -m "chore(android): sync android-update.json for $Env:TAG"
+          git push origin $branch
+
       - name: Resumo (android-update.json)
         shell: pwsh
         run: |
           $repo = "${{ github.repository }}"
           $tag = "${{ steps.meta.outputs.release_tag }}"
           $url = "https://github.com/$repo/releases/download/$tag/wellpaid-$tag.apk"
-          Add-Content -Path $Env:GITHUB_STEP_SUMMARY -Encoding utf8 -Value "## Próximo passo — manifesto da API"
+          $vc = "${{ steps.apkver.outputs.version_code }}"
+          $vn = "${{ steps.apkver.outputs.version_name }}"
+          Add-Content -Path $Env:GITHUB_STEP_SUMMARY -Encoding utf8 -Value "## Manifesto da API (commit automático)"
           Add-Content -Path $Env:GITHUB_STEP_SUMMARY -Encoding utf8 -Value ""
-          Add-Content -Path $Env:GITHUB_STEP_SUMMARY -Encoding utf8 -Value "Edita backend/app/static/android-update.json (deploy da API): version_code > app instalada; apk_url HTTPS ="
+          Add-Content -Path $Env:GITHUB_STEP_SUMMARY -Encoding utf8 -Value "Foi feito push de ``backend/app/static/android-update.json`` para o branch por omissão com ``version_code=$vc``, ``version_name=$vn``, ``apk_url`` ="
           Add-Content -Path $Env:GITHUB_STEP_SUMMARY -Encoding utf8 -Value $url
+          Add-Content -Path $Env:GITHUB_STEP_SUMMARY -Encoding utf8 -Value ""
+          Add-Content -Path $Env:GITHUB_STEP_SUMMARY -Encoding utf8 -Value "Confirma que o deploy do backend (ex.: Vercel) corre neste commit para a app obter o JSON novo."
