@@ -12,7 +12,7 @@
 
 .EXAMPLE
   cd "D:\Projects\Well Paid"
-  pwsh .\android-native\scripts\Export-GithubAndroidSecrets.ps1
+  powershell -ExecutionPolicy Bypass -File .\android-native\scripts\Export-GithubAndroidSecrets.ps1
 #>
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
