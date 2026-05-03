@@ -105,11 +105,12 @@ jobs:
             exit 1
           }
           [IO.File]::WriteAllBytes((Join-Path $PWD "release-ci.jks"), $bytes)
+          # storeFile e resolvido pelo modulo :app relativamente a android-native/app/ — o .jks fica em android-native/.
           @"
           storePassword=$Env:SP
           keyPassword=$Env:KP
           keyAlias=$Env:KA
-          storeFile=release-ci.jks
+          storeFile=../release-ci.jks
           "@ | Set-Content -Path keystore.properties -Encoding ascii
 
       - name: Assemble release APK
