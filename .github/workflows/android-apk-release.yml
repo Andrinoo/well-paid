@@ -85,7 +85,16 @@ jobs:
             exit 0
           }
           if ($b64.Length -lt 1200) {
-            Write-Host "AVISO: Base64 combinado tem so $($b64.Length) caracteres. Um .jks tipico costuma 2500+. Cola PART1+PART2 (scripts\\Write-KeystoreBase64ForGithub.ps1) ou corrige o secret."
+            Write-Host "AVISO: Base64 combinado tem so $($b64.Length) caracteres. Um .jks tipico costuma 2500+."
+          }
+          if ($p1.Length -eq 0 -and $b64.Length -gt 0 -and $b64.Length -lt 1200) {
+            Write-Host "ERRO: ANDROID_KEYSTORE_BASE64_PART1 e PART2 estao vazios no repo, por isso o CI usa so ANDROID_KEYSTORE_BASE64 ($($b64.Length) chars) — valor truncado ou errado."
+            Write-Host "No GitHub -> Settings -> Secrets -> Actions:"
+            Write-Host "  Cria ANDROID_KEYSTORE_BASE64_PART1 = conteudo de gh-keystore-base64-part1-for-github.txt (corre Write-KeystoreBase64ForGithub.ps1 no PC)."
+            Write-Host "  Cria ANDROID_KEYSTORE_BASE64_PART2 = conteudo de gh-keystore-base64-part2-for-github.txt"
+            Write-Host "  Nomes exactos (case sensitive). Depois apaga o secret ANDROID_KEYSTORE_BASE64 ou cola la o ficheiro completo gh-keystore-base64-for-github.txt."
+            Write-Host "  Preenche tambem ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_PASSWORD, ANDROID_KEY_ALIAS."
+            exit 1
           }
           try {
             $bytes = [Convert]::FromBase64String($b64)
