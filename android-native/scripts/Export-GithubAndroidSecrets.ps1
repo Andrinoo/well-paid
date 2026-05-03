@@ -123,25 +123,34 @@ if ($useGh) {
 }
 
 if ($useGh) {
-    Write-Host "A enviar segredos para GitHub (repo: $slug)..." -ForegroundColor Green
+    Write-Host "Modo: GitHub CLI (repo $slug)." -ForegroundColor Cyan
+    Write-Host "A enviar segredos para GitHub..." -ForegroundColor Green
     Invoke-GhSecretSet -Slug $slug -Name "ANDROID_KEYSTORE_BASE64" -Value $b64
     Invoke-GhSecretSet -Slug $slug -Name "ANDROID_KEYSTORE_PASSWORD" -Value $props["storePassword"]
     Invoke-GhSecretSet -Slug $slug -Name "ANDROID_KEY_PASSWORD" -Value $props["keyPassword"]
     Invoke-GhSecretSet -Slug $slug -Name "ANDROID_KEY_ALIAS" -Value $props["keyAlias"]
     Write-Host "Concluído: os 4 secrets foram definidos em $slug" -ForegroundColor Green
 } else {
-    if ([string]::IsNullOrWhiteSpace($slug) -and -not $ClipboardOnly) {
-        Write-Warning "Não detecei repo GitHub em origin (ou falta gh). Usa -Repo 'Dono/repo' ou -ClipboardOnly."
+    Write-Host ""
+    Write-Host "Modo: area de transferencia (cria os 4 secrets manualmente no GitHub)." -ForegroundColor Yellow
+    if (-not [string]::IsNullOrWhiteSpace($slug)) {
+        Write-Host "Repo detectado: $slug (confirma que e este no browser)." -ForegroundColor DarkGray
     }
+    if ([string]::IsNullOrWhiteSpace($slug) -and -not $ClipboardOnly) {
+        Write-Warning "Nao detecei repo GitHub em origin (ou falta gh). Usa -Repo 'Dono/repo' ou instala/auth gh."
+    }
+    Write-Host "GitHub: Settings -> Secrets and variables -> Actions -> New repository secret (nome exacto, uma vez por secret)." -ForegroundColor White
+    Write-Host ""
     Set-Clipboard -Text $b64
     Write-Host ""
-    Write-Host "OK: ANDROID_KEYSTORE_BASE64 na área de transferência (${($b64.Length)} caracteres)." -ForegroundColor Green
-    Write-Host "GitHub → Settings → Secrets → Actions → colar cada secret."
+    $lenMsg = 'OK: ANDROID_KEYSTORE_BASE64 na area de transferencia ({0} caracteres).' -f $b64.Length
+    Write-Host $lenMsg -ForegroundColor Green
+    Write-Host "1) New repository secret: ANDROID_KEYSTORE_BASE64 = colar (ja na area de transferencia)."
     Write-Host ""
 
     function Copy-SecretToClipboard {
         param([string] $Label, [string] $Value)
-        Write-Host "Próximo: $Label — Enter para copiar (valor não mostrado)..."
+        Write-Host "New repository secret: $Label - Enter para copiar (valor nao mostrado)..."
         Read-Host | Out-Null
         Set-Clipboard -Text $Value
         Write-Host "  Copiado: cola como $Label" -ForegroundColor Cyan
@@ -153,5 +162,5 @@ if ($useGh) {
     Copy-SecretToClipboard -Label "ANDROID_KEY_ALIAS" -Value $props["keyAlias"]
 }
 
-Write-Host "Disparar build: Actions → Android APK release → Run workflow → release_tag = v0.1.xx" -ForegroundColor Yellow
+Write-Host "Depois: Actions -> Android APK release -> Run workflow -> release_tag = v0.1.xx" -ForegroundColor Yellow
 Write-Host ""

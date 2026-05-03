@@ -1,6 +1,6 @@
 {
-  "version_code": 0,
-  "version_name": "0.0.0",
-  "apk_url": "",
-  "release_notes": "Edit backend/app/static/android-update.json on deploy: set version_code ≥ app versionCode, HTTPS apk_url, then redeploy the API."
+  "version_code": 41,
+  "version_name": "0.1.41",
+  "apk_url": "https://github.com/Andrinoo/well-paid/releases/download/v0.1.41/wellpaid-v0.1.41.apk",
+  "release_notes": "Well Paid 0.1.41 — atualizacao da aplicacao."
 }
