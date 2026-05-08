@@ -119,7 +119,7 @@ fun formatElapsedNumericFromMillis(totalMs: Long): String {
 }
 val elapsedSinceAnchorAtBuild = formatElapsedNumericFromMillis(elapsedSinceAnchorAtBuildMs)
 val versionDisplayLine =
-    "$wellpaidVersionSigla:1.$derivedVersionCode($versionBuildDateDots)($elapsedSinceAnchorAtBuild)"
+    "$wellpaidVersionSigla:1.$alembicHead($versionBuildDateDots)($elapsedSinceAnchorAtBuild)"
 
 android {
     namespace = "com.wellpaid"
