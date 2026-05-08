@@ -1,6 +1,14 @@
-# Tutorial: publicar o APK Android (GitHub Releases + actualização na app)
+# Diretrizes Well Paid — publicar o APK Android (GitHub Releases + actualização na app)
 
-Este guia cobre: **segredos de assinatura**, **workflow que gera o APK**, **link para a app actualizar**, e **deploy do JSON na API**.
+Este guia cobre: **segredos de assinatura**, **workflow que gera o APK**, **link para a app actualizar**, **versionamento (Alembic + tag git)** e **deploy do JSON na API**.
+
+> **Nota sobre versionamento:** o `versionCode` da APK é derivado automaticamente do **head do Alembic** (ver `android-native/app/build.gradle.kts → detectAlembicHead()`). Para subir uma versão da app:
+>
+> 1. Cria uma migração no-op em [`backend/alembic/versions/`](../../backend/alembic/versions/) seguindo o padrão `NNN_bump_android_version_marker.py` (basta copiar a anterior, ajustar `revision` e `down_revision`).
+> 2. O `versionCode` passa a ser `head - 1` e o `versionName` passa a ser `0.1.<head-1>`.
+> 3. Cria/empurra a tag git `v0.1.<head-1>` (ex.: `git tag v0.1.48 && git push origin v0.1.48`).
+> 4. O workflow CI compila o APK, publica a Release e faz commit automático do `backend/app/static/android-update.json`.
+> 5. Faz **deploy do backend** (Vercel) para o JSON novo aparecer em `https://<API>/android-update.json` — só assim os utilizadores recebem o aviso de atualização.
 
 ---
 
@@ -14,7 +22,7 @@ Este guia cobre: **segredos de assinatura**, **workflow que gera o APK**, **link
 
 ## Parte 1 — Segredos no GitHub (assinatura do APK release)
 
-O workflow [`.github/workflows/android-apk-release.yml`](../.github/workflows/android-apk-release.yml) usa estes **quatro** nomes exactos:
+O workflow [`.github/workflows/android-apk-release.yml`](../../.github/workflows/android-apk-release.yml) usa estes **quatro** nomes exactos:
 
 | Secret | Conteúdo |
 |--------|-----------|
@@ -95,7 +103,7 @@ Substitui `SEU_USUARIO`, `SEU_REPO` e a tag. O resumo do job no GitHub Actions t
 
 A app Android lê **`GET {API_BASE_URL}android-update.json`** (a mesma base URL que o login usa).
 
-1. No repo, edita [`backend/app/static/android-update.json`](../backend/app/static/android-update.json).
+1. No repo, edita [`backend/app/static/android-update.json`](../../backend/app/static/android-update.json).
 2. Campos:
    - **`version_code`** — inteiro **maior** que o `versionCode` da APK **já instalada** nos telemóveis (no projeto Android isso vem do Gradle / Alembic; se duvidares, compara com o número em **Definições → Sobre** ou com `BuildConfig.VERSION_CODE` do build que publicaste).
    - **`version_name`** — texto livre (ex. `0.1.41`), para notas / humanos.
@@ -140,4 +148,4 @@ Exemplo mínimo:
 | A app diz que não há update | `version_code` tem de ser **>** ao instalado; `apk_url` tem de começar por `https://`. |
 | Download falha | URL público (release **público** ou token não aplicável ao browser da app); GitHub Releases normalmente OK. |
 
-Para a linha de versão visível no login/definições, vê a secção **“Versão visível no APK”** em [`WELL_PAID_DOCUMENTACAO_UNIFICADA.md`](./WELL_PAID_DOCUMENTACAO_UNIFICADA.md).
+Para a linha de versão visível no login/definições, vê a secção **“Versão visível no APK”** em [`WELL_PAID_DOCUMENTACAO_UNIFICADA.md`](../WELL_PAID_DOCUMENTACAO_UNIFICADA.md).

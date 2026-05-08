@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -568,17 +569,22 @@ private fun HomeRecadosHeaderIcon(
                 if (count > 0) Alignment.BottomEnd else Alignment.TopEnd
             val dotPadding =
                 if (count > 0) {
-                    Modifier.padding(end = 3.dp, bottom = 4.dp)
+                    Modifier.padding(end = 1.dp, bottom = 2.dp)
                 } else {
-                    Modifier.padding(top = 3.dp, end = 2.dp)
+                    Modifier.padding(top = 1.dp, end = 0.dp)
                 }
             Box(
-                Modifier
+                modifier = Modifier
                     .align(dotAlign)
                     .then(dotPadding)
-                    .size(8.dp)
+                    .size(12.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary),
+                    .background(WellPaidGold)
+                    .border(
+                        width = 1.5.dp,
+                        color = Color.White,
+                        shape = CircleShape,
+                    ),
             )
         }
     }

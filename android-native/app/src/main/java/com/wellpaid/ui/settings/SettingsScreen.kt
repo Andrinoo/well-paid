@@ -469,7 +469,7 @@ fun SettingsScreen(
             }
 
             Spacer(Modifier.height(12.dp))
-            SectionLabel(stringResource(R.string.settings_family_section))
+            SectionLabel(stringResource(R.string.settings_section_categories))
             Spacer(Modifier.height(6.dp))
             Surface(
                 shape = MaterialTheme.shapes.large,
@@ -484,7 +484,9 @@ fun SettingsScreen(
                 )
             }
 
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(12.dp))
+            SectionLabel(stringResource(R.string.settings_family_section))
+            Spacer(Modifier.height(6.dp))
             Surface(
                 shape = MaterialTheme.shapes.large,
                 color = MaterialTheme.colorScheme.surface,
@@ -514,12 +516,6 @@ fun SettingsScreen(
                             )
                         },
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
-                    SettingsNavRow(
-                        icon = Icons.Outlined.Category,
-                        title = stringResource(R.string.settings_tile_manage_categories),
-                        onClick = onOpenManageCategories,
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
                     SettingsNavRow(

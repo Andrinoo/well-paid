@@ -510,6 +510,9 @@
     <string name="manage_categories_existing_dropdown_label">View registered</string>
     <string name="manage_categories_existing_summary">%d registered — tap to open</string>
     <string name="manage_categories_existing_empty">None yet — add one above</string>
+    <string name="manage_categories_count_zero">None registered</string>
+    <string name="manage_categories_count_one">1 registered</string>
+    <string name="manage_categories_count_many">%d registered</string>
     <string name="settings_tile_display_name">Greeting name</string>
     <string name="settings_tile_language">Language</string>
     <string name="settings_tile_keypad_haptics">Keypad haptics</string>
