@@ -2,6 +2,7 @@ package com.wellpaid.ui.expenses
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import com.wellpaid.util.parseIsoDateLocal
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
@@ -19,6 +20,16 @@ enum class DueUrgency {
 
 fun daysUntilDue(anchor: LocalDate, today: LocalDate = LocalDate.now()): Long =
     ChronoUnit.DAYS.between(today, anchor)
+
+/**
+ * Alinha-se à API: com data de vencimento definida, só nos últimos 5 dias é permitido
+ * pagar sem `allow_advance`; com mais dias em falta o cliente deve confirmar e enviar antecipação.
+ */
+fun expenseNeedsEarlyPayUserConfirmation(dueDateIso: String?, today: LocalDate = LocalDate.now()): Boolean {
+    val due = dueDateIso?.let { parseIsoDateLocal(it) } ?: return false
+    if (!due.isAfter(today)) return false
+    return ChronoUnit.DAYS.between(today, due) > 5
+}
 
 fun dueUrgencyForDays(days: Long): DueUrgency = when {
     days < 0 -> DueUrgency.Overdue

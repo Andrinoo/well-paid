@@ -54,12 +54,16 @@ class _PeriodSelectorBarState extends ConsumerState<PeriodSelectorBar> {
         : WellPaidColors.navy.withValues(alpha: 0.7);
     final chevron = dark ? WellPaidColors.gold : WellPaidColors.navy;
 
-    // Warm up nearby months once for immediate next interactions.
+    // Aquecimento fora de [build] — evita "Tried to modify a provider while building" na Web.
     if (!_bootstrappedPrefetch) {
       _bootstrappedPrefetch = true;
-      _prefetchWindow(ref, p);
-      warmGlobalReferenceData(ref);
-      warmMonthlyListsForDashboardPeriod(ref);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final period = ref.read(dashboardPeriodProvider);
+        _prefetchWindow(ref, period);
+        warmGlobalReferenceData(ref);
+        warmMonthlyListsForDashboardPeriod(ref);
+      });
     }
 
     final d = widget.dense;

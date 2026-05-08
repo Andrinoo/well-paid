@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'core/theme/well_paid_colors.dart';
 import 'features/app_lock/application/app_lock_notifier.dart';
 import 'features/app_lock/presentation/security_settings_page.dart';
 import 'features/app_lock/presentation/unlock_page.dart';
@@ -54,6 +55,61 @@ final goRouterProvider = Provider<GoRouter>((ref) {
     navigatorKey: rootNavigatorKey,
     initialLocation: '/login',
     refreshListenable: refresh,
+    errorBuilder: (context, state) {
+      return Scaffold(
+        backgroundColor: WellPaidColors.cream,
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  size: 48,
+                  color: WellPaidColors.navy.withValues(alpha: 0.65),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Rota inválida ou erro de navegação.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: WellPaidColors.navy.withValues(alpha: 0.88),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (state.error != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    state.error.toString(),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: WellPaidColors.navy.withValues(alpha: 0.55),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 8),
+                Text(
+                  state.uri.toString(),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: WellPaidColors.navy.withValues(alpha: 0.4),
+                    fontSize: 11,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                FilledButton(
+                  onPressed: () => context.go('/login'),
+                  child: const Text('Início de sessão'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
     redirect: (context, state) {
       final auth = ref.read(authNotifierProvider);
       final lock = ref.read(appLockNotifierProvider);

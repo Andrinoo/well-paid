@@ -7,6 +7,7 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../../core/format/brl_cents.dart';
 import '../../../core/l10n/context_l10n.dart';
+import '../../../core/theme/well_paid_breakpoints.dart';
 import '../../../core/theme/well_paid_colors.dart';
 import '../../expenses/application/expenses_providers.dart';
 import '../domain/dashboard_overview.dart';
@@ -25,7 +26,8 @@ class DashboardScrollContent extends ConsumerStatefulWidget {
       _DashboardScrollContentState();
 }
 
-class _DashboardScrollContentState extends ConsumerState<DashboardScrollContent> {
+class _DashboardScrollContentState
+    extends ConsumerState<DashboardScrollContent> {
   late final PageController _pageController;
   int _chartTab = 0;
 
@@ -89,144 +91,281 @@ class _DashboardScrollContentState extends ConsumerState<DashboardScrollContent>
         ? 0
         : _donutSelectedSliceIndex.clamp(0, donutRows.length - 1);
 
-    return CustomScrollView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      slivers: [
-        if (data.pendingTotalCents > 0) ...[
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(10, 2, 10, 0),
-            sliver: SliverToBoxAdapter(
-              child: _PendingThisMonthCard(data: data),
-            ),
-          ),
-          const SliverToBoxAdapter(child: SizedBox(height: 6)),
-        ],
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
-          sliver: SliverToBoxAdapter(
-            child: Semantics(
-              container: true,
-              label: '${l10n.dashHomeChartTabCategory}, ${l10n.dashHomeChartTabCashflow}',
-              child: SegmentedButton<int>(
-                segments: [
-                  ButtonSegment<int>(
-                    value: 0,
-                    icon: const Icon(PhosphorIconsRegular.chartPie, size: 18),
-                    label: Text(l10n.dashHomeChartTabCategory),
-                  ),
-                  ButtonSegment<int>(
-                    value: 1,
-                    icon: const Icon(PhosphorIconsRegular.chartLineUp, size: 18),
-                    label: Text(l10n.dashHomeChartTabCashflow),
-                  ),
-                ],
-                selected: {_chartTab},
-                onSelectionChanged: (Set<int> next) {
-                  final i = next.first;
-                  setState(() => _chartTab = i);
-                  _pageController.animateToPage(
-                    i,
-                    duration: const Duration(milliseconds: 280),
-                    curve: Curves.easeOutCubic,
-                  );
-                },
-              ),
-            ),
-          ),
-        ),
-        const SliverToBoxAdapter(child: SizedBox(height: 8)),
-        // [SliverFillRemaining] + [PageView] pode ficar com altura 0 no viewport
-        // (área “branca”). Altura explícita via [SliverLayoutBuilder] + mínimo seguro.
-        SliverLayoutBuilder(
-          builder: (context, constraints) {
-            final fromViewport = constraints.viewportMainAxisExtent * 0.74;
-            final h = math.max(
-              400.0,
-              math.max(constraints.remainingPaintExtent, fromViewport),
-            );
-            return SliverToBoxAdapter(
-              child: SizedBox(
-                height: h,
-                child: PageView(
-                  controller: _pageController,
-                  onPageChanged: (i) => setState(() => _chartTab = i),
-                  children: [
-                    Padding(
-                      padding: EdgeInsets.fromLTRB(10, 0, 10, bottomInset),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Expanded(
-                            child: _SectionChartCard(
-                              title: l10n.dashByCategory,
-                              icon: PhosphorIconsRegular.chartPie,
-                              accent: WellPaidColors.goldPressed,
-                              showHeader: false,
-                              expandBody: true,
-                              child: CategoryDonutChart(
-                                categories: data.spendingByCategory,
-                                monthExpenseTotalCents:
-                                    data.monthExpenseTotalCents,
-                                selectedSliceIndex: donutIdx,
-                                onSelectedSliceIndexChanged: (i) => setState(
-                                  () => _donutSelectedSliceIndex = i,
-                                ),
-                                period: data.period,
-                                onViewCategoryExpenses: (c) =>
-                                    _openDashboardCategoryExpenses(
-                                      context,
-                                      ref,
-                                      data,
-                                      c,
-                                    ),
-                                onRegisterExpense: () =>
-                                    context.push('/expenses/new'),
-                              ),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(4, 10, 4, 4),
-                            child: Text(
-                              l10n.dashHomeCategoriesFootnote,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context).textTheme.labelSmall
-                                  ?.copyWith(
-                                    color: WellPaidColors.navy.withValues(
-                                      alpha: 0.48,
-                                    ),
-                                    height: 1.25,
-                                  ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.fromLTRB(10, 0, 10, bottomInset),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Expanded(
-                            child: SingleChildScrollView(
-                              primary: false,
-                              physics: const AlwaysScrollableScrollPhysics(),
-                              child: DashboardCashflowChartCard(
-                                embeddedInHomeTabs: true,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Largura real da área do shell (não MediaQuery: senão ignora o NavigationRail
+        // e activa grelha 2 colunas sem espaço → gráficos podem não pintar).
+        final wide = constraints.maxWidth >= WellPaidBreakpoints.medium;
+        final hPad = wide ? 20.0 : 10.0;
+
+        return CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            if (data.pendingTotalCents > 0) ...[
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(hPad, 2, hPad, 0),
+                sliver: SliverToBoxAdapter(
+                  child: _PendingThisMonthCard(data: data),
                 ),
               ),
-            );
-          },
-        ),
-      ],
+              const SliverToBoxAdapter(child: SizedBox(height: 6)),
+            ],
+            if (!wide) ...[
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(hPad, 0, hPad, 0),
+                sliver: SliverToBoxAdapter(
+                  child: Semantics(
+                    container: true,
+                    label:
+                        '${l10n.dashHomeChartTabCategory}, ${l10n.dashHomeChartTabCashflow}',
+                    child: SegmentedButton<int>(
+                      segments: [
+                        ButtonSegment<int>(
+                          value: 0,
+                          icon: const Icon(
+                            PhosphorIconsRegular.chartPie,
+                            size: 18,
+                          ),
+                          label: Text(l10n.dashHomeChartTabCategory),
+                        ),
+                        ButtonSegment<int>(
+                          value: 1,
+                          icon: const Icon(
+                            PhosphorIconsRegular.chartLineUp,
+                            size: 18,
+                          ),
+                          label: Text(l10n.dashHomeChartTabCashflow),
+                        ),
+                      ],
+                      selected: {_chartTab},
+                      onSelectionChanged: (Set<int> next) {
+                        final i = next.first;
+                        setState(() => _chartTab = i);
+                        _pageController.animateToPage(
+                          i,
+                          duration: const Duration(milliseconds: 280),
+                          curve: Curves.easeOutCubic,
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 8)),
+            ],
+            // [SliverFillRemaining] + [PageView] pode ficar com altura 0 no viewport
+            // (área “branca”). Altura explícita via [SliverLayoutBuilder] + mínimo seguro.
+            SliverLayoutBuilder(
+              builder: (context, constraints) {
+                final fromViewport =
+                    constraints.viewportMainAxisExtent * (wide ? 0.52 : 0.74);
+                final h = math.max(
+                  wide ? 380.0 : 400.0,
+                  math.max(constraints.remainingPaintExtent, fromViewport),
+                );
+                if (wide) {
+                  return SliverToBoxAdapter(
+                    child: SizedBox(
+                      height: h,
+                      child: Padding(
+                        padding: EdgeInsets.fromLTRB(
+                          hPad,
+                          4,
+                          hPad,
+                          bottomInset,
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Expanded(
+                                    child: _SectionChartCard(
+                                      title: l10n.dashByCategory,
+                                      icon: PhosphorIconsRegular.chartPie,
+                                      accent: WellPaidColors.goldPressed,
+                                      showHeader: true,
+                                      expandBody: true,
+                                      child: CategoryDonutChart(
+                                        categories: data.spendingByCategory,
+                                        monthExpenseTotalCents:
+                                            data.monthExpenseTotalCents,
+                                        selectedSliceIndex: donutIdx,
+                                        onSelectedSliceIndexChanged: (i) =>
+                                            setState(
+                                              () =>
+                                                  _donutSelectedSliceIndex = i,
+                                            ),
+                                        period: data.period,
+                                        onViewCategoryExpenses: (c) =>
+                                            _openDashboardCategoryExpenses(
+                                              context,
+                                              ref,
+                                              data,
+                                              c,
+                                            ),
+                                        onRegisterExpense: () =>
+                                            context.push('/expenses/new'),
+                                      ),
+                                    ),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                      4,
+                                      8,
+                                      4,
+                                      4,
+                                    ),
+                                    child: Text(
+                                      l10n.dashHomeCategoriesFootnote,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      textAlign: TextAlign.center,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelSmall
+                                          ?.copyWith(
+                                            color: WellPaidColors.navy
+                                                .withValues(alpha: 0.48),
+                                            height: 1.25,
+                                          ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Expanded(
+                                    child: _SectionChartCard(
+                                      title: l10n.dashHomeChartTabCashflow,
+                                      icon: PhosphorIconsRegular.chartLineUp,
+                                      accent: WellPaidColors.navy.withValues(
+                                        alpha: 0.65,
+                                      ),
+                                      showHeader: true,
+                                      expandBody: true,
+                                      child: SingleChildScrollView(
+                                        primary: false,
+                                        physics:
+                                            const AlwaysScrollableScrollPhysics(),
+                                        child: DashboardCashflowChartCard(
+                                          embeddedInHomeTabs: true,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }
+                return SliverToBoxAdapter(
+                  child: SizedBox(
+                    height: h,
+                    child: PageView(
+                      controller: _pageController,
+                      onPageChanged: (i) => setState(() => _chartTab = i),
+                      children: [
+                        Padding(
+                          padding: EdgeInsets.fromLTRB(
+                            hPad,
+                            0,
+                            hPad,
+                            bottomInset,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(
+                                child: _SectionChartCard(
+                                  title: l10n.dashByCategory,
+                                  icon: PhosphorIconsRegular.chartPie,
+                                  accent: WellPaidColors.goldPressed,
+                                  showHeader: false,
+                                  expandBody: true,
+                                  child: CategoryDonutChart(
+                                    categories: data.spendingByCategory,
+                                    monthExpenseTotalCents:
+                                        data.monthExpenseTotalCents,
+                                    selectedSliceIndex: donutIdx,
+                                    onSelectedSliceIndexChanged: (i) =>
+                                        setState(
+                                          () => _donutSelectedSliceIndex = i,
+                                        ),
+                                    period: data.period,
+                                    onViewCategoryExpenses: (c) =>
+                                        _openDashboardCategoryExpenses(
+                                          context,
+                                          ref,
+                                          data,
+                                          c,
+                                        ),
+                                    onRegisterExpense: () =>
+                                        context.push('/expenses/new'),
+                                  ),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(4, 10, 4, 4),
+                                child: Text(
+                                  l10n.dashHomeCategoriesFootnote,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.center,
+                                  style: Theme.of(context).textTheme.labelSmall
+                                      ?.copyWith(
+                                        color: WellPaidColors.navy.withValues(
+                                          alpha: 0.48,
+                                        ),
+                                        height: 1.25,
+                                      ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Padding(
+                          padding: EdgeInsets.fromLTRB(
+                            hPad,
+                            0,
+                            hPad,
+                            bottomInset,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(
+                                child: SingleChildScrollView(
+                                  primary: false,
+                                  physics:
+                                      const AlwaysScrollableScrollPhysics(),
+                                  child: DashboardCashflowChartCard(
+                                    embeddedInHomeTabs: true,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 }

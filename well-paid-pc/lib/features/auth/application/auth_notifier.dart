@@ -39,6 +39,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
   final TokenStorage _storage;
   final AuthRepository _repository;
 
+  void _scheduleShellDataWarmup() {
+    Future.microtask(() => scheduleShellDataWarmup(_ref));
+  }
+
   Future<void> _hydrate() async {
     var access = await _storage.readAccess();
     var refresh = await _storage.readRefresh();
@@ -70,7 +74,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     );
     _ref.read(routerRefreshProvider).ping();
     if (access != null && access.isNotEmpty) {
-      scheduleShellDataWarmup(_ref);
+      _scheduleShellDataWarmup();
     }
   }
 
@@ -87,7 +91,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     );
     await _ref.read(appLockNotifierProvider.notifier).onLoggedIn();
     _ref.read(routerRefreshProvider).ping();
-    scheduleShellDataWarmup(_ref);
+    _scheduleShellDataWarmup();
   }
 
   Future<RegisterResult> register({
@@ -117,7 +121,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     );
     await _ref.read(appLockNotifierProvider.notifier).onLoggedIn();
     _ref.read(routerRefreshProvider).ping();
-    scheduleShellDataWarmup(_ref);
+    _scheduleShellDataWarmup();
   }
 
   /// Após `POST /auth/refresh` bem-sucedido (interceptor Dio).

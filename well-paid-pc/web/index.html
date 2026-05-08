@@ -17,6 +17,7 @@
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="A new Flutter project.">
 
@@ -31,6 +32,11 @@
 
   <title>well_paid_pc</title>
   <link rel="manifest" href="manifest.json">
+  <!-- Evita canvas Flutter com altura 0 em alguns browsers / iframes -->
+  <style>
+    html, body { height: 100%; margin: 0; }
+    body { background-color: #f5f1e8; }
+  </style>
 </head>
 <body>
   <!--

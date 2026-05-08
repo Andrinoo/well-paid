@@ -112,6 +112,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Pull up or tap for To pay and Shopping lists shortcuts';
 
   @override
+  String get pcNavKeyboardSections =>
+      'Alt+1 to Alt+5: switch main sections (Home, Expenses, Income, Goals, Reserve).';
+
+  @override
+  String get pcShellQuickActionsTitle => 'Quick actions';
+
+  @override
   String get menuMoreTooltip => 'More options';
 
   @override
@@ -908,6 +915,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String expensePayInstallmentLine(int current, int total) {
     return 'Installment $current of $total';
   }
+
+  @override
+  String get expenseTableColDate => 'Date';
+
+  @override
+  String get expenseTableColDescription => 'Description';
+
+  @override
+  String get expenseTableColCategory => 'Category';
+
+  @override
+  String get expenseTableColAmount => 'Amount';
+
+  @override
+  String get expenseTableColStatus => 'Status';
 
   @override
   String get expensesTitle => 'Expenses';

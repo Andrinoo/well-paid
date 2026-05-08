@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:flutter/services.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -9,6 +9,7 @@ import '../../../core/format/brl_currency_input_formatter.dart';
 import '../../../core/format/parse_brl_input.dart';
 import '../../../core/l10n/context_l10n.dart';
 import '../../../core/network/dio_client.dart';
+import '../../../core/theme/well_paid_breakpoints.dart';
 import '../../../core/theme/well_paid_colors.dart';
 import '../../dashboard/application/dashboard_providers.dart';
 import '../application/expenses_providers.dart';
@@ -179,7 +180,15 @@ class _NewExpensePageState extends ConsumerState<NewExpensePage> {
         : installmentAmountCents *
             (_kind == _ExpenseKind.installments ? _installments : 1);
 
-    return Scaffold(
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.keyS, control: true): () {
+          _submit();
+        },
+      },
+      child: Focus(
+        autofocus: false,
+        child: Scaffold(
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(PhosphorIconsRegular.x),
@@ -187,11 +196,21 @@ class _NewExpensePageState extends ConsumerState<NewExpensePage> {
         ),
         title: Text(l10n.newExpenseTitle),
       ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: WellPaidBreakpoints.pageMaxWidth,
+                ),
+                child: Form(
+                  key: _formKey,
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+                    children: [
             TextFormField(
               controller: _descCtrl,
               decoration: InputDecoration(
@@ -442,12 +461,40 @@ class _NewExpensePageState extends ConsumerState<NewExpensePage> {
               onSharedChanged: (v) => setState(() => _isShared = v),
               onPeerChanged: (v) => setState(() => _sharedWithUserId = v),
             ),
-            const SizedBox(height: 28),
-            FilledButton(
-              onPressed: _submit,
-              child: Text(l10n.save),
-            ),
+            const SizedBox(height: 12),
           ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Material(
+            elevation: 8,
+            shadowColor: WellPaidColors.navy.withValues(alpha: 0.12),
+            color: WellPaidColors.cream,
+            child: SafeArea(
+              top: false,
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                child: Row(
+                  children: [
+                    TextButton(
+                      onPressed: () => context.pop(),
+                      child: Text(l10n.cancel),
+                    ),
+                    const Spacer(),
+                    FilledButton(
+                      onPressed: _submit,
+                      child: Text(l10n.save),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
         ),
       ),
     );

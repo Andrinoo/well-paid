@@ -119,6 +119,7 @@ fun MainShellScreen(
     onOpenGoalEdit: (String) -> Unit,
     onOpenShoppingLists: () -> Unit,
     onOpenAnnouncements: () -> Unit,
+    onOpenFamily: () -> Unit,
     onOpenReceivables: () -> Unit,
     onOpenInvestments: () -> Unit,
     onOpenEmergencyReserveNew: () -> Unit,
@@ -513,6 +514,7 @@ fun MainShellScreen(
                         modifier = Modifier.fillMaxSize(),
                         mainRouteEntry = mainRouteEntry,
                         onOpenSettings = onOpenSettings,
+                        onOpenFamily = onOpenFamily,
                         onOpenAnnouncements = onOpenAnnouncements,
                         viewModel = homeViewModel,
                     )

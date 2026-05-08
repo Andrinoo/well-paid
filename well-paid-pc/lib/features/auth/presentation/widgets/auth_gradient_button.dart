@@ -38,7 +38,7 @@ class _AuthGradientButtonState extends State<AuthGradientButton> {
     final child = Material(
       color: Colors.transparent,
       clipBehavior: Clip.antiAlias,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(14),
       child: InkWell(
         onTap: disabled
             ? null
@@ -49,7 +49,7 @@ class _AuthGradientButtonState extends State<AuthGradientButton> {
         onHighlightChanged: disabled
             ? null
             : (highlighted) => setState(() => _pressed = highlighted),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         splashColor: Colors.white.withValues(alpha: 0.18),
         highlightColor: Colors.white.withValues(alpha: 0.08),
         child: Ink(
@@ -65,7 +65,7 @@ class _AuthGradientButtonState extends State<AuthGradientButton> {
                       WellPaidColors.gold,
                     ],
             ),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(14),
             boxShadow: disabled
                 ? null
                 : [
@@ -78,7 +78,7 @@ class _AuthGradientButtonState extends State<AuthGradientButton> {
           ),
           child: Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 10),
+            padding: const EdgeInsets.symmetric(vertical: 13),
             alignment: Alignment.center,
             child: widget.busy
                 ? const SizedBox(

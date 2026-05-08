@@ -3,6 +3,7 @@ package com.wellpaid.ui.home
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.wellpaid.BuildConfig
 import com.wellpaid.R
 import com.wellpaid.core.model.announcement.AnnouncementDto
 import com.wellpaid.core.model.announcement.AnnouncementListDto
@@ -10,6 +11,7 @@ import com.wellpaid.core.model.auth.UserMeDto
 import com.wellpaid.core.model.dashboard.DashboardCashflowDto
 import com.wellpaid.core.model.dashboard.DashboardOverviewDto
 import com.wellpaid.core.model.auth.TokenStorage
+import com.wellpaid.core.network.AppUpdateApi
 import com.wellpaid.core.network.DashboardApi
 import com.wellpaid.core.network.AnnouncementsApi
 import com.wellpaid.core.network.UserApi
@@ -50,6 +52,8 @@ data class HomeUiState(
     /** `warning` | `info` | `tip` | `material` — cor do badge pela prioridade visual. */
     val recadosBadgeKind: String = "info",
     val familyInviteBadgeCount: Int = 0,
+    /** Manifesto no servidor indica APK mais recente (mesma regra que Definições → Procurar atualizações). */
+    val appUpdateAvailable: Boolean = false,
 )
 
 /** Com `dynamic=false`, a API exige janela explícita: 6 meses civis terminando no mês do dashboard. */
@@ -72,6 +76,7 @@ class HomeViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context,
     private val dashboardApi: DashboardApi,
     private val announcementsApi: AnnouncementsApi,
+    private val appUpdateApi: AppUpdateApi,
     private val userApi: UserApi,
     private val tokenStorage: TokenStorage,
     private val homeDashboardCache: HomeDashboardCacheRepository,
@@ -118,6 +123,7 @@ class HomeViewModel @Inject constructor(
                     announcementsError = null,
                     recadosBadgeCount = 0,
                     recadosBadgeKind = "info",
+                    appUpdateAvailable = false,
                 )
             }
             return
@@ -166,6 +172,9 @@ class HomeViewModel @Inject constructor(
             val announcementsTabPlacements = async {
                 runCatching { announcementsApi.listActive(placement = "announcements_tab", limit = 50) }
             }
+            val appUpdateManifest = async {
+                runCatching { appUpdateApi.getManifest() }
+            }
             val overviewResult = overviewDeferred.await()
             val cashflowResult = cashflowDeferred.await()
             val inviteBadgeCount = familyMeRepository.listPendingInvites().getOrNull()?.size ?: 0
@@ -175,6 +184,13 @@ class HomeViewModel @Inject constructor(
                 financePlacements.await(),
                 announcementsTabPlacements.await(),
             )
+            val appUpdateAvailable =
+                appUpdateManifest.await().getOrNull()?.let { manifest ->
+                    val url = manifest.apkUrl.trim()
+                    manifest.versionCode > BuildConfig.VERSION_CODE &&
+                        url.isNotEmpty() &&
+                        url.startsWith("https://")
+                } ?: false
             val mergedRecados = mergeAnnouncementLists(placementResults.mapNotNull { it.getOrNull() })
             val bannerForHome = mergedRecados
                 .filter { it.placement == "home_banner" }
@@ -217,6 +233,7 @@ class HomeViewModel @Inject constructor(
                     recadosBadgeCount = recadosBadgeCount + inviteBadgeCount,
                     recadosBadgeKind = recadosBadgeKind,
                     familyInviteBadgeCount = inviteBadgeCount,
+                    appUpdateAvailable = appUpdateAvailable,
                 )
             }
             if (newOverview != null) {

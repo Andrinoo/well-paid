@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -59,6 +60,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -103,6 +105,7 @@ fun HomeDashboardContent(
     viewModel: HomeViewModel,
     modifier: Modifier = Modifier,
     onOpenSettings: () -> Unit = {},
+    onOpenFamily: () -> Unit = {},
     onOpenAnnouncements: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -209,10 +212,24 @@ fun HomeDashboardContent(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
+                val alertsIconCd =
+                    homeAlertsIconContentDescription(
+                        familyInviteBadgeCount = state.familyInviteBadgeCount,
+                        appUpdateAvailable = state.appUpdateAvailable,
+                    )
+                val onAlertsClick = {
+                    when {
+                        state.familyInviteBadgeCount > 0 -> onOpenFamily()
+                        state.appUpdateAvailable -> onOpenSettings()
+                        else -> onOpenAnnouncements()
+                    }
+                }
                 HomeRecadosHeaderIcon(
                     count = state.recadosBadgeCount,
                     kind = state.recadosBadgeKind,
-                    onClick = onOpenAnnouncements,
+                    appUpdateAvailable = state.appUpdateAvailable,
+                    contentDescription = alertsIconCd,
+                    onClick = onAlertsClick,
                 )
                 IconButton(
                     onClick = onOpenSettings,
@@ -495,37 +512,73 @@ fun HomeDashboardContent(
 }
 
 @Composable
+private fun homeAlertsIconContentDescription(
+    familyInviteBadgeCount: Int,
+    appUpdateAvailable: Boolean,
+): String =
+    when {
+        familyInviteBadgeCount > 0 && appUpdateAvailable ->
+            stringResource(R.string.home_alerts_cd_family_and_update)
+        familyInviteBadgeCount > 0 -> stringResource(R.string.home_alerts_cd_open_family)
+        appUpdateAvailable -> stringResource(R.string.home_alerts_cd_open_settings)
+        else -> stringResource(R.string.home_alerts_cd_open_announcements)
+    }
+
+@Composable
 private fun HomeRecadosHeaderIcon(
     count: Int,
     kind: String,
+    appUpdateAvailable: Boolean,
+    contentDescription: String,
     onClick: () -> Unit,
 ) {
     val (container, content) = recadosBadgeColors(kind)
-    BadgedBox(
-        badge = {
-            if (count > 0) {
-                Badge(
-                    containerColor = container,
-                    contentColor = content,
-                ) {
-                    Text(
-                        text = if (count > 99) "99+" else count.toString(),
-                        style = MaterialTheme.typography.labelSmall,
-                        fontSize = 10.sp,
-                    )
+    Box(Modifier.size(40.dp)) {
+        BadgedBox(
+            modifier = Modifier.fillMaxSize(),
+            badge = {
+                if (count > 0) {
+                    Badge(
+                        containerColor = container,
+                        contentColor = content,
+                    ) {
+                        Text(
+                            text = if (count > 99) "99+" else count.toString(),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontSize = 10.sp,
+                        )
+                    }
                 }
-            }
-        },
-    ) {
-        IconButton(
-            onClick = onClick,
-            modifier = Modifier.size(40.dp),
+            },
         ) {
-            Icon(
-                Icons.Filled.Campaign,
-                contentDescription = stringResource(R.string.home_shortcut_announcements),
-                tint = Color.White.copy(alpha = 0.95f),
-                modifier = Modifier.size(22.dp),
+            IconButton(
+                onClick = onClick,
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                Icon(
+                    Icons.Filled.Campaign,
+                    contentDescription = contentDescription,
+                    tint = Color.White.copy(alpha = 0.95f),
+                    modifier = Modifier.size(22.dp),
+                )
+            }
+        }
+        if (appUpdateAvailable) {
+            val dotAlign =
+                if (count > 0) Alignment.BottomEnd else Alignment.TopEnd
+            val dotPadding =
+                if (count > 0) {
+                    Modifier.padding(end = 3.dp, bottom = 4.dp)
+                } else {
+                    Modifier.padding(top = 3.dp, end = 2.dp)
+                }
+            Box(
+                Modifier
+                    .align(dotAlign)
+                    .then(dotPadding)
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary),
             )
         }
     }

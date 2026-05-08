@@ -5,6 +5,9 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../../../core/l10n/context_l10n.dart';
 import '../../../core/theme/well_paid_colors.dart';
+import '../../../core/theme/well_paid_radii.dart';
+import '../../../core/theme/well_paid_shadows.dart';
+import '../../../core/theme/well_paid_spacing.dart';
 import '../../dashboard/application/dashboard_providers.dart';
 import '../../dashboard/presentation/due_urgency.dart';
 
@@ -17,53 +20,66 @@ class ShellQuickPanelDesktop extends ConsumerWidget {
     final l10n = context.l10n;
     final overview = ref.watch(dashboardOverviewProvider).valueOrNull;
     final today = DateTime.now();
-    final hasCritical = overview != null &&
+    final hasCritical =
+        overview != null &&
         overview.pendingPreview.any((e) {
           final due = e.dueDate;
           if (due == null) return false;
           final u = dueUrgencyFor(due, today);
           return u == DueUrgency.overdue || u == DueUrgency.dueToday;
         });
-    final hasPending =
-        overview != null && overview.pendingPreview.isNotEmpty;
+    final hasPending = overview != null && overview.pendingPreview.isNotEmpty;
+
+    final sp = context.wellPaidSpacing;
+    final r = context.wellPaidRadii;
+    final shadows = context.wellPaidShadows;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          _ShortcutChip(
-            icon: PhosphorIconsRegular.invoice,
-            label: l10n.dashToPay,
-            dotColor: hasCritical
-                ? const Color(0xFFB00020)
-                : hasPending
+      padding: EdgeInsets.fromLTRB(sp.md, sp.sm, sp.md, sp.sm),
+      child: DecoratedBox(
+        decoration: shadows.cardDecoration(
+          color: Colors.white.withValues(alpha: 0.78),
+          radius: r.lg,
+        ),
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: sp.sm, vertical: sp.sm),
+          child: Wrap(
+            spacing: sp.sm,
+            runSpacing: sp.sm,
+            children: [
+              _ShortcutChip(
+                icon: PhosphorIconsRegular.invoice,
+                label: l10n.dashToPay,
+                dotColor: hasCritical
+                    ? const Color(0xFFB00020)
+                    : hasPending
                     ? const Color(0xFFF9A825)
                     : null,
-            onTap: () => context.push('/to-pay'),
+                onTap: () => context.push('/to-pay'),
+              ),
+              _ShortcutChip(
+                icon: PhosphorIconsRegular.shoppingCartSimple,
+                label: l10n.shoppingListsTitle,
+                onTap: () => context.push('/shopping-lists'),
+              ),
+              _ShortcutChip(
+                icon: PhosphorIconsRegular.megaphone,
+                label: l10n.pcNavAnnouncements,
+                onTap: () => context.push('/announcements'),
+              ),
+              _ShortcutChip(
+                icon: PhosphorIconsRegular.handCoins,
+                label: l10n.pcNavReceivables,
+                onTap: () => context.push('/receivables'),
+              ),
+              _ShortcutChip(
+                icon: PhosphorIconsRegular.chartLineUp,
+                label: l10n.pcNavInvestments,
+                onTap: () => context.push('/investments'),
+              ),
+            ],
           ),
-          _ShortcutChip(
-            icon: PhosphorIconsRegular.shoppingCartSimple,
-            label: l10n.shoppingListsTitle,
-            onTap: () => context.push('/shopping-lists'),
-          ),
-          _ShortcutChip(
-            icon: PhosphorIconsRegular.megaphone,
-            label: l10n.pcNavAnnouncements,
-            onTap: () => context.push('/announcements'),
-          ),
-          _ShortcutChip(
-            icon: PhosphorIconsRegular.handCoins,
-            label: l10n.pcNavReceivables,
-            onTap: () => context.push('/receivables'),
-          ),
-          _ShortcutChip(
-            icon: PhosphorIconsRegular.chartLineUp,
-            label: l10n.pcNavInvestments,
-            onTap: () => context.push('/investments'),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -84,14 +100,18 @@ class _ShortcutChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final r = context.wellPaidRadii;
+
     return Material(
-      color: WellPaidColors.creamMuted.withValues(alpha: 0.95),
-      borderRadius: BorderRadius.circular(12),
+      color: WellPaidColors.cream.withValues(alpha: 0.65),
+      borderRadius: BorderRadius.circular(r.md),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(r.md),
+        hoverColor: WellPaidColors.navy.withValues(alpha: 0.06),
+        splashColor: WellPaidColors.gold.withValues(alpha: 0.12),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [

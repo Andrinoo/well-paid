@@ -89,6 +89,8 @@ data class ExpenseFormUiState(
     val payDiscountCents: Int? = null,
     val advanceSettlementCents: Int? = null,
     val advanceDiscountCents: Int? = null,
+    /** Confirmação extra quando o vencimento é daqui a mais de 5 dias e o utilizador não ligou «Antecipar». */
+    val showEarlyPayConfirm: Boolean = false,
 )
 
 @HiltViewModel
@@ -566,6 +568,7 @@ class ExpenseFormViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 showPayConfirm = true,
+                showEarlyPayConfirm = false,
                 payAllowAdvance = false,
                 payAmountText = centsToBrlInput(e.amountCents),
                 payNominalCents = e.amountCents,
@@ -576,7 +579,13 @@ class ExpenseFormViewModel @Inject constructor(
     }
 
     fun dismissPayConfirm() {
-        _uiState.update { it.copy(showPayConfirm = false, payAllowAdvance = false) }
+        _uiState.update {
+            it.copy(showPayConfirm = false, payAllowAdvance = false, showEarlyPayConfirm = false)
+        }
+    }
+
+    fun dismissEarlyPayConfirm() {
+        _uiState.update { it.copy(showEarlyPayConfirm = false) }
     }
 
     fun setPayAllowAdvance(value: Boolean) {
@@ -808,9 +817,17 @@ class ExpenseFormViewModel @Inject constructor(
         }
     }
 
-    fun pay(onSuccess: () -> Unit) {
+    fun pay(onSuccess: () -> Unit, bypassEarlyGateWithAllowAdvance: Boolean = false) {
         val id = expenseId ?: return
         val current = _uiState.value.loadedExpense ?: return
+        val allowAdvanceForApi =
+            bypassEarlyGateWithAllowAdvance || _uiState.value.payAllowAdvance
+
+        if (expenseNeedsEarlyPayUserConfirmation(current.dueDate) && !allowAdvanceForApi) {
+            _uiState.update { it.copy(showEarlyPayConfirm = true) }
+            return
+        }
+
         viewModelScope.launch {
             val payAmountCents = if (_uiState.value.payAllowAdvance) {
                 runCatching { expensesApi.quoteAdvancePayment(id).settlementAmountCents }.getOrNull()
@@ -827,12 +844,14 @@ class ExpenseFormViewModel @Inject constructor(
                 return@launch
             }
 
-            _uiState.update { it.copy(isSaving = true, errorMessage = null, showPayConfirm = false) }
+            _uiState.update {
+                it.copy(isSaving = true, errorMessage = null, showPayConfirm = false, showEarlyPayConfirm = false)
+            }
             runCatching {
                 expensesApi.payExpense(
                     id,
                     ExpensePayDto(
-                        allowAdvance = _uiState.value.payAllowAdvance,
+                        allowAdvance = allowAdvanceForApi,
                         amountCents = payAmountCents,
                     ),
                 )
@@ -844,6 +863,7 @@ class ExpenseFormViewModel @Inject constructor(
                             loadedExpense = e,
                             status = e.status,
                             errorMessage = null,
+                            showEarlyPayConfirm = false,
                         )
                     }
                     onSuccess()

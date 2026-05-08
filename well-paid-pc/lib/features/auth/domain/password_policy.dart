@@ -48,32 +48,32 @@ InputDecoration authFieldDecoration(
     filled: true,
     fillColor: WellPaidColors.authFieldFill,
     border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(12),
       borderSide: BorderSide(
         color: Colors.white.withValues(alpha: 0.08),
       ),
     ),
     enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(12),
       borderSide: BorderSide(
         color: Colors.white.withValues(alpha: 0.1),
       ),
     ),
     focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(12),
       borderSide: const BorderSide(
         color: WellPaidColors.gold,
         width: 1.5,
       ),
     ),
     errorBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(12),
       borderSide: BorderSide(
         color: Colors.red.shade300.withValues(alpha: 0.9),
       ),
     ),
     focusedErrorBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(12),
       borderSide: BorderSide(
         color: Colors.red.shade200,
         width: 1.5,
@@ -92,6 +92,6 @@ InputDecoration authFieldDecoration(
       color: Colors.red.shade200,
       fontSize: 11,
     ),
-    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
   );
 }

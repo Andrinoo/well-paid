@@ -296,6 +296,18 @@ abstract class AppLocalizations {
   /// **'Puxar ou tocar para atalhos A pagar e Listas de compras'**
   String get navQuickPanelToggleHint;
 
+  /// No description provided for @pcNavKeyboardSections.
+  ///
+  /// In pt, this message translates to:
+  /// **'Alt+1 a Alt+5: secções principais (Início, Despesas, Rendimentos, Metas, Reserva).'**
+  String get pcNavKeyboardSections;
+
+  /// No description provided for @pcShellQuickActionsTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ações rápidas'**
+  String get pcShellQuickActionsTitle;
+
   /// No description provided for @menuMoreTooltip.
   ///
   /// In pt, this message translates to:
@@ -1729,6 +1741,36 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Parcela {current} de {total}'**
   String expensePayInstallmentLine(int current, int total);
+
+  /// No description provided for @expenseTableColDate.
+  ///
+  /// In pt, this message translates to:
+  /// **'Data'**
+  String get expenseTableColDate;
+
+  /// No description provided for @expenseTableColDescription.
+  ///
+  /// In pt, this message translates to:
+  /// **'Descrição'**
+  String get expenseTableColDescription;
+
+  /// No description provided for @expenseTableColCategory.
+  ///
+  /// In pt, this message translates to:
+  /// **'Categoria'**
+  String get expenseTableColCategory;
+
+  /// No description provided for @expenseTableColAmount.
+  ///
+  /// In pt, this message translates to:
+  /// **'Valor'**
+  String get expenseTableColAmount;
+
+  /// No description provided for @expenseTableColStatus.
+  ///
+  /// In pt, this message translates to:
+  /// **'Estado'**
+  String get expenseTableColStatus;
 
   /// No description provided for @expensesTitle.
   ///

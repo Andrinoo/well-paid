@@ -122,6 +122,10 @@
     <string name="home_donut_selected_percent">%1$d%% of total</string>
     <string name="home_shortcut_pending_pay">To pay</string>
     <string name="home_shortcut_announcements">News &amp; tips</string>
+    <string name="home_alerts_cd_open_announcements">News and tips — opens announcements</string>
+    <string name="home_alerts_cd_open_family">Family invites — opens Family</string>
+    <string name="home_alerts_cd_open_settings">App update available — opens Settings</string>
+    <string name="home_alerts_cd_family_and_update">Family invites and app update — opens Family first</string>
     <string name="home_shortcut_shopping_lists">Shopping lists</string>
     <string name="home_shortcut_investments">Investments</string>
     <string name="announcements_screen_title">News &amp; tips</string>
@@ -199,6 +203,10 @@
     <string name="expense_pay_discount_line">Discount: %1$s</string>
     <string name="expense_pay_amount_optional">Recurring amount (optional)</string>
     <string name="expense_pay_confirm">Confirm payment</string>
+    <string name="expense_pay_early_days_title">Pay before due date?</string>
+    <string name="expense_pay_early_days_message">This expense is due in more than 5 days. Do you still want to mark it as paid now?</string>
+    <string name="expense_pay_early_days_continue">Yes, mark as paid</string>
+    <string name="expense_pay_early_days_cancel">No</string>
     <string name="expense_delete">Delete</string>
     <string name="expense_delete_title">Delete expense</string>
     <string name="expense_delete_message">This cannot be undone in the app. Continue?</string>

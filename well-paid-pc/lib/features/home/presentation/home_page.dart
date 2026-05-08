@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/format/brl_cents.dart';
 import '../../../core/l10n/context_l10n.dart';
 import '../../../core/network/dio_client.dart';
+import '../../../core/theme/well_paid_breakpoints.dart';
 import '../../../core/theme/well_paid_colors.dart';
 import '../../auth/application/auth_notifier.dart';
 import '../../dashboard/application/dashboard_providers.dart';
@@ -28,248 +29,270 @@ class HomePage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: WellPaidColors.cream,
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          DecoratedBox(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [WellPaidColors.navyDeep, WellPaidColors.navy],
-              ),
-            ),
-            child: SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(0, 0, 0, 2),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: PopupMenuButton<_HomeMenuAction>(
-                        tooltip: l10n.menuMoreTooltip,
-                        icon: Icon(
-                          PhosphorIconsRegular.dotsThreeVertical,
-                          size: 22,
-                          color: WellPaidColors.cream.withValues(alpha: 0.95),
-                        ),
-                        onSelected: (action) async {
-                          switch (action) {
-                            case _HomeMenuAction.settings:
-                              if (context.mounted) context.push('/settings');
-                              break;
-                            case _HomeMenuAction.family:
-                              if (context.mounted) context.push('/family');
-                              break;
-                            case _HomeMenuAction.security:
-                              if (context.mounted) context.push('/security');
-                              break;
-                            case _HomeMenuAction.refresh:
-                              ref.invalidate(dashboardOverviewProvider);
-                              ref.invalidate(dashboardCashflowProvider);
-                              break;
-                            case _HomeMenuAction.logout:
-                              final ok = await showDialog<bool>(
-                                context: context,
-                                builder: (ctx) => AlertDialog(
-                                  title: Text(l10n.logoutConfirmTitle),
-                                  content: Text(l10n.logoutConfirmBody),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () =>
-                                          Navigator.of(ctx).pop(false),
-                                      child: Text(l10n.cancel),
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            maxWidth: WellPaidBreakpoints.pageMaxWidth,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              DecoratedBox(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [WellPaidColors.navyDeep, WellPaidColors.navy],
+                  ),
+                ),
+                child: SafeArea(
+                  bottom: false,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(0, 0, 0, 2),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: PopupMenuButton<_HomeMenuAction>(
+                            tooltip: l10n.menuMoreTooltip,
+                            icon: Icon(
+                              PhosphorIconsRegular.dotsThreeVertical,
+                              size: 22,
+                              color: WellPaidColors.cream.withValues(
+                                alpha: 0.95,
+                              ),
+                            ),
+                            onSelected: (action) async {
+                              switch (action) {
+                                case _HomeMenuAction.settings:
+                                  if (context.mounted)
+                                    context.push('/settings');
+                                  break;
+                                case _HomeMenuAction.family:
+                                  if (context.mounted) context.push('/family');
+                                  break;
+                                case _HomeMenuAction.security:
+                                  if (context.mounted)
+                                    context.push('/security');
+                                  break;
+                                case _HomeMenuAction.refresh:
+                                  ref.invalidate(dashboardOverviewProvider);
+                                  ref.invalidate(dashboardCashflowProvider);
+                                  break;
+                                case _HomeMenuAction.logout:
+                                  final ok = await showDialog<bool>(
+                                    context: context,
+                                    builder: (ctx) => AlertDialog(
+                                      title: Text(l10n.logoutConfirmTitle),
+                                      content: Text(l10n.logoutConfirmBody),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.of(ctx).pop(false),
+                                          child: Text(l10n.cancel),
+                                        ),
+                                        FilledButton(
+                                          onPressed: () =>
+                                              Navigator.of(ctx).pop(true),
+                                          child: Text(l10n.tooltipLogout),
+                                        ),
+                                      ],
                                     ),
-                                    FilledButton(
-                                      onPressed: () =>
-                                          Navigator.of(ctx).pop(true),
-                                      child: Text(l10n.tooltipLogout),
+                                  );
+                                  if (ok == true && context.mounted) {
+                                    await ref
+                                        .read(authNotifierProvider.notifier)
+                                        .logout();
+                                  }
+                                  break;
+                              }
+                            },
+                            itemBuilder: (context) => [
+                              PopupMenuItem(
+                                value: _HomeMenuAction.settings,
+                                child: _MenuRow(
+                                  icon: PhosphorIconsRegular.gearSix,
+                                  label: l10n.settingsTitle,
+                                ),
+                              ),
+                              PopupMenuItem(
+                                value: _HomeMenuAction.family,
+                                child: _MenuRow(
+                                  icon: PhosphorIconsRegular.usersThree,
+                                  label: l10n.tooltipFamily,
+                                ),
+                              ),
+                              PopupMenuItem(
+                                value: _HomeMenuAction.security,
+                                child: _MenuRow(
+                                  icon: PhosphorIconsRegular.lock,
+                                  label: l10n.tooltipSecurity,
+                                ),
+                              ),
+                              PopupMenuItem(
+                                value: _HomeMenuAction.refresh,
+                                child: _MenuRow(
+                                  icon: PhosphorIconsRegular.arrowsClockwise,
+                                  label: l10n.tooltipRefreshDashboard,
+                                ),
+                              ),
+                              const PopupMenuDivider(),
+                              PopupMenuItem(
+                                value: _HomeMenuAction.logout,
+                                child: _MenuRow(
+                                  icon: PhosphorIconsRegular.signOut,
+                                  label: l10n.tooltipLogout,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(6, 2, 6, 0),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: headerOverview != null
+                                    ? _HomeHeaderMoneyCol(
+                                        label: l10n.dashIncome,
+                                        value: formatBrlFromCents(
+                                          headerOverview.monthIncomeCents,
+                                        ),
+                                        emphasize: false,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        compact: true,
+                                      )
+                                    : const SizedBox.shrink(),
+                              ),
+                              Expanded(
+                                flex: 2,
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      l10n.dashBalance,
+                                      textAlign: TextAlign.center,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelSmall
+                                          ?.copyWith(
+                                            color: WellPaidColors.cream
+                                                .withValues(alpha: 0.68),
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 10,
+                                          ),
+                                    ),
+                                    AnimatedSwitcher(
+                                      duration: const Duration(
+                                        milliseconds: 280,
+                                      ),
+                                      switchInCurve: Curves.easeOutCubic,
+                                      switchOutCurve: Curves.easeInCubic,
+                                      child: balanceLine != null
+                                          ? Text(
+                                              key: ValueKey<String>(
+                                                balanceLine,
+                                              ),
+                                              balanceLine,
+                                              textAlign: TextAlign.center,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .titleSmall
+                                                  ?.copyWith(
+                                                    fontWeight: FontWeight.w800,
+                                                    color: WellPaidColors.gold,
+                                                    letterSpacing: -0.3,
+                                                    fontSize: 15,
+                                                  ),
+                                            )
+                                          : SizedBox(
+                                              key: const ValueKey<String>(
+                                                'balance-loading',
+                                              ),
+                                              height: 17,
+                                              child: Center(
+                                                child: SizedBox(
+                                                  width: 15,
+                                                  height: 15,
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                        strokeWidth: 1.75,
+                                                        color: WellPaidColors
+                                                            .cream
+                                                            .withValues(
+                                                              alpha: 0.85,
+                                                            ),
+                                                      ),
+                                                ),
+                                              ),
+                                            ),
                                     ),
                                   ],
                                 ),
-                              );
-                              if (ok == true && context.mounted) {
-                                await ref
-                                    .read(authNotifierProvider.notifier)
-                                    .logout();
-                              }
-                              break;
-                          }
-                        },
-                        itemBuilder: (context) => [
-                          PopupMenuItem(
-                            value: _HomeMenuAction.settings,
-                            child: _MenuRow(
-                              icon: PhosphorIconsRegular.gearSix,
-                              label: l10n.settingsTitle,
-                            ),
-                          ),
-                          PopupMenuItem(
-                            value: _HomeMenuAction.family,
-                            child: _MenuRow(
-                              icon: PhosphorIconsRegular.usersThree,
-                              label: l10n.tooltipFamily,
-                            ),
-                          ),
-                          PopupMenuItem(
-                            value: _HomeMenuAction.security,
-                            child: _MenuRow(
-                              icon: PhosphorIconsRegular.lock,
-                              label: l10n.tooltipSecurity,
-                            ),
-                          ),
-                          PopupMenuItem(
-                            value: _HomeMenuAction.refresh,
-                            child: _MenuRow(
-                              icon: PhosphorIconsRegular.arrowsClockwise,
-                              label: l10n.tooltipRefreshDashboard,
-                            ),
-                          ),
-                          const PopupMenuDivider(),
-                          PopupMenuItem(
-                            value: _HomeMenuAction.logout,
-                            child: _MenuRow(
-                              icon: PhosphorIconsRegular.signOut,
-                              label: l10n.tooltipLogout,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(6, 2, 6, 0),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: headerOverview != null
-                                ? _HomeHeaderMoneyCol(
-                                    label: l10n.dashIncome,
-                                    value: formatBrlFromCents(
-                                      headerOverview.monthIncomeCents,
-                                    ),
-                                    emphasize: false,
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    compact: true,
-                                  )
-                                : const SizedBox.shrink(),
-                          ),
-                          Expanded(
-                            flex: 2,
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  l10n.dashBalance,
-                                  textAlign: TextAlign.center,
-                                  style: Theme.of(context).textTheme.labelSmall
-                                      ?.copyWith(
-                                        color: WellPaidColors.cream.withValues(
-                                          alpha: 0.68,
+                              ),
+                              Expanded(
+                                child: headerOverview != null
+                                    ? _HomeHeaderMoneyCol(
+                                        label: l10n.dashExpenses,
+                                        value: formatBrlFromCents(
+                                          headerOverview.monthExpenseTotalCents,
                                         ),
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 10,
-                                      ),
-                                ),
-                                AnimatedSwitcher(
-                                  duration: const Duration(milliseconds: 280),
-                                  switchInCurve: Curves.easeOutCubic,
-                                  switchOutCurve: Curves.easeInCubic,
-                                  child: balanceLine != null
-                                      ? Text(
-                                          key: ValueKey<String>(balanceLine),
-                                          balanceLine,
-                                          textAlign: TextAlign.center,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .titleSmall
-                                              ?.copyWith(
-                                                fontWeight: FontWeight.w800,
-                                                color: WellPaidColors.gold,
-                                                letterSpacing: -0.3,
-                                                fontSize: 15,
-                                              ),
-                                        )
-                                      : SizedBox(
-                                          key: const ValueKey<String>(
-                                            'balance-loading',
-                                          ),
-                                          height: 17,
-                                          child: Center(
-                                            child: SizedBox(
-                                              width: 15,
-                                              height: 15,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 1.75,
-                                                color: WellPaidColors.cream
-                                                    .withValues(alpha: 0.85),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                ),
-                              ],
-                            ),
+                                        emphasize: true,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.end,
+                                        compact: true,
+                                      )
+                                    : const SizedBox.shrink(),
+                              ),
+                            ],
                           ),
-                          Expanded(
-                            child: headerOverview != null
-                                ? _HomeHeaderMoneyCol(
-                                    label: l10n.dashExpenses,
-                                    value: formatBrlFromCents(
-                                      headerOverview.monthExpenseTotalCents,
-                                    ),
-                                    emphasize: true,
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    compact: true,
-                                  )
-                                : const SizedBox.shrink(),
+                        ),
+                        Center(
+                          child: PeriodSelectorBar(
+                            variant: PeriodSelectorBarVariant.dark,
+                            dense: true,
+                            ultraDense: true,
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                    Center(
-                      child: PeriodSelectorBar(
-                        variant: PeriodSelectorBarVariant.dark,
-                        dense: true,
-                        ultraDense: true,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Expanded(
-            child: overview.when(
-              skipLoadingOnReload: true,
-              loading: () => const _HomeDashboardLoadingSkeleton(),
-              error: (e, _) => Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text(
-                    messageFromDio(e, l10n) ?? l10n.homeDashboardError,
-                    textAlign: TextAlign.center,
                   ),
                 ),
               ),
-              data: (d) => RefreshIndicator(
-                color: WellPaidColors.navy,
-                onRefresh: () async {
-                  await refreshDashboardData(
-                    ProviderScope.containerOf(context),
-                  );
-                },
-                child: DashboardScrollContent(data: d),
+              Expanded(
+                child: overview.when(
+                  skipLoadingOnReload: true,
+                  loading: () => const _HomeDashboardLoadingSkeleton(),
+                  error: (e, _) => Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Text(
+                        messageFromDio(e, l10n) ?? l10n.homeDashboardError,
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+                  data: (d) => RefreshIndicator(
+                    color: WellPaidColors.navy,
+                    onRefresh: () async {
+                      await refreshDashboardData(
+                        ProviderScope.containerOf(context),
+                      );
+                    },
+                    child: DashboardScrollContent(data: d),
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -345,9 +368,11 @@ class _HomeDashboardLoadingSkeleton extends StatelessWidget {
       );
     }
 
+    final w = MediaQuery.sizeOf(context).width;
+    final hPad = w >= WellPaidBreakpoints.medium ? 20.0 : 10.0;
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(10, 2, 10, 120),
+      padding: EdgeInsets.fromLTRB(hPad, 2, hPad, 120),
       children: [
         bar(h: 40, r: 14),
         const SizedBox(height: 6),

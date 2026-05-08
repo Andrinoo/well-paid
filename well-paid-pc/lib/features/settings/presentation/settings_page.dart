@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/l10n/context_l10n.dart';
-import '../../../l10n/app_localizations.dart';
 import '../../../core/locale/app_locale_provider.dart';
+import '../../../core/theme/well_paid_breakpoints.dart';
 import '../../../core/theme/well_paid_colors.dart';
+import '../../../core/widgets/desktop/desktop.dart';
+import '../../../l10n/app_localizations.dart';
 import 'goal_stall_reminder_settings_tile.dart';
 
 class SettingsPage extends ConsumerWidget {
@@ -19,113 +21,44 @@ class SettingsPage extends ConsumerWidget {
     final localeAsync = ref.watch(appLocaleProvider);
     final lang = (localeAsync.valueOrNull ?? const Locale('pt')).languageCode;
     final group = lang == 'en' ? const Locale('en') : const Locale('pt');
-
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(PhosphorIconsRegular.arrowLeft),
-          onPressed: () => context.pop(),
-        ),
-        title: Text(l10n.settingsTitle),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
+    final accountSection = SectionCard(
+      child: Column(
         children: [
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: Icon(
-              PhosphorIconsRegular.userCircle,
-              color: WellPaidColors.navy.withValues(alpha: 0.85),
-            ),
-            title: Text(
-              l10n.pcDisplayNameTitle,
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: WellPaidColors.navy,
-              ),
-            ),
-            trailing: const Icon(PhosphorIconsRegular.caretRight),
+          _SettingsLink(
+            icon: PhosphorIconsRegular.userCircle,
+            label: l10n.pcDisplayNameTitle,
             onTap: () => context.push('/display-name'),
           ),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: Icon(
-              PhosphorIconsRegular.tagSimple,
-              color: WellPaidColors.navy.withValues(alpha: 0.85),
-            ),
-            title: Text(
-              l10n.pcManageCategoriesTitle,
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: WellPaidColors.navy,
-              ),
-            ),
-            trailing: const Icon(PhosphorIconsRegular.caretRight),
+          _SettingsLink(
+            icon: PhosphorIconsRegular.tagSimple,
+            label: l10n.pcManageCategoriesTitle,
             onTap: () => context.push('/manage-categories'),
           ),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: Icon(
-              PhosphorIconsRegular.clipboardText,
-              color: WellPaidColors.navy.withValues(alpha: 0.85),
-            ),
-            title: Text(
-              l10n.pcPlansTitle,
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: WellPaidColors.navy,
-              ),
-            ),
-            trailing: const Icon(PhosphorIconsRegular.caretRight),
+          _SettingsLink(
+            icon: PhosphorIconsRegular.clipboardText,
+            label: l10n.pcPlansTitle,
             onTap: () => context.push('/emergency-plans'),
           ),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: Icon(
-              PhosphorIconsRegular.shield,
-              color: WellPaidColors.navy.withValues(alpha: 0.85),
-            ),
-            title: Text(
-              l10n.settingsEmergencyReserve,
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: WellPaidColors.navy,
-              ),
-            ),
-            trailing: const Icon(PhosphorIconsRegular.caretRight),
+          _SettingsLink(
+            icon: PhosphorIconsRegular.shield,
+            label: l10n.settingsEmergencyReserve,
             onTap: () => context.push('/emergency-reserve'),
           ),
-          const SizedBox(height: 16),
-          Divider(height: 1, color: WellPaidColors.navy.withValues(alpha: 0.12)),
-          const SizedBox(height: 20),
-          Text(
-            l10n.settingsNotificationsSection,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: WellPaidColors.navy,
-                ),
-          ),
-          const SizedBox(height: 6),
-          const GoalStallReminderSettingsTile(),
-          const SizedBox(height: 20),
-          Divider(height: 1, color: WellPaidColors.navy.withValues(alpha: 0.12)),
-          const SizedBox(height: 20),
-          Text(
-            l10n.settingsLanguageTitle,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: WellPaidColors.navy,
-                ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            l10n.settingsLanguageSubtitle,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: WellPaidColors.navy.withValues(alpha: 0.72),
-                  height: 1.35,
-                ),
-          ),
-          const SizedBox(height: 16),
+        ],
+      ),
+    );
+
+    final notificationSection = SectionCard(
+      title: l10n.settingsNotificationsSection,
+      child: const GoalStallReminderSettingsTile(),
+    );
+
+    final languageSection = SectionCard(
+      title: l10n.settingsLanguageTitle,
+      subtitle: l10n.settingsLanguageSubtitle,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
           RadioListTile<Locale>(
             contentPadding: EdgeInsets.zero,
             title: Text(l10n.langPortugueseBrazil),
@@ -139,8 +72,8 @@ class SettingsPage extends ConsumerWidget {
                     if (!context.mounted) return;
                     SchedulerBinding.instance.addPostFrameCallback((_) {
                       if (!context.mounted) return;
-                      final msg =
-                          AppLocalizations.of(context)!.settingsLanguageUpdated;
+                      final msg = AppLocalizations.of(context)!
+                          .settingsLanguageUpdated;
                       ScaffoldMessenger.of(context)
                           .showSnackBar(SnackBar(content: Text(msg)));
                     });
@@ -159,14 +92,120 @@ class SettingsPage extends ConsumerWidget {
                     if (!context.mounted) return;
                     SchedulerBinding.instance.addPostFrameCallback((_) {
                       if (!context.mounted) return;
-                      final msg =
-                          AppLocalizations.of(context)!.settingsLanguageUpdated;
+                      final msg = AppLocalizations.of(context)!
+                          .settingsLanguageUpdated;
                       ScaffoldMessenger.of(context)
                           .showSnackBar(SnackBar(content: Text(msg)));
                     });
                   },
           ),
         ],
+      ),
+    );
+
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(PhosphorIconsRegular.arrowLeft),
+          onPressed: () => context.pop(),
+        ),
+        title: Text(l10n.settingsTitle),
+      ),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final wide =
+              constraints.maxWidth >= WellPaidBreakpoints.medium;
+          return wide
+              ? Align(
+                  alignment: Alignment.topCenter,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      maxWidth: WellPaidBreakpoints.pageMaxWidth,
+                    ),
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+                      children: [
+                        accountSection,
+                        const SizedBox(height: 16),
+                        notificationSection,
+                        const SizedBox(height: 16),
+                        languageSection,
+                      ],
+                    ),
+                  ),
+                )
+              : ListView(
+                  padding: const EdgeInsets.all(20),
+                  children: [
+                    accountSection,
+                    const SizedBox(height: 12),
+                    notificationSection,
+                    const SizedBox(height: 12),
+                    languageSection,
+                  ],
+                );
+        },
+      ),
+    );
+  }
+}
+
+class _SettingsLink extends StatelessWidget {
+  const _SettingsLink({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: WellPaidColors.creamMuted.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: WellPaidColors.navy.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 22,
+                    color: WellPaidColors.navy.withValues(alpha: 0.88),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: WellPaidColors.navy,
+                        ),
+                  ),
+                ),
+                Icon(
+                  PhosphorIconsRegular.caretRight,
+                  color: WellPaidColors.navy.withValues(alpha: 0.45),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

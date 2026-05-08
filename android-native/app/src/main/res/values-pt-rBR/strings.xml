@@ -121,6 +121,10 @@
     <string name="home_donut_selected_percent">%1$d%% do total</string>
     <string name="home_shortcut_pending_pay">A pagar</string>
     <string name="home_shortcut_announcements">Recados</string>
+    <string name="home_alerts_cd_open_announcements">Recados e avisos — abre recados</string>
+    <string name="home_alerts_cd_open_family">Convites da família — abre Família</string>
+    <string name="home_alerts_cd_open_settings">Atualização da app disponível — abre Definições</string>
+    <string name="home_alerts_cd_family_and_update">Convites da família e atualização da app — abre primeiro Família</string>
     <string name="home_shortcut_shopping_lists">Listas de compras</string>
     <string name="home_shortcut_investments">Investimentos</string>
     <string name="announcements_screen_title">Recados</string>
@@ -211,6 +215,10 @@
     <string name="expense_pay_discount_line">Desconto: %1$s</string>
     <string name="expense_pay_amount_optional">Valor da recorrência (opcional)</string>
     <string name="expense_pay_confirm">Confirmar pagamento</string>
+    <string name="expense_pay_early_days_title">Pagar antes do vencimento?</string>
+    <string name="expense_pay_early_days_message">Esta despesa só vence daqui a mais de 5 dias. Quer mesmo registar o pagamento agora?</string>
+    <string name="expense_pay_early_days_continue">Sim, marcar como paga</string>
+    <string name="expense_pay_early_days_cancel">Não</string>
     <string name="expense_delete">Eliminar</string>
     <string name="expense_delete_title">Eliminar despesa</string>
     <string name="expense_delete_message">Esta ação não pode ser anulada na aplicação. Continuar?</string>

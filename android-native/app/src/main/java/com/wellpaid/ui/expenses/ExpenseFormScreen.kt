@@ -1362,6 +1362,30 @@ fun ExpenseFormScreen(
         )
     }
 
+    if (state.showEarlyPayConfirm) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissEarlyPayConfirm() },
+            title = { Text(stringResource(R.string.expense_pay_early_days_title)) },
+            text = { Text(stringResource(R.string.expense_pay_early_days_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.dismissEarlyPayConfirm()
+                        viewModel.pay(onFinishedNeedRefresh, bypassEarlyGateWithAllowAdvance = true)
+                    },
+                    enabled = !state.isSaving,
+                ) {
+                    Text(stringResource(R.string.expense_pay_early_days_continue))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissEarlyPayConfirm() }) {
+                    Text(stringResource(R.string.expense_pay_early_days_cancel))
+                }
+            },
+        )
+    }
+
     if (state.showCoverDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.dismissCoverDialog() },

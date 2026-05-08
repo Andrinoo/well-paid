@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.wellpaid.R
 import com.wellpaid.core.model.auth.TokenStorage
 import com.wellpaid.core.model.expense.ExpenseDto
+import com.wellpaid.core.model.expense.ExpensePayDto
 import com.wellpaid.core.network.ExpensesApi
 import com.wellpaid.data.MainPrefetchTiming
 import com.wellpaid.util.FastApiErrorMapper
@@ -117,9 +118,14 @@ class ExpensesViewModel @Inject constructor(
         refresh()
     }
 
-    fun payExpense(expenseId: String) {
+    fun payExpense(expenseId: String, allowAdvance: Boolean = false) {
         viewModelScope.launch {
-            runCatching { expensesApi.payExpense(expenseId) }
+            runCatching {
+                expensesApi.payExpense(
+                    expenseId,
+                    ExpensePayDto(allowAdvance = allowAdvance),
+                )
+            }
                 .onSuccess { updated ->
                     _uiState.update { s ->
                         s.copy(

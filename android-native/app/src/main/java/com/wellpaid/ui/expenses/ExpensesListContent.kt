@@ -128,6 +128,7 @@ fun ExpensesListContent(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var deletePrompt by remember { mutableStateOf<ExpenseDeletePrompt?>(null) }
+    var earlyPayExpense by remember { mutableStateOf<ExpenseDto?>(null) }
     val dirtyFlow = remember(mainRouteEntry) {
         mainRouteEntry.savedStateHandle.getStateFlow("expense_list_dirty", 0L)
     }
@@ -349,7 +350,11 @@ fun ExpensesListContent(
                                     },
                                     onPayClick = {
                                         if (expense.status != "paid" && (expense.isMine || expense.isShared)) {
-                                            viewModel.payExpense(expense.id)
+                                            if (expenseNeedsEarlyPayUserConfirmation(expense.dueDate)) {
+                                                earlyPayExpense = expense
+                                            } else {
+                                                viewModel.payExpense(expense.id)
+                                            }
                                         }
                                     },
                                     onDeleteClick = if (expense.isMine) {
@@ -496,6 +501,30 @@ fun ExpensesListContent(
                 },
             )
         }
+    }
+
+    earlyPayExpense?.let { expense ->
+        AlertDialog(
+            onDismissRequest = { earlyPayExpense = null },
+            title = { Text(stringResource(R.string.expense_pay_early_days_title)) },
+            text = { Text(stringResource(R.string.expense_pay_early_days_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        earlyPayExpense = null
+                        viewModel.payExpense(expense.id, allowAdvance = true)
+                    },
+                    enabled = !state.isLoading,
+                ) {
+                    Text(stringResource(R.string.expense_pay_early_days_continue))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { earlyPayExpense = null }) {
+                    Text(stringResource(R.string.expense_pay_early_days_cancel))
+                }
+            },
+        )
     }
     }
 }

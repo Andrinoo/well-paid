@@ -33,6 +33,8 @@
   "navGoals": "Metas",
   "navReserve": "Reserva",
   "navQuickPanelToggleHint": "Puxar ou tocar para atalhos A pagar e Listas de compras",
+  "pcNavKeyboardSections": "Alt+1 a Alt+5: secções principais (Início, Despesas, Rendimentos, Metas, Reserva).",
+  "pcShellQuickActionsTitle": "Ações rápidas",
   "menuMoreTooltip": "Mais opções",
   "logoutConfirmTitle": "Terminar sessão?",
   "logoutConfirmBody": "Terá de voltar a iniciar sessão para aceder à conta.",
@@ -396,6 +398,11 @@
       "total": {"type": "int"}
     }
   },
+  "expenseTableColDate": "Data",
+  "expenseTableColDescription": "Descrição",
+  "expenseTableColCategory": "Categoria",
+  "expenseTableColAmount": "Valor",
+  "expenseTableColStatus": "Estado",
   "expensesTitle": "Despesas",
   "expensesRefresh": "Atualizar",
   "expensesNew": "Nova",

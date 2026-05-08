@@ -268,6 +268,9 @@ fun WellPaidNavHost(
                         onOpenAnnouncements = {
                             navController.navigate(NavRoutes.Announcements)
                         },
+                        onOpenFamily = {
+                            navController.navigate(NavRoutes.Family)
+                        },
                         onOpenReceivables = {
                             navController.navigate(NavRoutes.Receivables)
                         },

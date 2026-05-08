@@ -112,6 +112,13 @@ class AppLocalizationsPt extends AppLocalizations {
       'Puxar ou tocar para atalhos A pagar e Listas de compras';
 
   @override
+  String get pcNavKeyboardSections =>
+      'Alt+1 a Alt+5: secções principais (Início, Despesas, Rendimentos, Metas, Reserva).';
+
+  @override
+  String get pcShellQuickActionsTitle => 'Ações rápidas';
+
+  @override
   String get menuMoreTooltip => 'Mais opções';
 
   @override
@@ -910,6 +917,21 @@ class AppLocalizationsPt extends AppLocalizations {
   String expensePayInstallmentLine(int current, int total) {
     return 'Parcela $current de $total';
   }
+
+  @override
+  String get expenseTableColDate => 'Data';
+
+  @override
+  String get expenseTableColDescription => 'Descrição';
+
+  @override
+  String get expenseTableColCategory => 'Categoria';
+
+  @override
+  String get expenseTableColAmount => 'Valor';
+
+  @override
+  String get expenseTableColStatus => 'Estado';
 
   @override
   String get expensesTitle => 'Despesas';

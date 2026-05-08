@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import 'app_router.dart';
@@ -9,6 +10,11 @@ import 'core/config/api_config.dart';
 import 'core/locale/app_locale_provider.dart';
 import 'core/notifications/goal_stall_reminder_service.dart';
 import 'core/theme/well_paid_colors.dart';
+import 'core/theme/well_paid_money_typography.dart';
+import 'core/theme/well_paid_radii.dart';
+import 'core/theme/well_paid_semantic_colors.dart';
+import 'core/theme/well_paid_shadows.dart';
+import 'core/theme/well_paid_spacing.dart';
 import 'features/app_lock/presentation/app_lifecycle_lock.dart';
 import 'l10n/app_localizations.dart';
 
@@ -58,18 +64,24 @@ class WellPaidApp extends ConsumerWidget {
     final localeAsync = ref.watch(appLocaleProvider);
     final appLocale = localeAsync.valueOrNull ?? const Locale('pt');
 
-    final scheme = ColorScheme.fromSeed(
-      seedColor: WellPaidColors.navy,
-      brightness: Brightness.light,
-    ).copyWith(
-      primary: WellPaidColors.navy,
-      onPrimary: Colors.white,
-      secondary: WellPaidColors.gold,
-      onSecondary: WellPaidColors.navy,
-      surface: WellPaidColors.cream,
-      onSurface: WellPaidColors.navy,
-      onSurfaceVariant: WellPaidColors.navy.withValues(alpha: 0.62),
-      outline: WellPaidColors.navy.withValues(alpha: 0.2),
+    final scheme =
+        ColorScheme.fromSeed(
+          seedColor: WellPaidColors.navy,
+          brightness: Brightness.light,
+        ).copyWith(
+          primary: WellPaidColors.navy,
+          onPrimary: Colors.white,
+          secondary: WellPaidColors.gold,
+          onSecondary: WellPaidColors.navy,
+          surface: WellPaidColors.cream,
+          onSurface: WellPaidColors.navy,
+          onSurfaceVariant: WellPaidColors.navy.withValues(alpha: 0.62),
+          outline: WellPaidColors.navy.withValues(alpha: 0.2),
+        );
+
+    final textTheme = GoogleFonts.interTextTheme().apply(
+      bodyColor: WellPaidColors.navy,
+      displayColor: WellPaidColors.navy,
     );
 
     return MaterialApp.router(
@@ -77,20 +89,31 @@ class WellPaidApp extends ConsumerWidget {
       locale: appLocale,
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
-      builder: (context, child) => AppLifecycleLock(
-        child: child ?? const SizedBox.shrink(),
-      ),
+      builder: (context, child) =>
+          AppLifecycleLock(child: child ?? const SizedBox.shrink()),
       theme: ThemeData(
         useMaterial3: true,
         scaffoldBackgroundColor: WellPaidColors.cream,
         colorScheme: scheme,
+        textTheme: textTheme,
+        extensions: <ThemeExtension<dynamic>>[
+          const WellPaidSpacing(),
+          const WellPaidRadii(),
+          const WellPaidShadows(),
+          WellPaidSemanticColors.light(),
+          WellPaidMoneyTypography.fromTextTheme(textTheme),
+        ],
         filledButtonTheme: FilledButtonThemeData(
           style: FilledButton.styleFrom(
             elevation: 0,
             backgroundColor: WellPaidColors.gold,
             foregroundColor: WellPaidColors.navy,
-            disabledBackgroundColor: WellPaidColors.gold.withValues(alpha: 0.45),
-            disabledForegroundColor: WellPaidColors.navy.withValues(alpha: 0.45),
+            disabledBackgroundColor: WellPaidColors.gold.withValues(
+              alpha: 0.45,
+            ),
+            disabledForegroundColor: WellPaidColors.navy.withValues(
+              alpha: 0.45,
+            ),
             padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 22),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14),
@@ -102,9 +125,7 @@ class WellPaidApp extends ConsumerWidget {
           ),
         ),
         textButtonTheme: TextButtonThemeData(
-          style: TextButton.styleFrom(
-            foregroundColor: WellPaidColors.navy,
-          ),
+          style: TextButton.styleFrom(foregroundColor: WellPaidColors.navy),
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
@@ -126,11 +147,43 @@ class WellPaidApp extends ConsumerWidget {
             borderSide: const BorderSide(color: WellPaidColors.gold, width: 2),
           ),
         ),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: WellPaidColors.navy,
-          foregroundColor: Colors.white,
+        appBarTheme: AppBarTheme(
+          backgroundColor: WellPaidColors.cream,
+          foregroundColor: WellPaidColors.navy,
           elevation: 0,
-          centerTitle: true,
+          scrolledUnderElevation: 0,
+          surfaceTintColor: Colors.transparent,
+          centerTitle: false,
+          titleTextStyle: GoogleFonts.inter(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: WellPaidColors.navy,
+            letterSpacing: -0.2,
+          ),
+          iconTheme: IconThemeData(
+            color: WellPaidColors.navy.withValues(alpha: 0.88),
+          ),
+        ),
+        navigationRailTheme: NavigationRailThemeData(
+          backgroundColor: WellPaidColors.creamMuted.withValues(alpha: 0.98),
+          selectedIconTheme: IconThemeData(
+            color: WellPaidColors.navy,
+            size: 24,
+          ),
+          unselectedIconTheme: IconThemeData(
+            color: WellPaidColors.navy.withValues(alpha: 0.45),
+            size: 22,
+          ),
+          selectedLabelTextStyle: GoogleFonts.inter(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: WellPaidColors.navy,
+          ),
+          unselectedLabelTextStyle: GoogleFonts.inter(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: WellPaidColors.navy.withValues(alpha: 0.45),
+          ),
         ),
       ),
       routerConfig: router,

@@ -33,6 +33,8 @@
   "navGoals": "Goals",
   "navReserve": "Reserve",
   "navQuickPanelToggleHint": "Pull up or tap for To pay and Shopping lists shortcuts",
+  "pcNavKeyboardSections": "Alt+1 to Alt+5: switch main sections (Home, Expenses, Income, Goals, Reserve).",
+  "pcShellQuickActionsTitle": "Quick actions",
   "menuMoreTooltip": "More options",
   "logoutConfirmTitle": "Log out?",
   "logoutConfirmBody": "You will need to sign in again to access your account.",
@@ -396,6 +398,11 @@
       "total": {"type": "int"}
     }
   },
+  "expenseTableColDate": "Date",
+  "expenseTableColDescription": "Description",
+  "expenseTableColCategory": "Category",
+  "expenseTableColAmount": "Amount",
+  "expenseTableColStatus": "Status",
   "expensesTitle": "Expenses",
   "expensesRefresh": "Refresh",
   "expensesNew": "New",

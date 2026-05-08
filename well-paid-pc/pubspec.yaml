@@ -30,6 +30,7 @@ dependencies:
   flutter_timezone: ^3.0.1
   phosphor_flutter: ^2.1.0
   flutter_dotenv: ^5.2.1
+  google_fonts: ^8.1.0
 
 dev_dependencies:
   flutter_test:
@@ -51,4 +52,3 @@ flutter:
     - assets/app.env
     - assets/images/well_paid_logo.png
     - assets/images/playstore-icon.png
-    - assets/images/login_logo.png

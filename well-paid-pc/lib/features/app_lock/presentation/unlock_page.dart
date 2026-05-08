@@ -7,6 +7,7 @@ import 'package:local_auth/local_auth.dart';
 import '../../../core/l10n/context_l10n.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../core/theme/well_paid_colors.dart';
+import '../../../core/theme/well_paid_semantic_colors.dart';
 import '../application/app_lock_notifier.dart';
 import '../application/biometric_ui_kind.dart';
 
@@ -137,61 +138,70 @@ class _UnlockPageState extends ConsumerState<UnlockPage> {
           automaticallyImplyLeading: false,
           title: Text(l10n.unlockTitle),
         ),
-        body: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                l10n.unlockIntro,
-                style: TextStyle(
-                  color: WellPaidColors.navy.withValues(alpha: 0.85),
-                  fontSize: 16,
-                ),
+        body: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    l10n.unlockIntro,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: WellPaidColors.navy.withValues(alpha: 0.85),
+                          height: 1.4,
+                        ),
+                  ),
+                  const SizedBox(height: 24),
+                  TextField(
+                    controller: _pinCtrl,
+                    keyboardType: TextInputType.number,
+                    obscureText: true,
+                    maxLength: 6,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    decoration: InputDecoration(
+                      labelText: l10n.unlockPinLabel,
+                      counterText: '',
+                    ),
+                    onSubmitted: (_) {
+                      if (!_busy) _tryPin();
+                    },
+                  ),
+                  if (_error != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      _error!,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: context.wellPaidSemantic.danger,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                  ],
+                  const SizedBox(height: 20),
+                  FilledButton(
+                    onPressed: _busy ? null : _tryPin,
+                    child: Text(l10n.confirm),
+                  ),
+                  if (lock.biometricPreferred &&
+                      k != null &&
+                      k != AppBiometricUiKind.unavailable) ...[
+                    const SizedBox(height: 16),
+                    OutlinedButton.icon(
+                      onPressed: _busy ? null : _tryBio,
+                      icon: Icon(biometricPhosphorIcon(k)),
+                      label: Text(_unlockBioButtonLabel(l10n, k)),
+                    ),
+                  ],
+                  if (_busy)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 24),
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                ],
               ),
-              const SizedBox(height: 24),
-              TextField(
-                controller: _pinCtrl,
-                keyboardType: TextInputType.number,
-                obscureText: true,
-                maxLength: 6,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: InputDecoration(
-                  labelText: l10n.unlockPinLabel,
-                  counterText: '',
-                ),
-                onSubmitted: (_) {
-                  if (!_busy) _tryPin();
-                },
-              ),
-              if (_error != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  _error!,
-                  style: const TextStyle(color: Colors.redAccent),
-                ),
-              ],
-              const SizedBox(height: 20),
-              FilledButton(
-                onPressed: _busy ? null : _tryPin,
-                child: Text(l10n.confirm),
-              ),
-              if (lock.biometricPreferred &&
-                  k != null &&
-                  k != AppBiometricUiKind.unavailable) ...[
-                const SizedBox(height: 16),
-                OutlinedButton.icon(
-                  onPressed: _busy ? null : _tryBio,
-                  icon: Icon(biometricPhosphorIcon(k)),
-                  label: Text(_unlockBioButtonLabel(l10n, k)),
-                ),
-              ],
-              if (_busy)
-                const Padding(
-                  padding: EdgeInsets.only(top: 24),
-                  child: Center(child: CircularProgressIndicator()),
-                ),
-            ],
+            ),
           ),
         ),
       ),
