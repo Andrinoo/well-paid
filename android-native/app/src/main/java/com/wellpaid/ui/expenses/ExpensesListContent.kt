@@ -102,11 +102,9 @@ private val ExpenseTypeTagHeight = 13.dp
 private val ExpenseTypeTagFontSize = 7.sp
 private val ExpenseTypeTagCorner = 2.dp
 
-/** Largura fixa para as etiquetas alinharem entre linhas; valor com mínimo para não empurrar as tags. */
-private val ExpenseRowTagColumnWidth = 50.dp
 private val ExpenseRowWarningSlotWidth = 18.dp
-/** Largura fixa do valor + alinhamento à direita, para a coluna das tags não se mover entre linhas. */
-private val ExpenseRowAmountColumnWidth = 100.dp
+/** Coluna compacta à direita para abrir espaço da descrição. */
+private val ExpenseRowAmountColumnWidth = 88.dp
 
 private sealed class ExpenseDeletePrompt {
     data class Simple(val expense: ExpenseDto) : ExpenseDeletePrompt()
@@ -741,7 +739,7 @@ private fun ExpenseListRow(
                     Text(
                         text = expense.description,
                         modifier = Modifier.weight(1f),
-                        maxLines = 1,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold,
@@ -815,8 +813,19 @@ private fun ExpenseListRow(
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.spacedBy(3.dp),
             ) {
+                Text(
+                    text = formatBrlFromCents(expense.amountCents),
+                    modifier = Modifier.width(ExpenseRowAmountColumnWidth),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 13.sp,
+                    color = WellPaidNavy,
+                    textAlign = TextAlign.End,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalAlignment = Alignment.Top,
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     Box(
@@ -832,56 +841,49 @@ private fun ExpenseListRow(
                             )
                         }
                     }
-                    Box(
-                        modifier = Modifier.width(ExpenseRowTagColumnWidth),
-                        contentAlignment = Alignment.CenterStart,
+                    Column(
+                        horizontalAlignment = Alignment.End,
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
                     ) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(3.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            if (showParTag(expense)) {
-                                ExpenseTypeTagChip(
-                                    text = "PAR",
-                                    background = Color(0xFFE3F2FD),
-                                    contentColor = Color(0xFF1565C0),
-                                )
-                            }
-                            if (showRecTag(expense)) {
-                                ExpenseTypeTagChip(
-                                    text = "REC",
-                                    background = WellPaidGold.copy(alpha = 0.38f),
-                                    contentColor = WellPaidNavy,
-                                )
-                            }
-                            if (showAntTag(expense)) {
-                                ExpenseTypeTagChip(
-                                    text = "ANT",
-                                    background = Color(0xFFE8F5E9),
-                                    contentColor = Color(0xFF2E7D32),
-                                )
-                            }
-                            if (showPaidTag(expense)) {
-                                ExpenseTypeTagPaid(paidAtRaw = expense.paidAt)
-                            }
+                        if (showParTag(expense)) {
+                            ExpenseTypeTagChip(
+                                text = "PAR",
+                                background = Color(0xFFE3F2FD),
+                                contentColor = Color(0xFF1565C0),
+                            )
+                        }
+                        if (showRecTag(expense)) {
+                            ExpenseTypeTagChip(
+                                text = "REC",
+                                background = WellPaidGold.copy(alpha = 0.38f),
+                                contentColor = WellPaidNavy,
+                            )
+                        }
+                        if (showAntTag(expense)) {
+                            ExpenseTypeTagChip(
+                                text = "ANT",
+                                background = Color(0xFFE8F5E9),
+                                contentColor = Color(0xFF2E7D32),
+                            )
+                        }
+                        if (showPaidTag(expense)) {
+                            ExpenseTypeTagPaid(paidAtRaw = expense.paidAt)
                         }
                     }
-                    Text(
-                        text = formatBrlFromCents(expense.amountCents),
-                        modifier = Modifier.width(ExpenseRowAmountColumnWidth),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = WellPaidNavy,
-                        textAlign = TextAlign.End,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = WellPaidNavy.copy(alpha = 0.34f),
-                    )
+                    if (onDeleteClick != null) {
+                        IconButton(
+                            onClick = onDeleteClick,
+                            enabled = deleteEnabled,
+                            modifier = Modifier.size(28.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Delete,
+                                contentDescription = stringResource(R.string.expenses_row_delete_cd),
+                                tint = WellPaidNavy.copy(alpha = 0.42f),
+                                modifier = Modifier.size(16.dp),
+                            )
+                        }
+                    }
                 }
                 if (!isPaid && (expense.isMine || expense.isShared)) {
                     val payLabel = stringResource(R.string.expenses_pay)
@@ -916,21 +918,6 @@ private fun ExpenseListRow(
                         )
                     }
                 }
-            }
-        }
-        if (onDeleteClick != null) {
-            IconButton(
-                onClick = onDeleteClick,
-                enabled = deleteEnabled,
-                modifier = Modifier
-                    .heightIn(min = 40.dp)
-                    .align(Alignment.Top),
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Delete,
-                    contentDescription = stringResource(R.string.expenses_row_delete_cd),
-                    tint = WellPaidNavy.copy(alpha = 0.42f),
-                )
             }
         }
     }

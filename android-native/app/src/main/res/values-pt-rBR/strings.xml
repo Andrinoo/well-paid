@@ -515,7 +515,7 @@
     <string name="settings_tile_keypad_haptics_hint">Ativa vibração ao tocar nos teclados numéricos do app.</string>
     <string name="settings_tile_emergency_hide_target_end">Reserva de emergência: só meses</string>
     <string name="settings_tile_emergency_hide_target_end_hint">Oculta a data-alvo fim ao criar ou editar o plano; o app continua a enviá-la a partir do início e do período em meses.</string>
-    <string name="settings_tile_screenshots_allowed">Permitir capturas de ecrã</string>
+    <string name="settings_tile_screenshots_allowed">Habilitar Print Screen</string>
     <string name="settings_tile_screenshots_allowed_hint">Desligado: o sistema bloqueia captura e pré-visualização em apps recentes (como antes).</string>
     <string name="settings_tile_security">Segurança</string>
     <string name="settings_tile_family">Família</string>

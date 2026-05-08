@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -39,8 +40,11 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
@@ -134,7 +138,7 @@ fun SettingsScreen(
             snackbarHost = { SnackbarHost(snackHostState) },
             topBar = {
             CenterAlignedTopAppBar(
-                modifier = Modifier.height(68.dp),
+                modifier = Modifier.height(64.dp),
                 colors = wellPaidCenterTopAppBarColors(),
                 title = {
                     Text(
@@ -189,10 +193,10 @@ fun SettingsScreen(
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
                 .wellPaidScreenHorizontalPadding()
-                .padding(vertical = 12.dp),
+                .padding(vertical = 8.dp),
         ) {
             SectionLabel(stringResource(R.string.settings_profile_section))
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(6.dp))
             Surface(
                 shape = MaterialTheme.shapes.large,
                 color = MaterialTheme.colorScheme.surface,
@@ -211,7 +215,7 @@ fun SettingsScreen(
                             ?: '?'
                         Box(
                             modifier = Modifier
-                                .size(44.dp)
+                                .size(40.dp)
                                 .clip(CircleShape)
                                 .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
                             contentAlignment = Alignment.Center,
@@ -225,7 +229,7 @@ fun SettingsScreen(
                         }
                         Column(
                             modifier = Modifier
-                                .padding(start = 14.dp)
+                                .padding(start = 12.dp)
                                 .weight(1f),
                         ) {
                             Text(
@@ -255,9 +259,9 @@ fun SettingsScreen(
                 }
             }
 
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(12.dp))
             SectionLabel(stringResource(R.string.settings_section_prefs))
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(6.dp))
             Surface(
                 shape = MaterialTheme.shapes.large,
                 color = MaterialTheme.colorScheme.surface,
@@ -266,7 +270,7 @@ fun SettingsScreen(
             ) {
                 Column(Modifier.fillMaxWidth()) {
                     Row(
-                        modifier = Modifier.padding(start = 16.dp, top = 12.dp, end = 16.dp),
+                        modifier = Modifier.padding(start = 16.dp, top = 10.dp, end = 16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(
@@ -389,33 +393,84 @@ fun SettingsScreen(
                                 fontWeight = FontWeight.Medium,
                             )
                         },
-                        supportingContent = {
-                            Text(
-                                stringResource(R.string.settings_tile_screenshots_allowed_hint),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        },
                         trailingContent = {
-                            Switch(
-                                checked = screenshotsAllowed,
-                                onCheckedChange = { v ->
-                                    screenshotsAllowed = v
-                                    scope.launch {
-                                        uiPreferencesRepository.setScreenshotsAllowed(v)
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                val yesSelected = screenshotsAllowed
+                                val noSelected = !screenshotsAllowed
+                                val yesColor = Color(0xFF2E7D32)
+                                val noColor = Color(0xFFC62828)
+
+                                if (yesSelected) {
+                                    Button(
+                                        onClick = {},
+                                        enabled = false,
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = yesColor,
+                                            disabledContainerColor = yesColor,
+                                            contentColor = Color.White,
+                                            disabledContentColor = Color.White,
+                                        ),
+                                    ) {
+                                        Text("Sim")
                                     }
-                                },
-                            )
+                                } else {
+                                    OutlinedButton(
+                                        onClick = {
+                                            screenshotsAllowed = true
+                                            scope.launch {
+                                                uiPreferencesRepository.setScreenshotsAllowed(true)
+                                            }
+                                        },
+                                        colors = ButtonDefaults.outlinedButtonColors(
+                                            contentColor = yesColor,
+                                        ),
+                                    ) {
+                                        Text("Sim")
+                                    }
+                                }
+
+                                if (noSelected) {
+                                    Button(
+                                        onClick = {},
+                                        enabled = false,
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = noColor,
+                                            disabledContainerColor = noColor,
+                                            contentColor = Color.White,
+                                            disabledContentColor = Color.White,
+                                        ),
+                                    ) {
+                                        Text("Não")
+                                    }
+                                } else {
+                                    OutlinedButton(
+                                        onClick = {
+                                            screenshotsAllowed = false
+                                            scope.launch {
+                                                uiPreferencesRepository.setScreenshotsAllowed(false)
+                                            }
+                                        },
+                                        colors = ButtonDefaults.outlinedButtonColors(
+                                            contentColor = noColor,
+                                        ),
+                                    ) {
+                                        Text("Não")
+                                    }
+                                }
+                            }
                         },
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     )
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(2.dp))
                 }
             }
 
-            Spacer(Modifier.height(18.dp))
-            SectionLabel(stringResource(R.string.settings_section_categories))
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(12.dp))
+            SectionLabel(stringResource(R.string.settings_family_section))
+            Spacer(Modifier.height(6.dp))
             Surface(
                 shape = MaterialTheme.shapes.large,
                 color = MaterialTheme.colorScheme.surface,
@@ -462,6 +517,12 @@ fun SettingsScreen(
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
                     SettingsNavRow(
+                        icon = Icons.Outlined.Category,
+                        title = stringResource(R.string.settings_tile_manage_categories),
+                        onClick = onOpenManageCategories,
+                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+                    SettingsNavRow(
                         icon = Icons.Outlined.Shield,
                         title = stringResource(R.string.settings_tile_security),
                         onClick = onOpenSecurity,
@@ -475,9 +536,9 @@ fun SettingsScreen(
                 }
             }
 
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(12.dp))
             SectionLabel(stringResource(R.string.settings_section_about))
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(6.dp))
             Surface(
                 shape = MaterialTheme.shapes.large,
                 color = MaterialTheme.colorScheme.surface,
@@ -553,9 +614,9 @@ fun SettingsScreen(
                 }
             }
 
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(12.dp))
             SectionLabel(stringResource(R.string.settings_section_session))
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(6.dp))
             Surface(
                 shape = MaterialTheme.shapes.large,
                 color = MaterialTheme.colorScheme.surface,
@@ -664,7 +725,7 @@ private fun SettingsLogoutRow(onClick: () -> Unit) {
 private fun SectionLabel(text: String) {
     Text(
         text = text,
-        style = MaterialTheme.typography.labelLarge,
+        style = MaterialTheme.typography.labelMedium,
         fontWeight = FontWeight.SemiBold,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(horizontal = 4.dp),
@@ -693,7 +754,7 @@ private fun SettingsNavRow(
             Icon(
                 icon,
                 contentDescription = null,
-                modifier = Modifier.size(22.dp),
+                modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colorScheme.primary,
             )
         },
@@ -701,7 +762,7 @@ private fun SettingsNavRow(
             Icon(
                 Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier.size(18.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
             )
         },
