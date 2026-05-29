@@ -3,7 +3,10 @@
 # Disparo A — manual: Actions → "Android APK release" → Run workflow → preencher release_tag (ex.: v0.1.41).
 #   Cria a tag no commit actual se ainda não existir e anexa o APK.
 #
-# Disparo B — por tag: git tag v0.1.41 && git push origin v0.1.41
+# Disparo B — automatico: push em main com novo ficheiro Alembic em backend/alembic/versions/*.py.
+#   Calcula a tag a partir do Alembic head (ex.: 050 -> v0.1.49), compila e publica o APK.
+#
+# Disparo C — por tag: git tag v0.1.41 && git push origin v0.1.41
 #   Compila no commit da tag e anexa o APK à release dessa tag.
 #
 # Assinatura release (opcional): Settings -> Secrets and variables -> Actions
@@ -19,8 +22,12 @@ name: Android APK release
 
 on:
   push:
+    branches:
+      - main
     tags:
       - "v*"
+    paths:
+      - "backend/alembic/versions/*.py"
   workflow_dispatch:
     inputs:
       release_tag:
@@ -125,10 +132,25 @@ jobs:
         shell: pwsh
         run: |
           $root = $Env:GITHUB_WORKSPACE
-          $tag = if ($Env:GITHUB_EVENT_NAME -eq 'workflow_dispatch') {
-            '${{ github.event.inputs.release_tag }}'.Trim()
+          $tag = $null
+          if ($Env:GITHUB_EVENT_NAME -eq 'workflow_dispatch') {
+            $tag = '${{ github.event.inputs.release_tag }}'.Trim()
+          } elseif ($Env:GITHUB_REF_TYPE -eq 'tag') {
+            $tag = $Env:GITHUB_REF_NAME
           } else {
-            $Env:GITHUB_REF_NAME
+            $versionsDir = Join-Path $root "backend\alembic\versions"
+            if (-not (Test-Path $versionsDir)) { throw "Diretorio Alembic nao encontrado: $versionsDir" }
+            $head = Get-ChildItem -LiteralPath $versionsDir -Filter "*.py" |
+              ForEach-Object {
+                if ($_.Name -match '^(\d{3})_') { [int]$Matches[1] }
+              } |
+              Sort-Object -Descending |
+              Select-Object -First 1
+            if ($null -eq $head) { throw "Alembic head nao encontrado em $versionsDir." }
+            $versionCode = ([int]$head - 1)
+            if ($versionCode -lt 1) { throw "versionCode invalido derivado do Alembic head $head." }
+            $tag = "v0.1.$versionCode"
+            Write-Host "Tag calculada pelo Alembic head ${head}: $tag"
           }
           if ([string]::IsNullOrWhiteSpace($tag)) { throw "Tag vazia." }
           if ($tag -notmatch '^v') { throw "Use tag no formato v0.1.xx (ex.: v0.1.41)." }
@@ -166,6 +188,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.meta.outputs.release_tag }}
+          target_commitish: ${{ github.sha }}
           name: Well Paid ${{ steps.meta.outputs.release_tag }}
           files: ${{ steps.meta.outputs.asset_path }}
           generate_release_notes: true
