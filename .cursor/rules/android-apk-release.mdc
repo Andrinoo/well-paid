@@ -1,0 +1,13 @@
+---
+description: Alerta sobre versionamento e release do APK Android
+alwaysApply: true
+---
+
+# Alerta: Release APK Android
+
+- Quando uma alteracao precisar chegar aos usuarios via atualizacao do aplicativo Android, garanta um novo Alembic revision em `backend/alembic/versions/`.
+- O Android deriva a versao pelo Alembic head em `android-native/app/build.gradle.kts`: `versionCode = alembicHead - 1` e `versionName = 0.1.<versionCode>`.
+- Para mudancas sem schema, use um revision no-op no padrao `NNN_bump_android_version_marker.py`, revisando o head anterior.
+- O workflow `.github/workflows/android-apk-release.yml` dispara automaticamente em push para `main` quando mudar `backend/alembic/versions/*.py`.
+- Nao edite `backend/app/static/android-update.json` manualmente para publicar APK. O workflow de release gera o APK, publica a GitHub Release e sincroniza esse manifesto.
+- Se nao houver novo arquivo Alembic, o push normal para `main` nao gera APK novo.
