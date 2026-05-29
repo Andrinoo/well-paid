@@ -76,6 +76,43 @@ def _record_history(
     )
 
 
+def _apply_lower_market_price(
+    goal: Goal,
+    *,
+    price_cents: int,
+    now: datetime,
+    source: str | None,
+    observed_title: str | None,
+) -> bool:
+    if price_cents <= 0:
+        return False
+    current_prices = [
+        int(value)
+        for value in (
+            goal.target_cents,
+            goal.reference_price_cents,
+        )
+        if value is not None and int(value) > 0
+    ]
+    current_floor = min(current_prices) if current_prices else 0
+    if current_floor > 0 and price_cents >= current_floor:
+        return False
+
+    goal.reference_price_cents = price_cents
+    goal.target_cents = price_cents
+    if int(goal.current_cents or 0) > price_cents:
+        goal.current_cents = price_cents
+    if observed_title:
+        goal.reference_product_name = str(observed_title)[:500]
+    if source:
+        goal.price_source = str(source)[:32]
+    goal.price_checked_at = now
+    goal.last_price_track_at = now
+    goal.tracking_failures = 0
+    goal.next_track_after = None
+    return True
+
+
 def _create_opportunity_announcement(
     db: Session,
     goal: Goal,
@@ -184,23 +221,44 @@ def run_goal_price_tracking_cycle(db: Session) -> dict[str, int]:
                         observed_title=primary.get("reference_product_name") or primary.get("title"),
                     )
                     updated += 1
-                # Opportunities from secondary query (name/description) only produce alerts.
+                # A secondary marketplace hit can both alert the user and lower the goal.
                 secondary_query = (goal.description or goal.reference_product_name or goal.title or "").strip()
                 secondary = _title_or_description_hints(secondary_query)
                 secondary_price = int(secondary.get("price_cents") or 0)
                 drop_threshold = max(0.0, float(settings.goal_tracking_drop_threshold_pct))
                 threshold_price = int(old_price * (1 - (drop_threshold / 100.0))) if old_price > 0 else 0
+                secondary_source = str(secondary.get("source") or "google_shopping")[:64]
+                secondary_url = str(secondary.get("url") or "").strip() or None
+                secondary_title = str(secondary.get("title") or "").strip() or None
                 if secondary_price > 0 and old_price > 0 and secondary_price < threshold_price:
                     _create_opportunity_announcement(
                         db,
                         goal,
                         old_price=old_price,
                         new_price=secondary_price,
-                        source=secondary.get("source"),
-                        url=secondary.get("url"),
-                        title=secondary.get("title"),
+                        source=secondary_source,
+                        url=secondary_url,
+                        title=secondary_title,
                     )
                     alerts += 1
+                if _apply_lower_market_price(
+                    goal,
+                    price_cents=secondary_price,
+                    now=now,
+                    source=secondary_source,
+                    observed_title=secondary_title,
+                ):
+                    _record_history(
+                        db,
+                        goal,
+                        price_cents=secondary_price,
+                        capture_type="scheduled",
+                        source=secondary_source,
+                        observed_url=secondary_url,
+                        observed_title=secondary_title,
+                    )
+                    if primary_price <= 0:
+                        updated += 1
             except Exception:
                 goal.tracking_failures = int(goal.tracking_failures or 0) + 1
                 wait_hours = min(24, 2 ** min(goal.tracking_failures, 4))

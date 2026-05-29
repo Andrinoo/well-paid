@@ -537,10 +537,21 @@ private fun GoalPriceLineChart(
     }
     if (chartEntries.isEmpty()) return
     val currentEntry = chartEntries.last()
+    val minQuoteValue = chartEntries.minOfOrNull { it.priceCents } ?: return
     val maxQuoteValue = chartEntries.maxOfOrNull { it.priceCents } ?: return
-    val axisBottomValue = 0
-    val axisTopValue = ((maxQuoteValue * 1.5f).toInt()).coerceAtLeast(1)
-    val axisMiddleValue = axisTopValue / 2
+    val quoteRange = maxQuoteValue - minQuoteValue
+    val axisPadding = ((quoteRange * 0.18f).toInt()).coerceAtLeast(1)
+    val axisBottomValue = if (quoteRange > 0) {
+        (minQuoteValue - axisPadding).coerceAtLeast(0)
+    } else {
+        0
+    }
+    val axisTopValue = if (quoteRange > 0) {
+        (maxQuoteValue + axisPadding).coerceAtLeast(axisBottomValue + 1)
+    } else {
+        ((maxQuoteValue * 1.5f).toInt()).coerceAtLeast(1)
+    }
+    val axisMiddleValue = axisBottomValue + ((axisTopValue - axisBottomValue) / 2)
     val valueRange = (axisTopValue - axisBottomValue).toFloat().coerceAtLeast(1f)
     val goalValue = (targetCents ?: 0).coerceAtLeast(0)
     val hasGoalValue = goalValue > 0
