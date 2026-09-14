@@ -36,6 +36,7 @@ from app.core.config import get_settings
 from app.core.database import SessionLocal
 from app.core.limiter import limiter
 from app.services.entitlements import expire_trials
+from app.services.signup_guard import expire_stale_unverified
 from app.services.goal_price_tracking import run_goal_price_tracking_cycle
 from app.services.ticker_cache import ticker_cache_service
 
@@ -91,8 +92,11 @@ async def _trial_expiry_loop() -> None:
         try:
             with SessionLocal() as db:
                 n = expire_trials(db)
+                stale = expire_stale_unverified(db)
                 if n:
                     logger.info("Trial expiry: deactivated=%s", n)
+                if stale:
+                    logger.info("Unverified signup expiry: deactivated=%s", stale)
         except Exception:
             logger.exception("Trial expiry cycle failed.")
         await asyncio.sleep(60 * 60)

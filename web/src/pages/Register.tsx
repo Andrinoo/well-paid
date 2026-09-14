@@ -23,8 +23,8 @@ export function RegisterPage() {
         replace: true,
       });
     } catch (err) {
-      if (err instanceof ApiError && err.status === 409) {
-        setError(a.register.emailTaken);
+      if (err instanceof ApiError && err.status === 429) {
+        setError(a.register.throttled);
       } else {
         setError(a.register.fallback);
       }

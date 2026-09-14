@@ -12,7 +12,7 @@ class RegisterRequest(BaseModel):
 
 
 class LoginRequest(BaseModel):
-    email: EmailStr
+    email: str = Field(min_length=1, max_length=320)
     password: str
 
 
@@ -88,6 +88,7 @@ class ResetPasswordRequest(BaseModel):
 
 class UserMeResponse(BaseModel):
     email: str
+    public_id: str | None = None
     full_name: str | None = None
     display_name: str | None = None
     family_mode_enabled: bool = False

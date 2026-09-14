@@ -127,7 +127,7 @@ Well Paid — gestão financeira pensada para si.
 """
 
 
-def _verification_plain_text(code: str, link: str | None) -> str:
+def _verification_plain_text(code: str, link: str | None, public_id: str | None = None) -> str:
     lines = [
         "Olá,",
         "",
@@ -135,6 +135,14 @@ def _verification_plain_text(code: str, link: str | None) -> str:
         "",
         f"CÓDIGO DE CONFIRMAÇÃO (6 dígitos — use na app, ecrã «Confirmar e-mail»):\n\n{code}\n",
     ]
+    if public_id:
+        lines.extend(
+            [
+                f"O seu ID Well Paid: {public_id}",
+                "Pode entrar com o e-mail ou com este ID.",
+                "",
+            ]
+        )
     if link:
         lines.extend(
             [
@@ -154,7 +162,7 @@ def _verification_plain_text(code: str, link: str | None) -> str:
     return "\n".join(lines)
 
 
-def _verification_html(code: str, link: str | None) -> str:
+def _verification_html(code: str, link: str | None, public_id: str | None = None) -> str:
     safe_code = html.escape(code, quote=True)
     link_html = ""
     if link:
@@ -167,6 +175,19 @@ Alternativa: abra o link no telemóvel (associação Well Paid):
 </p>
 <p style="margin:0;font-size:14px;word-break:break-all;font-family:Consolas,Monaco,monospace;">
 <a href="{safe_link}" style="color:#38bdf8;">{safe_link}</a>
+</p>
+</td>
+</tr>
+"""
+    public_id_html = ""
+    if public_id:
+        safe_pid = html.escape(public_id, quote=True)
+        public_id_html = f"""
+<tr>
+<td style="padding:0 24px 16px 24px;">
+<p style="margin:0;font-size:14px;line-height:1.5;color:#cbd5e1;">
+O seu ID Well Paid: <strong style="color:#e2e8f0;letter-spacing:0.08em;font-family:Consolas,Monaco,monospace;">{safe_pid}</strong><br>
+Pode entrar com o e-mail ou com este ID.
 </p>
 </td>
 </tr>
@@ -215,6 +236,7 @@ Código de confirmação
 </table>
 </td>
 </tr>
+{public_id_html}
 {link_html}
 <tr>
 <td style="padding:8px 24px 24px 24px;border-top:1px solid rgba(148,163,184,0.15);">
@@ -233,7 +255,12 @@ Com os melhores cumprimentos,<br>
 """
 
 
-def send_verification_email(to_email: str, raw_token: str, code: str) -> bool:
+def send_verification_email(
+    to_email: str,
+    raw_token: str,
+    code: str,
+    public_id: str | None = None,
+) -> bool:
     """Envia confirmação com código de 6 dígitos e link opcional (deep link)."""
     settings = get_settings()
     host = (settings.smtp_host or "").strip()
@@ -253,8 +280,8 @@ def send_verification_email(to_email: str, raw_token: str, code: str) -> bool:
     msg["Subject"] = "Well Paid — confirme o seu e-mail"
     msg["From"] = _brand_from_header(mail_from)
     msg["To"] = to_email
-    msg.set_content(_verification_plain_text(code, link))
-    msg.add_alternative(_verification_html(code, link), subtype="html")
+    msg.set_content(_verification_plain_text(code, link, public_id=public_id))
+    msg.add_alternative(_verification_html(code, link, public_id=public_id), subtype="html")
 
     try:
         context = ssl.create_default_context()

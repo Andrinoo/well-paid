@@ -191,11 +191,11 @@ fun LoginScreen(
                             value = state.email,
                             onValueChange = viewModel::onEmailChange,
                             modifier = Modifier.fillMaxWidth(),
-                            label = { Text(stringResource(R.string.login_email_label)) },
+                            label = { Text(stringResource(R.string.login_identifier_label)) },
                             singleLine = true,
                             shape = MaterialTheme.shapes.medium,
                             keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.Email,
+                                keyboardType = KeyboardType.Ascii,
                                 imeAction = ImeAction.Next,
                             ),
                             enabled = !state.isLoading,

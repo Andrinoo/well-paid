@@ -18,6 +18,7 @@
     <string name="login_subtitle">Inicie sessão com a sua conta</string>
     <string name="login_card_title">Entrar na conta</string>
     <string name="login_email_label">E-mail</string>
+    <string name="login_identifier_label">E-mail ou ID</string>
     <string name="login_password_label">Senha</string>
     <string name="login_password_show">Mostrar senha</string>
     <string name="login_password_hide">Ocultar senha</string>

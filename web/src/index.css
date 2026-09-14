@@ -4,19 +4,22 @@
   --color-navy: #1b2c41;
   --color-navy-mid: #22344d;
   --color-navy-deep: #141c2a;
-  --color-gold: #c9a94e;
-  --color-gold-pressed: #b8943d;
-  --color-cream: #f5f1e8;
-  --color-cream-muted: #eae6dd;
+  --color-gold: #e3b23c;
+  --color-gold-pressed: #c9962a;
+  --color-sun: #f6c445;
+  --color-peach: #ffe7cc;
+  --color-cream: #fff6eb;
+  --color-cream-muted: #f3e6d4;
   --color-ink: #141c2a;
-  --color-muted: #7a756d;
-  --color-positive: #2a7a6e;
-  --color-expense-line: #b85c4a;
-  --color-teal: #1a8f7a;
-  --color-teal-bright: #24c4a8;
-  --color-teal-deep: #0e5c50;
-  --color-sage: #e8f4f0;
-  --color-paper: #f6f4ef;
+  --color-muted: #6f746e;
+  --color-positive: #1f9a7a;
+  --color-expense-line: #c97a3a;
+  --color-teal: #12a888;
+  --color-teal-bright: #3ad4b0;
+  --color-teal-deep: #0c6e5c;
+  --color-sage: #e4f7f0;
+  --color-sky: #eaf8f4;
+  --color-paper: #fff8f0;
   --font-sans: "Segoe UI", system-ui, sans-serif;
   --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
   --font-display: "Fraunces", "Iowan Old Style", Georgia, serif;
@@ -59,6 +62,6 @@ select {
 }
 
 .site-lang-btn[aria-pressed="true"] {
-  background: var(--color-navy-deep);
+  background: var(--color-teal);
   color: #fff;
 }

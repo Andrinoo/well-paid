@@ -19,6 +19,7 @@
     <string name="login_subtitle">Sign in with your account</string>
     <string name="login_card_title">Sign in</string>
     <string name="login_email_label">Email</string>
+    <string name="login_identifier_label">Email or ID</string>
     <string name="login_password_label">Password</string>
     <string name="login_password_show">Show password</string>
     <string name="login_password_hide">Hide password</string>

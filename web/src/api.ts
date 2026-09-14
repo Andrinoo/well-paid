@@ -115,6 +115,7 @@ export type TokenPair = {
 
 export type UserMe = {
   email: string;
+  public_id?: string | null;
   full_name: string | null;
   display_name: string | null;
   family_mode_enabled?: boolean;

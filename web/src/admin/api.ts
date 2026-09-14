@@ -125,6 +125,7 @@ export type AdminMe = {
 export type AdminUserRow = {
   id: string;
   email: string;
+  public_id?: string | null;
   full_name: string | null;
   display_name: string | null;
   is_active: boolean;
@@ -153,6 +154,7 @@ export type PaymentRow = {
 export type BillingDetail = {
   id: string;
   email: string;
+  public_id?: string | null;
   full_name: string | null;
   display_name: string | null;
   is_active: boolean;

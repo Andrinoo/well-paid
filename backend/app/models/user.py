@@ -6,6 +6,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
+from app.services.public_id import new_public_id
 
 
 class User(Base, TimestampMixin):
@@ -15,7 +16,11 @@ class User(Base, TimestampMixin):
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     email: Mapped[str] = mapped_column(String(320), unique=True, index=True)
+    public_id: Mapped[str] = mapped_column(
+        String(16), unique=True, index=True, default=new_public_id
+    )
     hashed_password: Mapped[str] = mapped_column(String(255))
+    signup_ip_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     full_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
     display_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
     phone: Mapped[str | None] = mapped_column(String(32), nullable=True)

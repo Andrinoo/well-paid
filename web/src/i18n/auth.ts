@@ -5,8 +5,8 @@ export const authCopy = {
     brandKicker: "Well Paid",
     login: {
       title: "Entrar",
-      subtitle: "A mesma conta do aplicativo Android. Ligação protegida.",
-      email: "E-mail",
+      subtitle: "A mesma conta do aplicativo. Entre com o e-mail ou com o seu ID Well Paid.",
+      email: "E-mail ou ID",
       password: "Senha",
       submit: "Entrar",
       busy: "A entrar…",
@@ -19,7 +19,7 @@ export const authCopy = {
     register: {
       title: "Criar conta",
       subtitle:
-        "Confirmamos o e-mail com um código. Depois podes assinar Well Paid por 14,99 / mês.",
+        "Confirmamos o e-mail com um código. Você recebe um ID Well Paid e pode entrar com o e-mail ou com esse ID.",
       name: "Nome",
       email: "E-mail",
       password: "Senha (mín. 8 caracteres, maiúscula, número e símbolo)",
@@ -28,11 +28,12 @@ export const authCopy = {
       hasAccount: "Já tem conta?",
       signIn: "Entrar",
       fallback: "Não foi possível criar a conta.",
-      emailTaken: "Este e-mail já tem conta. Entra ou recupera a senha.",
+      emailTaken: "Não foi possível criar a conta.",
+      throttled: "Muitas contas a partir daqui. Tente mais tarde.",
     },
     confirm: {
       title: "Confirmar e-mail",
-      subtitle: "Abre o link do e-mail ou introduz o código de 6 dígitos.",
+      subtitle: "Abre o link do e-mail ou introduz o código de 6 dígitos. O seu ID Well Paid também vai no e-mail.",
       checking: "A confirmar o e-mail…",
       email: "E-mail",
       code: "Código",
@@ -67,8 +68,8 @@ export const authCopy = {
     brandKicker: "Well Paid",
     login: {
       title: "Sign in",
-      subtitle: "The same account as the Android app. Protected connection.",
-      email: "Email",
+      subtitle: "The same account as the app. Sign in with your email or Well Paid ID.",
+      email: "Email or ID",
       password: "Password",
       submit: "Sign in",
       busy: "Signing in…",
@@ -81,7 +82,7 @@ export const authCopy = {
     register: {
       title: "Create account",
       subtitle:
-        "We confirm your email with a code. Then you can subscribe to Well Paid for 14.99 / month.",
+        "We confirm your email with a code. You get a Well Paid ID and can sign in with email or that ID.",
       name: "Name",
       email: "Email",
       password: "Password (min. 8 characters, uppercase, number, and symbol)",
@@ -90,11 +91,12 @@ export const authCopy = {
       hasAccount: "Already have an account?",
       signIn: "Sign in",
       fallback: "Could not create the account.",
-      emailTaken: "This email already has an account. Sign in or reset your password.",
+      emailTaken: "Could not create the account.",
+      throttled: "Too many accounts from here. Try again later.",
     },
     confirm: {
       title: "Confirm email",
-      subtitle: "Open the link in your email or enter the 6-digit code.",
+      subtitle: "Open the link in your email or enter the 6-digit code. Your Well Paid ID is in that email too.",
       checking: "Confirming your email…",
       email: "Email",
       code: "Code",

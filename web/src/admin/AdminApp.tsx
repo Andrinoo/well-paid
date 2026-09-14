@@ -131,7 +131,7 @@ function LoginScreen() {
         <ErrorText message={error} />
         <Field
           label={a.login.email}
-          type="email"
+          type="text"
           value={email}
           onChange={setEmail}
           autoComplete="username"
@@ -214,7 +214,7 @@ function UsersScreen() {
       >
         <input
           className="min-w-[12rem] flex-1 rounded-xl border border-navy/12 bg-white px-3 py-2 text-sm outline-none focus:border-teal/40 focus:ring-2 focus:ring-teal/30"
-          placeholder="e-mail"
+          placeholder={locale === "en-US" ? "email or ID" : "e-mail ou ID"}
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
@@ -254,6 +254,7 @@ function UsersScreen() {
               <span>
                 <span className="block font-medium text-navy-deep">{row.email}</span>
                 <span className="text-xs text-muted">
+                  {row.public_id ? `${row.public_id} · ` : ""}
                   {row.display_name || row.full_name || "—"}
                 </span>
               </span>
@@ -338,6 +339,9 @@ function UserScreen() {
       <section className="mb-6 rounded-[22px] border border-navy/8 bg-white p-5">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-deep">
           {locLabel(PLAN_LABEL, data.plan, locale)}
+        </p>
+        <p className="mt-2 font-mono text-sm tracking-wide text-navy-deep">
+          {data.public_id || "—"}
         </p>
         <p className="mt-2 text-sm text-navy/70">
           {locale === "en-US" ? "Trial until" : "Trial até"}{" "}

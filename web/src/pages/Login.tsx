@@ -47,9 +47,9 @@ export function LoginPage() {
         <ErrorText message={error} />
         <Field
           label={a.login.email}
-          type="email"
+          type="text"
           value={email}
-          autoComplete="email"
+          autoComplete="username"
           required
           onChange={setEmail}
         />

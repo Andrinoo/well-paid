@@ -328,7 +328,7 @@ def list_users(
     request: Request,
     _admin: Annotated[User, Depends(get_current_superuser)],
     db: Annotated[Session, Depends(get_db)],
-    q: Annotated[str | None, Query(description="Pesquisa por e-mail (contém)")] = None,
+    q: Annotated[str | None, Query(description="Pesquisa por e-mail ou ID")] = None,
     is_active: Annotated[bool | None, Query(description="Filtrar contas ativas/inativas")] = None,
     is_admin: Annotated[bool | None, Query(description="Filtrar contas admin")] = None,
     email_verified: Annotated[
@@ -358,8 +358,12 @@ def list_users(
     stmt = select(User)
     count_stmt = select(func.count()).select_from(User)
     if q and q.strip():
-        term = f"%{q.strip().lower()}%"
-        flt = User.email.ilike(term)
+        term = f"%{q.strip()}%"
+        flt = or_(
+            User.email.ilike(term),
+            User.public_id.ilike(term),
+            User.full_name.ilike(term),
+        )
         stmt = stmt.where(flt)
         count_stmt = select(func.count()).select_from(User).where(flt)
     if is_active is not None:

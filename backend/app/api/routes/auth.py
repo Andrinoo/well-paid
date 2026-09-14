@@ -40,6 +40,14 @@ from app.services.login_guard import (
     raise_if_locked,
     register_failure,
 )
+from app.services.public_id import looks_like_public_id, new_public_id, normalize_public_id
+from app.services.signup_guard import (
+    client_ip,
+    hash_client_ip,
+    is_disposable_email,
+    raise_if_signup_blocked,
+    record_signup_attempt,
+)
 from app.models.user import User
 from app.schemas.auth import (
     ForgotPasswordRequest,
@@ -72,7 +80,7 @@ _RESEND_VERIFICATION_MSG = (
     "enviámos instruções. Verifique também a pasta de spam."
 )
 _REGISTER_OK_MSG = (
-    "Conta criada. Enviámos um código e um link para confirmar o seu e-mail."
+    "Se este e-mail for novo, enviámos um código para confirmar a conta."
 )
 
 
@@ -83,6 +91,7 @@ def _is_dev_env() -> bool:
 def _me_response(db: Session, user: User) -> UserMeResponse:
     return UserMeResponse(
         email=user.email,
+        public_id=user.public_id,
         full_name=user.full_name,
         display_name=user.display_name,
         family_mode_enabled=bool(user.family_mode_enabled),
@@ -147,7 +156,7 @@ def _add_email_verification_row(db: Session, user_id: uuid.UUID) -> tuple[str, s
 
 
 def _send_verification_email_helper(user: User, raw_tok: str, code: str) -> None:
-    sent = send_verification_email(user.email, raw_tok, code)
+    sent = send_verification_email(user.email, raw_tok, code, public_id=user.public_id)
     if not sent:
         if settings.email_verification_log_token:
             logger.warning(
@@ -164,18 +173,35 @@ def _send_verification_email_helper(user: User, raw_tok: str, code: str) -> None
             )
 
 
+def _login_user(db: Session, identifier: str) -> User | None:
+    raw = identifier.strip()
+    if not raw:
+        return None
+    if looks_like_public_id(raw):
+        return db.scalar(select(User).where(User.public_id == normalize_public_id(raw)))
+    return db.scalar(select(User).where(User.email == raw.lower()))
+
+
+def _fresh_public_id(db: Session) -> str:
+    for _ in range(8):
+        candidate = new_public_id()
+        taken = db.scalar(select(User.id).where(User.public_id == candidate))
+        if taken is None:
+            return candidate
+    return new_public_id()
+
+
 @router.post(
     "/register",
     response_model=RegisterResponse,
     status_code=status.HTTP_201_CREATED,
 )
-@limiter.limit("10/minute")
+@limiter.limit("5/minute")
 def register(
     request: Request,
     body: RegisterRequest,
     db: Session = Depends(get_db),
 ) -> RegisterResponse:
-    email = body.email.lower().strip()
     try:
         hashed = hash_password(body.password)
     except ValueError as e:
@@ -183,39 +209,47 @@ def register(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(e),
         ) from e
+
+    ip_hash = hash_client_ip(client_ip(request))
+    raise_if_signup_blocked(db, ip_hash)
+    record_signup_attempt(db, ip_hash)
+
+    email = body.email.lower().strip()
+    generic = RegisterResponse(message=_REGISTER_OK_MSG, email=email)
+    if is_disposable_email(email):
+        return generic
+    existing = db.scalar(select(User).where(User.email == email))
+    if existing is not None:
+        return generic
+
     user = User(
         email=email,
         hashed_password=hashed,
         full_name=body.full_name,
         phone=body.phone,
         email_verified_at=None,
+        public_id=_fresh_public_id(db),
+        signup_ip_hash=ip_hash,
     )
     db.add(user)
     try:
         db.flush()
     except IntegrityError:
         db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="E-mail já cadastrado",
-        ) from None
+        return generic
 
     raw_tok, code = _add_email_verification_row(db, user.id)
     try:
         db.commit()
     except IntegrityError:
         db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="E-mail já cadastrado",
-        ) from None
+        return generic
 
     db.refresh(user)
     _send_verification_email_helper(user, raw_tok, code)
-
     return RegisterResponse(
         message=_REGISTER_OK_MSG,
-        email=user.email,
+        email=email,
         dev_verification_token=raw_tok if _is_dev_env() else None,
         dev_verification_code=code if _is_dev_env() else None,
     )
@@ -330,11 +364,11 @@ def login(
     body: LoginRequest,
     db: Session = Depends(get_db),
 ) -> TokenPairResponse:
-    email = body.email.lower().strip()
-    raise_if_locked(db, email)
-    user = db.scalar(select(User).where(User.email == email))
+    user = _login_user(db, body.email)
+    lock_key = user.email.lower() if user is not None else body.email.strip().lower()
+    raise_if_locked(db, lock_key)
     if user is None or not verify_password(body.password, user.hashed_password):
-        register_failure(db, email)
+        register_failure(db, lock_key)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=LOGIN_FAIL_DETAIL,
@@ -350,7 +384,7 @@ def login(
             detail="Confirme o seu e-mail antes de entrar. Verifique a caixa de entrada ou reenvie o código.",
         )
     assert_plan_access(db, user)
-    clear_failures(db, email)
+    clear_failures(db, lock_key)
     return _issue_tokens(db, user, event_type="login_success")
 
 

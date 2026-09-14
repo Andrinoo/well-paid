@@ -55,6 +55,7 @@ class ModuleToggle(BaseModel):
 class SuperUserDetail(BaseModel):
     id: uuid.UUID
     email: str
+    public_id: str | None = None
     full_name: str | None = None
     display_name: str | None = None
     is_active: bool
@@ -105,6 +106,7 @@ def _detail(db: Session, target: User) -> SuperUserDetail:
     return SuperUserDetail(
         id=target.id,
         email=target.email,
+        public_id=target.public_id,
         full_name=target.full_name,
         display_name=target.display_name,
         is_active=target.is_active,

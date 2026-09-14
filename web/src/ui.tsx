@@ -38,12 +38,12 @@ export function Wordmark({
     >
       {withMark && (
         <span
-          className={`inline-flex shrink-0 items-center justify-center rounded-xl bg-navy-deep font-display font-semibold tracking-tight ${markSize} ${accent === "teal" ? "text-teal-bright" : "text-gold"}`}
+          className={`inline-flex shrink-0 items-center justify-center rounded-xl bg-teal font-display font-semibold tracking-tight text-white ${markSize}`}
         >
           WP
         </span>
       )}
-      <span>
+      <span className="whitespace-nowrap">
         Well <span className={paid}>Paid</span>
       </span>
     </Link>
@@ -114,8 +114,9 @@ export function AuthCard({
     document.title = `Well Paid — ${title}`;
   }, [title]);
   return (
-    <div className="site-root relative flex min-h-dvh flex-col bg-paper px-4 py-8 font-ui text-navy-deep">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-[radial-gradient(ellipse_at_top,_#e8f4f0_0%,_transparent_70%)]" />
+    <div className="site-root relative flex min-h-dvh flex-col overflow-hidden bg-paper px-4 py-8 font-ui text-navy-deep">
+      <div className="pointer-events-none absolute -left-16 -top-20 h-64 w-64 rounded-full bg-peach/90 blur-3xl" />
+      <div className="pointer-events-none absolute -right-10 top-10 h-56 w-56 rounded-full bg-sky blur-3xl" />
       <header className="relative mx-auto flex w-full max-w-md items-center justify-between gap-3">
         <Wordmark accent="teal" size="md" withMark />
         <LangToggle />
