@@ -1,40 +1,46 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   ApiError,
+  contributeGoal,
   fetchCashflow,
+  fetchHomeBanner,
   fetchMe,
   fetchOverview,
-  logout,
   type DashboardCashflow,
   type DashboardOverview,
-  type UserMe,
+  type HomeBanner,
 } from "../api";
 import {
+  daysUntil,
   formatBrlFromCents,
   formatDueDate,
+  greetingFirstName,
   monthLabel,
-  shortMonth,
+  parseBrlToCents,
 } from "../format";
-import { CashflowChart, DonutChart, Wordmark } from "../ui";
-
-function shiftMonth(year: number, month: number, delta: number) {
-  const d = new Date(year, month - 1 + delta, 1);
-  return { year: d.getFullYear(), month: d.getMonth() + 1 };
-}
+import { MonthBar, Widget } from "../ui";
+import { useToggleShellMenu } from "../shell";
+import { HomeCashflow } from "./home/cashflow";
+import { CategoryDonut } from "./home/donut";
 
 export function DashboardPage() {
   const navigate = useNavigate();
+  const toggleMenu = useToggleShellMenu();
   const now = new Date();
   const [period, setPeriod] = useState({
     year: now.getFullYear(),
     month: now.getMonth() + 1,
   });
-  const [me, setMe] = useState<UserMe | null>(null);
+  const [name, setName] = useState<string | null>(null);
   const [overview, setOverview] = useState<DashboardOverview | null>(null);
   const [cashflow, setCashflow] = useState<DashboardCashflow | null>(null);
+  const [banner, setBanner] = useState<HomeBanner | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(true);
+  const [dynamic, setDynamic] = useState(true);
+  const [forecastMonths, setForecastMonths] = useState(3);
+  const [contrib, setContrib] = useState<Record<string, string>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -42,15 +48,22 @@ export function DashboardPage() {
     setError(null);
     void (async () => {
       try {
-        const [user, ov, cf] = await Promise.all([
+        const [user, ov, cf, recado] = await Promise.all([
           fetchMe(),
           fetchOverview(period.year, period.month),
-          fetchCashflow(),
+          fetchCashflow({
+            dynamic,
+            forecastMonths,
+            year: period.year,
+            month: period.month,
+          }),
+          fetchHomeBanner(),
         ]);
         if (cancelled) return;
-        setMe(user);
+        setName(greetingFirstName(user));
         setOverview(ov);
         setCashflow(cf);
+        setBanner(recado);
       } catch (err) {
         if (cancelled) return;
         if (err instanceof ApiError && err.status === 401) {
@@ -67,177 +80,204 @@ export function DashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [period.year, period.month, navigate]);
+  }, [period.year, period.month, dynamic, forecastMonths, navigate]);
 
-  async function onLogout() {
-    await logout();
-    navigate("/", { replace: true });
-  }
-
-  const greeting = me?.display_name || me?.full_name || me?.email || "olá";
   const pending = overview?.pending_preview?.length
     ? overview.pending_preview
     : (overview?.upcoming_due ?? []);
+  const goals = overview?.goals_preview ?? [];
+  const monthTitle =
+    monthLabel(period.year, period.month).charAt(0).toLocaleUpperCase("pt-BR") +
+    monthLabel(period.year, period.month).slice(1);
+
+  async function onContribute(id: string) {
+    const cents = parseBrlToCents(contrib[id] ?? "");
+    if (!cents) return;
+    try {
+      await contributeGoal(id, cents);
+      const ov = await fetchOverview(period.year, period.month);
+      setOverview(ov);
+      setContrib((c) => ({ ...c, [id]: "" }));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Não foi possível aportar.");
+    }
+  }
 
   return (
-    <div className="min-h-dvh bg-cream">
-      <header className="bg-gradient-to-b from-navy-deep to-navy">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4">
-          <Wordmark light />
+    <div className="flex h-full min-h-0 flex-col px-3 py-3 sm:px-4">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[11px] uppercase tracking-[0.28em] text-muted">Dashboard</p>
+          <h1 className="mt-0.5 truncate font-serif text-2xl text-navy-deep sm:text-3xl">
+            {name ? `Olá, ${name}` : "Olá"}
+          </h1>
+        </div>
+        <div className="flex items-center gap-2">
+          <MonthBar year={period.year} month={period.month} onChange={setPeriod} />
           <button
             type="button"
-            className="text-sm text-cream/80 hover:text-gold"
-            onClick={() => void onLogout()}
+            className="rounded-lg px-2 py-2 text-sm text-navy md:hidden"
+            onClick={toggleMenu}
           >
-            Sair
+            Menu
           </button>
         </div>
-        <div className="mx-auto max-w-5xl px-5 pb-8 pt-2">
-          <p className="text-cream/60 text-sm">Olá, {greeting}</p>
-          <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.22em] text-gold/80">
-                Saldo do mês
-              </p>
-              <p className="mt-1 font-serif text-4xl text-cream">
-                {overview
-                  ? formatBrlFromCents(overview.month_balance_cents)
-                  : "—"}
-              </p>
-            </div>
-            <div className="flex items-center gap-2 rounded-xl bg-black/20 p-1">
-              <button
-                type="button"
-                className="px-3 py-2 text-cream"
-                onClick={() => setPeriod((p) => shiftMonth(p.year, p.month, -1))}
-              >
-                ‹
-              </button>
-              <span className="min-w-36 text-center text-sm capitalize text-cream">
-                {monthLabel(period.year, period.month)}
-              </span>
-              <button
-                type="button"
-                className="px-3 py-2 text-cream"
-                onClick={() => setPeriod((p) => shiftMonth(p.year, p.month, 1))}
-              >
-                ›
-              </button>
-            </div>
-          </div>
-          {overview ? (
-            <dl className="mt-6 grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
-              <div className="rounded-xl bg-white/5 px-4 py-3">
-                <dt className="text-cream/50">Receitas</dt>
-                <dd className="mt-1 text-cream">
-                  {formatBrlFromCents(overview.month_income_cents)}
-                </dd>
-              </div>
-              <div className="rounded-xl bg-white/5 px-4 py-3">
-                <dt className="text-cream/50">Despesas</dt>
-                <dd className="mt-1 text-cream">
-                  {formatBrlFromCents(overview.month_expense_total_cents)}
-                </dd>
-              </div>
-              <div className="col-span-2 rounded-xl bg-white/5 px-4 py-3 sm:col-span-1">
-                <dt className="text-cream/50">A pagar</dt>
-                <dd className="mt-1 text-cream">
-                  {formatBrlFromCents(overview.pending_total_cents)}
-                </dd>
-              </div>
-            </dl>
-          ) : null}
-        </div>
-      </header>
+      </div>
 
-      <main className="mx-auto grid max-w-5xl gap-4 px-5 py-6 lg:grid-cols-2">
-        {error ? (
-          <p className="lg:col-span-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-            {error}
-          </p>
-        ) : null}
-        {busy && !overview ? (
-          <p className="lg:col-span-2 py-12 text-center text-muted">A carregar…</p>
-        ) : null}
+      {error ? (
+        <p className="mb-3 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800">
+          {error}
+        </p>
+      ) : null}
+      {banner ? (
+        <p className="mb-3 rounded-xl border border-gold/30 bg-[#FFF8E1] px-4 py-2 text-sm text-navy">
+          {banner.title}
+        </p>
+      ) : null}
 
-        <section className="rounded-2xl border border-navy/8 bg-white/70 p-5">
-          <h2 className="font-serif text-xl text-navy-deep">Categorias</h2>
-          <div className="mt-4">
-            <DonutChart slices={overview?.spending_by_category ?? []} />
-          </div>
-        </section>
-
-        <section className="rounded-2xl border border-navy/8 bg-white/70 p-5">
-          <h2 className="font-serif text-xl text-navy-deep">Fluxo</h2>
-          <div className="mt-4">
-            <CashflowChart
-              labels={(cashflow?.months ?? []).map((m) =>
-                shortMonth(m.year, m.month),
-              )}
-              income={cashflow?.income_cents ?? []}
-              expense={cashflow?.expense_paid_cents ?? []}
+      {busy && !overview ? (
+        <p className="py-16 text-center text-muted">A carregar {monthTitle}…</p>
+      ) : (
+        <div className="grid min-h-0 flex-1 gap-2 overflow-auto lg:grid-cols-2 lg:grid-rows-2 lg:overflow-hidden">
+          <Widget
+            title="Despesas por categoria"
+            action={
+              <Link to="/app/despesas" className="text-sm text-gold-pressed">
+                Ver mais
+              </Link>
+            }
+          >
+            <CategoryDonut
+              spending={overview?.spending_by_category ?? []}
+              totalCents={overview?.month_expense_total_cents ?? 0}
             />
-          </div>
-        </section>
+          </Widget>
 
-        <section className="rounded-2xl border border-navy/8 bg-white/70 p-5">
-          <h2 className="font-serif text-xl text-navy-deep">A pagar</h2>
-          {pending.length === 0 ? (
-            <p className="mt-6 text-sm text-muted">Nada pendente neste recorte.</p>
-          ) : (
-            <ul className="mt-4 divide-y divide-navy/8">
-              {pending.map((item) => (
-                <li
-                  key={item.id}
-                  className="flex items-baseline justify-between gap-3 py-3 text-sm"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-navy">{item.description}</p>
-                    <p className="text-xs text-muted">
-                      {formatDueDate(item.due_date)}
-                    </p>
-                  </div>
-                  <span className="shrink-0 font-medium text-navy-deep">
-                    {formatBrlFromCents(item.amount_cents)}
+          <Widget title="Histórico mensal">
+            {cashflow ? (
+              <HomeCashflow
+                data={cashflow}
+                dynamic={dynamic}
+                forecastMonths={forecastMonths}
+                onDynamicChange={setDynamic}
+                onForecastChange={setForecastMonths}
+              />
+            ) : (
+              <p className="text-sm text-muted">Sem dados de séries para o gráfico.</p>
+            )}
+          </Widget>
+
+          <Widget
+            title="Pagamentos futuros"
+            action={
+              <Link to="/app/despesas?filtro=pagar" className="text-sm text-gold-pressed">
+                Ver mais
+              </Link>
+            }
+          >
+            {pending.length === 0 ? (
+              <p className="text-sm text-muted">Nenhuma despesa a vencer.</p>
+            ) : (
+              <>
+                <div className="mb-1 hidden grid-cols-[7rem_1fr_auto] gap-3 text-[11px] uppercase tracking-wide text-muted sm:grid">
+                  <span>Vencimento</span>
+                  <span>Descrição</span>
+                  <span>Valor</span>
+                </div>
+                <ul className="max-h-full min-h-0 divide-y divide-navy/8 overflow-auto">
+                  {pending.map((item) => {
+                    const urgent = (daysUntil(item.due_date) ?? 99) <= 3;
+                    return (
+                      <li
+                        key={item.id}
+                        className="grid grid-cols-1 gap-0.5 py-2.5 text-sm sm:grid-cols-[7rem_1fr_auto] sm:items-baseline sm:gap-3"
+                      >
+                        <p className={urgent ? "text-red-700" : "text-muted"}>
+                          {formatDueDate(item.due_date)}
+                        </p>
+                        <p className="truncate text-navy">{item.description}</p>
+                        <span className="font-medium sm:text-right">
+                          {formatBrlFromCents(item.amount_cents)}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+                <p className="mt-3 border-t border-navy/8 pt-3 text-sm">
+                  Total pendente:{" "}
+                  <span className="font-medium">
+                    {formatBrlFromCents(overview?.pending_total_cents ?? 0)}
                   </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+                </p>
+              </>
+            )}
+          </Widget>
 
-        <section className="rounded-2xl border border-navy/8 bg-white/70 p-5">
-          <h2 className="font-serif text-xl text-navy-deep">Metas</h2>
-          {(overview?.goals_preview ?? []).length === 0 ? (
-            <p className="mt-6 text-sm text-muted">
-              Sem metas activas. Crie-as no aplicativo.
-            </p>
-          ) : (
-            <ul className="mt-4 space-y-4">
-              {overview?.goals_preview.map((goal) => {
-                const pct = Math.min(
-                  100,
-                  Math.round((goal.current_cents / goal.target_cents) * 100),
-                );
-                return (
-                  <li key={goal.id}>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-navy">{goal.title}</span>
-                      <span className="text-muted">{pct}%</span>
-                    </div>
-                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-cream-muted">
-                      <div
-                        className="h-full rounded-full bg-gold"
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </section>
-      </main>
+          <Widget
+            title="Metas"
+            action={
+              <Link to="/app/metas" className="text-sm text-gold-pressed">
+                Ver mais
+              </Link>
+            }
+          >
+            {goals.length === 0 ? (
+              <p className="text-sm text-muted">Nenhuma meta activa. Crie uma agora!</p>
+            ) : (
+              <ul className="min-h-0 space-y-4 overflow-auto">
+                {goals.map((goal) => {
+                  const pct = Math.min(
+                    100,
+                    Math.round((goal.current_cents / Math.max(1, goal.target_cents)) * 100),
+                  );
+                  return (
+                    <li key={goal.id}>
+                      <div className="flex justify-between gap-3 text-sm">
+                        <span className="truncate font-medium uppercase tracking-wide">
+                          {goal.title}
+                        </span>
+                        <span className="shrink-0 text-muted">{pct}%</span>
+                      </div>
+                      <div className="mt-2 h-2 overflow-hidden rounded-full bg-cream-muted">
+                        <div
+                          className="h-full rounded-full bg-gold"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <p className="mt-1 text-xs text-muted">
+                        {formatBrlFromCents(goal.current_cents)} de{" "}
+                        {formatBrlFromCents(goal.target_cents)}
+                      </p>
+                      <form
+                        className="mt-2 flex gap-2"
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          void onContribute(goal.id);
+                        }}
+                      >
+                        <input
+                          className="min-w-0 flex-1 rounded-lg border border-navy/10 px-2 py-1.5 text-sm"
+                          placeholder="Aportar R$"
+                          value={contrib[goal.id] ?? ""}
+                          onChange={(e) =>
+                            setContrib((c) => ({ ...c, [goal.id]: e.target.value }))
+                          }
+                        />
+                        <button
+                          type="submit"
+                          className="rounded-lg bg-navy-deep px-3 py-1.5 text-xs text-cream"
+                        >
+                          Guardar
+                        </button>
+                      </form>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </Widget>
+        </div>
+      )}
     </div>
   );
 }

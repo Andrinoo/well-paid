@@ -21,12 +21,17 @@ class User(Base, TimestampMixin):
     phone: Mapped[str | None] = mapped_column(String(32), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_superuser: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_free_plan: Mapped[bool] = mapped_column(Boolean, default=False)
     family_mode_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     email_verified_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
     last_seen_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True, index=True
+    )
+    trial_ends_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
     )
 
     refresh_tokens: Mapped[list["RefreshToken"]] = relationship(
@@ -62,4 +67,10 @@ class User(Base, TimestampMixin):
         "FamilyMember",
         back_populates="user",
         uselist=False,
+    )
+    payments: Mapped[list["Payment"]] = relationship(
+        "Payment", back_populates="user", cascade="all, delete-orphan"
+    )
+    modules: Mapped[list["UserModule"]] = relationship(
+        "UserModule", back_populates="user", cascade="all, delete-orphan"
     )

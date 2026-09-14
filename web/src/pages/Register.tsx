@@ -1,10 +1,12 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ApiError, registerAccount } from "../api";
+import { useLocale } from "../i18n/LocaleProvider";
 import { AuthCard, ErrorText, Field, PrimaryButton } from "../ui";
 
 export function RegisterPage() {
   const navigate = useNavigate();
+  const { auth: a } = useLocale();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -21,9 +23,11 @@ export function RegisterPage() {
         replace: true,
       });
     } catch (err) {
-      setError(
-        err instanceof ApiError ? err.message : "Não foi possível criar a conta.",
-      );
+      if (err instanceof ApiError && err.status === 409) {
+        setError(a.register.emailTaken);
+      } else {
+        setError(a.register.fallback);
+      }
     } finally {
       setBusy(false);
     }
@@ -31,13 +35,13 @@ export function RegisterPage() {
 
   return (
     <AuthCard
-      title="Criar conta"
-      subtitle="Enviamos um código e um link para confirmar o e-mail."
+      title={a.register.title}
+      subtitle={a.register.subtitle}
       footer={
         <>
-          Já tem conta?{" "}
-          <Link to="/login" className="text-gold hover:underline">
-            Entrar
+          {a.register.hasAccount}{" "}
+          <Link to="/login" className="font-semibold text-teal-deep hover:underline">
+            {a.register.signIn}
           </Link>
         </>
       }
@@ -45,13 +49,13 @@ export function RegisterPage() {
       <form className="space-y-4" onSubmit={onSubmit}>
         <ErrorText message={error} />
         <Field
-          label="Nome"
+          label={a.register.name}
           value={fullName}
           autoComplete="name"
           onChange={setFullName}
         />
         <Field
-          label="E-mail"
+          label={a.register.email}
           type="email"
           value={email}
           autoComplete="email"
@@ -59,7 +63,7 @@ export function RegisterPage() {
           onChange={setEmail}
         />
         <Field
-          label="Senha (mín. 8 caracteres)"
+          label={a.register.password}
           type="password"
           value={password}
           autoComplete="new-password"
@@ -67,7 +71,7 @@ export function RegisterPage() {
           onChange={setPassword}
         />
         <PrimaryButton disabled={busy}>
-          {busy ? "A criar…" : "Criar conta"}
+          {busy ? a.register.busy : a.register.submit}
         </PrimaryButton>
       </form>
     </AuthCard>

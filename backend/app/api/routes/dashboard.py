@@ -9,7 +9,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user
+from app.api.deps import require_module
 from app.core.database import get_db
 from app.models.user import User
 from app.schemas.dashboard import DashboardCashflowResponse, DashboardOverviewResponse
@@ -29,7 +29,7 @@ router = APIRouter(prefix="/dashboard", tags=["dashboard"])
     ),
 )
 def read_dashboard_overview(
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(require_module("dashboard"))],
     db: Annotated[Session, Depends(get_db)],
     year: Annotated[int, Query(ge=2000, le=2100, description="Ano civil")],
     month: Annotated[int, Query(ge=1, le=12, description="Mês 1–12")],
@@ -47,7 +47,7 @@ def read_dashboard_overview(
     ),
 )
 def read_dashboard_cashflow(
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(require_module("dashboard"))],
     db: Annotated[Session, Depends(get_db)],
     dynamic: Annotated[
         bool,

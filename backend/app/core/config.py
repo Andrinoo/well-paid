@@ -192,6 +192,22 @@ class Settings(BaseSettings):
     goal_tracking_enabled: bool = True
     goal_tracking_scheduler_minutes: int = 60
     goal_tracking_drop_threshold_pct: float = 5.0
+    superuser_email: str = Field(
+        default="",
+        validation_alias=AliasChoices("superuser_email", "SUPERUSER_EMAIL"),
+    )
+    superadmin_api_prefix: str = Field(
+        default="/sa-api",
+        validation_alias=AliasChoices(
+            "superadmin_api_prefix", "SUPERADMIN_API_PREFIX"
+        ),
+    )
+    mercado_pago_access_token: str = Field(
+        default="",
+        validation_alias=AliasChoices(
+            "mercado_pago_access_token", "MERCADO_PAGO_ACCESS_TOKEN"
+        ),
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -225,6 +241,13 @@ class Settings(BaseSettings):
         if self.cors_origins.strip() == "*":
             return ["*"]
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
+    @property
+    def superadmin_api_prefix_path(self) -> str:
+        p = (self.superadmin_api_prefix or "/sa-api").strip() or "/sa-api"
+        if not p.startswith("/"):
+            p = "/" + p
+        return p.rstrip("/") or "/sa-api"
 
 
 def _settings_hint() -> str:

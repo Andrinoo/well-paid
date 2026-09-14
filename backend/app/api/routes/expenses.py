@@ -12,7 +12,7 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
-from app.api.deps import get_current_user
+from app.api.deps import require_module
 from app.core.database import get_db
 from app.models.category import Category
 from app.models.expense import Expense
@@ -380,7 +380,7 @@ def _merge_projected_recurring_month(
 
 @router.get("", response_model=list[ExpenseResponse])
 def list_expenses(
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(require_module("payables"))],
     db: Annotated[Session, Depends(get_db)],
     year: Annotated[int | None, Query(ge=2000, le=2100)] = None,
     month: Annotated[int | None, Query(ge=1, le=12)] = None,
@@ -471,7 +471,7 @@ def list_expenses(
 @router.post("", response_model=ExpenseCreateOutcome, status_code=status.HTTP_201_CREATED)
 def create_expense(
     body: ExpenseCreate,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(require_module("payables"))],
     db: Annotated[Session, Depends(get_db)],
 ) -> ExpenseCreateOutcome:
     _ensure_category(db, body.category_id)
@@ -660,7 +660,7 @@ def create_expense(
 @router.get("/{expense_id}", response_model=ExpenseResponse)
 def get_expense(
     expense_id: uuid.UUID,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(require_module("payables"))],
     db: Annotated[Session, Depends(get_db)],
 ) -> ExpenseResponse:
     e = _get_visible_in_family(db, expense_id, user.id)
@@ -689,7 +689,7 @@ def get_expense(
 def update_expense(
     expense_id: uuid.UUID,
     body: ExpenseUpdate,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(require_module("payables"))],
     db: Annotated[Session, Depends(get_db)],
 ) -> ExpenseResponse:
     e = _get_owned(db, expense_id, user.id)
@@ -830,7 +830,7 @@ def update_expense(
 @router.delete("/{expense_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_expense(
     expense_id: uuid.UUID,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(require_module("payables"))],
     db: Annotated[Session, Depends(get_db)],
     delete_target: Annotated[ExpenseDeleteTarget, Query()] = ExpenseDeleteTarget.series,
     delete_scope: Annotated[ExpenseDeleteScope, Query()] = ExpenseDeleteScope.all,
@@ -927,7 +927,7 @@ def _compute_advance_quote(expense: Expense, settlement_date: date) -> tuple[int
 @router.post("/{expense_id}/advance-quote", response_model=ExpenseAdvanceQuoteResponse)
 def advance_quote(
     expense_id: uuid.UUID,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(require_module("payables"))],
     db: Annotated[Session, Depends(get_db)],
     body: ExpenseAdvanceQuoteRequest | None = None,
 ) -> ExpenseAdvanceQuoteResponse:
@@ -950,7 +950,7 @@ def advance_quote(
 @router.post("/{expense_id}/pay", response_model=ExpenseResponse)
 def pay_expense(
     expense_id: uuid.UUID,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(require_module("payables"))],
     db: Annotated[Session, Depends(get_db)],
     body: ExpensePayRequest | None = None,
 ) -> ExpenseResponse:
@@ -1068,7 +1068,7 @@ def pay_expense(
 def request_share_cover(
     expense_id: uuid.UUID,
     body: ExpenseCoverRequest,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(require_module("payables"))],
     db: Annotated[Session, Depends(get_db)],
 ) -> ExpenseResponse:
     e = _get_expense_for_family_action(db, expense_id, user.id)
@@ -1148,7 +1148,7 @@ def request_share_cover(
 @router.post("/{expense_id}/share/decline", response_model=ExpenseResponse)
 def decline_expense_share(
     expense_id: uuid.UUID,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(require_module("payables"))],
     db: Annotated[Session, Depends(get_db)],
     body: ExpenseShareDeclineRequest | None = None,
 ) -> ExpenseResponse:
@@ -1223,7 +1223,7 @@ def decline_expense_share(
 @router.post("/{expense_id}/share/assume-full", response_model=ExpenseResponse)
 def assume_full_expense_share(
     expense_id: uuid.UUID,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(require_module("payables"))],
     db: Annotated[Session, Depends(get_db)],
 ) -> ExpenseResponse:
     e = _get_owned(db, expense_id, user.id)
@@ -1275,7 +1275,7 @@ def assume_full_expense_share(
 @router.post("/{expense_id}/share/mark-paid", response_model=ExpenseResponse)
 def mark_share_paid_alias(
     expense_id: uuid.UUID,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(require_module("payables"))],
     db: Annotated[Session, Depends(get_db)],
     body: ExpensePayRequest | None = None,
 ) -> ExpenseResponse:
@@ -1285,7 +1285,7 @@ def mark_share_paid_alias(
 @router.post("/{expense_id}/recurrence/stop", response_model=ExpenseResponse)
 def stop_recurrence(
     expense_id: uuid.UUID,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(require_module("payables"))],
     db: Annotated[Session, Depends(get_db)],
 ) -> ExpenseResponse:
     e = _get_owned(db, expense_id, user.id)

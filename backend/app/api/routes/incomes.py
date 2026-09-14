@@ -12,7 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
-from app.api.deps import get_current_user
+from app.api.deps import require_module
 from app.core.database import get_db
 from app.models.income import Income
 from app.models.income_category import IncomeCategory
@@ -92,7 +92,7 @@ def _ensure_income_category(db: Session, category_id: uuid.UUID) -> None:
 
 @router.get("", response_model=list[IncomeResponse])
 def list_incomes(
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(require_module("incomes"))],
     db: Annotated[Session, Depends(get_db)],
     year: Annotated[int | None, Query(ge=2000, le=2100)] = None,
     month: Annotated[int | None, Query(ge=1, le=12)] = None,
@@ -121,7 +121,7 @@ def list_incomes(
 @router.post("", response_model=IncomeResponse, status_code=status.HTTP_201_CREATED)
 def create_income(
     body: IncomeCreate,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(require_module("incomes"))],
     db: Annotated[Session, Depends(get_db)],
 ) -> IncomeResponse:
     _ensure_income_category(db, body.income_category_id)
@@ -154,7 +154,7 @@ def create_income(
 @router.get("/{income_id}", response_model=IncomeResponse)
 def get_income(
     income_id: uuid.UUID,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(require_module("incomes"))],
     db: Annotated[Session, Depends(get_db)],
 ) -> IncomeResponse:
     row = _get_visible_for_viewer(db, income_id, user.id)
@@ -167,7 +167,7 @@ def get_income(
 def update_income(
     income_id: uuid.UUID,
     body: IncomeUpdate,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(require_module("incomes"))],
     db: Annotated[Session, Depends(get_db)],
 ) -> IncomeResponse:
     row = _get_owned(db, income_id, user.id)
@@ -205,7 +205,7 @@ def update_income(
 @router.delete("/{income_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_income(
     income_id: uuid.UUID,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[User, Depends(require_module("incomes"))],
     db: Annotated[Session, Depends(get_db)],
 ) -> None:
     row = _get_owned(db, income_id, user.id)

@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Self
 
 from pydantic import BaseModel, EmailStr, Field, model_validator
@@ -90,6 +91,12 @@ class UserMeResponse(BaseModel):
     full_name: str | None = None
     display_name: str | None = None
     family_mode_enabled: bool = False
+    plan: str = "free"
+    trial_ends_at: datetime | None = None
+    due_at: datetime | None = None
+    modules: list[str] = []
+    is_superuser: bool = False
+    is_free_plan: bool = False
 
 
 class UserProfilePatch(BaseModel):

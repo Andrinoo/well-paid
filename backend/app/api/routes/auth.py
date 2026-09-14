@@ -26,6 +26,20 @@ from app.models.app_usage_event import AppUsageEvent
 from app.models.password_reset_token import PasswordResetToken
 from app.models.refresh_token import RefreshToken
 from app.api.deps import get_current_user
+from app.services.entitlements import (
+    enabled_module_ids,
+    paid_until,
+    plan_status,
+    start_trial,
+    enable_basic_modules,
+    assert_plan_access,
+)
+from app.services.login_guard import (
+    LOGIN_FAIL_DETAIL,
+    clear_failures,
+    raise_if_locked,
+    register_failure,
+)
 from app.models.user import User
 from app.schemas.auth import (
     ForgotPasswordRequest,
@@ -64,6 +78,21 @@ _REGISTER_OK_MSG = (
 
 def _is_dev_env() -> bool:
     return settings.app_env.strip().lower() in _DEV_ENVS
+
+
+def _me_response(db: Session, user: User) -> UserMeResponse:
+    return UserMeResponse(
+        email=user.email,
+        full_name=user.full_name,
+        display_name=user.display_name,
+        family_mode_enabled=bool(user.family_mode_enabled),
+        plan=plan_status(db, user),
+        trial_ends_at=user.trial_ends_at,
+        due_at=paid_until(db, user),
+        modules=enabled_module_ids(db, user),
+        is_superuser=bool(user.is_superuser),
+        is_free_plan=bool(user.is_free_plan),
+    )
 
 
 def _issue_tokens(
@@ -254,6 +283,8 @@ def verify_email(
         )
 
     u.email_verified_at = now
+    start_trial(u)
+    enable_basic_modules(db, u.id)
     row.used = True
     db.add(u)
     db.add(row)
@@ -300,22 +331,26 @@ def login(
     db: Session = Depends(get_db),
 ) -> TokenPairResponse:
     email = body.email.lower().strip()
+    raise_if_locked(db, email)
     user = db.scalar(select(User).where(User.email == email))
     if user is None or not verify_password(body.password, user.hashed_password):
+        register_failure(db, email)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="E-mail ou senha incorretos",
+            detail=LOGIN_FAIL_DETAIL,
         )
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Conta inativa",
         )
-    if user.email_verified_at is None and not user.is_admin:
+    if user.email_verified_at is None and not user.is_admin and not user.is_superuser:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Confirme o seu e-mail antes de entrar. Verifique a caixa de entrada ou reenvie o código.",
         )
+    assert_plan_access(db, user)
+    clear_failures(db, email)
     return _issue_tokens(db, user, event_type="login_success")
 
 
@@ -339,18 +374,24 @@ def refresh_token(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Refresh token inválido",
         )
-    row = db.scalar(
-        select(RefreshToken).where(
-            RefreshToken.jti == str(jti),
-            RefreshToken.revoked.is_(False),
-        )
-    )
+    row = db.scalar(select(RefreshToken).where(RefreshToken.jti == str(jti)))
     if row is None or row.expires_at < datetime.now(UTC):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Refresh token inválido ou expirado",
         )
     if str(row.user_id) != str(sub):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token inválido",
+        )
+    if row.revoked:
+        db.execute(
+            update(RefreshToken)
+            .where(RefreshToken.user_id == row.user_id)
+            .values(revoked=True)
+        )
+        db.commit()
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Refresh token inválido",
@@ -496,14 +537,12 @@ def reset_password(
 
 
 @router.get("/me", response_model=UserMeResponse)
-def read_me(current: User = Depends(get_current_user)) -> UserMeResponse:
+def read_me(
+    current: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> UserMeResponse:
     """Perfil mínimo para a app (saudação, ecrã inicial)."""
-    return UserMeResponse(
-        email=current.email,
-        full_name=current.full_name,
-        display_name=current.display_name,
-        family_mode_enabled=bool(current.family_mode_enabled),
-    )
+    return _me_response(db, current)
 
 
 @router.patch("/me", response_model=UserMeResponse)
@@ -520,12 +559,7 @@ def patch_me(
     db.add(current)
     db.commit()
     db.refresh(current)
-    return UserMeResponse(
-        email=current.email,
-        full_name=current.full_name,
-        display_name=current.display_name,
-        family_mode_enabled=bool(current.family_mode_enabled),
-    )
+    return _me_response(db, current)
 
 
 @router.post("/profile/display-name", response_model=UserMeResponse)
@@ -543,9 +577,4 @@ def post_profile_display_name(
     db.add(current)
     db.commit()
     db.refresh(current)
-    return UserMeResponse(
-        email=current.email,
-        full_name=current.full_name,
-        display_name=current.display_name,
-        family_mode_enabled=bool(current.family_mode_enabled),
-    )
+    return _me_response(db, current)

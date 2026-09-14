@@ -1,4 +1,4 @@
-"""Testes das rotas /admin (overrides de dependências; sem BD real)."""
+"""Testes das rotas superadmin (prefixo env; overrides de dependências; sem BD real)."""
 
 from __future__ import annotations
 
@@ -10,10 +10,13 @@ from unittest.mock import MagicMock
 import pytest
 from fastapi.testclient import TestClient
 
-from app.api.deps import get_current_admin_user
+from app.api.deps import get_current_superuser
+from app.core.config import get_settings
 from app.core.database import get_db
 from app.main import app
 from app.models.user import User
+
+_SA = get_settings().superadmin_api_prefix_path
 
 
 @pytest.fixture
@@ -32,21 +35,27 @@ def _fake_admin() -> User:
         email="admin@test.com",
         hashed_password="x",
         is_admin=True,
+        is_superuser=True,
         is_active=True,
     )
     u.id = uuid.uuid4()
     return u
 
 
-def test_admin_me_401_sem_authorization(client: TestClient) -> None:
+def test_admin_me_404_sem_authorization(client: TestClient) -> None:
+    r = client.get(f"{_SA}/me")
+    assert r.status_code == 404
+
+
+def test_legacy_admin_prefix_is_hidden(client: TestClient) -> None:
     r = client.get("/admin/me")
-    assert r.status_code == 401
+    assert r.status_code == 404
 
 
 def test_admin_me_200_com_override(client: TestClient) -> None:
     admin = _fake_admin()
-    app.dependency_overrides[get_current_admin_user] = lambda: admin
-    r = client.get("/admin/me", headers={"Authorization": "Bearer test"})
+    app.dependency_overrides[get_current_superuser] = lambda: admin
+    r = client.get(f"{_SA}/me", headers={"Authorization": "Bearer test"})
     assert r.status_code == 200
     data = r.json()
     assert data["email"] == "admin@test.com"
@@ -55,7 +64,7 @@ def test_admin_me_200_com_override(client: TestClient) -> None:
 
 def test_list_users_returns_items(client: TestClient) -> None:
     admin = _fake_admin()
-    app.dependency_overrides[get_current_admin_user] = lambda: admin
+    app.dependency_overrides[get_current_superuser] = lambda: admin
 
     uid = uuid.uuid4()
     now = datetime.now(UTC)
@@ -84,7 +93,7 @@ def test_list_users_returns_items(client: TestClient) -> None:
 
     app.dependency_overrides[get_db] = _db
 
-    r = client.get("/admin/users", headers={"Authorization": "Bearer x"})
+    r = client.get(f"{_SA}/users", headers={"Authorization": "Bearer x"})
     assert r.status_code == 200
     data = r.json()
     assert data["total"] == 1
@@ -94,7 +103,7 @@ def test_list_users_returns_items(client: TestClient) -> None:
 
 def test_patch_user_404(client: TestClient) -> None:
     admin = _fake_admin()
-    app.dependency_overrides[get_current_admin_user] = lambda: admin
+    app.dependency_overrides[get_current_superuser] = lambda: admin
 
     db = MagicMock()
     db.get.return_value = None
@@ -106,7 +115,7 @@ def test_patch_user_404(client: TestClient) -> None:
 
     missing = uuid.uuid4()
     r = client.patch(
-        f"/admin/users/{missing}",
+        f"{_SA}/users/{missing}",
         headers={"Authorization": "Bearer x"},
         json={"is_active": False},
     )
@@ -115,7 +124,7 @@ def test_patch_user_404(client: TestClient) -> None:
 
 def test_patch_user_updates_active(client: TestClient) -> None:
     admin = _fake_admin()
-    app.dependency_overrides[get_current_admin_user] = lambda: admin
+    app.dependency_overrides[get_current_superuser] = lambda: admin
 
     uid = uuid.uuid4()
     target = SimpleNamespace(
@@ -134,7 +143,7 @@ def test_patch_user_updates_active(client: TestClient) -> None:
     app.dependency_overrides[get_db] = _db
 
     r = client.patch(
-        f"/admin/users/{uid}",
+        f"{_SA}/users/{uid}",
         headers={"Authorization": "Bearer x"},
         json={"is_active": False},
     )
@@ -148,7 +157,7 @@ def test_patch_user_updates_active(client: TestClient) -> None:
 
 def test_patch_user_updates_admin_and_revokes_sessions(client: TestClient) -> None:
     admin = _fake_admin()
-    app.dependency_overrides[get_current_admin_user] = lambda: admin
+    app.dependency_overrides[get_current_superuser] = lambda: admin
 
     uid = uuid.uuid4()
     target = SimpleNamespace(
@@ -168,7 +177,7 @@ def test_patch_user_updates_admin_and_revokes_sessions(client: TestClient) -> No
     app.dependency_overrides[get_db] = _db
 
     r = client.patch(
-        f"/admin/users/{uid}",
+        f"{_SA}/users/{uid}",
         headers={"Authorization": "Bearer x"},
         json={"is_admin": True, "revoke_sessions": True},
     )
@@ -183,7 +192,7 @@ def test_patch_user_updates_admin_and_revokes_sessions(client: TestClient) -> No
 
 def test_patch_user_block_self_demote(client: TestClient) -> None:
     admin = _fake_admin()
-    app.dependency_overrides[get_current_admin_user] = lambda: admin
+    app.dependency_overrides[get_current_superuser] = lambda: admin
 
     target = SimpleNamespace(
         id=admin.id,
@@ -201,7 +210,7 @@ def test_patch_user_block_self_demote(client: TestClient) -> None:
     app.dependency_overrides[get_db] = _db
 
     r = client.patch(
-        f"/admin/users/{admin.id}",
+        f"{_SA}/users/{admin.id}",
         headers={"Authorization": "Bearer x"},
         json={"is_admin": False},
     )
@@ -211,7 +220,7 @@ def test_patch_user_block_self_demote(client: TestClient) -> None:
 
 def test_usage_summary_returns_metrics(client: TestClient) -> None:
     admin = _fake_admin()
-    app.dependency_overrides[get_current_admin_user] = lambda: admin
+    app.dependency_overrides[get_current_superuser] = lambda: admin
 
     db = MagicMock()
     db.scalar.side_effect = [12, 5, 17]
@@ -225,7 +234,7 @@ def test_usage_summary_returns_metrics(client: TestClient) -> None:
 
     app.dependency_overrides[get_db] = _db
 
-    r = client.get("/admin/usage/summary", headers={"Authorization": "Bearer x"})
+    r = client.get(f"{_SA}/usage/summary", headers={"Authorization": "Bearer x"})
     assert r.status_code == 200
     data = r.json()
     assert data["events_24h"] == 12
@@ -237,7 +246,7 @@ def test_usage_summary_returns_metrics(client: TestClient) -> None:
 
 def test_get_user_detail_returns_activity_breakdown(client: TestClient) -> None:
     admin = _fake_admin()
-    app.dependency_overrides[get_current_admin_user] = lambda: admin
+    app.dependency_overrides[get_current_superuser] = lambda: admin
 
     uid = uuid.uuid4()
     now = datetime.now(UTC)
@@ -279,7 +288,7 @@ def test_get_user_detail_returns_activity_breakdown(client: TestClient) -> None:
 
     app.dependency_overrides[get_db] = _db
 
-    r = client.get(f"/admin/users/{uid}", headers={"Authorization": "Bearer x"})
+    r = client.get(f"{_SA}/users/{uid}", headers={"Authorization": "Bearer x"})
     assert r.status_code == 200
     data = r.json()
     assert data["user"]["email"] == "detail@test.com"
@@ -294,7 +303,7 @@ def test_get_user_detail_returns_activity_breakdown(client: TestClient) -> None:
 
 def test_list_families_returns_items(client: TestClient) -> None:
     admin = _fake_admin()
-    app.dependency_overrides[get_current_admin_user] = lambda: admin
+    app.dependency_overrides[get_current_superuser] = lambda: admin
 
     fid = uuid.uuid4()
     now = datetime.now(UTC)
@@ -315,7 +324,7 @@ def test_list_families_returns_items(client: TestClient) -> None:
 
     app.dependency_overrides[get_db] = _db
 
-    r = client.get("/admin/families", headers={"Authorization": "Bearer x"})
+    r = client.get(f"{_SA}/families", headers={"Authorization": "Bearer x"})
     assert r.status_code == 200
     data = r.json()
     assert data["total"] == 1
@@ -326,7 +335,7 @@ def test_list_families_returns_items(client: TestClient) -> None:
 
 def test_get_family_detail_returns_members_and_invites(client: TestClient) -> None:
     admin = _fake_admin()
-    app.dependency_overrides[get_current_admin_user] = lambda: admin
+    app.dependency_overrides[get_current_superuser] = lambda: admin
 
     fid = uuid.uuid4()
     uid = uuid.uuid4()
@@ -363,7 +372,7 @@ def test_get_family_detail_returns_members_and_invites(client: TestClient) -> No
 
     app.dependency_overrides[get_db] = _db
 
-    r = client.get(f"/admin/families/{fid}", headers={"Authorization": "Bearer x"})
+    r = client.get(f"{_SA}/families/{fid}", headers={"Authorization": "Bearer x"})
     assert r.status_code == 200
     data = r.json()
     assert data["name"] == "Fam"
@@ -376,7 +385,7 @@ def test_get_family_detail_returns_members_and_invites(client: TestClient) -> No
 
 def test_get_family_detail_404(client: TestClient) -> None:
     admin = _fake_admin()
-    app.dependency_overrides[get_current_admin_user] = lambda: admin
+    app.dependency_overrides[get_current_superuser] = lambda: admin
 
     db = MagicMock()
     mock_scalars = MagicMock()
@@ -389,13 +398,13 @@ def test_get_family_detail_404(client: TestClient) -> None:
     app.dependency_overrides[get_db] = _db
 
     fid = uuid.uuid4()
-    r = client.get(f"/admin/families/{fid}", headers={"Authorization": "Bearer x"})
+    r = client.get(f"{_SA}/families/{fid}", headers={"Authorization": "Bearer x"})
     assert r.status_code == 404
 
 
 def test_finance_summary_returns_totals(client: TestClient) -> None:
     admin = _fake_admin()
-    app.dependency_overrides[get_current_admin_user] = lambda: admin
+    app.dependency_overrides[get_current_superuser] = lambda: admin
 
     db = MagicMock()
     db.scalar.side_effect = [
@@ -421,7 +430,7 @@ def test_finance_summary_returns_totals(client: TestClient) -> None:
 
     app.dependency_overrides[get_db] = _db
 
-    r = client.get("/admin/finance/summary", headers={"Authorization": "Bearer x"})
+    r = client.get(f"{_SA}/finance/summary", headers={"Authorization": "Bearer x"})
     assert r.status_code == 200
     data = r.json()
     assert data["expenses_total"] == 100
@@ -443,7 +452,7 @@ def test_finance_summary_returns_totals(client: TestClient) -> None:
 
 def test_product_funnel_returns_counts(client: TestClient) -> None:
     admin = _fake_admin()
-    app.dependency_overrides[get_current_admin_user] = lambda: admin
+    app.dependency_overrides[get_current_superuser] = lambda: admin
 
     db = MagicMock()
     db.scalar.side_effect = [
@@ -462,7 +471,7 @@ def test_product_funnel_returns_counts(client: TestClient) -> None:
 
     app.dependency_overrides[get_db] = _db
 
-    r = client.get("/admin/metrics/funnel", headers={"Authorization": "Bearer x"})
+    r = client.get(f"{_SA}/metrics/funnel", headers={"Authorization": "Bearer x"})
     assert r.status_code == 200
     data = r.json()
     assert data["users_total"] == 1000
@@ -477,7 +486,7 @@ def test_product_funnel_returns_counts(client: TestClient) -> None:
 
 def test_list_audit_events_returns_items(client: TestClient) -> None:
     admin = _fake_admin()
-    app.dependency_overrides[get_current_admin_user] = lambda: admin
+    app.dependency_overrides[get_current_superuser] = lambda: admin
 
     aid = uuid.uuid4()
     now = datetime.now(UTC)
@@ -501,7 +510,7 @@ def test_list_audit_events_returns_items(client: TestClient) -> None:
 
     app.dependency_overrides[get_db] = _db
 
-    r = client.get("/admin/audit/events", headers={"Authorization": "Bearer x"})
+    r = client.get(f"{_SA}/audit/events", headers={"Authorization": "Bearer x"})
     assert r.status_code == 200
     data = r.json()
     assert data["total"] == 1

@@ -1,10 +1,12 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ApiError, forgotPassword, resetPassword } from "../api";
+import { useLocale } from "../i18n/LocaleProvider";
 import { AuthCard, ErrorText, Field, PrimaryButton } from "../ui";
 
 export function RecoverPage() {
   const navigate = useNavigate();
+  const { auth: a } = useLocale();
   const [step, setStep] = useState<"ask" | "reset">("ask");
   const [email, setEmail] = useState("");
   const [token, setToken] = useState("");
@@ -21,8 +23,8 @@ export function RecoverPage() {
       const message = await forgotPassword(email.trim());
       setInfo(message);
       setStep("reset");
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Não foi possível enviar.");
+    } catch {
+      setError(a.recover.sendFail);
     } finally {
       setBusy(false);
     }
@@ -36,9 +38,7 @@ export function RecoverPage() {
       await resetPassword(token.trim(), password);
       navigate("/login", { replace: true });
     } catch (err) {
-      setError(
-        err instanceof ApiError ? err.message : "Não foi possível redefinir a senha.",
-      );
+      setError(err instanceof ApiError ? err.message : a.recover.resetFail);
     } finally {
       setBusy(false);
     }
@@ -46,15 +46,11 @@ export function RecoverPage() {
 
   return (
     <AuthCard
-      title={step === "ask" ? "Recuperar senha" : "Nova senha"}
-      subtitle={
-        step === "ask"
-          ? "Enviamos um código para o e-mail da conta."
-          : "Cole o código do e-mail e escolha a nova senha."
-      }
+      title={step === "ask" ? a.recover.titleAsk : a.recover.titleReset}
+      subtitle={step === "ask" ? a.recover.subtitleAsk : a.recover.subtitleReset}
       footer={
-        <Link to="/login" className="text-gold hover:underline">
-          Voltar ao login
+        <Link to="/login" className="font-semibold text-teal-deep hover:underline">
+          {a.recover.back}
         </Link>
       }
     >
@@ -62,7 +58,7 @@ export function RecoverPage() {
         <form className="space-y-4" onSubmit={onAsk}>
           <ErrorText message={error} />
           <Field
-            label="E-mail"
+            label={a.recover.email}
             type="email"
             value={email}
             autoComplete="email"
@@ -70,16 +66,16 @@ export function RecoverPage() {
             onChange={setEmail}
           />
           <PrimaryButton disabled={busy}>
-            {busy ? "A enviar…" : "Enviar código"}
+            {busy ? a.recover.sending : a.recover.send}
           </PrimaryButton>
         </form>
       ) : (
         <form className="space-y-4" onSubmit={onReset}>
           <ErrorText message={error} />
-          {info ? <p className="text-sm text-cream/70">{info}</p> : null}
-          <Field label="Código" value={token} required onChange={setToken} />
+          {info ? <p className="text-sm text-navy/70">{info}</p> : null}
+          <Field label={a.recover.code} value={token} required onChange={setToken} />
           <Field
-            label="Nova senha"
+            label={a.recover.newPassword}
             type="password"
             value={password}
             autoComplete="new-password"
@@ -87,7 +83,7 @@ export function RecoverPage() {
             onChange={setPassword}
           />
           <PrimaryButton disabled={busy}>
-            {busy ? "A guardar…" : "Guardar senha"}
+            {busy ? a.recover.saving : a.recover.save}
           </PrimaryButton>
         </form>
       )}

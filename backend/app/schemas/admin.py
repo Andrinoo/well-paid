@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 class AdminMeResponse(BaseModel):
     email: str
     is_admin: bool = True
+    is_superuser: bool = True
 
 
 class AdminUserRow(BaseModel):
@@ -17,8 +18,11 @@ class AdminUserRow(BaseModel):
     phone: str | None = None
     is_active: bool
     is_admin: bool
+    is_superuser: bool = False
+    is_free_plan: bool = False
     email_verified_at: datetime | None = None
     last_seen_at: datetime | None = None
+    trial_ends_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -49,6 +53,9 @@ class AdminUsageSummaryResponse(BaseModel):
 class AdminUserPatch(BaseModel):
     is_active: bool | None = Field(default=None, description="Ativar ou desativar conta")
     is_admin: bool | None = Field(default=None, description="Promover ou rebaixar admin")
+    is_free_plan: bool | None = Field(
+        default=None, description="Plano Free (não cobra; staff/testes)"
+    )
     revoke_sessions: bool = Field(
         default=False,
         description="Revogar sessões ativas (refresh tokens) do utilizador",
@@ -58,6 +65,7 @@ class AdminUserPatch(BaseModel):
         return (
             self.is_active is not None
             or self.is_admin is not None
+            or self.is_free_plan is not None
             or self.revoke_sessions
         )
 

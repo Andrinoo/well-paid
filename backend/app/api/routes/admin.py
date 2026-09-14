@@ -3,10 +3,12 @@ import uuid
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from sqlalchemy import func, select, update
+from sqlalchemy import exists, func, or_, select, update
 from sqlalchemy.orm import Session, joinedload
 
-from app.api.deps import get_current_admin_user
+from app.api.deps import get_current_superuser
+from app.models.entitlements import Payment
+from app.services.entitlements import enable_basic_modules
 from app.core.database import get_db
 from app.core.limiter import limiter
 from app.models.admin_audit_event import AdminAuditEvent
@@ -45,7 +47,7 @@ from app.schemas.admin import (
 )
 from app.services.family_limits import MAX_FAMILY_MEMBERS
 
-router = APIRouter(prefix="/admin", tags=["admin"])
+router = APIRouter(tags=["admin"])
 
 _MAX_LIMIT = 100
 _RECENT_EVENTS_LIMIT = 30
@@ -55,7 +57,7 @@ _RECENT_EVENTS_LIMIT = 30
 @limiter.limit("60/minute")
 def usage_summary(
     request: Request,
-    _admin: Annotated[User, Depends(get_current_admin_user)],
+    _admin: Annotated[User, Depends(get_current_superuser)],
     db: Annotated[Session, Depends(get_db)],
     days: Annotated[int, Query(ge=7, le=90)] = 14,
 ) -> AdminUsageSummaryResponse:
@@ -122,7 +124,7 @@ def usage_summary(
 @limiter.limit("60/minute")
 def finance_summary(
     request: Request,
-    _admin: Annotated[User, Depends(get_current_admin_user)],
+    _admin: Annotated[User, Depends(get_current_superuser)],
     db: Annotated[Session, Depends(get_db)],
 ) -> AdminFinanceSummaryResponse:
     today = datetime.now(UTC).date()
@@ -212,7 +214,7 @@ def finance_summary(
 @limiter.limit("60/minute")
 def product_funnel(
     request: Request,
-    _admin: Annotated[User, Depends(get_current_admin_user)],
+    _admin: Annotated[User, Depends(get_current_superuser)],
     db: Annotated[Session, Depends(get_db)],
 ) -> AdminProductFunnelResponse:
     now = datetime.now(UTC)
@@ -275,7 +277,7 @@ def product_funnel(
 @limiter.limit("120/minute")
 def list_audit_events(
     request: Request,
-    _admin: Annotated[User, Depends(get_current_admin_user)],
+    _admin: Annotated[User, Depends(get_current_superuser)],
     db: Annotated[Session, Depends(get_db)],
     skip: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=_MAX_LIMIT)] = 50,
@@ -311,16 +313,20 @@ def list_audit_events(
 @limiter.limit("60/minute")
 def admin_me(
     request: Request,
-    admin_user: Annotated[User, Depends(get_current_admin_user)],
+    admin_user: Annotated[User, Depends(get_current_superuser)],
 ) -> AdminMeResponse:
-    return AdminMeResponse(email=admin_user.email, is_admin=True)
+    return AdminMeResponse(
+        email=admin_user.email,
+        is_admin=True,
+        is_superuser=True,
+    )
 
 
 @router.get("/users", response_model=AdminUserListResponse)
 @limiter.limit("120/minute")
 def list_users(
     request: Request,
-    _admin: Annotated[User, Depends(get_current_admin_user)],
+    _admin: Annotated[User, Depends(get_current_superuser)],
     db: Annotated[Session, Depends(get_db)],
     q: Annotated[str | None, Query(description="Pesquisa por e-mail (contém)")] = None,
     is_active: Annotated[bool | None, Query(description="Filtrar contas ativas/inativas")] = None,
@@ -333,6 +339,11 @@ def list_users(
     ] = None,
     created_to: Annotated[
         datetime | None, Query(description="Criado até esta data/hora ISO")
+    ] = None,
+    is_free_plan: Annotated[bool | None, Query(description="Plano Free")] = None,
+    plan: Annotated[
+        Literal["free", "trial", "paid", "expired", "pending_pix"] | None,
+        Query(description="Filtro de plano / PIX pendente"),
     ] = None,
     order_by: Annotated[
         Literal["created_at", "last_seen_at", "email"],
@@ -374,6 +385,49 @@ def list_users(
         flt = User.created_at <= created_to
         stmt = stmt.where(flt)
         count_stmt = count_stmt.where(flt)
+    if is_free_plan is not None:
+        flt = User.is_free_plan.is_(is_free_plan)
+        stmt = stmt.where(flt)
+        count_stmt = count_stmt.where(flt)
+    if plan is not None:
+        now = datetime.now(UTC)
+        paid_q = exists(
+            select(Payment.id).where(
+                Payment.user_id == User.id,
+                Payment.status == "paid",
+                Payment.due_at.is_not(None),
+                Payment.due_at > now,
+            )
+        )
+        pending_q = exists(
+            select(Payment.id).where(
+                Payment.user_id == User.id,
+                Payment.status == "pending",
+            )
+        )
+        if plan == "free":
+            flt = User.is_free_plan.is_(True)
+        elif plan == "trial":
+            flt = (
+                User.is_free_plan.is_(False)
+                & User.is_superuser.is_(False)
+                & User.trial_ends_at.is_not(None)
+                & (User.trial_ends_at > now)
+                & ~paid_q
+            )
+        elif plan == "paid":
+            flt = User.is_free_plan.is_(False) & paid_q
+        elif plan == "expired":
+            flt = (
+                User.is_free_plan.is_(False)
+                & User.is_superuser.is_(False)
+                & ~paid_q
+                & or_(User.trial_ends_at.is_(None), User.trial_ends_at <= now)
+            )
+        else:
+            flt = pending_q
+        stmt = stmt.where(flt)
+        count_stmt = count_stmt.where(flt)
 
     order_field = {
         "created_at": User.created_at,
@@ -400,7 +454,7 @@ def list_users(
 def get_user_detail(
     request: Request,
     user_id: uuid.UUID,
-    _admin: Annotated[User, Depends(get_current_admin_user)],
+    _admin: Annotated[User, Depends(get_current_superuser)],
     db: Annotated[Session, Depends(get_db)],
 ) -> AdminUserDetailResponse:
     target = db.get(User, user_id)
@@ -483,7 +537,7 @@ def patch_user(
     request: Request,
     user_id: uuid.UUID,
     body: AdminUserPatch,
-    admin_user: Annotated[User, Depends(get_current_admin_user)],
+    admin_user: Annotated[User, Depends(get_current_superuser)],
     db: Annotated[Session, Depends(get_db)],
 ) -> AdminUserPatchResponse:
     if not body.has_updates():
@@ -507,6 +561,11 @@ def patch_user(
                 detail="Não é permitido remover o próprio acesso admin.",
             )
         target.is_admin = body.is_admin
+    if body.is_free_plan is not None:
+        target.is_free_plan = body.is_free_plan
+        if body.is_free_plan:
+            target.is_active = True
+            enable_basic_modules(db, target.id)
 
     revoked_sessions = 0
     if body.revoke_sessions:
@@ -534,6 +593,8 @@ def patch_user(
         details["is_active"] = body.is_active
     if body.is_admin is not None:
         details["is_admin"] = body.is_admin
+    if body.is_free_plan is not None:
+        details["is_free_plan"] = body.is_free_plan
     if body.revoke_sessions:
         details["revoke_sessions"] = True
         details["revoked_sessions"] = revoked_sessions
@@ -563,7 +624,7 @@ def patch_user(
 @limiter.limit("120/minute")
 def list_families(
     request: Request,
-    _admin: Annotated[User, Depends(get_current_admin_user)],
+    _admin: Annotated[User, Depends(get_current_superuser)],
     db: Annotated[Session, Depends(get_db)],
     q: Annotated[str | None, Query(description="Pesquisa por nome (contém)")] = None,
     order_by: Annotated[
@@ -628,7 +689,7 @@ def list_families(
 def get_family_detail(
     request: Request,
     family_id: uuid.UUID,
-    _admin: Annotated[User, Depends(get_current_admin_user)],
+    _admin: Annotated[User, Depends(get_current_superuser)],
     db: Annotated[Session, Depends(get_db)],
 ) -> AdminFamilyDetailResponse:
     fam = db.scalars(

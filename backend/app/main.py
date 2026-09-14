@@ -29,11 +29,13 @@ from app.api.routes import (
     investments,
     receivables,
     shopping_lists,
+    superadmin_billing,
     telemetry,
 )
 from app.core.config import get_settings
 from app.core.database import SessionLocal
 from app.core.limiter import limiter
+from app.services.entitlements import expire_trials
 from app.services.goal_price_tracking import run_goal_price_tracking_cycle
 from app.services.ticker_cache import ticker_cache_service
 
@@ -84,20 +86,42 @@ async def _goal_tracking_loop() -> None:
         await asyncio.sleep(minutes * 60)
 
 
+async def _trial_expiry_loop() -> None:
+    while True:
+        try:
+            with SessionLocal() as db:
+                n = expire_trials(db)
+                if n:
+                    logger.info("Trial expiry: deactivated=%s", n)
+        except Exception:
+            logger.exception("Trial expiry cycle failed.")
+        await asyncio.sleep(60 * 60)
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     _log_smtp_status()
     _warm_ticker_cache()
     tracking_task = None
+    expiry_task = asyncio.create_task(_trial_expiry_loop())
     if get_settings().goal_tracking_enabled:
         tracking_task = asyncio.create_task(_goal_tracking_loop())
     yield
+    expiry_task.cancel()
     if tracking_task is not None:
         tracking_task.cancel()
 
 
-
-app = FastAPI(title="Well Paid API", version="0.1.0", lifespan=lifespan)
+_docs = None if get_settings().app_env.strip().lower() == "production" else "/docs"
+_redoc = None if _docs is None else "/redoc"
+app = FastAPI(
+    title="Well Paid API",
+    version="0.1.0",
+    lifespan=lifespan,
+    docs_url=_docs,
+    redoc_url=_redoc,
+    openapi_url=None if _docs is None else "/openapi.json",
+)
 app.state.limiter = limiter
 
 
@@ -107,7 +131,6 @@ def root() -> dict[str, str]:
     return {
         "service": "Well Paid API",
         "health": "/health",
-        "docs": "/docs",
     }
 
 
@@ -200,7 +223,9 @@ async def log_requests(request: Request, call_next):
 
 app.include_router(health.router)
 app.include_router(auth.router)
-app.include_router(admin.router)
+_sa_prefix = get_settings().superadmin_api_prefix_path
+app.include_router(admin.router, prefix=_sa_prefix)
+app.include_router(superadmin_billing.router, prefix=_sa_prefix)
 app.include_router(announcements.router)
 app.include_router(categories.router)
 app.include_router(income_categories.router)

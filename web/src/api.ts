@@ -4,6 +4,7 @@ import {
   getRefreshToken,
   setTokens,
 } from "./session";
+import { shiftMonth } from "./format";
 
 export const API_BASE = import.meta.env.DEV
   ? "/__api"
@@ -116,6 +117,7 @@ export type UserMe = {
   email: string;
   full_name: string | null;
   display_name: string | null;
+  family_mode_enabled?: boolean;
 };
 
 export type RegisterResult = {
@@ -158,6 +160,8 @@ export type DashboardOverview = {
   pending_preview: PendingExpenseItem[];
   upcoming_due: PendingExpenseItem[];
   goals_preview: GoalSummaryItem[];
+  emergency_reserve_balance_cents?: number;
+  emergency_reserve_monthly_target_cents?: number;
 };
 
 export type DashboardCashflow = {
@@ -273,10 +277,399 @@ export async function fetchOverview(
   )) as DashboardOverview;
 }
 
-export async function fetchCashflow(): Promise<DashboardCashflow> {
+export async function fetchCashflow(opts?: {
+  dynamic?: boolean;
+  forecastMonths?: number;
+  year?: number;
+  month?: number;
+}): Promise<DashboardCashflow> {
+  const dynamic = opts?.dynamic ?? true;
+  const forecastMonths = opts?.forecastMonths ?? 3;
+  const q = new URLSearchParams({
+    dynamic: String(dynamic),
+    forecast_months: String(forecastMonths),
+  });
+  if (!dynamic && opts?.year && opts?.month) {
+    const start = shiftMonth(opts.year, opts.month, -5);
+    q.set("start_year", String(start.year));
+    q.set("start_month", String(start.month));
+    q.set("end_year", String(opts.year));
+    q.set("end_month", String(opts.month));
+  }
   return (await request(
-    "/dashboard/cashflow?dynamic=true&forecast_months=3",
+    `/dashboard/cashflow?${q}`,
     { method: "GET" },
     true,
   )) as DashboardCashflow;
+}
+
+export type HomeBanner = {
+  id: string;
+  title: string;
+  body: string;
+  kind: string;
+  cta_label: string | null;
+  cta_url: string | null;
+};
+
+export async function fetchHomeBanner(): Promise<HomeBanner | null> {
+  try {
+    const body = (await request(
+      "/announcements/active?placement=home_banner&limit=1",
+      { method: "GET" },
+      true,
+    )) as { items?: HomeBanner[] };
+    return body.items?.[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export type Category = { id: string; key: string; name: string };
+
+export type Expense = {
+  id: string;
+  description: string;
+  amount_cents: number;
+  expense_date: string;
+  due_date: string | null;
+  status: string;
+  category_id: string;
+  category_name: string;
+  installment_total?: number;
+  installment_number?: number;
+  recurring_frequency?: string | null;
+  is_shared?: boolean;
+  is_family?: boolean;
+};
+
+export type Income = {
+  id: string;
+  description: string;
+  amount_cents: number;
+  income_date: string;
+  income_category_id: string;
+  category_name: string;
+  notes?: string | null;
+};
+
+export type Goal = {
+  id: string;
+  title: string;
+  target_cents: number;
+  current_cents: number;
+  is_active: boolean;
+};
+
+export type ReservePlan = {
+  id: string;
+  title: string;
+  monthly_target_cents: number;
+  balance_cents: number;
+  status: string;
+};
+
+export type ShoppingList = {
+  id: string;
+  title: string | null;
+  store_name: string | null;
+  status: string;
+  items_count: number;
+  total_cents: number | null;
+};
+
+export type ShoppingItem = {
+  id: string;
+  label: string;
+  quantity: number;
+  line_amount_cents: number | null;
+  is_picked: boolean;
+};
+
+export type InvestmentOverview = {
+  total_allocated_cents: number;
+  total_yield_cents: number;
+  estimated_monthly_yield_cents: number;
+};
+
+export type InvestmentPosition = {
+  id: string;
+  instrument_type: string;
+  name: string;
+  principal_cents: number;
+  annual_rate_bps: number;
+};
+
+export type FamilyMe = {
+  family: {
+    id: string;
+    name: string;
+    members: {
+      user_id: string;
+      email: string;
+      full_name?: string | null;
+      role: string;
+      is_self: boolean;
+    }[];
+  } | null;
+};
+
+function monthQuery(year: number, month: number): string {
+  return new URLSearchParams({
+    year: String(year),
+    month: String(month),
+  }).toString();
+}
+
+export async function fetchCategories(): Promise<Category[]> {
+  return (await request("/categories", { method: "GET" }, true)) as Category[];
+}
+
+export async function fetchIncomeCategories(): Promise<Category[]> {
+  return (await request("/income-categories", { method: "GET" }, true)) as Category[];
+}
+
+export async function fetchExpenses(
+  year: number,
+  month: number,
+): Promise<Expense[]> {
+  return (await request(
+    `/expenses?${monthQuery(year, month)}`,
+    { method: "GET" },
+    true,
+  )) as Expense[];
+}
+
+export async function createExpense(body: {
+  description: string;
+  amount_cents: number;
+  expense_date: string;
+  due_date: string | null;
+  category_id: string;
+  status?: "pending" | "paid";
+  monthly_interest_bps?: number | null;
+  start_date?: string | null;
+  installment_total?: number;
+  recurring_frequency?: string | null;
+  is_shared?: boolean;
+  is_family?: boolean;
+  shared_with_user_id?: string | null;
+  split_mode?: "amount" | "percent" | null;
+  owner_share_cents?: number | null;
+  peer_share_cents?: number | null;
+  owner_percent_bps?: number | null;
+  peer_percent_bps?: number | null;
+}): Promise<void> {
+  await request("/expenses", { method: "POST", body: JSON.stringify(body) }, true);
+}
+
+export async function payExpense(id: string): Promise<void> {
+  await request(`/expenses/${id}/pay`, { method: "POST", body: "{}" }, true);
+}
+
+export async function deleteExpense(id: string): Promise<void> {
+  await request(
+    `/expenses/${id}?delete_target=occurrence&delete_scope=all&confirm_delete_paid=true`,
+    { method: "DELETE" },
+    true,
+  );
+}
+
+export async function deleteIncome(id: string): Promise<void> {
+  await request(`/incomes/${id}`, { method: "DELETE" }, true);
+}
+
+export async function fetchIncomes(
+  year: number,
+  month: number,
+): Promise<Income[]> {
+  return (await request(
+    `/incomes?${monthQuery(year, month)}`,
+    { method: "GET" },
+    true,
+  )) as Income[];
+}
+
+export async function createIncome(body: {
+  description: string;
+  amount_cents: number;
+  income_date: string;
+  income_category_id: string;
+  notes?: string | null;
+}): Promise<void> {
+  await request("/incomes", { method: "POST", body: JSON.stringify(body) }, true);
+}
+
+export async function fetchGoals(): Promise<Goal[]> {
+  return (await request("/goals", { method: "GET" }, true)) as Goal[];
+}
+
+export async function createGoal(body: {
+  title: string;
+  target_cents: number;
+}): Promise<void> {
+  await request("/goals", { method: "POST", body: JSON.stringify(body) }, true);
+}
+
+export async function contributeGoal(
+  id: string,
+  amount_cents: number,
+): Promise<void> {
+  await request(
+    `/goals/${id}/contribute`,
+    { method: "POST", body: JSON.stringify({ amount_cents }) },
+    true,
+  );
+}
+
+export async function fetchReservePlans(): Promise<ReservePlan[]> {
+  return (await request(
+    "/emergency-reserve/plans",
+    { method: "GET" },
+    true,
+  )) as ReservePlan[];
+}
+
+export async function createReservePlan(body: {
+  title: string;
+  monthly_target_cents: number;
+}): Promise<void> {
+  await request(
+    "/emergency-reserve/plans",
+    { method: "POST", body: JSON.stringify(body) },
+    true,
+  );
+}
+
+export async function contributeReserve(
+  planId: string,
+  amount_cents: number,
+  contribution_date: string,
+): Promise<void> {
+  await request(
+    "/emergency-reserve/contributions",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        contribution_date,
+        total_amount_cents: amount_cents,
+        allocations: [{ plan_id: planId, amount_cents }],
+      }),
+    },
+    true,
+  );
+}
+
+export async function fetchShoppingLists(): Promise<ShoppingList[]> {
+  return (await request("/shopping-lists", { method: "GET" }, true)) as ShoppingList[];
+}
+
+export async function createShoppingList(title: string): Promise<void> {
+  await request(
+    "/shopping-lists",
+    { method: "POST", body: JSON.stringify({ title }) },
+    true,
+  );
+}
+
+export async function fetchShoppingDetail(id: string): Promise<{
+  items: ShoppingItem[];
+}> {
+  return (await request(
+    `/shopping-lists/${id}`,
+    { method: "GET" },
+    true,
+  )) as { items: ShoppingItem[] };
+}
+
+export async function addShoppingItem(
+  listId: string,
+  label: string,
+): Promise<void> {
+  await request(
+    `/shopping-lists/${listId}/items`,
+    { method: "POST", body: JSON.stringify({ label, quantity: 1 }) },
+    true,
+  );
+}
+
+export async function patchShoppingItem(
+  listId: string,
+  itemId: string,
+  body: { is_picked?: boolean },
+): Promise<void> {
+  await request(
+    `/shopping-lists/${listId}/items/${itemId}`,
+    { method: "PATCH", body: JSON.stringify(body) },
+    true,
+  );
+}
+
+export async function deleteShoppingList(id: string): Promise<void> {
+  await request(`/shopping-lists/${id}`, { method: "DELETE" }, true);
+}
+
+export async function fetchInvestmentOverview(): Promise<InvestmentOverview> {
+  return (await request(
+    "/investments/overview",
+    { method: "GET" },
+    true,
+  )) as InvestmentOverview;
+}
+
+export async function fetchPositions(): Promise<InvestmentPosition[]> {
+  return (await request(
+    "/investments/positions",
+    { method: "GET" },
+    true,
+  )) as InvestmentPosition[];
+}
+
+export async function createPosition(body: {
+  instrument_type: string;
+  name: string;
+  principal_cents: number;
+  annual_rate_bps: number;
+}): Promise<void> {
+  await request(
+    "/investments/positions",
+    { method: "POST", body: JSON.stringify({ ...body, is_liquid: true }) },
+    true,
+  );
+}
+
+export async function fetchFamilyMe(): Promise<FamilyMe> {
+  return (await request("/families/me", { method: "GET" }, true)) as FamilyMe;
+}
+
+export async function createFamily(name: string): Promise<void> {
+  await request(
+    "/families/me",
+    { method: "POST", body: JSON.stringify({ name }) },
+    true,
+  );
+}
+
+export async function joinFamily(token: string): Promise<void> {
+  await request(
+    "/families/join",
+    { method: "POST", body: JSON.stringify({ token }) },
+    true,
+  );
+}
+
+export async function createFamilyInvite(): Promise<{ token: string }> {
+  return (await request(
+    "/families/me/invites",
+    { method: "POST", body: "{}" },
+    true,
+  )) as { token: string };
+}
+
+export async function patchDisplayName(display_name: string): Promise<UserMe> {
+  return (await request(
+    "/auth/me",
+    { method: "PATCH", body: JSON.stringify({ display_name }) },
+    true,
+  )) as UserMe;
 }

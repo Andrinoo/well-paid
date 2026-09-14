@@ -1,17 +1,19 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ApiError, resendVerification, verifyEmail } from "../api";
+import { useLocale } from "../i18n/LocaleProvider";
 import { AuthCard, ErrorText, Field, PrimaryButton } from "../ui";
 
 export function ConfirmEmailPage() {
   const navigate = useNavigate();
+  const { auth: a } = useLocale();
   const [params] = useSearchParams();
   const tokenFromLink = params.get("token")?.trim() ?? "";
   const [email, setEmail] = useState(params.get("email")?.trim() ?? "");
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(
-    tokenFromLink ? "A confirmar o e-mail…" : null,
+    tokenFromLink ? a.confirm.checking : null,
   );
   const [busy, setBusy] = useState(Boolean(tokenFromLink));
 
@@ -27,9 +29,7 @@ export function ConfirmEmailPage() {
           setBusy(false);
           setInfo(null);
           setError(
-            err instanceof ApiError
-              ? err.message
-              : "Link inválido. Use o código de 6 dígitos.",
+            err instanceof ApiError ? err.message : a.confirm.invalidLink,
           );
         }
       }
@@ -37,7 +37,7 @@ export function ConfirmEmailPage() {
     return () => {
       cancelled = true;
     };
-  }, [tokenFromLink, navigate]);
+  }, [tokenFromLink, navigate, a.confirm.invalidLink]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -47,7 +47,7 @@ export function ConfirmEmailPage() {
       await verifyEmail({ email: email.trim(), code: code.trim() });
       navigate("/app", { replace: true });
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Não foi possível confirmar.");
+      setError(err instanceof ApiError ? err.message : a.confirm.fallback);
     } finally {
       setBusy(false);
     }
@@ -55,7 +55,7 @@ export function ConfirmEmailPage() {
 
   async function onResend() {
     if (!email.trim()) {
-      setError("Indique o e-mail para reenviar o código.");
+      setError(a.confirm.needEmail);
       return;
     }
     setError(null);
@@ -64,7 +64,7 @@ export function ConfirmEmailPage() {
       const message = await resendVerification(email.trim());
       setInfo(message);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Falha ao reenviar.");
+      setError(err instanceof ApiError ? err.message : a.confirm.resendFail);
     } finally {
       setBusy(false);
     }
@@ -72,19 +72,19 @@ export function ConfirmEmailPage() {
 
   return (
     <AuthCard
-      title="Confirmar e-mail"
-      subtitle="Abra o link do e-mail ou introduza o código de 6 dígitos."
+      title={a.confirm.title}
+      subtitle={a.confirm.subtitle}
       footer={
-        <Link to="/login" className="text-gold hover:underline">
-          Voltar ao login
+        <Link to="/login" className="font-semibold text-teal-deep hover:underline">
+          {a.confirm.back}
         </Link>
       }
     >
       <form className="space-y-4" onSubmit={onSubmit}>
         <ErrorText message={error} />
-        {info ? <p className="text-sm text-cream/70">{info}</p> : null}
+        {info ? <p className="text-sm text-navy/70">{info}</p> : null}
         <Field
-          label="E-mail"
+          label={a.confirm.email}
           type="email"
           value={email}
           autoComplete="email"
@@ -92,22 +92,22 @@ export function ConfirmEmailPage() {
           onChange={setEmail}
         />
         <Field
-          label="Código"
+          label={a.confirm.code}
           value={code}
           autoComplete="one-time-code"
           required
           onChange={setCode}
         />
         <PrimaryButton disabled={busy}>
-          {busy ? "A confirmar…" : "Confirmar"}
+          {busy ? a.confirm.busy : a.confirm.submit}
         </PrimaryButton>
         <button
           type="button"
-          className="w-full text-sm text-gold/90 hover:underline"
+          className="w-full text-sm font-medium text-teal-deep hover:underline"
           onClick={() => void onResend()}
           disabled={busy}
         >
-          Reenviar e-mail
+          {a.confirm.resend}
         </button>
       </form>
     </AuthCard>

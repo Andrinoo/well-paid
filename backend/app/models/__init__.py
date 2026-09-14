@@ -26,7 +26,9 @@ from app.models.email_verification_token import EmailVerificationToken
 from app.models.password_reset_token import PasswordResetToken
 from app.models.shopping_list import ShoppingList
 from app.models.shopping_list_item import ShoppingListItem
+from app.models.login_attempt import LoginAttempt
 from app.models.refresh_token import RefreshToken
+from app.models.entitlements import Payment, UserModule
 from app.models.user import User
 
 __all__ = [
@@ -36,6 +38,9 @@ __all__ = [
     "AnnouncementUserState",
     "AppUsageEvent",
     "User",
+    "LoginAttempt",
+    "Payment",
+    "UserModule",
     "RefreshToken",
     "PasswordResetToken",
     "EmailVerificationToken",
