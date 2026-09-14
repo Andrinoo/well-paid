@@ -27,6 +27,7 @@ from app.api.routes import (
     income_categories,
     incomes,
     investments,
+    media,
     receivables,
     shopping_lists,
     superadmin_billing,
@@ -238,6 +239,7 @@ app.include_router(dashboard.router)
 app.include_router(expenses.router)
 app.include_router(receivables.router)
 app.include_router(goals.router)
+app.include_router(media.router)
 app.include_router(investments.router)
 app.include_router(families.router)
 app.include_router(family_financial.router)

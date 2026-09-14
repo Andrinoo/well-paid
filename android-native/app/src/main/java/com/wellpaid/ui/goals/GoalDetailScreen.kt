@@ -55,6 +55,7 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -76,6 +77,8 @@ import com.wellpaid.ui.theme.WellPaidPositive
 import com.wellpaid.ui.theme.wellPaidScreenHorizontalPadding
 import com.wellpaid.ui.theme.wellPaidTopAppBarColors
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import com.wellpaid.util.RemoteImageUrls
 import com.wellpaid.util.formatBrlFromCents
 import com.wellpaid.util.formatIsoDateToBr
 import com.wellpaid.util.parseBrlToCents
@@ -210,9 +213,12 @@ fun GoalDetailScreen(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.Top,
             ) {
-                goal.referenceThumbnailUrl?.trim()?.takeIf { it.isNotEmpty() }?.let { thumb ->
+                goal.referenceThumbnailUrl?.let { RemoteImageUrls.proxied(it) }?.let { thumb ->
                     AsyncImage(
-                        model = thumb,
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(thumb)
+                            .crossfade(140)
+                            .build(),
                         contentDescription = null,
                         modifier = Modifier
                             .size(72.dp)

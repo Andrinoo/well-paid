@@ -230,6 +230,7 @@ def get_dashboard_overview(
             current_cents=int(g.current_cents),
             target_cents=int(g.target_cents),
             is_mine=g.owner_user_id == user.id,
+            reference_thumbnail_url=g.reference_thumbnail_url,
         )
         for g in goals_rows
     ]

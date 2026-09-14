@@ -138,7 +138,7 @@ export function AppShell() {
             </button>
           </div>
         ) : null}
-        <main className={isHome ? "flex min-h-0 flex-1 flex-col overflow-hidden pb-16 md:pb-0" : "flex-1 px-4 py-5 pb-20 sm:px-6 md:pb-5"}>
+        <main className={isHome ? "relative flex min-h-0 flex-1 flex-col overflow-auto bg-paper pb-16 md:pb-0" : "flex-1 px-4 py-5 pb-20 sm:px-6 md:pb-5"}>
           <Outlet />
         </main>
         <nav

@@ -35,8 +35,13 @@ from app.services.goal_product_search import (
     search_products_tavily,
 )
 from app.services.goal_reference_price import fetch_product_hints, is_safe_public_http_url
+from app.services.thumbnail_proxy import normalize_thumbnail_url
 
 router = APIRouter(prefix="/goals", tags=["goals"])
+
+
+def _normalized_thumb(raw: str | None) -> str | None:
+    return normalize_thumbnail_url(raw)
 
 
 def _default_due_at() -> datetime:
@@ -191,11 +196,7 @@ def create_goal(
         due_at=(body.due_at or _default_due_at()),
         price_check_interval_hours=int(body.price_check_interval_hours or 12),
         tracking_enabled=bool(body.tracking_enabled),
-        reference_thumbnail_url=(
-            body.reference_thumbnail_url.strip()
-            if body.reference_thumbnail_url
-            else None
-        ),
+        reference_thumbnail_url=_normalized_thumb(body.reference_thumbnail_url),
     )
     db.add(row)
     db.flush()
@@ -367,8 +368,9 @@ def _hints_from_title_search(title: str, settings) -> dict[str, Any]:
                 "url": r.get("url"),
             }
         )
-    thumb = first.get("thumbnail")
-    thumb_s = str(thumb).strip()[:2048] if thumb else None
+    thumb_s = _normalized_thumb(
+        str(first.get("thumbnail")).strip() if first.get("thumbnail") else None
+    )
     return {
         "reference_product_name": str(first.get("title") or "")[:500] or None,
         "reference_price_cents": pc,
@@ -439,7 +441,7 @@ def refresh_goal_reference_price(
     row.price_source = str(src) if src else "unavailable"
     row.price_alternatives = list(hints.get("price_alternatives") or [])
     if hints.get("reference_thumbnail_url"):
-        row.reference_thumbnail_url = str(hints["reference_thumbnail_url"])[:2048]
+        row.reference_thumbnail_url = _normalized_thumb(str(hints["reference_thumbnail_url"]))
     row.last_price_track_at = datetime.now(UTC)
     _record_goal_price_history(
         db,
@@ -509,6 +511,8 @@ def update_goal(
     data.pop("current_cents", None)
     if "description" in data and isinstance(data["description"], str):
         data["description"] = data["description"].strip() or None
+    if "reference_thumbnail_url" in data:
+        data["reference_thumbnail_url"] = _normalized_thumb(data.get("reference_thumbnail_url"))
     if "price_check_interval_hours" in data and data["price_check_interval_hours"] is not None:
         data["price_check_interval_hours"] = int(data["price_check_interval_hours"])
     for k, v in data.items():

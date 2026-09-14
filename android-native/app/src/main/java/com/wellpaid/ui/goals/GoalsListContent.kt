@@ -53,6 +53,7 @@ import com.wellpaid.ui.theme.WellPaidMaxContentWidth
 import com.wellpaid.ui.theme.wellPaidMaxContentWidth
 import com.wellpaid.core.model.goal.GoalDto
 import com.wellpaid.util.formatBrlFromCents
+import com.wellpaid.util.RemoteImageUrls
 
 @Composable
 fun GoalsListContent(
@@ -163,7 +164,7 @@ private fun GoalCompactCard(
         0f
     }
     val context = LocalContext.current
-    val thumbUrl = goal.referenceThumbnailUrl?.trim()?.takeIf { it.isNotEmpty() }
+    val thumbUrl = RemoteImageUrls.proxied(goal.referenceThumbnailUrl)
 
     Card(
         modifier = modifier

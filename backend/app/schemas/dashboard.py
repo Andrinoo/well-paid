@@ -70,6 +70,7 @@ class GoalSummaryItem(BaseModel):
         default=True,
         description="False se a meta é de outro membro da família",
     )
+    reference_thumbnail_url: str | None = None
 
 
 class DashboardCashflowResponse(BaseModel):

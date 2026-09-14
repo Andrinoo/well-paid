@@ -8,6 +8,8 @@ from typing import Any
 
 import httpx
 
+from app.services.thumbnail_proxy import normalize_thumbnail_url
+
 logger = logging.getLogger(__name__)
 
 _USER_AGENT = "WellPaid/1.0 (+https://wellpaid.app) SerpAPI Google Shopping price search"
@@ -288,7 +290,7 @@ def _shopping_blocks_to_rows(
         if price_cents is None or price_cents <= 0:
             continue
         thumb = item.get("thumbnail") or item.get("serpapi_thumbnail")
-        thumb_s = str(thumb).strip() if thumb else None
+        thumb_s = normalize_thumbnail_url(str(thumb) if thumb else None)
         out.append(
             {
                 "title": title,

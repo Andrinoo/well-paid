@@ -149,6 +149,7 @@ export type GoalSummaryItem = {
   current_cents: number;
   target_cents: number;
   is_mine: boolean;
+  reference_thumbnail_url?: string | null;
 };
 
 export type DashboardOverview = {
@@ -371,6 +372,18 @@ export type Goal = {
   target_cents: number;
   current_cents: number;
   is_active: boolean;
+  target_url?: string | null;
+  reference_product_name?: string | null;
+  reference_thumbnail_url?: string | null;
+};
+
+export type GoalProductHit = {
+  title: string;
+  price_cents: number;
+  currency_id: string;
+  url: string;
+  thumbnail: string | null;
+  source: string;
 };
 
 export type ReservePlan = {
@@ -516,11 +529,35 @@ export async function fetchGoals(): Promise<Goal[]> {
   return (await request("/goals", { method: "GET" }, true)) as Goal[];
 }
 
+export async function searchGoalProducts(query: string): Promise<GoalProductHit[]> {
+  const body = (await request(
+    "/goals/product-search",
+    { method: "POST", body: JSON.stringify({ query }) },
+    true,
+  )) as { results?: GoalProductHit[] };
+  return body.results ?? [];
+}
+
 export async function createGoal(body: {
   title: string;
   target_cents: number;
+  target_url?: string | null;
+  reference_product_name?: string | null;
+  reference_price_cents?: number | null;
+  reference_thumbnail_url?: string | null;
+  price_source?: string | null;
 }): Promise<void> {
   await request("/goals", { method: "POST", body: JSON.stringify(body) }, true);
+}
+
+export function thumbnailSrc(raw: string | null | undefined): string | null {
+  const t = (raw ?? "").trim();
+  if (!t) return null;
+  let url = t;
+  if (url.startsWith("//")) url = `https:${url}`;
+  else if (url.startsWith("www.")) url = `https://${url}`;
+  if (!/^https?:\/\//i.test(url)) return null;
+  return `${API_BASE}/media/thumbnail?u=${encodeURIComponent(url)}`;
 }
 
 export async function contributeGoal(

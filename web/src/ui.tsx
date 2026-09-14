@@ -304,21 +304,23 @@ export function MonthBar({
   onChange: (next: { year: number; month: number }) => void;
 }) {
   return (
-    <div className="flex items-center gap-1 rounded-xl bg-navy-deep/90 p-1">
+    <div className="flex items-center gap-0.5 rounded-full bg-navy-deep p-1 shadow-[0_10px_24px_-16px_rgba(20,28,42,0.9)]">
       <button
         type="button"
-        className="px-3 py-2 text-cream"
+        className="rounded-full px-3 py-2 text-cream/80 transition hover:bg-white/10 hover:text-cream"
         onClick={() => onChange(shiftMonth(year, month, -1))}
+        aria-label="Mês anterior"
       >
         ‹
       </button>
-      <span className="min-w-36 text-center text-sm text-cream">
+      <span className="min-w-36 text-center text-sm font-medium tracking-wide text-cream">
         {monthLabel(year, month).replace(/^./, (ch) => ch.toLocaleUpperCase("pt-BR"))}
       </span>
       <button
         type="button"
-        className="px-3 py-2 text-cream"
+        className="rounded-full px-3 py-2 text-cream/80 transition hover:bg-white/10 hover:text-cream"
         onClick={() => onChange(shiftMonth(year, month, 1))}
+        aria-label="Mês seguinte"
       >
         ›
       </button>
@@ -358,25 +360,5 @@ export function InField({
       />
       {hint ? <span className="mt-1 block text-[11px] text-muted">{hint}</span> : null}
     </label>
-  );
-}
-
-export function Widget({
-  title,
-  action,
-  children,
-}: {
-  title: string;
-  action?: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <section className="flex h-full min-h-[240px] flex-col overflow-hidden rounded-xl border border-navy/8 border-l-4 border-l-gold bg-white p-4 shadow-[0_8px_24px_rgba(20,28,42,0.06)] lg:min-h-0">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <h2 className="font-serif text-xl text-navy-deep">{title}</h2>
-        {action}
-      </div>
-      <div className="min-h-0 flex-1">{children}</div>
-    </section>
   );
 }

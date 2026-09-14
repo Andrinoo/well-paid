@@ -2,14 +2,15 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   ApiError,
-  contributeGoal,
   fetchCashflow,
   fetchHomeBanner,
   fetchMe,
   fetchOverview,
   type DashboardCashflow,
   type DashboardOverview,
+  type GoalSummaryItem,
   type HomeBanner,
+  type PendingExpenseItem,
 } from "../api";
 import {
   daysUntil,
@@ -17,12 +18,12 @@ import {
   formatDueDate,
   greetingFirstName,
   monthLabel,
-  parseBrlToCents,
+  shiftMonth,
 } from "../format";
-import { MonthBar, Widget } from "../ui";
 import { useToggleShellMenu } from "../shell";
-import { HomeCashflow } from "./home/cashflow";
-import { CategoryDonut } from "./home/donut";
+import { MoneyCount } from "./home/count-up";
+import { GoalThumb } from "./home/GoalThumb";
+import { MonthOrbit, MonthTide, MonthWave } from "./home/stage";
 
 export function DashboardPage() {
   const navigate = useNavigate();
@@ -38,9 +39,6 @@ export function DashboardPage() {
   const [banner, setBanner] = useState<HomeBanner | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(true);
-  const [dynamic, setDynamic] = useState(true);
-  const [forecastMonths, setForecastMonths] = useState(3);
-  const [contrib, setContrib] = useState<Record<string, string>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -52,8 +50,8 @@ export function DashboardPage() {
           fetchMe(),
           fetchOverview(period.year, period.month),
           fetchCashflow({
-            dynamic,
-            forecastMonths,
+            dynamic: true,
+            forecastMonths: 3,
             year: period.year,
             month: period.month,
           }),
@@ -80,7 +78,7 @@ export function DashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [period.year, period.month, dynamic, forecastMonths, navigate]);
+  }, [period.year, period.month, navigate]);
 
   const pending = overview?.pending_preview?.length
     ? overview.pending_preview
@@ -89,195 +87,230 @@ export function DashboardPage() {
   const monthTitle =
     monthLabel(period.year, period.month).charAt(0).toLocaleUpperCase("pt-BR") +
     monthLabel(period.year, period.month).slice(1);
-
-  async function onContribute(id: string) {
-    const cents = parseBrlToCents(contrib[id] ?? "");
-    if (!cents) return;
-    try {
-      await contributeGoal(id, cents);
-      const ov = await fetchOverview(period.year, period.month);
-      setOverview(ov);
-      setContrib((c) => ({ ...c, [id]: "" }));
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Não foi possível aportar.");
-    }
-  }
+  const income = overview?.month_income_cents ?? 0;
+  const spent = overview?.month_expense_total_cents ?? 0;
+  const balance = overview?.month_balance_cents ?? 0;
+  const story = monthStory(balance, pending, income, spent);
+  const tight = balance < 0;
 
   return (
-    <div className="flex h-full min-h-0 flex-col px-3 py-3 sm:px-4">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+    <div className="relative min-h-full overflow-hidden bg-paper font-ui text-navy-deep">
+      <div
+        className={`pointer-events-none absolute -left-24 -top-24 h-[28rem] w-[28rem] rounded-full blur-3xl wp-float ${
+          tight ? "bg-peach" : "bg-sky"
+        }`}
+      />
+      <div className="pointer-events-none absolute -right-16 top-32 h-72 w-72 rounded-full bg-peach/80 blur-3xl wp-float-alt" />
+      <div className="pointer-events-none absolute bottom-20 left-1/3 h-56 w-56 rounded-full bg-sun/20 blur-3xl wp-float" />
+
+      <header className="relative flex flex-wrap items-end justify-between gap-4 px-5 pt-6 sm:px-8">
         <div className="min-w-0">
-          <p className="text-[11px] uppercase tracking-[0.28em] text-muted">Dashboard</p>
-          <h1 className="mt-0.5 truncate font-serif text-2xl text-navy-deep sm:text-3xl">
-            {name ? `Olá, ${name}` : "Olá"}
+          <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-teal-deep">
+            {name ? `${name}, o seu mês` : "O seu mês"}
+          </p>
+          <h1 className="mt-1 font-display text-4xl font-semibold tracking-tight text-navy-deep sm:text-5xl">
+            {monthTitle}
           </h1>
         </div>
         <div className="flex items-center gap-2">
-          <MonthBar year={period.year} month={period.month} onChange={setPeriod} />
+          <div className="flex items-center rounded-full border border-navy/10 bg-white/70 p-1 backdrop-blur">
+            <button
+              type="button"
+              className="rounded-full px-3 py-2 text-navy/70 hover:bg-sage hover:text-navy"
+              onClick={() => setPeriod((p) => shiftMonth(p.year, p.month, -1))}
+              aria-label="Mês anterior"
+            >
+              ‹
+            </button>
+            <button
+              type="button"
+              className="rounded-full px-3 py-2 text-navy/70 hover:bg-sage hover:text-navy"
+              onClick={() => setPeriod((p) => shiftMonth(p.year, p.month, 1))}
+              aria-label="Mês seguinte"
+            >
+              ›
+            </button>
+          </div>
           <button
             type="button"
-            className="rounded-lg px-2 py-2 text-sm text-navy md:hidden"
+            className="rounded-full px-3 py-2 text-sm text-navy md:hidden"
             onClick={toggleMenu}
           >
             Menu
           </button>
         </div>
-      </div>
+      </header>
 
       {error ? (
-        <p className="mb-3 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800">
+        <p className="relative mx-5 mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800 sm:mx-8">
           {error}
         </p>
       ) : null}
       {banner ? (
-        <p className="mb-3 rounded-xl border border-gold/30 bg-[#FFF8E1] px-4 py-2 text-sm text-navy">
+        <p className="relative mx-5 mt-4 rounded-full bg-white/70 px-4 py-2 text-sm text-navy/80 sm:mx-8">
           {banner.title}
         </p>
       ) : null}
 
       {busy && !overview ? (
-        <p className="py-16 text-center text-muted">A carregar {monthTitle}…</p>
+        <div className="relative grid gap-6 px-5 py-10 lg:grid-cols-[1.15fr_0.85fr] sm:px-8">
+          <p className="sr-only">A carregar {monthTitle}…</p>
+          <div className="mx-auto aspect-square w-full max-w-[420px] overflow-hidden rounded-full bg-white/60">
+            <div className="h-full w-full wp-shimmer" />
+          </div>
+          <div className="h-80 overflow-hidden rounded-[28px] bg-white/70">
+            <div className="h-full w-full wp-shimmer" />
+          </div>
+        </div>
       ) : (
-        <div className="grid min-h-0 flex-1 gap-2 overflow-auto lg:grid-cols-2 lg:grid-rows-2 lg:overflow-hidden">
-          <Widget
-            title="Despesas por categoria"
-            action={
-              <Link to="/app/despesas" className="text-sm text-gold-pressed">
-                Ver mais
-              </Link>
-            }
-          >
-            <CategoryDonut
+        <div className="relative grid items-start gap-10 px-5 pb-24 pt-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)] lg:gap-12 sm:px-8 sm:pt-6">
+          <section className="wp-rise min-w-0">
+            <MonthOrbit
               spending={overview?.spending_by_category ?? []}
-              totalCents={overview?.month_expense_total_cents ?? 0}
+              balanceCents={balance}
+              story={story}
             />
-          </Widget>
+            <div className="mx-auto mt-2 max-w-lg">
+              <MonthTide inCents={income} outCents={spent} />
+              {cashflow ? <div className="mt-6"><MonthWave data={cashflow} /></div> : null}
+            </div>
+          </section>
 
-          <Widget title="Histórico mensal">
-            {cashflow ? (
-              <HomeCashflow
-                data={cashflow}
-                dynamic={dynamic}
-                forecastMonths={forecastMonths}
-                onDynamicChange={setDynamic}
-                onForecastChange={setForecastMonths}
-              />
-            ) : (
-              <p className="text-sm text-muted">Sem dados de séries para o gráfico.</p>
-            )}
-          </Widget>
-
-          <Widget
-            title="Pagamentos futuros"
-            action={
-              <Link to="/app/despesas?filtro=pagar" className="text-sm text-gold-pressed">
-                Ver mais
-              </Link>
-            }
-          >
-            {pending.length === 0 ? (
-              <p className="text-sm text-muted">Nenhuma despesa a vencer.</p>
-            ) : (
-              <>
-                <div className="mb-1 hidden grid-cols-[7rem_1fr_auto] gap-3 text-[11px] uppercase tracking-wide text-muted sm:grid">
-                  <span>Vencimento</span>
-                  <span>Descrição</span>
-                  <span>Valor</span>
-                </div>
-                <ul className="max-h-full min-h-0 divide-y divide-navy/8 overflow-auto">
-                  {pending.map((item) => {
-                    const urgent = (daysUntil(item.due_date) ?? 99) <= 3;
-                    return (
-                      <li
-                        key={item.id}
-                        className="grid grid-cols-1 gap-0.5 py-2.5 text-sm sm:grid-cols-[7rem_1fr_auto] sm:items-baseline sm:gap-3"
-                      >
-                        <p className={urgent ? "text-red-700" : "text-muted"}>
-                          {formatDueDate(item.due_date)}
-                        </p>
-                        <p className="truncate text-navy">{item.description}</p>
-                        <span className="font-medium sm:text-right">
-                          {formatBrlFromCents(item.amount_cents)}
-                        </span>
-                      </li>
-                    );
-                  })}
-                </ul>
-                <p className="mt-3 border-t border-navy/8 pt-3 text-sm">
-                  Total pendente:{" "}
-                  <span className="font-medium">
-                    {formatBrlFromCents(overview?.pending_total_cents ?? 0)}
-                  </span>
-                </p>
-              </>
-            )}
-          </Widget>
-
-          <Widget
-            title="Metas"
-            action={
-              <Link to="/app/metas" className="text-sm text-gold-pressed">
-                Ver mais
-              </Link>
-            }
-          >
-            {goals.length === 0 ? (
-              <p className="text-sm text-muted">Nenhuma meta activa. Crie uma agora!</p>
-            ) : (
-              <ul className="min-h-0 space-y-4 overflow-auto">
-                {goals.map((goal) => {
-                  const pct = Math.min(
-                    100,
-                    Math.round((goal.current_cents / Math.max(1, goal.target_cents)) * 100),
-                  );
-                  return (
-                    <li key={goal.id}>
-                      <div className="flex justify-between gap-3 text-sm">
-                        <span className="truncate font-medium uppercase tracking-wide">
-                          {goal.title}
-                        </span>
-                        <span className="shrink-0 text-muted">{pct}%</span>
-                      </div>
-                      <div className="mt-2 h-2 overflow-hidden rounded-full bg-cream-muted">
-                        <div
-                          className="h-full rounded-full bg-gold"
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                      <p className="mt-1 text-xs text-muted">
-                        {formatBrlFromCents(goal.current_cents)} de{" "}
-                        {formatBrlFromCents(goal.target_cents)}
-                      </p>
-                      <form
-                        className="mt-2 flex gap-2"
-                        onSubmit={(e) => {
-                          e.preventDefault();
-                          void onContribute(goal.id);
-                        }}
-                      >
-                        <input
-                          className="min-w-0 flex-1 rounded-lg border border-navy/10 px-2 py-1.5 text-sm"
-                          placeholder="Aportar R$"
-                          value={contrib[goal.id] ?? ""}
-                          onChange={(e) =>
-                            setContrib((c) => ({ ...c, [goal.id]: e.target.value }))
-                          }
-                        />
-                        <button
-                          type="submit"
-                          className="rounded-lg bg-navy-deep px-3 py-1.5 text-xs text-cream"
-                        >
-                          Guardar
-                        </button>
-                      </form>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </Widget>
+          <aside className="wp-rise lg:sticky lg:top-6" style={{ ["--wp-delay" as string]: "120ms" }}>
+            <ComingNext items={pending} totalCents={overview?.pending_total_cents ?? 0} />
+            <GrowingNow goals={goals} />
+            <p className="mt-6 text-sm leading-relaxed text-navy/60">
+              Despesas, proventos e metas continuam nos sítios de sempre. Aqui o mês
+              aparece inteiro — o que sobra, o que orbita e o que se aproxima.
+            </p>
+          </aside>
         </div>
       )}
     </div>
+  );
+}
+
+function monthStory(
+  balance: number,
+  pending: PendingExpenseItem[],
+  income: number,
+  spent: number,
+): string {
+  const soon = pending.filter((item) => {
+    const days = daysUntil(item.due_date);
+    return days != null && days <= 5;
+  }).length;
+  if (income === 0 && spent === 0) {
+    return "Ainda não há movimento neste mês. Quando entrar e sair dinheiro, este palco ganha vida.";
+  }
+  if (balance < 0) {
+    return "A folga ficou negativa. Vale olhar o que ainda sai antes do fim do mês.";
+  }
+  if (soon > 0) {
+    return soon === 1
+      ? "Há uma conta nos próximos dias. A folga ainda está à vista."
+      : `Há ${soon} contas nos próximos dias. A folga ainda está à vista.`;
+  }
+  return "Folga à vista. O mês está nas suas mãos.";
+}
+
+function ComingNext({
+  items,
+  totalCents,
+}: {
+  items: PendingExpenseItem[];
+  totalCents: number;
+}) {
+  return (
+    <section>
+      <div className="flex items-end justify-between gap-3">
+        <h2 className="font-display text-2xl font-semibold text-navy-deep">
+          O que se aproxima
+        </h2>
+        <Link
+          to="/app/despesas?filtro=pagar"
+          className="text-sm font-medium text-teal-deep hover:underline"
+        >
+          A pagar
+        </Link>
+      </div>
+      {items.length === 0 ? (
+        <p className="mt-4 text-sm text-muted">Nada a vencer por agora.</p>
+      ) : (
+        <ol className="relative mt-5 space-y-0 border-l border-navy/10 pl-5">
+          {items.slice(0, 5).map((item, i) => {
+            const days = daysUntil(item.due_date);
+            const urgent = days != null && days <= 3;
+            return (
+              <li
+                key={item.id}
+                className="wp-rise relative pb-5"
+                style={{ ["--wp-delay" as string]: `${180 + i * 70}ms` }}
+              >
+                <span
+                  className={`absolute -left-[26px] top-1.5 h-2.5 w-2.5 rounded-full ${
+                    urgent ? "bg-red-600 wp-pulse-dot" : "bg-teal"
+                  }`}
+                />
+                <p className={`text-xs ${urgent ? "font-semibold text-red-700" : "text-muted"}`}>
+                  {formatDueDate(item.due_date)}
+                  {days != null && days >= 0 ? ` · ${days === 0 ? "hoje" : `${days}d`}` : ""}
+                </p>
+                <p className="truncate text-navy">{item.description}</p>
+                <p className="tabular-nums text-sm text-navy-deep">
+                  {formatBrlFromCents(item.amount_cents)}
+                </p>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+      <p className="text-sm text-navy/70">
+        Total a pagar{" "}
+        <MoneyCount cents={totalCents} className="font-semibold tabular-nums text-navy-deep" />
+      </p>
+    </section>
+  );
+}
+
+function GrowingNow({ goals }: { goals: GoalSummaryItem[] }) {
+  return (
+    <section className="mt-8">
+      <div className="flex items-end justify-between gap-3">
+        <h2 className="font-display text-2xl font-semibold text-navy-deep">A crescer</h2>
+        <Link to="/app/metas" className="text-sm font-medium text-teal-deep hover:underline">
+          Metas
+        </Link>
+      </div>
+      {goals.length === 0 ? (
+        <p className="mt-4 text-sm text-muted">Nenhuma meta activa neste momento.</p>
+      ) : (
+        <ul className="mt-5 space-y-4">
+          {goals.slice(0, 3).map((goal, i) => {
+            const pct = Math.min(
+              100,
+              Math.round((goal.current_cents / Math.max(1, goal.target_cents)) * 100),
+            );
+            return (
+              <li
+                key={goal.id}
+                className="wp-rise flex items-center gap-4"
+                style={{ ["--wp-delay" as string]: `${280 + i * 80}ms` }}
+              >
+                <GoalThumb url={goal.reference_thumbnail_url} className="h-14 w-14" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium text-navy">{goal.title}</p>
+                  <p className="text-xs text-muted">
+                    {formatBrlFromCents(goal.current_cents)} de{" "}
+                    {formatBrlFromCents(goal.target_cents)}
+                  </p>
+                </div>
+                <span className="shrink-0 text-sm font-semibold text-teal-deep">{pct}%</span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
   );
 }

@@ -33,6 +33,7 @@ import coil.request.ImageRequest
 import coil.size.Size
 import com.wellpaid.ui.theme.WellPaidCreamMuted
 import com.wellpaid.ui.theme.WellPaidNavy
+import com.wellpaid.util.RemoteImageUrls
 
 /**
  * Linha tocável para preço sugerido (lista de compras, metas). Altura mínima confortável para toque.
@@ -72,7 +73,7 @@ fun ProductPriceHitCard(
                 if (!thumbnailUrl.isNullOrBlank()) {
                     AsyncImage(
                         model = ImageRequest.Builder(context)
-                            .data(thumbnailUrl)
+                            .data(RemoteImageUrls.proxied(thumbnailUrl) ?: thumbnailUrl)
                             .size(Size(104, 104))
                             .crossfade(180)
                             .build(),
