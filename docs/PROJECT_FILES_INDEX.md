@@ -14,6 +14,7 @@ Este documento lista **apenas** ficheiros e pastas que estão **directamente** n
 | [`android-native/`](../android-native/) | App **Android** (Kotlin, Compose, Gradle multi-módulo). |
 | [`mobile/`](../mobile/) | App **Flutter** (multi-plataforma). |
 | [`admin-console/`](../admin-console/) | **SPA** (Vite + React + TypeScript) para administradores. |
+| [`web/`](../web/) | **Site público** (Vite + React): landing, login e dashboard em wellpaid.com.br. |
 | [`docs/`](../docs/) | Documentação do produto (contratos API, QA, arquivo de planos). |
 | [`.cursor/`](../.cursor/) | Regras do Cursor no repo (ex.: [no-env-secrets.mdc](../.cursor/rules/no-env-secrets.mdc)). |
 | [`.git/`](../.git/) | Metadados do **Git** (histórico, branches); local ao clone. |

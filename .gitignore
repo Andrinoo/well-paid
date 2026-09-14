@@ -56,7 +56,9 @@ backend/.venv/
 # Vercel (ligação local na raiz; `npx vercel link` se necessário)
 .vercel/
 
-# Node (admin console local)
+# Node (admin console local; site público em web/)
 node_modules/
 admin-console/
 admin-console/dist/
+web/dist/
+!web/.env.example
