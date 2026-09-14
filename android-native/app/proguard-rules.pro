@@ -37,6 +37,11 @@
 # Coil
 -dontwarn coil.**
 
+# Turnstile WebView bridge
+-keepclassmembers class com.wellpaid.ui.register.TurnstileJsBridge {
+    @android.webkit.JavascriptInterface <methods>;
+}
+
 # Tink / crypto (transitivo; anotações opcionais em compileOnly)
 -dontwarn com.google.errorprone.annotations.CanIgnoreReturnValue
 -dontwarn com.google.errorprone.annotations.CheckReturnValue

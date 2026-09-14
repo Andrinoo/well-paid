@@ -137,6 +137,7 @@ android {
         buildConfigField("String", "BUILD_TIMESTAMP", "\"${escapeBuildConfigString(buildStamp)}\"")
         buildConfigField("String", "VERSION_SIGLA", "\"${escapeBuildConfigString(wellpaidVersionSigla)}\"")
         buildConfigField("String", "VERSION_DISPLAY_LINE", "\"${escapeBuildConfigString(versionDisplayLine)}\"")
+        buildConfigField("String", "SITE_PUBLIC_URL", "\"https://wellpaid.com.br\"")
     }
 
     signingConfigs {

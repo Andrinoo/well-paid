@@ -22,6 +22,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -34,6 +35,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.wellpaid.BuildConfig
 import com.wellpaid.R
 import com.wellpaid.ui.auth.AuthScreenShell
 import com.wellpaid.ui.auth.authOutlinedFieldColors
@@ -196,10 +198,23 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(20.dp))
 
+        val captchaSiteKey = state.captchaSiteKey
+        if (state.captchaEnabled && !captchaSiteKey.isNullOrBlank()) {
+            key(state.captchaNonce) {
+                TurnstileWebView(
+                    siteUrl = BuildConfig.SITE_PUBLIC_URL,
+                    siteKey = captchaSiteKey,
+                    onToken = viewModel::onTurnstileToken,
+                    onError = viewModel::onTurnstileError,
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+
         Button(
             onClick = { viewModel.submit() },
             modifier = Modifier.fillMaxWidth(),
-            enabled = !state.isLoading,
+            enabled = !state.isLoading && (!state.captchaEnabled || state.turnstileToken.isNotBlank()),
             shape = MaterialTheme.shapes.medium,
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,

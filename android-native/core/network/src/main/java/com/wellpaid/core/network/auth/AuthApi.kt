@@ -7,6 +7,7 @@ import com.wellpaid.core.model.auth.LogoutRequestDto
 import com.wellpaid.core.model.auth.ResetPasswordRequestDto
 import com.wellpaid.core.model.auth.MessageResponseDto
 import com.wellpaid.core.model.auth.RefreshRequestDto
+import com.wellpaid.core.model.auth.CaptchaConfigDto
 import com.wellpaid.core.model.auth.RegisterRequestDto
 import com.wellpaid.core.model.auth.RegisterResponseDto
 import com.wellpaid.core.model.auth.ResendVerificationRequestDto
@@ -15,9 +16,13 @@ import com.wellpaid.core.model.auth.TokenPairDto
 import com.wellpaid.core.model.auth.VerifyEmailRequestDto
 import retrofit2.Call
 import retrofit2.http.Body
+import retrofit2.http.GET
 import retrofit2.http.POST
 
 interface AuthApi {
+    @GET("auth/captcha")
+    suspend fun captcha(): CaptchaConfigDto
+
     @POST("auth/register")
     suspend fun register(@Body body: RegisterRequestDto): RegisterResponseDto
 

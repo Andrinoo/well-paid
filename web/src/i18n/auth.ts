@@ -30,6 +30,9 @@ export const authCopy = {
       fallback: "Não foi possível criar a conta.",
       emailTaken: "Não foi possível criar a conta.",
       throttled: "Muitas contas a partir daqui. Tente mais tarde.",
+      captcha: "Confirmação",
+      captchaWait: "A carregar a verificação…",
+      captchaNeed: "Conclua a verificação antes de criar a conta.",
     },
     confirm: {
       title: "Confirmar e-mail",
@@ -93,6 +96,9 @@ export const authCopy = {
       fallback: "Could not create the account.",
       emailTaken: "Could not create the account.",
       throttled: "Too many accounts from here. Try again later.",
+      captcha: "Verification",
+      captchaWait: "Loading verification…",
+      captchaNeed: "Complete the check before creating the account.",
     },
     confirm: {
       title: "Confirm email",

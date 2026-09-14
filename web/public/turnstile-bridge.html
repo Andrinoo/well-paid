@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Well Paid</title>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: transparent;
+      }
+      #cf {
+        display: flex;
+        justify-content: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="cf"></div>
+    <script>
+      const sitekey = new URLSearchParams(location.search).get("sitekey") || "";
+      function notify(token) {
+        if (window.WellPaidTurnstile && token) {
+          window.WellPaidTurnstile.onToken(token);
+        }
+      }
+      function fail() {
+        if (window.WellPaidTurnstile) {
+          window.WellPaidTurnstile.onError();
+        }
+      }
+      function boot() {
+        if (!sitekey || !window.turnstile) return;
+        window.turnstile.render("#cf", {
+          sitekey: sitekey,
+          callback: notify,
+          "expired-callback": fail,
+          "error-callback": fail,
+        });
+      }
+      window.addEventListener("load", function () {
+        if (window.turnstile) {
+          boot();
+          return;
+        }
+        var n = 0;
+        var t = setInterval(function () {
+          n += 1;
+          if (window.turnstile) {
+            clearInterval(t);
+            boot();
+          } else if (n > 80) {
+            clearInterval(t);
+            fail();
+          }
+        }, 50);
+      });
+    </script>
+  </body>
+</html>

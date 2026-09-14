@@ -9,6 +9,7 @@ import com.wellpaid.core.network.auth.AuthApi
 import com.wellpaid.util.FastApiErrorMapper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,6 +17,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @HiltViewModel
@@ -29,6 +31,20 @@ class RegisterViewModel @Inject constructor(
 
     private val _events = Channel<RegisterEvent>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
+
+    init {
+        viewModelScope.launch {
+            runCatching { authApi.captcha() }.onSuccess { cfg ->
+                val key = cfg.siteKey?.trim().orEmpty()
+                _uiState.update {
+                    it.copy(
+                        captchaEnabled = cfg.enabled && key.isNotEmpty(),
+                        captchaSiteKey = key.takeIf { cfg.enabled && key.isNotEmpty() },
+                    )
+                }
+            }
+        }
+    }
 
     fun onEmailChange(value: String) {
         _uiState.update { it.copy(email = value, errorMessage = null) }
@@ -50,12 +66,25 @@ class RegisterViewModel @Inject constructor(
         _uiState.update { it.copy(phone = value, errorMessage = null) }
     }
 
+    fun onTurnstileToken(token: String) {
+        viewModelScope.launch(Dispatchers.Main.immediate) {
+            _uiState.update { it.copy(turnstileToken = token, errorMessage = null) }
+        }
+    }
+
+    fun onTurnstileError() {
+        viewModelScope.launch(Dispatchers.Main.immediate) {
+            _uiState.update { it.copy(turnstileToken = "") }
+        }
+    }
+
     fun submit() {
         val email = _uiState.value.email.trim().lowercase()
         val password = _uiState.value.password
         val confirm = _uiState.value.confirmPassword
         val fullName = _uiState.value.fullName.trim().takeIf { it.isNotEmpty() }
         val phone = _uiState.value.phone.trim().takeIf { it.isNotEmpty() }
+        val token = _uiState.value.turnstileToken.trim().takeIf { it.isNotEmpty() }
 
         when {
             email.isEmpty() || password.isEmpty() -> {
@@ -73,18 +102,26 @@ class RegisterViewModel @Inject constructor(
                     it.copy(errorMessage = appContext.getString(R.string.register_error_password_mismatch))
                 }
             }
+            _uiState.value.captchaEnabled && token.isNullOrEmpty() -> {
+                _uiState.update {
+                    it.copy(errorMessage = appContext.getString(R.string.register_error_captcha))
+                }
+            }
             else -> {
                 viewModelScope.launch {
                     _uiState.update { it.copy(isLoading = true, errorMessage = null) }
                     runCatching {
-                        authApi.register(
-                            RegisterRequestDto(
-                                email = email,
-                                password = password,
-                                fullName = fullName,
-                                phone = phone,
-                            ),
-                        )
+                        withContext(Dispatchers.IO) {
+                            authApi.register(
+                                RegisterRequestDto(
+                                    email = email,
+                                    password = password,
+                                    fullName = fullName,
+                                    phone = phone,
+                                    turnstileToken = token,
+                                ),
+                            )
+                        }
                     }.onSuccess { response ->
                         _uiState.update { it.copy(isLoading = false) }
                         _events.send(RegisterEvent.NavigateVerify(response.email))
@@ -92,6 +129,8 @@ class RegisterViewModel @Inject constructor(
                         _uiState.update {
                             it.copy(
                                 isLoading = false,
+                                turnstileToken = "",
+                                captchaNonce = it.captchaNonce + 1,
                                 errorMessage = FastApiErrorMapper.message(appContext, t),
                             )
                         }
@@ -108,6 +147,10 @@ data class RegisterUiState(
     val confirmPassword: String = "",
     val fullName: String = "",
     val phone: String = "",
+    val captchaEnabled: Boolean = false,
+    val captchaSiteKey: String? = null,
+    val turnstileToken: String = "",
+    val captchaNonce: Int = 0,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
 )

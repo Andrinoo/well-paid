@@ -50,6 +50,7 @@ from app.services.signup_guard import (
 )
 from app.models.user import User
 from app.schemas.auth import (
+    CaptchaConfigResponse,
     ForgotPasswordRequest,
     ForgotPasswordResponse,
     LoginRequest,
@@ -66,6 +67,7 @@ from app.schemas.auth import (
     UserProfilePatch,
     VerifyEmailRequest,
 )
+from app.services.turnstile import assert_turnstile, turnstile_configured
 router = APIRouter(prefix="/auth", tags=["auth"])
 settings = get_settings()
 logger = logging.getLogger(__name__)
@@ -202,6 +204,8 @@ def register(
     body: RegisterRequest,
     db: Session = Depends(get_db),
 ) -> RegisterResponse:
+    ip = client_ip(request)
+    assert_turnstile(body.turnstile_token, ip)
     try:
         hashed = hash_password(body.password)
     except ValueError as e:
@@ -210,7 +214,7 @@ def register(
             detail=str(e),
         ) from e
 
-    ip_hash = hash_client_ip(client_ip(request))
+    ip_hash = hash_client_ip(ip)
     raise_if_signup_blocked(db, ip_hash)
     record_signup_attempt(db, ip_hash)
 
@@ -253,6 +257,14 @@ def register(
         dev_verification_token=raw_tok if _is_dev_env() else None,
         dev_verification_code=code if _is_dev_env() else None,
     )
+
+
+@router.get("/captcha", response_model=CaptchaConfigResponse)
+@limiter.limit("60/minute")
+def captcha_config(request: Request) -> CaptchaConfigResponse:
+    enabled = turnstile_configured()
+    site_key = settings.turnstile_site_key.strip() if enabled else None
+    return CaptchaConfigResponse(enabled=enabled, site_key=site_key or None)
 
 
 @router.post("/verify-email", response_model=TokenPairResponse)

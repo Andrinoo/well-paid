@@ -69,6 +69,7 @@
     <string name="register_error_empty">Enter email and password.</string>
     <string name="register_error_password_short">Password must be at least 8 characters.</string>
     <string name="register_error_password_mismatch">Passwords do not match.</string>
+    <string name="register_error_captcha">Complete the verification before creating the account.</string>
     <string name="verify_title">Confirm email</string>
     <string name="verify_subtitle">Enter the 6-digit code or paste the token from the link you received.</string>
     <string name="verify_code_label">6-digit code</string>

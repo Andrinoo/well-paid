@@ -208,6 +208,14 @@ class Settings(BaseSettings):
             "mercado_pago_access_token", "MERCADO_PAGO_ACCESS_TOKEN"
         ),
     )
+    turnstile_site_key: str = Field(
+        default="",
+        validation_alias=AliasChoices("turnstile_site_key", "TURNSTILE_SITE_KEY"),
+    )
+    turnstile_secret_key: str = Field(
+        default="",
+        validation_alias=AliasChoices("turnstile_secret_key", "TURNSTILE_SECRET_KEY"),
+    )
 
     @model_validator(mode="before")
     @classmethod

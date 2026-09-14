@@ -9,6 +9,12 @@ class RegisterRequest(BaseModel):
     password: str = Field(min_length=8)
     full_name: str | None = Field(default=None, max_length=200)
     phone: str | None = Field(default=None, max_length=32)
+    turnstile_token: str | None = Field(default=None, max_length=2048)
+
+
+class CaptchaConfigResponse(BaseModel):
+    enabled: bool
+    site_key: str | None = None
 
 
 class LoginRequest(BaseModel):

@@ -185,10 +185,20 @@ export async function login(
   return body;
 }
 
+export type CaptchaConfig = {
+  enabled: boolean;
+  site_key: string | null;
+};
+
+export async function fetchCaptchaConfig(): Promise<CaptchaConfig> {
+  return (await request("/auth/captcha", { method: "GET" }, false)) as CaptchaConfig;
+}
+
 export async function registerAccount(
   email: string,
   password: string,
   fullName: string,
+  turnstileToken?: string | null,
 ): Promise<RegisterResult> {
   return (await request(
     "/auth/register",
@@ -198,6 +208,7 @@ export async function registerAccount(
         email,
         password,
         full_name: fullName.trim() || null,
+        ...(turnstileToken ? { turnstile_token: turnstileToken } : {}),
       }),
     },
     false,

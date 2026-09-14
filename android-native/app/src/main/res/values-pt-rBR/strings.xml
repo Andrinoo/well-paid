@@ -68,6 +68,7 @@
     <string name="register_error_empty">Preencha e-mail e palavra-passe.</string>
     <string name="register_error_password_short">A palavra-passe deve ter pelo menos 8 caracteres.</string>
     <string name="register_error_password_mismatch">As palavras-passe não coincidem.</string>
+    <string name="register_error_captcha">Conclua a verificação antes de criar a conta.</string>
     <string name="verify_title">Confirmar e-mail</string>
     <string name="verify_subtitle">Introduza o código de 6 dígitos ou cole o token do link que recebeu.</string>
     <string name="verify_code_label">Código de 6 dígitos</string>
