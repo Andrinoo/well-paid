@@ -32,6 +32,8 @@ export function RegisterPage() {
   const [busy, setBusy] = useState(false);
   const [siteKey, setSiteKey] = useState<string | null>(null);
   const [captchaOn, setCaptchaOn] = useState(false);
+  const [captchaLoading, setCaptchaLoading] = useState(true);
+  const [captchaFailed, setCaptchaFailed] = useState(false);
   const [token, setToken] = useState("");
   const widgetHost = useRef<HTMLDivElement>(null);
   const widgetId = useRef<string | null>(null);
@@ -44,9 +46,13 @@ export function RegisterPage() {
         const key = cfg.enabled ? (cfg.site_key || "").trim() : "";
         setCaptchaOn(Boolean(key));
         setSiteKey(key || null);
+        setCaptchaLoading(false);
       })
       .catch(() => {
-        if (!cancelled) setCaptchaOn(false);
+        if (!cancelled) {
+          setCaptchaFailed(true);
+          setCaptchaLoading(false);
+        }
       });
     return () => {
       cancelled = true;
@@ -65,7 +71,10 @@ export function RegisterPage() {
         sitekey: siteKey as string,
         callback: (value) => setToken(value),
         "expired-callback": () => setToken(""),
-        "error-callback": () => setToken(""),
+        "error-callback": () => {
+          setToken("");
+          setCaptchaFailed(true);
+        },
       });
     }
 
@@ -77,6 +86,7 @@ export function RegisterPage() {
       );
       if (existing) {
         existing.addEventListener("load", renderWidget);
+        existing.addEventListener("error", () => setCaptchaFailed(true));
       } else {
         const script = document.createElement("script");
         script.src =
@@ -84,6 +94,7 @@ export function RegisterPage() {
         script.async = true;
         script.dataset.wpTurnstile = "1";
         script.addEventListener("load", renderWidget);
+        script.addEventListener("error", () => setCaptchaFailed(true));
         document.head.appendChild(script);
       }
     }
@@ -109,6 +120,14 @@ export function RegisterPage() {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    if (password.length < 8) {
+      setError(a.register.passwordShort);
+      return;
+    }
+    if (captchaLoading || captchaFailed) {
+      setError(a.register.captchaUnavailable);
+      return;
+    }
     if (captchaOn && !token) {
       setError(a.register.captchaNeed);
       return;
@@ -123,6 +142,10 @@ export function RegisterPage() {
       resetCaptcha();
       if (err instanceof ApiError && err.status === 429) {
         setError(a.register.throttled);
+      } else if (err instanceof ApiError && err.status === 400 && captchaOn) {
+        setError(a.register.captchaNeed);
+      } else if (err instanceof ApiError && err.status === 422) {
+        setError(a.register.passwordShort);
       } else {
         setError(a.register.fallback);
       }
@@ -179,7 +202,8 @@ export function RegisterPage() {
             ) : null}
           </div>
         ) : null}
-        <PrimaryButton disabled={busy || (captchaOn && !token)}>
+        {captchaFailed ? <p className="text-sm text-red-700">{a.register.captchaUnavailable}</p> : null}
+        <PrimaryButton disabled={busy || captchaLoading || captchaFailed || (captchaOn && !token)}>
           {busy ? a.register.busy : a.register.submit}
         </PrimaryButton>
       </form>

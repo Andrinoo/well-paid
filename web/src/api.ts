@@ -326,8 +326,13 @@ export type GoalProductHit = {
 export type ReservePlan = {
   id: string;
   title: string;
+  details?: string | null;
   monthly_target_cents: number;
+  target_cents?: number | null;
   balance_cents: number;
+  opening_balance_cents?: number;
+  tracking_start?: string;
+  target_end_date?: string | null;
   status: string;
 };
 
@@ -586,6 +591,9 @@ export async function fetchReservePlans(): Promise<ReservePlan[]> {
 export async function createReservePlan(body: {
   title: string;
   monthly_target_cents: number;
+  target_cents?: number | null;
+  opening_balance_cents?: number | null;
+  details?: string | null;
 }): Promise<void> {
   await request(
     "/emergency-reserve/plans",
@@ -725,6 +733,38 @@ export async function patchDisplayName(display_name: string): Promise<UserMe> {
     { method: "PATCH", body: JSON.stringify({ display_name }) },
     true,
   )) as UserMe;
+}
+
+export async function moveReserveBalance(
+  planId: string,
+  amountCents: number,
+  movementDate: string,
+  note?: string | null,
+): Promise<void> {
+  await request(
+    "/emergency-reserve/contributions",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        contribution_date: movementDate,
+        total_amount_cents: amountCents,
+        allocations: [{ plan_id: planId, amount_cents: amountCents }],
+        note: note?.trim() || null,
+      }),
+    },
+    true,
+  );
+}
+
+export async function updateReservePlan(
+  planId: string,
+  body: { title: string; monthly_target_cents: number; target_cents?: number | null; details?: string | null },
+): Promise<ReservePlan> {
+  return (await request(`/emergency-reserve/plans/${planId}`, { method: "PUT", body: JSON.stringify(body) }, true)) as ReservePlan;
+}
+
+export async function deleteReservePlan(planId: string): Promise<void> {
+  await request(`/emergency-reserve/plans/${planId}`, { method: "DELETE" }, true);
 }
 
 export async function patchFamilyMode(family_mode_enabled: boolean): Promise<UserMe> {

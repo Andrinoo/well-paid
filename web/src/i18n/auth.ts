@@ -33,6 +33,8 @@ export const authCopy = {
       captcha: "Confirmação",
       captchaWait: "A carregar a verificação…",
       captchaNeed: "Conclua a verificação antes de criar a conta.",
+      captchaUnavailable: "A verificação de segurança não carregou. Atualize a página e tente novamente.",
+      passwordShort: "A senha precisa ter pelo menos 8 caracteres.",
     },
     confirm: {
       title: "Confirmar e-mail",
@@ -99,6 +101,8 @@ export const authCopy = {
       captcha: "Verification",
       captchaWait: "Loading verification…",
       captchaNeed: "Complete the check before creating the account.",
+      captchaUnavailable: "The security check did not load. Refresh the page and try again.",
+      passwordShort: "Password must be at least 8 characters long.",
     },
     confirm: {
       title: "Confirm email",

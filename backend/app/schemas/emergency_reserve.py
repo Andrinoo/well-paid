@@ -1,7 +1,7 @@
 from datetime import date as date_type
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class EmergencyReserveUpdate(BaseModel):
@@ -69,7 +69,7 @@ class EmergencyReservePlanCreate(BaseModel):
     opening_balance_cents: int | None = Field(
         default=None,
         ge=0,
-        description="Aporte inicial em centavos (dinheiro já na reserva ao criar o plano).",
+        description="Valor inicial em centavos (dinheiro já guardado ao criar o cofrinho).",
     )
 
 
@@ -108,25 +108,39 @@ class EmergencyReserveCompleteBody(BaseModel):
 
 class EmergencyReserveContributionAllocation(BaseModel):
     plan_id: UUID
-    amount_cents: int = Field(gt=0)
+    amount_cents: int
+
+    @model_validator(mode="after")
+    def non_zero_amount(self):
+        if self.amount_cents == 0:
+            raise ValueError("O valor da movimentação não pode ser zero")
+        return self
 
 
 class EmergencyReserveContributionCreate(BaseModel):
     contribution_date: date_type | None = None
-    total_amount_cents: int = Field(gt=0)
+    total_amount_cents: int
     allocations: list[EmergencyReserveContributionAllocation] = Field(min_length=1)
     note: str | None = Field(default=None, max_length=500)
+
+    @model_validator(mode="after")
+    def valid_movement(self):
+        if self.total_amount_cents == 0:
+            raise ValueError("O valor da movimentação não pode ser zero")
+        if any((item.amount_cents > 0) != (self.total_amount_cents > 0) for item in self.allocations):
+            raise ValueError("Todas as alocações devem ter o mesmo tipo da movimentação")
+        return self
 
 
 class EmergencyReserveContributionItem(BaseModel):
     plan_id: UUID
-    amount_cents: int = Field(gt=0)
+    amount_cents: int
 
 
 class EmergencyReserveContributionResponse(BaseModel):
     id: UUID
     contribution_date: date_type
-    total_amount_cents: int = Field(gt=0)
+    total_amount_cents: int
     note: str | None = None
     created_at: date_type | None = None
     items: list[EmergencyReserveContributionItem]

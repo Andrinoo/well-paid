@@ -15,6 +15,7 @@ from app.api.routes.emergency_reserve import (
 )
 from app.schemas.emergency_reserve import (
     EmergencyReserveAccrualPatch,
+    EmergencyReserveContributionCreate,
     EmergencyReserveUpdate,
 )
 
@@ -175,4 +176,36 @@ def test_delete_entire_reserve_no_longer_checks_family_role() -> None:
     ):
         out = delete_emergency_reserve(user, db)
     assert out.status_code == 204
+
+
+def test_cofrinho_accepts_deposit_and_withdrawal_movements() -> None:
+    plan_id = "8ba2be6c-4f5f-4b79-91a1-05c45d6baf08"
+
+    deposit = EmergencyReserveContributionCreate(
+        total_amount_cents=2500,
+        allocations=[{"plan_id": plan_id, "amount_cents": 2500}],
+    )
+    withdrawal = EmergencyReserveContributionCreate(
+        total_amount_cents=-1200,
+        allocations=[{"plan_id": plan_id, "amount_cents": -1200}],
+    )
+
+    assert deposit.total_amount_cents == 2500
+    assert withdrawal.total_amount_cents == -1200
+
+
+def test_cofrinho_rejects_zero_and_mixed_movement_types() -> None:
+    plan_id = "8ba2be6c-4f5f-4b79-91a1-05c45d6baf08"
+
+    with pytest.raises(ValueError):
+        EmergencyReserveContributionCreate(
+            total_amount_cents=0,
+            allocations=[{"plan_id": plan_id, "amount_cents": 0}],
+        )
+
+    with pytest.raises(ValueError):
+        EmergencyReserveContributionCreate(
+            total_amount_cents=1000,
+            allocations=[{"plan_id": plan_id, "amount_cents": -1000}],
+        )
 

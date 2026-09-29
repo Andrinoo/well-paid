@@ -15,7 +15,7 @@ const PRIMARY: NavItem[] = [
   { to: "/app/despesas", label: "Despesas", icon: <IconCoin /> },
   { to: "/app/receitas", label: "Proventos", icon: <IconWallet /> },
   { to: "/app/metas", label: "Metas", icon: <IconTrophy /> },
-  { to: "/app/reserva", label: "Reserva", icon: <IconShield /> },
+  { to: "/app/reserva", label: "Cofrinho", icon: <IconPiggy /> },
 ];
 
 const MORE: NavItem[] = [
@@ -210,10 +210,11 @@ function IconChart() {
     </svg>
   );
 }
-function IconShield() {
+function IconPiggy() {
   return (
     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3Z" />
+      <path d="M5 10a7 7 0 0 1 7-5h2a6 6 0 0 1 5.7 4H22v5h-2.2a7 7 0 0 1-2.8 3v3h-3v-2H9v2H6v-3.2A6 6 0 0 1 5 10Z" />
+      <path d="M13 8h3M5 11H2v-2M17.5 11h.01" />
     </svg>
   );
 }

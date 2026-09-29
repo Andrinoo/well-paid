@@ -136,6 +136,43 @@ html[data-theme="dark"] :where(.wp-app-shell, .site-root) .to-peach\/70 {
   --tw-gradient-to: rgb(55 42 38 / 0.7);
 }
 
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .from-paper {
+  --tw-gradient-from: #0d1522;
+}
+
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .via-paper {
+  --tw-gradient-via: #101b2a;
+}
+
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .to-sky\/45 {
+  --tw-gradient-to: rgb(24 50 69 / 0.45);
+}
+
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .from-white {
+  --tw-gradient-from: #182536;
+}
+
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .via-white {
+  --tw-gradient-via: #162131;
+}
+
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .to-sage\/45 {
+  --tw-gradient-to: rgb(27 48 64 / 0.72);
+}
+
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .bg-red-50,
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .bg-red-50\/70 {
+  background-color: rgb(69 24 32 / 0.72) !important;
+}
+
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) :is(.text-red-700, .text-red-800) {
+  color: #fda4af !important;
+}
+
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .border-red-200 {
+  border-color: #7f3340 !important;
+}
+
 html[data-theme="dark"] :where(.wp-app-shell, .site-root) .bg-gold.text-navy-deep,
 html[data-theme="dark"] :where(.wp-app-shell, .site-root) .bg-sun.text-navy-deep {
   color: #141c2a !important;
@@ -330,6 +367,11 @@ select {
 .expense-list-row:hover {
   background-color: rgb(18 168 136 / 0.045);
   box-shadow: inset 3px 0 0 rgb(18 168 136 / 0.2);
+}
+
+html[data-theme="dark"] .expense-list-row:hover {
+  background-color: rgb(45 212 191 / 0.075);
+  box-shadow: inset 3px 0 0 rgb(94 234 212 / 0.28);
 }
 
 @keyframes wp-wave-shift {

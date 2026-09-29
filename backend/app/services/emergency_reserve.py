@@ -1,4 +1,4 @@
-"""Reserva de emergência: planos múltiplos + acréscimos mensais por plano."""
+"""Cofrinhos: planos flexíveis e movimentações de entrada ou retirada."""
 
 from __future__ import annotations
 
@@ -754,6 +754,11 @@ def create_contribution(
             raise ValueError("plan_not_found_or_not_allowed")
         if plan.status != "active":
             raise ValueError("plan_not_active")
+        if amount_cents == 0:
+            raise ValueError("movement_amount_zero")
+        refresh_plan_cash_balance(db, plan)
+        if amount_cents < 0 and abs(amount_cents) > int(plan.balance_cents):
+            raise ValueError("insufficient_savings_balance")
         touched_plan_ids[plan.id] = None
         db.add(
             EmergencyReserveContributionItem(

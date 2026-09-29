@@ -1,4 +1,4 @@
-"""Reserva de emergência (meta mensal + saldo acumulado)."""
+"""Cofrinhos de economia (compatíveis com o antigo módulo de reserva)."""
 
 from datetime import date
 from typing import Annotated
@@ -139,7 +139,11 @@ def create_manual_contribution(
             note=body.note,
         )
     except ValueError as e:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+        detail = {
+            "insufficient_savings_balance": "Saldo insuficiente no cofrinho",
+            "movement_amount_zero": "O valor da movimentação não pode ser zero",
+        }.get(str(e), str(e))
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=detail) from e
     return EmergencyReserveContributionResponse(
         id=c.id,
         contribution_date=c.contribution_date,
@@ -324,7 +328,7 @@ def _reserve_unavailable() -> HTTPException:
     return HTTPException(
         status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
         detail=(
-            "Reserva de emergência indisponível: base de dados sem migração "
+            "Cofrinho indisponível: base de dados sem migração "
             "necessária. Execute: python -m alembic upgrade head"
         ),
     )
@@ -347,7 +351,7 @@ def patch_emergency_reserve_accrual(
     if r is None:
         raise HTTPException(
             status.HTTP_404_NOT_FOUND,
-            detail="Reserva de emergência não configurada",
+            detail="Cofrinho não configurado",
         )
     ensure_accruals(db, r, date.today())
     db.refresh(r)
@@ -367,7 +371,7 @@ def delete_emergency_reserve_accrual(
     if reserve is None:
         raise HTTPException(
             status.HTTP_404_NOT_FOUND,
-            detail="Reserva de emergência não configurada",
+            detail="Cofrinho não configurado",
         )
     if not deleted:
         raise HTTPException(
@@ -390,6 +394,6 @@ def delete_emergency_reserve(
     if not delete_reserve_for_user(db, user.id):
         raise HTTPException(
             status.HTTP_404_NOT_FOUND,
-            detail="Reserva de emergência não configurada",
+            detail="Cofrinho não configurado",
         )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
