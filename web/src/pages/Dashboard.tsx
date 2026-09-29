@@ -15,7 +15,7 @@ import {
 import { daysUntil, formatBrlFromCents, formatDueDate, greetingFirstName, monthLabel, shiftMonth } from "../format";
 import { useToggleShellMenu } from "../shell";
 import { GoalThumb } from "./home/GoalThumb";
-import { MonthOrbit, MonthTide, MonthWave } from "./home/stage";
+import { MonthOrbit, MonthWave } from "./home/stage";
 
 export function DashboardPage() {
   const navigate = useNavigate();
@@ -70,11 +70,11 @@ export function DashboardPage() {
   const tight = balance < 0;
 
   return (
-    <div className="relative min-h-full overflow-hidden bg-paper font-ui text-navy-deep">
+    <div className="relative min-h-full overflow-hidden bg-paper font-ui text-navy-deep xl:flex xl:h-full xl:min-h-0 xl:flex-col">
       <div className={`pointer-events-none absolute -left-24 -top-24 h-[28rem] w-[28rem] rounded-full blur-3xl wp-float ${tight ? "bg-peach" : "bg-sky"}`} />
       <div className="pointer-events-none absolute -right-16 top-32 h-72 w-72 rounded-full bg-peach/80 blur-3xl wp-float-alt" />
 
-      <header className="relative border-b border-navy/8 bg-white/45 px-5 py-5 backdrop-blur-xl sm:px-8">
+      <header className="relative shrink-0 border-b border-navy/8 bg-white/45 px-5 py-4 backdrop-blur-xl sm:px-8">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="min-w-0">
             <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-teal-deep">{name ? `${name}, sua visão financeira` : "Sua visão financeira"}</p>
@@ -103,14 +103,13 @@ export function DashboardPage() {
           {[0, 1, 2, 3].map((item) => <div key={item} className="h-[360px] overflow-hidden rounded-3xl bg-white/70"><div className="h-full w-full wp-shimmer" /></div>)}
         </div>
       ) : (
-        <main className="relative grid gap-4 px-5 pb-24 pt-5 xl:grid-cols-2 xl:auto-rows-[500px] xl:pb-8 sm:px-8">
+        <main className="relative grid gap-3 px-5 pb-24 pt-4 xl:min-h-0 xl:flex-1 xl:grid-cols-2 xl:grid-rows-2 xl:overflow-hidden xl:pb-4 sm:px-8">
           <DashboardPanel title="Despesas por categoria" subtitle="Onde seu dinheiro foi usado neste mês" value={formatBrlFromCents(spent)} valueLabel="total lançado" tone="expense">
-            <div className="mx-auto -my-4 w-full max-w-[360px]"><MonthOrbit spending={overview?.spending_by_category ?? []} balanceCents={balance} story={monthStory(balance, pending, income, spent)} /></div>
+            <div className="mx-auto -my-4 w-full max-w-[360px] xl:max-w-[270px]"><MonthOrbit spending={overview?.spending_by_category ?? []} balanceCents={balance} story={monthStory(balance, pending, income, spent)} /></div>
           </DashboardPanel>
 
-          <DashboardPanel title="Fluxo financeiro" subtitle="Histórico real e despesas previstas" value={formatBrlFromCents(balance)} valueLabel="saldo do mês" tone={tight ? "expense" : "teal"} delay="70ms">
-            <MonthTide inCents={income} outCents={spent} />
-            {cashflow ? <div className="mt-3"><MonthWave data={cashflow} /></div> : <EmptyState>Sem histórico suficiente para o gráfico.</EmptyState>}
+          <DashboardPanel title="Fluxo financeiro" subtitle="Histórico real e despesas previstas" value={formatBrlFromCents(balance)} valueLabel="saldo do mês" tone={tight ? "expense" : "teal"} delay="70ms" action={<span className="text-[11px] font-semibold text-muted"><b className="text-teal-deep">Entradas {formatBrlFromCents(income)}</b><span className="mx-2 text-navy/20">•</span><b className="text-expense-line">Despesas {formatBrlFromCents(spent)}</b></span>}>
+            {cashflow ? <MonthWave data={cashflow} /> : <EmptyState>Sem histórico suficiente para o gráfico.</EmptyState>}
           </DashboardPanel>
 
           <DashboardPanel title="Próximos pagamentos" subtitle="Compromissos que precisam de atenção" value={formatBrlFromCents(overview?.pending_total_cents ?? 0)} valueLabel={`${pending.length} próximos`} tone="gold" delay="140ms" action={<Link to="/app/despesas?filtro=pagar" className="text-xs font-bold text-teal-deep hover:underline">Ver despesas →</Link>}>
@@ -130,13 +129,13 @@ function DashboardPanel({ title, subtitle, value, valueLabel, tone, children, ac
   const accent = tone === "teal" ? "bg-teal" : tone === "expense" ? "bg-expense-line" : tone === "gold" ? "bg-gold" : "bg-navy";
   const valueTone = tone === "expense" ? "text-expense-line" : tone === "teal" ? "text-teal-deep" : "text-navy-deep";
   return (
-    <section className="wp-rise flex min-h-[360px] min-w-0 flex-col overflow-hidden rounded-3xl border border-navy/8 bg-white/85 shadow-[0_16px_48px_rgba(20,28,42,0.07)] backdrop-blur xl:min-h-0" style={{ ["--wp-delay" as string]: delay }}>
+    <section className="wp-rise flex min-h-[360px] min-w-0 flex-col overflow-hidden rounded-3xl border border-navy/8 bg-white/85 shadow-[0_16px_48px_rgba(20,28,42,0.07)] backdrop-blur xl:h-full xl:min-h-0" style={{ ["--wp-delay" as string]: delay }}>
       <div className={`h-1 w-full ${accent}`} />
-      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-navy/8 px-5 py-4">
+      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-navy/8 px-5 py-3">
         <div className="min-w-0"><h2 className="font-display text-xl font-semibold text-navy-deep">{title}</h2><p className="mt-0.5 text-xs text-muted">{subtitle}</p>{action ? <div className="mt-2">{action}</div> : null}</div>
         <div className="text-right"><p className={`font-display text-xl font-semibold tabular-nums ${valueTone}`}>{value}</p><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted">{valueLabel}</p></div>
       </header>
-      <div className="min-h-0 flex-1 overflow-auto p-5">{children}</div>
+      <div className="min-h-0 flex-1 overflow-auto p-4">{children}</div>
     </section>
   );
 }

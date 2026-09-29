@@ -89,7 +89,7 @@ export function AppShell() {
 
   return (
     <ShellMenuCtx.Provider value={() => setOpen((v) => !v)}>
-    <div className="wp-app-shell flex h-full min-h-dvh bg-cream">
+    <div className="wp-app-shell flex min-h-dvh bg-cream md:h-dvh md:overflow-hidden">
       <aside className="wp-sidebar hidden w-60 shrink-0 flex-col bg-navy-deep md:flex">
         <div className="px-5 py-6">
           <Wordmark light to="/app" />
@@ -138,7 +138,7 @@ export function AppShell() {
             </button>
           </div>
         ) : null}
-        <main className={isHome ? "relative flex min-h-0 flex-1 flex-col overflow-auto bg-paper pb-16 md:pb-0" : "flex-1 px-4 py-5 pb-20 sm:px-6 md:pb-5"}>
+        <main className={isHome ? "relative flex min-h-0 flex-1 flex-col overflow-auto bg-paper pb-16 md:overflow-hidden md:pb-0" : "min-h-0 flex-1 overflow-auto px-4 py-5 pb-20 sm:px-6 md:pb-5"}>
           <Outlet />
         </main>
         <nav
