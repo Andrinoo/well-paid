@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   ApiError,
@@ -163,30 +163,59 @@ export function DashboardPage() {
           </div>
         </div>
       ) : (
-        <div className="relative grid items-start gap-10 px-5 pb-24 pt-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)] lg:gap-12 sm:px-8 sm:pt-6">
-          <section className="wp-rise min-w-0">
-            <MonthOrbit
-              spending={overview?.spending_by_category ?? []}
-              balanceCents={balance}
-              story={story}
-            />
-            <div className="mx-auto mt-2 max-w-lg">
-              <MonthTide inCents={income} outCents={spent} />
-              {cashflow ? <div className="mt-6"><MonthWave data={cashflow} /></div> : null}
-            </div>
+        <div className="relative px-5 pb-24 pt-5 sm:px-8">
+          <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <DashboardMetric label="Entradas" cents={income} tone="teal" hint="Proventos do mês" />
+            <DashboardMetric label="Despesas" cents={spent} tone="expense" hint="Total lançado" />
+            <DashboardMetric label="Saldo" cents={balance} tone={tight ? "expense" : "navy"} hint={tight ? "Atenção ao orçamento" : "Folga disponível"} />
+            <DashboardMetric label="A pagar" cents={overview?.pending_total_cents ?? 0} tone="gold" hint={`${pending.length} próximos compromissos`} />
           </section>
 
-          <aside className="wp-rise lg:sticky lg:top-6" style={{ ["--wp-delay" as string]: "120ms" }}>
-            <ComingNext items={pending} totalCents={overview?.pending_total_cents ?? 0} />
-            <GrowingNow goals={goals} />
-            <p className="mt-6 text-sm leading-relaxed text-navy/60">
-              Despesas, proventos e metas continuam nos sítios de sempre. Aqui o mês
-              aparece inteiro — o que sobra, o que orbita e o que se aproxima.
-            </p>
-          </aside>
+          <div className="mt-5 grid items-stretch gap-5 xl:grid-cols-2">
+            <DashboardPanel title="Visão do mês" subtitle="Distribuição das despesas e saldo atual">
+              <div className="mx-auto max-w-[520px]">
+                <MonthOrbit spending={overview?.spending_by_category ?? []} balanceCents={balance} story={story} />
+              </div>
+            </DashboardPanel>
+            <DashboardPanel title="Fluxo financeiro" subtitle="Entradas, saídas e projeção dos próximos meses" delay="80ms">
+              <div className="mx-auto max-w-2xl py-2">
+                <MonthTide inCents={income} outCents={spent} />
+                {cashflow ? <div className="mt-5"><MonthWave data={cashflow} /></div> : null}
+              </div>
+            </DashboardPanel>
+            <DashboardPanel title="Próximos pagamentos" subtitle="Compromissos que precisam da sua atenção" delay="140ms">
+              <ComingNext items={pending} totalCents={overview?.pending_total_cents ?? 0} />
+            </DashboardPanel>
+            <DashboardPanel title="Metas em andamento" subtitle="Acompanhe o que está crescendo" delay="200ms">
+              <GrowingNow goals={goals} />
+            </DashboardPanel>
+          </div>
         </div>
       )}
     </div>
+  );
+}
+
+function DashboardMetric({ label, cents, tone, hint }: { label: string; cents: number; tone: "teal" | "expense" | "navy" | "gold"; hint: string }) {
+  const accent = tone === "teal" ? "border-l-teal text-teal-deep" : tone === "expense" ? "border-l-expense-line text-expense-line" : tone === "gold" ? "border-l-gold text-gold-pressed" : "border-l-navy text-navy";
+  return (
+    <article className={`wp-rise rounded-2xl border border-navy/8 border-l-4 bg-white/80 px-4 py-3.5 shadow-sm backdrop-blur ${accent}`}>
+      <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">{label}</p>
+      <MoneyCount cents={cents} className="mt-1 block font-display text-2xl font-semibold tabular-nums" />
+      <p className="mt-1 text-xs text-muted">{hint}</p>
+    </article>
+  );
+}
+
+function DashboardPanel({ title, subtitle, children, delay = "0ms" }: { title: string; subtitle: string; children: ReactNode; delay?: string }) {
+  return (
+    <section className="wp-rise min-w-0 overflow-hidden rounded-3xl border border-navy/8 bg-white/80 p-4 shadow-[0_14px_42px_rgba(20,28,42,0.06)] backdrop-blur sm:p-5" style={{ ["--wp-delay" as string]: delay }}>
+      <header className="mb-4 border-b border-navy/8 pb-3">
+        <h2 className="font-display text-xl font-semibold text-navy-deep">{title}</h2>
+        <p className="mt-0.5 text-xs text-muted">{subtitle}</p>
+      </header>
+      {children}
+    </section>
   );
 }
 

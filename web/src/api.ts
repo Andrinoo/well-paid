@@ -251,6 +251,13 @@ export type Expense = {
   recurring_frequency?: string | null;
   is_shared?: boolean;
   is_family?: boolean;
+  is_mine?: boolean;
+  is_projected?: boolean;
+  monthly_interest_bps?: number | null;
+  installment_group_id?: string | null;
+  recurring_series_id?: string | null;
+  shared_with_label?: string | null;
+  counterparty_label?: string | null;
 };
 
 export type Income = {
@@ -422,9 +429,28 @@ export async function payExpense(id: string): Promise<void> {
   await request(`/expenses/${id}/pay`, { method: "POST", body: "{}" }, true);
 }
 
-export async function deleteExpense(id: string): Promise<void> {
+export async function updateExpense(
+  id: string,
+  body: Partial<Pick<Expense, "description" | "amount_cents" | "expense_date" | "due_date" | "category_id">>,
+): Promise<Expense> {
+  return (await request(
+    `/expenses/${id}`,
+    { method: "PUT", body: JSON.stringify(body) },
+    true,
+  )) as Expense;
+}
+
+export async function deleteExpense(
+  id: string,
+  options?: { target?: "occurrence" | "series"; scope?: "all" | "future_unpaid" },
+): Promise<void> {
+  const query = new URLSearchParams({
+    delete_target: options?.target ?? "occurrence",
+    delete_scope: options?.scope ?? "all",
+    confirm_delete_paid: "true",
+  });
   await request(
-    `/expenses/${id}?delete_target=occurrence&delete_scope=all&confirm_delete_paid=true`,
+    `/expenses/${id}?${query.toString()}`,
     { method: "DELETE" },
     true,
   );
