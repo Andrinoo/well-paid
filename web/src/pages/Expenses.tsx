@@ -157,27 +157,27 @@ export function ExpensesPage() {
   }
 
   return (
-    <div className="mx-auto max-w-[1500px] space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-4">
+    <div className="-mx-4 -my-5 min-h-full bg-gradient-to-br from-paper via-paper to-sky/45 px-4 py-5 sm:-mx-6 sm:px-6">
+      <div className="flex w-full flex-wrap items-end justify-between gap-4">
         <PageTitle kicker="Controle mensal" title={pendingOnly ? "Contas a pagar" : "Despesas"} />
         <div className="flex flex-wrap items-center gap-2">
           <MonthBar year={period.year} month={period.month} onChange={setPeriod} />
           {!pendingOnly ? <button type="button" className="rounded-xl bg-gold px-4 py-2.5 text-sm font-bold text-navy-deep shadow-sm transition hover:-translate-y-0.5" onClick={() => setShowCreate((value) => !value)}>{showCreate ? "Fechar cadastro" : "+ Nova despesa"}</button> : null}
         </div>
       </div>
-      {pendingOnly ? <p className="text-sm text-muted">Mostrando somente compromissos pendentes. <Link to="/app/despesas" className="font-semibold text-teal-deep">Ver todas</Link></p> : null}
-      <ErrorNote message={error} />
+      {pendingOnly ? <p className="mt-3 text-sm text-muted">Mostrando somente compromissos pendentes. <Link to="/app/despesas" className="font-semibold text-teal-deep">Ver todas</Link></p> : null}
+      <div className="mt-4"><ErrorNote message={error} /></div>
 
-      {!pendingOnly && showCreate ? <ExpenseCreateForm categories={cats} onCreated={async () => { await load(); setShowCreate(false); }} /> : null}
+      {!pendingOnly && showCreate ? <div className="mt-4 wp-rise"><ExpenseCreateForm categories={cats} onCreated={async () => { await load(); setShowCreate(false); }} /></div> : null}
 
-      <section className="grid gap-3 sm:grid-cols-3">
+      <section className="mt-4 grid gap-3 sm:grid-cols-3">
         <SummaryCard label="Total do mês" value={totals.all} detail={`${rows.length} lançamentos`} tone="navy" />
         <SummaryCard label="Pago" value={totals.paid} detail={`${rows.filter((row) => row.status === "paid").length} concluídas`} tone="green" />
         <SummaryCard label="Pendente" value={totals.pending} detail={`${pendingRows.length} compromissos`} tone="gold" />
       </section>
 
-      <section className="overflow-hidden rounded-3xl border border-navy/8 bg-white shadow-[0_14px_45px_rgba(20,28,42,0.06)]">
-        <div className="border-b border-navy/8 p-4 sm:p-5">
+      <section className="mt-4 overflow-hidden rounded-[1.6rem] border border-navy/8 bg-white/90 shadow-[0_18px_55px_rgba(20,28,42,0.08)] backdrop-blur-sm">
+        <div className="border-b border-navy/8 bg-gradient-to-r from-white via-white to-sage/45 p-4 sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div><h2 className="font-serif text-xl text-navy-deep">Central de lançamentos</h2><p className="mt-0.5 text-xs text-muted">Filtre, ordene e execute ações sem sair da lista.</p></div>
             <button type="button" onClick={exportCsv} disabled={!visible.length} className="rounded-xl border border-navy/10 px-3 py-2 text-xs font-semibold text-navy transition hover:border-teal/40 hover:text-teal-deep disabled:opacity-40">Exportar CSV</button>
@@ -194,19 +194,19 @@ export function ExpensesPage() {
           </div>
         </div>
 
-        <div className="hidden overflow-x-auto lg:block">
+        <div className="hidden max-h-[calc(100vh-23rem)] min-h-72 overflow-auto lg:block">
           <table className="w-full table-fixed text-left text-sm">
-            <thead className="sticky top-0 bg-cream-muted/80 text-[11px] uppercase tracking-wide text-muted backdrop-blur">
-              <tr><th className="w-12 px-4 py-3"><input type="checkbox" aria-label="Selecionar todas" checked={allSelected} onChange={() => setSelected(allSelected ? new Set() : new Set(selectable.map((row) => row.id)))} /></th><th className="w-28 px-3 py-3">Data</th><th className="px-3 py-3">Descrição</th><th className="w-44 px-3 py-3">Categoria</th><th className="w-32 px-3 py-3 text-right">Valor</th><th className="w-28 px-3 py-3">Status</th><th className="w-40 px-4 py-3 text-right">Ações</th></tr>
+            <thead className="sticky top-0 z-10 bg-cream-muted/95 text-[10px] uppercase tracking-[0.14em] text-muted shadow-[0_1px_0_rgba(20,28,42,0.08)] backdrop-blur-md">
+              <tr><th className="w-12 px-4 py-3"><input className="h-4 w-4 rounded accent-teal" type="checkbox" aria-label="Selecionar todas" checked={allSelected} onChange={() => setSelected(allSelected ? new Set() : new Set(selectable.map((row) => row.id)))} /></th><th className="w-28 px-3 py-3">Data</th><th className="px-3 py-3">Descrição</th><th className="w-44 px-3 py-3">Categoria</th><th className="w-32 px-3 py-3 text-right">Valor</th><th className="w-28 px-3 py-3">Status</th><th className="w-40 px-4 py-3 text-right">Ações</th></tr>
             </thead>
             <tbody className="divide-y divide-navy/8">
-              {loading ? <tr><td colSpan={7} className="px-4 py-12 text-center text-muted">Carregando lançamentos…</td></tr> : visible.length === 0 ? <tr><td colSpan={7} className="px-4 py-12 text-center text-muted">Nenhuma despesa encontrada com estes filtros.</td></tr> : visible.map((row) => <ExpenseTableRow key={row.id} row={row} checked={selected.has(row.id)} onToggle={() => toggleRow(row.id)} onEdit={() => setEditing(row)} onPay={() => void markPaid([row])} onDelete={() => void remove([row])} />)}
+              {loading ? <ExpenseLoadingRows /> : visible.length === 0 ? <tr><td colSpan={7} className="px-4 py-16 text-center"><span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-cream text-muted"><EmptyIcon /></span><p className="mt-3 font-semibold text-navy">Nenhuma despesa encontrada</p><p className="mt-1 text-xs text-muted">Ajuste os filtros ou inclua um novo lançamento.</p></td></tr> : visible.map((row, index) => <ExpenseTableRow key={row.id} row={row} index={index} checked={selected.has(row.id)} onToggle={() => toggleRow(row.id)} onEdit={() => setEditing(row)} onPay={() => void markPaid([row])} onDelete={() => void remove([row])} />)}
             </tbody>
           </table>
         </div>
 
         <ul className="divide-y divide-navy/8 lg:hidden">
-          {loading ? <li className="px-4 py-12 text-center text-sm text-muted">Carregando lançamentos…</li> : visible.length === 0 ? <li className="px-4 py-12 text-center text-sm text-muted">Nenhuma despesa encontrada.</li> : visible.map((row) => <ExpenseMobileCard key={row.id} row={row} checked={selected.has(row.id)} onToggle={() => toggleRow(row.id)} onEdit={() => setEditing(row)} onPay={() => void markPaid([row])} onDelete={() => void remove([row])} />)}
+          {loading ? <li className="px-4 py-12 text-center text-sm text-muted">Carregando lançamentos…</li> : visible.length === 0 ? <li className="px-4 py-12 text-center text-sm text-muted">Nenhuma despesa encontrada.</li> : visible.map((row, index) => <ExpenseMobileCard key={row.id} row={row} index={index} checked={selected.has(row.id)} onToggle={() => toggleRow(row.id)} onEdit={() => setEditing(row)} onPay={() => void markPaid([row])} onDelete={() => void remove([row])} />)}
         </ul>
         <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-navy/8 bg-cream/25 px-4 py-3 text-xs text-muted"><span>{visible.length} de {rows.length} lançamentos</span><span className="font-semibold text-navy">Total filtrado: {formatBrlFromCents(visible.reduce((sum, row) => sum + row.amount_cents, 0))}</span></footer>
       </section>
@@ -215,17 +215,17 @@ export function ExpensesPage() {
   );
 }
 
-function ExpenseTableRow({ row, checked, onToggle, onEdit, onPay, onDelete }: RowActions) {
+function ExpenseTableRow({ row, index, checked, onToggle, onEdit, onPay, onDelete }: RowActions) {
   const manageable = canManage(row);
-  return <tr className={`transition hover:bg-teal/[0.035] ${checked ? "bg-teal/5" : ""}`}><td className="px-4 py-3"><input type="checkbox" aria-label={`Selecionar ${row.description}`} checked={checked} disabled={!manageable} onChange={onToggle} /></td><td className="px-3 py-3 text-xs text-muted">{formatDueDate(row.due_date || row.expense_date)}</td><td className="px-3 py-3"><p className="truncate font-semibold text-navy">{row.description}</p><ExpenseMeta row={row} /></td><td className="px-3 py-3"><span className="inline-flex max-w-full truncate rounded-full bg-cream px-2.5 py-1 text-xs text-navy">{row.category_name}</span></td><td className="px-3 py-3 text-right font-semibold tabular-nums text-navy-deep">{formatBrlFromCents(row.amount_cents)}</td><td className="px-3 py-3"><StatusBadge row={row} /></td><td className="px-4 py-3"><div className="flex justify-end gap-1"><ActionButton label="Editar" onClick={onEdit} disabled={!manageable} />{row.status !== "paid" ? <ActionButton label="Pagar" onClick={onPay} disabled={!manageable} primary /> : null}<ActionButton label="Apagar" onClick={onDelete} disabled={!manageable} danger /></div></td></tr>;
+  return <tr className={`expense-list-row group border-l-2 ${row.status === "paid" ? "border-l-teal/45" : "border-l-gold"} ${checked ? "bg-teal/8" : ""}`} style={{ ["--expense-delay" as string]: `${Math.min(index, 10) * 28}ms` }}><td className="px-4 py-3"><input className="h-4 w-4 rounded accent-teal" type="checkbox" aria-label={`Selecionar ${row.description}`} checked={checked} disabled={!manageable} onChange={onToggle} /></td><td className="px-3 py-3"><p className="text-xs font-semibold text-navy">{formatDueDate(row.due_date || row.expense_date)}</p><p className="mt-0.5 text-[10px] text-muted">{row.due_date ? "Vencimento" : "Lançamento"}</p></td><td className="px-3 py-3"><p className="truncate font-semibold text-navy transition-colors group-hover:text-teal-deep">{row.description}</p><ExpenseMeta row={row} /></td><td className="px-3 py-3"><span className="inline-flex max-w-full items-center gap-1.5 truncate rounded-full border border-navy/8 bg-cream/65 px-2.5 py-1 text-xs font-medium text-navy"><span className="h-1.5 w-1.5 shrink-0 rounded-full bg-teal/70" />{row.category_name}</span></td><td className="px-3 py-3 text-right font-display text-base font-semibold tabular-nums text-navy-deep">{formatBrlFromCents(row.amount_cents)}</td><td className="px-3 py-3"><StatusBadge row={row} /></td><td className="px-4 py-3"><div className="flex justify-end gap-1 opacity-75 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"><ActionButton label="Editar" onClick={onEdit} disabled={!manageable} />{row.status !== "paid" ? <ActionButton label="Pagar" onClick={onPay} disabled={!manageable} primary /> : null}<ActionButton label="Apagar" onClick={onDelete} disabled={!manageable} danger /></div></td></tr>;
 }
 
-function ExpenseMobileCard({ row, checked, onToggle, onEdit, onPay, onDelete }: RowActions) {
+function ExpenseMobileCard({ row, index, checked, onToggle, onEdit, onPay, onDelete }: RowActions) {
   const manageable = canManage(row);
-  return <li className={`p-4 ${checked ? "bg-teal/5" : ""}`}><div className="flex items-start gap-3"><input className="mt-1" type="checkbox" checked={checked} disabled={!manageable} onChange={onToggle} aria-label={`Selecionar ${row.description}`} /><div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate font-semibold text-navy">{row.description}</p><p className="mt-1 text-xs text-muted">{row.category_name} · {formatDueDate(row.due_date || row.expense_date)}</p></div><p className="shrink-0 font-semibold tabular-nums text-navy-deep">{formatBrlFromCents(row.amount_cents)}</p></div><div className="mt-2 flex flex-wrap items-center gap-2"><StatusBadge row={row} /><ExpenseMeta row={row} /></div><div className="mt-3 flex justify-end gap-1"><ActionButton label="Editar" onClick={onEdit} disabled={!manageable} />{row.status !== "paid" ? <ActionButton label="Pagar" onClick={onPay} disabled={!manageable} primary /> : null}<ActionButton label="Apagar" onClick={onDelete} disabled={!manageable} danger /></div></div></div></li>;
+  return <li className={`expense-list-row border-l-2 p-4 ${row.status === "paid" ? "border-l-teal/45" : "border-l-gold"} ${checked ? "bg-teal/8" : ""}`} style={{ ["--expense-delay" as string]: `${Math.min(index, 10) * 28}ms` }}><div className="flex items-start gap-3"><input className="mt-1 h-4 w-4 accent-teal" type="checkbox" checked={checked} disabled={!manageable} onChange={onToggle} aria-label={`Selecionar ${row.description}`} /><div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate font-semibold text-navy">{row.description}</p><p className="mt-1 text-xs text-muted">{row.category_name} · {formatDueDate(row.due_date || row.expense_date)}</p></div><p className="shrink-0 font-display font-semibold tabular-nums text-navy-deep">{formatBrlFromCents(row.amount_cents)}</p></div><div className="mt-2 flex flex-wrap items-center gap-2"><StatusBadge row={row} /><ExpenseMeta row={row} /></div><div className="mt-3 flex justify-end gap-1"><ActionButton label="Editar" onClick={onEdit} disabled={!manageable} />{row.status !== "paid" ? <ActionButton label="Pagar" onClick={onPay} disabled={!manageable} primary /> : null}<ActionButton label="Apagar" onClick={onDelete} disabled={!manageable} danger /></div></div></div></li>;
 }
 
-type RowActions = { row: Expense; checked: boolean; onToggle: () => void; onEdit: () => void; onPay: () => void; onDelete: () => void };
+type RowActions = { row: Expense; index: number; checked: boolean; onToggle: () => void; onEdit: () => void; onPay: () => void; onDelete: () => void };
 
 function ExpenseMeta({ row }: { row: Expense }) {
   return <span className="mt-1 flex flex-wrap gap-x-2 text-[11px] text-muted">{row.installment_total && row.installment_total > 1 ? <span>Parcela {row.installment_number || 1}/{row.installment_total}</span> : null}{row.recurring_frequency ? <span>{freqLabel(row.recurring_frequency)}</span> : null}{row.is_shared ? <span>Compartilhada{row.counterparty_label ? ` com ${row.counterparty_label}` : ""}</span> : null}{row.is_projected ? <span>Projetada</span> : null}</span>;
@@ -247,7 +247,15 @@ function ActionButton({ label, onClick, disabled, primary, danger }: { label: st
 
 function SummaryCard({ label, value, detail, tone }: { label: string; value: number; detail: string; tone: "navy" | "green" | "gold" }) {
   const border = tone === "green" ? "border-l-teal" : tone === "gold" ? "border-l-gold" : "border-l-navy";
-  return <article className={`rounded-2xl border border-navy/8 border-l-4 ${border} bg-white px-4 py-3.5 shadow-sm`}><p className="text-[11px] font-semibold uppercase tracking-wide text-muted">{label}</p><p className="mt-1 font-serif text-2xl font-semibold tabular-nums text-navy-deep">{formatBrlFromCents(value)}</p><p className="mt-1 text-xs text-muted">{detail}</p></article>;
+  return <article className={`group relative overflow-hidden rounded-2xl border border-navy/8 border-l-4 ${border} bg-white/90 px-4 py-3.5 shadow-[0_8px_25px_rgba(20,28,42,0.045)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_32px_rgba(20,28,42,0.09)]`}><span className="pointer-events-none absolute -right-6 -top-8 h-20 w-20 rounded-full bg-sage/50 transition-transform duration-500 group-hover:scale-125" /><p className="relative text-[10px] font-bold uppercase tracking-[0.16em] text-muted">{label}</p><p className="relative mt-1 font-display text-2xl font-semibold tabular-nums text-navy-deep">{formatBrlFromCents(value)}</p><p className="relative mt-1 text-xs text-muted">{detail}</p></article>;
+}
+
+function ExpenseLoadingRows() {
+  return <>{Array.from({ length: 5 }, (_, index) => <tr key={index} className="border-b border-navy/8"><td className="px-4 py-4" colSpan={7}><div className="h-5 rounded-lg bg-cream-muted wp-shimmer" style={{ width: `${82 - index * 6}%` }} /></td></tr>)}</>;
+}
+
+function EmptyIcon() {
+  return <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M5 4h14v16H5zM8 8h8M8 12h5M8 16h3" /></svg>;
 }
 
 function FilterSelect({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: string[][] }) {

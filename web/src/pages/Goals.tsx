@@ -54,6 +54,9 @@ export function GoalsPage() {
   const [contributionNote, setContributionNote] = useState<Record<string, string>>({});
   const [actionId, setActionId] = useState<string | null>(null);
   const [deleteCandidate, setDeleteCandidate] = useState<Goal | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
+  const [listSearch, setListSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "archived">("all");
 
   async function load() {
     setError(null);
@@ -126,6 +129,7 @@ export function GoalsPage() {
   }
 
   function beginEdit(goal: Goal) {
+    setShowCreate(true);
     setEditing(goal);
     setDraft({
       title: goal.title,
@@ -150,6 +154,7 @@ export function GoalsPage() {
     setQuery("");
     setHits([]);
     setShowSearch(false);
+    setShowCreate(false);
   }
 
   async function toggleDetails(goal: Goal) {
@@ -232,17 +237,20 @@ export function GoalsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <div className="-mx-4 -my-5 min-h-full bg-gradient-to-br from-paper via-paper to-sky/45 px-4 py-5 sm:-mx-6 sm:px-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <PageTitle kicker="Planejamento" title="Metas" />
-        <p className="max-w-lg text-sm text-muted">
-          Transforme objetivos em planos claros, acompanhe aportes e preços de referência.
-        </p>
+        <button type="button" onClick={() => { if (showCreate) resetForm(); else setShowCreate(true); }} className="rounded-xl bg-gold px-4 py-2.5 text-sm font-bold text-navy-deep shadow-sm transition hover:-translate-y-0.5">{showCreate ? "Fechar cadastro" : "+ Nova meta"}</button>
       </div>
-      <ErrorNote message={error} />
+      <div className="mt-4"><ErrorNote message={error} /></div>
 
-      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
-      <form className="min-w-0 space-y-4 rounded-3xl border border-navy/8 bg-white p-4 shadow-[0_18px_55px_rgba(20,28,42,0.08)] sm:p-5" onSubmit={saveGoal}>
+      <section className="mt-4 grid gap-3 sm:grid-cols-3">
+        <GoalMetric label="Total planejado" value={rows.reduce((sum, goal) => sum + goal.target_cents, 0)} detail={`${rows.length} metas`} tone="navy" />
+        <GoalMetric label="Já acumulado" value={rows.reduce((sum, goal) => sum + goal.current_cents, 0)} detail="Progresso consolidado" tone="teal" />
+        <GoalMetric label="Metas ativas" value={null} detail={`${rows.filter((goal) => goal.is_active).length} em andamento`} tone="gold" />
+      </section>
+
+      {showCreate ? <form className="wp-rise mt-4 min-w-0 space-y-4 rounded-3xl border border-navy/8 bg-white p-4 shadow-[0_18px_55px_rgba(20,28,42,0.08)] sm:p-5" onSubmit={saveGoal}>
         <div className="flex flex-wrap items-start justify-between gap-3 border-b border-navy/8 pb-4">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-gold-pressed">
@@ -319,14 +327,14 @@ export function GoalsPage() {
             {busy ? "Salvando…" : editing ? "Salvar alterações" : "Criar meta"}
           </button>
         </div>
-      </form>
+      </form> : null}
 
-      <section className="min-w-0 space-y-3 xl:sticky xl:top-6">
-        <div className="flex items-center justify-between"><h2 className="font-serif text-xl text-navy-deep">Suas metas</h2><span className="text-xs text-muted">{rows.length} no total</span></div>
+      <section className="mt-4 min-w-0 overflow-hidden rounded-[1.6rem] border border-navy/8 bg-white/90 shadow-[0_18px_55px_rgba(20,28,42,0.08)] backdrop-blur-sm">
+        <div className="border-b border-navy/8 bg-gradient-to-r from-white via-white to-sage/45 p-4 sm:p-5"><div className="flex items-center justify-between"><div><h2 className="font-serif text-xl text-navy-deep">Central de metas</h2><p className="mt-0.5 text-xs text-muted">Acompanhe progresso, aportes e referências em um só lugar.</p></div><span className="text-xs text-muted">{rows.length} no total</span></div><div className="mt-4 grid gap-2 md:grid-cols-[minmax(220px,1fr)_200px]"><input value={listSearch} onChange={(event) => setListSearch(event.target.value)} placeholder="Buscar meta…" className="h-10 rounded-xl border border-navy/10 bg-cream/25 px-3 text-sm outline-none focus:border-teal/50" /><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as "all" | "active" | "archived")} className="h-10 rounded-xl border border-navy/10 bg-cream/25 px-3 text-sm"><option value="all">Todas as metas</option><option value="active">Ativas</option><option value="archived">Arquivadas</option></select></div></div>
         {loading ? <div className="rounded-2xl border border-navy/8 bg-white p-8 text-center text-sm text-muted">Carregando metas…</div> : null}
         {!loading && rows.length === 0 ? <div className="rounded-2xl border border-dashed border-navy/15 bg-white/70 px-4 py-10 text-center text-sm text-muted">Nenhuma meta criada ainda.</div> : null}
-        <ul className="space-y-4 xl:max-h-[calc(100vh-11rem)] xl:overflow-y-auto xl:pr-1">
-          {rows.map((goal) => (
+        <ul className="grid max-h-[calc(100vh-18rem)] gap-4 overflow-y-auto p-4 lg:grid-cols-2 2xl:grid-cols-3 sm:p-5">
+          {rows.filter((goal) => statusFilter === "all" || (statusFilter === "active" ? goal.is_active : !goal.is_active)).filter((goal) => !listSearch.trim() || goal.title.toLocaleLowerCase("pt-BR").includes(listSearch.trim().toLocaleLowerCase("pt-BR"))).map((goal) => (
             <GoalCard
               key={goal.id}
               goal={goal}
@@ -346,8 +354,8 @@ export function GoalsPage() {
             />
           ))}
         </ul>
+        <footer className="border-t border-navy/8 bg-cream/25 px-4 py-3 text-xs text-muted">{rows.length} metas cadastradas</footer>
       </section>
-      </div>
 
       {deleteCandidate ? <ConfirmDelete goal={deleteCandidate} busy={actionId === deleteCandidate.id} onCancel={() => setDeleteCandidate(null)} onConfirm={() => void confirmDelete()} /> : null}
     </div>
@@ -362,7 +370,7 @@ function GoalCard({ goal, expanded, contributions, amount, note, busy, onToggle,
   const pct = goalProgress(goal);
   const mine = goal.is_mine !== false;
   return (
-    <li className="overflow-hidden rounded-3xl border border-navy/8 bg-white shadow-[0_10px_35px_rgba(20,28,42,0.05)]">
+    <li className="expense-list-row group self-start overflow-hidden rounded-3xl border border-navy/8 bg-white shadow-[0_10px_35px_rgba(20,28,42,0.05)] transition duration-300 hover:-translate-y-1 hover:border-teal/25 hover:shadow-[0_18px_45px_rgba(20,28,42,0.11)]">
       <div className="p-4 sm:p-5">
         <div className="flex items-start gap-4">
           <GoalThumb url={goal.reference_thumbnail_url} alt={goal.title} className="h-20 w-20" />
@@ -373,12 +381,12 @@ function GoalCard({ goal, expanded, contributions, amount, note, busy, onToggle,
           </div>
         </div>
         {goal.description ? <p className="mt-4 line-clamp-2 text-sm leading-6 text-muted">{goal.description}</p> : null}
-        <div className="mt-4 flex flex-wrap gap-2">
-          <SecondaryButton onClick={onToggle}>{expanded ? "Fechar detalhes" : "Ver detalhes"}</SecondaryButton>
-          {mine ? <SecondaryButton onClick={onEdit}>Editar</SecondaryButton> : null}
-          {mine && (goal.target_url || goal.reference_product_name) ? <SecondaryButton onClick={onRefresh} disabled={busy}>{busy ? "Atualizando…" : "Atualizar preço"}</SecondaryButton> : null}
-          {mine ? <DangerButton onClick={onDelete}>Excluir</DangerButton> : null}
-          {mine && goal.current_cents > 0 && goal.is_active ? <SecondaryButton onClick={onArchive} disabled={busy}>Arquivar</SecondaryButton> : null}
+        <div className="mt-4 flex flex-wrap items-center gap-1.5 border-t border-navy/8 pt-3">
+          <GoalActionButton kind="details" label={expanded ? "Fechar detalhes" : "Ver detalhes"} onClick={onToggle} />
+          {mine ? <GoalActionButton kind="edit" label="Editar" onClick={onEdit} /> : null}
+          {mine && (goal.target_url || goal.reference_product_name) ? <GoalActionButton kind="refresh" label={busy ? "Atualizando" : "Atualizar preço"} onClick={onRefresh} disabled={busy} /> : null}
+          {mine && goal.current_cents > 0 && goal.is_active ? <GoalActionButton kind="archive" label="Arquivar" onClick={onArchive} disabled={busy} /> : null}
+          {mine ? <GoalActionButton kind="delete" label="Excluir" onClick={onDelete} danger /> : null}
         </div>
       </div>
       {expanded ? (
@@ -411,12 +419,18 @@ function SecondaryButton({ children, onClick, disabled = false }: { children: Re
   return <button type="button" disabled={disabled} onClick={onClick} className="rounded-xl border border-navy/10 bg-white px-3 py-2 text-xs font-semibold text-navy transition hover:-translate-y-0.5 hover:border-gold/50 hover:bg-gold/8 disabled:opacity-60">{children}</button>;
 }
 
-function DangerButton({ children, onClick }: { children: ReactNode; onClick: () => void }) {
-  return <button type="button" onClick={onClick} className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-100">{children}</button>;
-}
-
 function Badge({ children }: { children: ReactNode }) {
   return <span className="rounded-full bg-sage px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-teal-deep">{children}</span>;
+}
+
+function GoalMetric({ label, value, detail, tone }: { label: string; value: number | null; detail: string; tone: "navy" | "teal" | "gold" }) {
+  const border = tone === "teal" ? "border-l-teal" : tone === "gold" ? "border-l-gold" : "border-l-navy";
+  return <article className={`rounded-2xl border border-navy/8 border-l-4 ${border} bg-white/90 px-4 py-3.5 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:shadow-lg`}><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted">{label}</p><p className="mt-1 font-display text-2xl font-semibold text-navy-deep">{value == null ? detail.split(" ")[0] : formatBrlFromCents(value)}</p><p className="mt-1 text-xs text-muted">{detail}</p></article>;
+}
+
+function GoalActionButton({ kind, label, onClick, disabled, danger }: { kind: "details" | "edit" | "refresh" | "archive" | "delete"; label: string; onClick: () => void; disabled?: boolean; danger?: boolean }) {
+  const path = kind === "edit" ? <><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-4-4L4 16v4Z"/><path d="m13.5 6.5 4 4"/></> : kind === "refresh" ? <><path d="M20 7v5h-5M4 17v-5h5"/><path d="M7 8a7 7 0 0 1 11-1l2 5M17 16a7 7 0 0 1-11 1l-2-5"/></> : kind === "archive" ? <><path d="M4 7h16v13H4zM3 4h18v3H3zM9 11h6"/></> : kind === "delete" ? <><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"/></> : <><circle cx="12" cy="12" r="9"/><path d="M12 10v6M12 7h.01"/></>;
+  return <button type="button" title={label} aria-label={label} disabled={disabled} onClick={onClick} className={`grid h-8 w-8 place-items-center rounded-lg transition disabled:opacity-40 ${danger ? "ml-auto text-red-700 hover:bg-red-50" : "bg-cream/60 text-navy hover:bg-sage hover:text-teal-deep"}`}><svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{path}</svg></button>;
 }
 
 function centsInput(cents: number): string {

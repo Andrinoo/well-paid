@@ -310,6 +310,28 @@ select {
   }
 }
 
+@keyframes expense-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.expense-list-row {
+  animation: expense-row-in 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--expense-delay, 0ms);
+  transition: background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.expense-list-row:hover {
+  background-color: rgb(18 168 136 / 0.045);
+  box-shadow: inset 3px 0 0 rgb(18 168 136 / 0.2);
+}
+
 @keyframes wp-wave-shift {
   0%,
   100% {
@@ -409,6 +431,10 @@ select {
   .wp-orbit-counter,
   .wp-sun,
   .wp-wave-shift {
+    animation: none !important;
+  }
+
+  .expense-list-row {
     animation: none !important;
   }
 
