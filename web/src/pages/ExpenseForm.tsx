@@ -167,7 +167,7 @@ export function ExpenseCreateForm({
 
   return (
     <form
-      className="space-y-5 overflow-hidden rounded-3xl border border-navy/8 bg-white p-4 shadow-[0_18px_55px_rgba(20,28,42,0.08)] sm:p-6"
+      className="space-y-4 overflow-hidden rounded-3xl border border-navy/8 bg-white p-4 shadow-[0_18px_55px_rgba(20,28,42,0.08)] sm:p-5"
       onSubmit={onSubmit}
     >
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-navy/8 pb-4">
@@ -203,7 +203,7 @@ export function ExpenseCreateForm({
         </p>
       ) : null}
 
-      <section className="space-y-4 rounded-2xl bg-cream/35 p-4">
+      <section className="space-y-3 rounded-2xl bg-cream/35 p-3.5 sm:p-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Tipo da despesa</p>
           <div className="mt-2">
@@ -257,7 +257,7 @@ export function ExpenseCreateForm({
       </section>
 
       {kind === "single" ? (
-        <section className="space-y-3 rounded-2xl border border-navy/8 p-4">
+        <section className="space-y-3 rounded-2xl border border-navy/8 p-3.5 sm:p-4">
           <SectionTitle title="Datas" description="Quando a despesa aconteceu e, se aplicável, quando vence." />
           <SwitchRow
             label="Tem data de vencimento"
@@ -288,7 +288,7 @@ export function ExpenseCreateForm({
       ) : null}
 
       {kind === "installments" ? (
-        <section className="space-y-3 rounded-2xl border border-navy/8 p-4">
+        <section className="space-y-3 rounded-2xl border border-navy/8 p-3.5 sm:p-4">
           <SectionTitle title="Plano de parcelas" description="O primeiro vencimento ancora todo o plano." />
           <div className="grid gap-3 sm:grid-cols-2">
           <InField
@@ -313,7 +313,7 @@ export function ExpenseCreateForm({
       ) : null}
 
       {kind === "recurring" ? (
-        <section className="space-y-3 rounded-2xl border border-navy/8 p-4">
+        <section className="space-y-3 rounded-2xl border border-navy/8 p-3.5 sm:p-4">
           <SectionTitle title="Recorrência" description="Defina o início, o primeiro vencimento e a frequência." />
           <div className="grid gap-3 sm:grid-cols-2">
             <InField
@@ -347,7 +347,7 @@ export function ExpenseCreateForm({
         </section>
       ) : null}
 
-      <section className="space-y-3 rounded-2xl border border-navy/8 p-4">
+      <section className="space-y-3 rounded-2xl border border-navy/8 p-3.5 sm:p-4">
         <SectionTitle title="Classificação" description="Use a mesma categoria que organiza seus relatórios." />
         <CategorySelect
           label="Categoria"
@@ -358,7 +358,7 @@ export function ExpenseCreateForm({
       </section>
 
       {familyMode ? (
-        <section className="space-y-3 rounded-2xl border border-navy/8 bg-navy/[0.025] p-4">
+        <section className="space-y-3 rounded-2xl border border-navy/8 bg-navy/[0.025] p-3.5 sm:p-4">
           <SectionTitle title="Família e divisão" description="Compartilhe a visibilidade ou divida o pagamento com uma pessoa." />
           <SwitchRow
             label="Conta família"

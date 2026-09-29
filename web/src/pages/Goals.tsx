@@ -233,7 +233,7 @@ export function GoalsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <div className="mx-auto max-w-7xl space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <PageTitle kicker="Planejamento" title="Metas" />
         <p className="max-w-lg text-sm text-muted">
@@ -242,7 +242,8 @@ export function GoalsPage() {
       </div>
       <ErrorNote message={error} />
 
-      <form className="space-y-5 rounded-3xl border border-navy/8 bg-white p-4 shadow-[0_18px_55px_rgba(20,28,42,0.08)] sm:p-6" onSubmit={saveGoal}>
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
+      <form className="min-w-0 space-y-4 rounded-3xl border border-navy/8 bg-white p-4 shadow-[0_18px_55px_rgba(20,28,42,0.08)] sm:p-5" onSubmit={saveGoal}>
         <div className="flex flex-wrap items-start justify-between gap-3 border-b border-navy/8 pb-4">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-gold-pressed">
@@ -255,7 +256,7 @@ export function GoalsPage() {
           {editing ? <SecondaryButton onClick={resetForm}>Cancelar edição</SecondaryButton> : null}
         </div>
 
-        <section className="grid gap-4 rounded-2xl bg-cream/35 p-4 md:grid-cols-2">
+        <section className="grid gap-3 rounded-2xl bg-cream/35 p-3.5 sm:grid-cols-2 sm:p-4">
           <InField label="Título" value={draft.title} required onChange={(title) => patchDraft({ title: title.slice(0, 200) })} hint={`${draft.title.length}/200`} />
           <InField label="Valor-alvo (R$)" value={draft.target} required placeholder="Ex.: 5.000,00" onChange={(target) => patchDraft({ target })} />
           {!editing ? <InField label="Valor inicial (R$)" value={draft.initial} placeholder="Opcional" onChange={(initial) => patchDraft({ initial })} /> : null}
@@ -267,7 +268,7 @@ export function GoalsPage() {
           </label>
         </section>
 
-        <section className="space-y-3 rounded-2xl border border-navy/8 p-4">
+        <section className="space-y-3 rounded-2xl border border-navy/8 p-3.5 sm:p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 className="font-serif text-lg text-navy-deep">Produto e preço de referência</h3>
@@ -308,7 +309,7 @@ export function GoalsPage() {
           <InField label="Link do produto" value={draft.targetUrl} onChange={(targetUrl) => patchDraft({ targetUrl })} placeholder="https://… (opcional)" />
         </section>
 
-        <section className="grid gap-3 rounded-2xl border border-navy/8 p-4 sm:grid-cols-2">
+        <section className="grid gap-3 rounded-2xl border border-navy/8 p-3.5 sm:grid-cols-2 sm:p-4">
           <SwitchRow label="Meta ativa" sub="Metas arquivadas continuam no histórico." checked={draft.isActive} onChange={(isActive) => patchDraft({ isActive })} />
           <SwitchRow label="Atualizar preço automaticamente" sub="Acompanha mudanças do produto de referência." checked={draft.trackingEnabled} onChange={(trackingEnabled) => patchDraft({ trackingEnabled })} />
           {familyMode ? <SwitchRow label="Meta da família" sub="Fica visível para os membros convidados." checked={draft.isFamily} onChange={(isFamily) => patchDraft({ isFamily })} /> : null}
@@ -321,11 +322,11 @@ export function GoalsPage() {
         </div>
       </form>
 
-      <section className="space-y-3">
+      <section className="min-w-0 space-y-3 xl:sticky xl:top-6">
         <div className="flex items-center justify-between"><h2 className="font-serif text-xl text-navy-deep">Suas metas</h2><span className="text-xs text-muted">{rows.length} no total</span></div>
         {loading ? <div className="rounded-2xl border border-navy/8 bg-white p-8 text-center text-sm text-muted">Carregando metas…</div> : null}
         {!loading && rows.length === 0 ? <div className="rounded-2xl border border-dashed border-navy/15 bg-white/70 px-4 py-10 text-center text-sm text-muted">Nenhuma meta criada ainda.</div> : null}
-        <ul className="grid gap-4 lg:grid-cols-2">
+        <ul className="space-y-4 xl:max-h-[calc(100vh-11rem)] xl:overflow-y-auto xl:pr-1">
           {rows.map((goal) => (
             <GoalCard
               key={goal.id}
@@ -347,6 +348,7 @@ export function GoalsPage() {
           ))}
         </ul>
       </section>
+      </div>
 
       {deleteCandidate ? <ConfirmDelete goal={deleteCandidate} busy={actionId === deleteCandidate.id} onCancel={() => setDeleteCandidate(null)} onConfirm={() => void confirmDelete()} /> : null}
     </div>
