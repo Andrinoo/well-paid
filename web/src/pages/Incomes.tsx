@@ -3,6 +3,8 @@ import { createIncome, deleteIncome, fetchIncomeCategories, fetchIncomes, type C
 import { formatBrlFromCents, formatDueDate } from "../format";
 import { ApiError, ErrorNote, MonthBar, PageTitle, parseBrlToCents, todayIso, usePeriod } from "./common";
 
+type IncomeSortKey = "date" | "description" | "category" | "amount";
+
 export function IncomesPage() {
   const [period, setPeriod] = usePeriod();
   const [rows, setRows] = useState<Income[]>([]);
@@ -18,6 +20,7 @@ export function IncomesPage() {
   const [categoryId, setCategoryId] = useState("");
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
+  const [sort, setSort] = useState<IncomeSortKey>("date");
   const [descending, setDescending] = useState(true);
 
   async function load() {
@@ -54,10 +57,31 @@ export function IncomesPage() {
     const term = search.trim().toLocaleLowerCase("pt-BR");
     return rows.filter((row) => category === "all" || row.income_category_id === category)
       .filter((row) => !term || `${row.description} ${row.category_name} ${row.notes || ""}`.toLocaleLowerCase("pt-BR").includes(term))
-      .sort((a, b) => descending ? b.income_date.localeCompare(a.income_date) : a.income_date.localeCompare(b.income_date));
-  }, [rows, category, search, descending]);
+      .sort((a, b) => {
+        let value = 0;
+        if (sort === "amount") value = a.amount_cents - b.amount_cents;
+        else if (sort === "description") value = a.description.localeCompare(b.description, "pt-BR");
+        else if (sort === "category") value = a.category_name.localeCompare(b.category_name, "pt-BR");
+        else value = a.income_date.localeCompare(b.income_date);
+        return descending ? -value : value;
+      });
+  }, [rows, category, search, sort, descending]);
   const total = rows.reduce((sum, row) => sum + row.amount_cents, 0);
   const average = rows.length ? Math.round(total / rows.length) : 0;
+
+  function exportCsv() {
+    const lines = [
+      ["Data", "Descrição", "Categoria", "Valor", "Nota"],
+      ...visible.map((row) => [row.income_date, row.description, row.category_name, (row.amount_cents / 100).toFixed(2).replace(".", ","), row.notes || ""]),
+    ];
+    const csv = lines.map((line) => line.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(";")).join("\n");
+    const url = URL.createObjectURL(new Blob(["\ufeff", csv], { type: "text/csv;charset=utf-8" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `proventos-${period.year}-${String(period.month).padStart(2, "0")}.csv`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
 
   return (
     <div className="-mx-4 -my-5 min-h-full bg-gradient-to-br from-paper via-paper to-sage/45 px-4 py-5 sm:-mx-6 sm:px-6">
@@ -67,8 +91,8 @@ export function IncomesPage() {
 
       <section className="mt-4 grid gap-3 sm:grid-cols-3"><IncomeMetric label="Total recebido" value={total} detail={`${rows.length} lançamentos`} tone="teal" /><IncomeMetric label="Média por entrada" value={average} detail="Valor médio no período" tone="navy" /><IncomeMetric label="Categorias usadas" value={null} detail={`${new Set(rows.map((row) => row.income_category_id)).size} categorias`} tone="gold" /></section>
 
-      <section className="mt-4 overflow-hidden rounded-[1.6rem] border border-navy/8 bg-white/90 shadow-[0_18px_55px_rgba(20,28,42,0.08)] backdrop-blur-sm"><div className="border-b border-navy/8 bg-gradient-to-r from-white via-white to-sage/45 p-4 sm:p-5"><div><h2 className="font-serif text-xl text-navy-deep">Central de proventos</h2><p className="mt-0.5 text-xs text-muted">Consulte e organize todas as entradas do mês.</p></div><div className="mt-4 grid gap-2 md:grid-cols-[minmax(220px,1fr)_220px_auto]"><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar descrição, categoria ou nota…" className="h-10 rounded-xl border border-navy/10 bg-cream/25 px-3 text-sm outline-none focus:border-teal/50" /><select value={category} onChange={(event) => setCategory(event.target.value)} className="h-10 rounded-xl border border-navy/10 bg-cream/25 px-3 text-sm"><option value="all">Todas as categorias</option>{cats.map((cat) => <option key={cat.id} value={cat.id}>{cat.name}</option>)}</select><button type="button" onClick={() => setDescending((value) => !value)} className="h-10 rounded-xl bg-cream/60 px-3 text-xs font-semibold text-muted">{descending ? "↓ Mais recentes" : "↑ Mais antigos"}</button></div></div>
-        <div className="hidden max-h-[calc(100vh-22rem)] min-h-72 overflow-auto md:block"><table className="w-full text-left text-sm"><thead className="sticky top-0 z-10 bg-cream-muted/95 text-[10px] uppercase tracking-[0.14em] text-muted backdrop-blur"><tr><th className="w-32 px-5 py-3">Data</th><th className="px-3 py-3">Descrição</th><th className="w-56 px-3 py-3">Categoria</th><th className="w-40 px-3 py-3 text-right">Valor</th><th className="w-20 px-5 py-3 text-right">Ações</th></tr></thead><tbody className="divide-y divide-navy/8">{loading ? <LoadingRows /> : visible.length === 0 ? <tr><td colSpan={5} className="px-4 py-16 text-center text-muted">Nenhum provento encontrado.</td></tr> : visible.map((row, index) => <tr key={row.id} className="expense-list-row group border-l-2 border-l-teal/60" style={{ ["--expense-delay" as string]: `${Math.min(index, 10) * 28}ms` }}><td className="px-5 py-3 text-xs font-semibold text-navy">{formatDueDate(row.income_date)}</td><td className="px-3 py-3"><p className="font-semibold text-navy group-hover:text-teal-deep">{row.description}</p>{row.notes ? <p className="mt-0.5 truncate text-[11px] text-muted">{row.notes}</p> : null}</td><td className="px-3 py-3"><span className="rounded-full border border-navy/8 bg-sage/50 px-2.5 py-1 text-xs text-teal-deep">{row.category_name}</span></td><td className="px-3 py-3 text-right font-display text-base font-semibold tabular-nums text-teal-deep">{formatBrlFromCents(row.amount_cents)}</td><td className="px-5 py-3 text-right"><IconButton label="Apagar" danger onClick={() => void remove(row)} /></td></tr>)}</tbody></table></div>
+      <section className="mt-4 overflow-hidden rounded-[1.6rem] border border-navy/8 bg-white/90 shadow-[0_18px_55px_rgba(20,28,42,0.08)] backdrop-blur-sm"><div className="border-b border-navy/8 bg-gradient-to-r from-white via-white to-sage/45 p-4 sm:p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-serif text-xl text-navy-deep">Central de proventos</h2><p className="mt-0.5 text-xs text-muted">Filtre, ordene e consulte todas as entradas do mês.</p></div><button type="button" onClick={exportCsv} disabled={!visible.length} className="rounded-xl border border-navy/10 px-3 py-2 text-xs font-semibold text-navy transition hover:border-teal/40 hover:text-teal-deep disabled:opacity-40">Exportar CSV</button></div><div className="mt-4 grid gap-2 md:grid-cols-[minmax(220px,1fr)_220px_170px]"><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar descrição, categoria ou nota…" className="h-10 rounded-xl border border-navy/10 bg-cream/25 px-3 text-sm outline-none focus:border-teal/50" /><select value={category} onChange={(event) => setCategory(event.target.value)} className="h-10 rounded-xl border border-navy/10 bg-cream/25 px-3 text-sm"><option value="all">Todas as categorias</option>{cats.map((cat) => <option key={cat.id} value={cat.id}>{cat.name}</option>)}</select><select value={sort} onChange={(event) => setSort(event.target.value as IncomeSortKey)} className="h-10 rounded-xl border border-navy/10 bg-cream/25 px-3 text-sm"><option value="date">Data</option><option value="description">Descrição</option><option value="category">Categoria</option><option value="amount">Valor</option></select></div><div className="mt-3"><button type="button" onClick={() => setDescending((value) => !value)} className="rounded-lg bg-cream/60 px-3 py-1.5 text-xs font-semibold text-muted">{descending ? "↓ Decrescente" : "↑ Crescente"}</button></div></div>
+        <div className="hidden max-h-[calc(100vh-22rem)] min-h-72 overflow-auto md:block"><table className="w-full table-fixed text-left text-sm"><thead className="sticky top-0 z-10 bg-cream-muted/95 text-[10px] uppercase tracking-[0.14em] text-muted shadow-[0_1px_0_rgba(20,28,42,0.08)] backdrop-blur-md"><tr><th className="w-32 px-5 py-3">Data</th><th className="px-3 py-3">Descrição</th><th className="w-56 px-3 py-3">Categoria</th><th className="w-40 px-3 py-3 text-right">Valor</th><th className="w-20 px-5 py-3 text-right">Ações</th></tr></thead><tbody className="divide-y divide-navy/8">{loading ? <LoadingRows /> : visible.length === 0 ? <tr><td colSpan={5} className="px-4 py-16 text-center"><p className="font-semibold text-navy">Nenhum provento encontrado</p><p className="mt-1 text-xs text-muted">Ajuste os filtros ou inclua uma nova entrada.</p></td></tr> : visible.map((row, index) => <tr key={row.id} className="expense-list-row group border-l-2 border-l-teal/60" style={{ ["--expense-delay" as string]: `${Math.min(index, 10) * 28}ms` }}><td className="px-5 py-3"><p className="text-xs font-semibold text-navy">{formatDueDate(row.income_date)}</p><p className="mt-0.5 text-[10px] text-muted">Recebimento</p></td><td className="px-3 py-3"><p className="truncate font-semibold text-navy transition-colors group-hover:text-teal-deep">{row.description}</p>{row.notes ? <p className="mt-0.5 truncate text-[11px] text-muted">{row.notes}</p> : null}</td><td className="px-3 py-3"><span className="inline-flex max-w-full items-center gap-1.5 truncate rounded-full border border-navy/8 bg-cream/65 px-2.5 py-1 text-xs font-medium text-navy"><span className="h-1.5 w-1.5 shrink-0 rounded-full bg-teal/70" />{row.category_name}</span></td><td className="px-3 py-3 text-right font-display text-base font-semibold tabular-nums text-teal-deep">{formatBrlFromCents(row.amount_cents)}</td><td className="px-5 py-3"><div className="flex justify-end opacity-70 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"><IconButton label="Apagar" danger onClick={() => void remove(row)} /></div></td></tr>)}</tbody></table></div>
         <ul className="divide-y divide-navy/8 md:hidden">{visible.map((row, index) => <li key={row.id} className="expense-list-row border-l-2 border-l-teal/60 p-4" style={{ ["--expense-delay" as string]: `${Math.min(index, 10) * 28}ms` }}><div className="flex justify-between gap-3"><div className="min-w-0"><p className="truncate font-semibold text-navy">{row.description}</p><p className="mt-1 text-xs text-muted">{row.category_name} · {formatDueDate(row.income_date)}</p></div><p className="font-display font-semibold text-teal-deep">{formatBrlFromCents(row.amount_cents)}</p></div><div className="mt-2 flex justify-end"><IconButton label="Apagar" danger onClick={() => void remove(row)} /></div></li>)}</ul>
         <footer className="flex justify-between border-t border-navy/8 bg-cream/25 px-4 py-3 text-xs text-muted"><span>{visible.length} de {rows.length} lançamentos</span><strong className="text-navy">Total filtrado: {formatBrlFromCents(visible.reduce((sum, row) => sum + row.amount_cents, 0))}</strong></footer>
       </section>

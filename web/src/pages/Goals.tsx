@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import {
   contributeGoal,
   createGoal,
@@ -58,6 +58,7 @@ export function GoalsPage() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [listSearch, setListSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "archived">("all");
+  const productSearchRequest = useRef(0);
 
   async function load() {
     setError(null);
@@ -75,6 +76,31 @@ export function GoalsPage() {
     void fetchMe().then((me) => setFamilyMode(Boolean(me.family_mode_enabled))).catch(() => undefined);
   }, []);
 
+  useEffect(() => {
+    const term = draft.title.trim();
+    const requestId = ++productSearchRequest.current;
+    if (!showCreate || term.length < 3 || draft.picked?.title === term) {
+      if (term.length < 3) setHits([]);
+      setSearching(false);
+      return;
+    }
+    setHits([]);
+    const timer = window.setTimeout(() => {
+      setSearching(true);
+      void searchGoalProducts(term)
+        .then((results) => {
+          if (productSearchRequest.current === requestId) setHits(results.slice(0, 8));
+        })
+        .catch(() => {
+          if (productSearchRequest.current === requestId) setHits([]);
+        })
+        .finally(() => {
+          if (productSearchRequest.current === requestId) setSearching(false);
+        });
+    }, 650);
+    return () => window.clearTimeout(timer);
+  }, [draft.picked?.title, draft.title, showCreate]);
+
   function patchDraft(patch: Partial<GoalDraft>) {
     setDraft((current) => ({ ...current, ...patch }));
   }
@@ -85,15 +111,19 @@ export function GoalsPage() {
       setError("Digite pelo menos dois caracteres para pesquisar um produto.");
       return;
     }
+    const requestId = ++productSearchRequest.current;
     setSearching(true);
     setError(null);
     try {
-      setHits((await searchGoalProducts(term)).slice(0, 12));
+      const results = await searchGoalProducts(term);
+      if (productSearchRequest.current === requestId) setHits(results.slice(0, 12));
     } catch (err) {
-      setHits([]);
-      setError(messageOf(err, "Não foi possível pesquisar produtos."));
+      if (productSearchRequest.current === requestId) {
+        setHits([]);
+        setError(messageOf(err, "Não foi possível pesquisar produtos."));
+      }
     } finally {
-      setSearching(false);
+      if (productSearchRequest.current === requestId) setSearching(false);
     }
   }
 
@@ -106,6 +136,7 @@ export function GoalsPage() {
     });
     setHits([]);
     setShowSearch(false);
+    setQuery(hit.title);
   }
 
   async function saveGoal(e: FormEvent) {
@@ -253,13 +284,13 @@ export function GoalsPage() {
         <GoalMetric label="Metas ativas" value={null} detail={`${rows.filter((goal) => goal.is_active).length} em andamento`} tone="gold" />
       </section>
 
-      {showCreate ? <form className="wp-rise mt-4 min-w-0 overflow-hidden rounded-2xl border border-navy/8 bg-white shadow-[0_12px_38px_rgba(20,28,42,0.06)]" onSubmit={saveGoal}>
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-navy/8 bg-cream/25 px-4 py-3">
+      {showCreate ? <form className="wp-rise relative mt-4 min-w-0 overflow-visible rounded-2xl border border-navy/8 bg-white shadow-[0_12px_38px_rgba(20,28,42,0.06)]" onSubmit={saveGoal}>
+        <header className="flex flex-wrap items-center justify-between gap-3 rounded-t-2xl border-b border-navy/8 bg-cream/25 px-4 py-3">
           <div className="flex items-center gap-3"><span className="grid h-9 w-9 place-items-center rounded-xl bg-gold/15 text-gold-pressed"><GoalPlusIcon /></span><div><h2 className="font-serif text-lg text-navy-deep">{editing ? `Editar ${editing.title}` : "Meta rápida"}</h2><p className="text-xs text-muted">Defina o objetivo agora; detalhes são opcionais.</p></div></div>
           {editing ? <SecondaryButton onClick={resetForm}>Cancelar edição</SecondaryButton> : null}
         </header>
         <div className="grid items-end gap-2 p-3 md:grid-cols-2 xl:grid-cols-[minmax(230px,1fr)_150px_150px_150px_auto] sm:p-4">
-          <CompactGoalField label="Nome da meta" value={draft.title} required placeholder="Ex.: Viagem" onChange={(title) => patchDraft({ title: title.slice(0, 200) })} />
+          <label className="relative block"><GoalFieldLabel>Nome da meta</GoalFieldLabel><div className="relative">{draft.picked?.thumbnail ? <GoalThumb url={draft.picked.thumbnail} alt="" className="absolute left-1 top-1 h-8 w-8 rounded-md" /> : null}<input required value={draft.title} placeholder="Digite para pesquisar…" autoComplete="off" onChange={(event) => patchDraft({ title: event.target.value.slice(0, 200) })} className={`h-10 w-full rounded-lg border border-navy/10 bg-white pr-9 text-sm outline-none focus:border-teal/50 focus:ring-2 focus:ring-teal/10 ${draft.picked?.thumbnail ? "pl-11" : "pl-3"}`} />{searching ? <span className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin rounded-full border-2 border-teal/25 border-t-teal" aria-label="Pesquisando produtos" /> : <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted"><SearchIcon /></span>}</div>{hits.length > 0 ? <ul className="absolute left-0 right-0 top-[calc(100%+4px)] z-40 max-h-72 space-y-1 overflow-y-auto rounded-xl border border-navy/10 bg-white p-1.5 shadow-2xl">{hits.map((hit) => <li key={`${hit.url}-${hit.price_cents}`}><button type="button" className="flex w-full items-center gap-2 rounded-lg p-2 text-left transition hover:bg-sage/50" onMouseDown={(event) => event.preventDefault()} onClick={() => applyHit(hit)}><GoalThumb url={hit.thumbnail} alt={hit.title} className="h-10 w-10" /><span className="min-w-0 flex-1"><span className="line-clamp-1 block text-xs font-semibold text-navy">{hit.title}</span><span className="text-[10px] text-muted">{hit.source}</span></span><span className="shrink-0 text-xs font-bold text-teal-deep">{formatBrlFromCents(hit.price_cents)}</span></button></li>)}</ul> : null}</label>
           <CompactGoalField label="Objetivo" value={draft.target} required placeholder="R$ 0,00" onChange={(target) => patchDraft({ target })} />
           {!editing ? <CompactGoalField label="Já guardado" value={draft.initial} placeholder="Opcional" onChange={(initial) => patchDraft({ initial })} /> : <div className="hidden xl:block" />}
           <CompactGoalField label="Data-alvo" type="date" value={draft.dueDate} onChange={(dueDate) => patchDraft({ dueDate })} />
@@ -385,6 +416,10 @@ function MiniGoalToggle({ label, checked, onChange }: { label: string; checked: 
 
 function GoalPlusIcon() {
   return <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="8"/><path d="M12 8v8M8 12h8"/></svg>;
+}
+
+function SearchIcon() {
+  return <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="11" cy="11" r="6"/><path d="m16 16 4 4"/></svg>;
 }
 
 function SecondaryButton({ children, onClick, disabled = false }: { children: ReactNode; onClick: () => void; disabled?: boolean }) {
