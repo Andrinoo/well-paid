@@ -1,112 +1,9 @@
-import {
-  clearTokens,
-  getAccessToken,
-  getRefreshToken,
-  setTokens,
-} from "./session";
+import { clearTokens, getRefreshToken, setTokens } from "./session";
 import { shiftMonth } from "./format";
+import { API_BASE, apiRequest as request } from "./api/http";
 
-export const API_BASE = import.meta.env.DEV
-  ? "/__api"
-  : (import.meta.env.VITE_API_BASE_URL || "https://well-paid-psi.vercel.app").replace(
-      /\/$/,
-      "",
-    );
-
-export class ApiError extends Error {
-  status: number;
-
-  constructor(message: string, status: number) {
-    super(message);
-    this.status = status;
-  }
-}
-
-function detailMessage(body: unknown, fallback: string): string {
-  if (!body || typeof body !== "object") return fallback;
-  const detail = (body as { detail?: unknown }).detail;
-  if (typeof detail === "string") return detail;
-  if (Array.isArray(detail) && detail[0] && typeof detail[0] === "object") {
-    const first = detail[0] as { msg?: string };
-    if (first.msg) return first.msg;
-  }
-  return fallback;
-}
-
-async function parseBody(res: Response): Promise<unknown> {
-  const text = await res.text();
-  if (!text) return null;
-  try {
-    return JSON.parse(text) as unknown;
-  } catch {
-    return text;
-  }
-}
-
-async function request(
-  path: string,
-  init: RequestInit,
-  retry: boolean,
-): Promise<unknown> {
-  const headers = new Headers(init.headers);
-  if (init.body && !headers.has("Content-Type")) {
-    headers.set("Content-Type", "application/json");
-  }
-  const access = getAccessToken();
-  if (access) headers.set("Authorization", `Bearer ${access}`);
-
-  let res: Response;
-  try {
-    res = await fetch(`${API_BASE}${path}`, {
-      ...init,
-      headers,
-      signal: init.signal ?? AbortSignal.timeout(25_000),
-    });
-  } catch (err) {
-    const name = err instanceof Error ? err.name : "";
-    if (name === "AbortError" || name === "TimeoutError") {
-      throw new ApiError("A API não respondeu a tempo. Tente de novo.", 0);
-    }
-    throw new ApiError("Não foi possível contactar a API.", 0);
-  }
-  const body = await parseBody(res);
-
-  if (res.status === 401 && retry && getRefreshToken()) {
-    const refreshed = await refreshTokens();
-    if (refreshed) return request(path, init, false);
-  }
-
-  if (!res.ok) {
-    throw new ApiError(
-      detailMessage(body, `Pedido falhou (${res.status})`),
-      res.status,
-    );
-  }
-  return body;
-}
-
-async function refreshTokens(): Promise<boolean> {
-  const refresh = getRefreshToken();
-  if (!refresh) return false;
-  try {
-    const res = await fetch(`${API_BASE}/auth/refresh`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ refresh_token: refresh }),
-      signal: AbortSignal.timeout(25_000),
-    });
-    const body = (await parseBody(res)) as TokenPair | null;
-    if (!res.ok || !body?.access_token || !body.refresh_token) {
-      clearTokens();
-      return false;
-    }
-    setTokens(body.access_token, body.refresh_token);
-    return true;
-  } catch {
-    clearTokens();
-    return false;
-  }
-}
+export { ApiError } from "./api/errors";
+export { API_BASE } from "./api/http";
 
 export type TokenPair = {
   access_token: string;
@@ -368,13 +265,46 @@ export type Income = {
 
 export type Goal = {
   id: string;
+  owner_user_id?: string;
+  is_mine?: boolean;
   title: string;
   target_cents: number;
   current_cents: number;
   is_active: boolean;
+  is_family?: boolean;
   target_url?: string | null;
   reference_product_name?: string | null;
+  reference_price_cents?: number | null;
+  reference_currency?: string;
+  price_checked_at?: string | null;
+  price_source?: string | null;
   reference_thumbnail_url?: string | null;
+  description?: string | null;
+  due_at?: string | null;
+  price_check_interval_hours?: number;
+  last_price_track_at?: string | null;
+  tracking_enabled?: boolean;
+  price_alternatives?: { label: string; price_cents: number; url?: string | null }[];
+};
+
+export type GoalContribution = {
+  id: string;
+  goal_id: string;
+  amount_cents: number;
+  note: string | null;
+  recorded_at: string;
+};
+
+export type GoalPriceHistoryItem = {
+  id: string;
+  goal_id: string;
+  price_cents: number;
+  currency: string;
+  source: string | null;
+  observed_url: string | null;
+  observed_title: string | null;
+  capture_type: string;
+  recorded_at: string;
 };
 
 export type GoalProductHit = {
@@ -541,13 +471,59 @@ export async function searchGoalProducts(query: string): Promise<GoalProductHit[
 export async function createGoal(body: {
   title: string;
   target_cents: number;
+  current_cents?: number;
+  is_active?: boolean;
+  is_family?: boolean;
   target_url?: string | null;
   reference_product_name?: string | null;
   reference_price_cents?: number | null;
   reference_thumbnail_url?: string | null;
+  reference_currency?: string;
+  description?: string | null;
+  due_at?: string | null;
+  price_check_interval_hours?: number;
+  tracking_enabled?: boolean;
   price_source?: string | null;
 }): Promise<void> {
   await request("/goals", { method: "POST", body: JSON.stringify(body) }, true);
+}
+
+export async function updateGoal(id: string, body: Partial<{
+  title: string;
+  target_cents: number;
+  is_active: boolean;
+  is_family: boolean;
+  target_url: string | null;
+  reference_product_name: string | null;
+  reference_price_cents: number | null;
+  reference_currency: string;
+  price_source: string | null;
+  reference_thumbnail_url: string | null;
+  description: string | null;
+  due_at: string | null;
+  price_check_interval_hours: number;
+  tracking_enabled: boolean;
+}>): Promise<Goal> {
+  return await request(`/goals/${id}`, { method: "PUT", body: JSON.stringify(body) }, true) as Goal;
+}
+
+export async function deleteGoal(id: string): Promise<void> {
+  await request(`/goals/${id}`, { method: "DELETE" }, true);
+}
+
+export async function fetchGoalContributions(id: string): Promise<GoalContribution[]> {
+  return await request(`/goals/${id}/contributions`, { method: "GET" }, true) as GoalContribution[];
+}
+
+export async function fetchGoalPriceHistory(id: string): Promise<GoalPriceHistoryItem[]> {
+  const body = await request(`/goals/${id}/price-history`, { method: "GET" }, true) as {
+    items?: GoalPriceHistoryItem[];
+  };
+  return body.items ?? [];
+}
+
+export async function refreshGoalPrice(id: string): Promise<Goal> {
+  return await request(`/goals/${id}/refresh-reference-price`, { method: "POST", body: "{}" }, true) as Goal;
 }
 
 export function thumbnailSrc(raw: string | null | undefined): string | null {
@@ -563,10 +539,11 @@ export function thumbnailSrc(raw: string | null | undefined): string | null {
 export async function contributeGoal(
   id: string,
   amount_cents: number,
+  note?: string | null,
 ): Promise<void> {
   await request(
     `/goals/${id}/contribute`,
-    { method: "POST", body: JSON.stringify({ amount_cents }) },
+    { method: "POST", body: JSON.stringify({ amount_cents, note: note?.trim() || null }) },
     true,
   );
 }

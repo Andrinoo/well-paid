@@ -1,13 +1,25 @@
+import { useEffect, useMemo, useState } from "react";
 import { thumbnailSrc } from "../../api";
 
 export function GoalThumb({
   url,
   className = "h-14 w-14",
+  alt = "",
 }: {
   url?: string | null;
   className?: string;
+  alt?: string;
 }) {
-  const src = thumbnailSrc(url);
+  const sources = useMemo(() => {
+    const raw = normalizeDirectImageUrl(url);
+    const proxy = thumbnailSrc(url);
+    return [proxy, raw].filter((item, index, all): item is string => Boolean(item) && all.indexOf(item) === index);
+  }, [url]);
+  const [sourceIndex, setSourceIndex] = useState(0);
+
+  useEffect(() => setSourceIndex(0), [url]);
+
+  const src = sources[sourceIndex] ?? null;
   if (!src) {
     return (
       <span
@@ -23,9 +35,20 @@ export function GoalThumb({
   return (
     <img
       src={src}
-      alt=""
+      alt={alt}
       referrerPolicy="no-referrer"
+      loading="lazy"
+      onError={() => setSourceIndex((current) => current + 1)}
       className={`shrink-0 rounded-2xl bg-cream-muted object-cover ${className}`}
     />
   );
+}
+
+function normalizeDirectImageUrl(raw: string | null | undefined): string | null {
+  const value = (raw ?? "").trim();
+  if (!value) return null;
+  if (value.startsWith("//")) return `https:${value}`;
+  if (value.startsWith("www.")) return `https://${value}`;
+  if (!value.toLowerCase().startsWith("https://")) return null;
+  return value;
 }

@@ -81,6 +81,9 @@ docs/        # Documentação do produto (contratos API, fluxos UI, plano mestre
 
 ### Documentação (pasta `docs/`)
 
+- **`docs/WEB_PORT_ARCHITECTURE.md`** — arquitetura adotada para tornar a web o cliente principal.
+- **`docs/WEB_MODULE_INVENTORY.md`** — módulos web existentes e sua origem no histórico Git.
+- **`docs/WEB_PORT_PARITY.md`** — matriz viva de paridade entre Android e web.
 - **`docs/FLUXOGRAMAS_UI_E_NAVEGACAO.md`** — fluxogramas (login → Main → domínios, definições, app lock).
 - **`docs/WELL_PAID_DOCUMENTACAO_UNIFICADA.md`** — leitura única: plano mestre, planos Cursor exportados, contrato API, checklist QA, índice da raiz.
 - **`docs/ANDROID_API_BACKEND_CONTRACT.md`** — mapeamento DTO Android ↔ API FastAPI.
