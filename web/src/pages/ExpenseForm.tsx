@@ -17,7 +17,7 @@ import {
   type ExpenseFrequency,
   type ExpenseKind,
 } from "../features/expenses/create-model";
-import { ApiError, CategorySelect, ChipRow, InField, SwitchRow } from "./common";
+import { ApiError } from "./common";
 
 type Peer = { user_id: string; label: string };
 
@@ -48,7 +48,7 @@ export function ExpenseCreateForm({
   const [ownerPart, setOwnerPart] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [showHelp, setShowHelp] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [familyLoading, setFamilyLoading] = useState(true);
 
   useEffect(() => {
@@ -167,245 +167,59 @@ export function ExpenseCreateForm({
 
   return (
     <form
-      className="space-y-4 overflow-hidden rounded-3xl border border-navy/8 bg-white p-4 shadow-[0_18px_55px_rgba(20,28,42,0.08)] sm:p-5"
+      className="overflow-hidden rounded-2xl border border-navy/8 bg-white shadow-[0_12px_38px_rgba(20,28,42,0.06)]"
       onSubmit={onSubmit}
     >
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-navy/8 pb-4">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-gold-pressed">
-            Lançamento
-          </p>
-          <p className="mt-1 font-serif text-2xl text-navy-deep">Nova despesa</p>
-          <p className="mt-1 max-w-xl text-sm text-muted">
-            Registre uma compra única, um parcelamento ou uma conta recorrente.
-          </p>
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-navy/8 bg-cream/25 px-4 py-3">
+        <div className="flex items-center gap-3">
+          <span className="grid h-9 w-9 place-items-center rounded-xl bg-gold/15 text-gold-pressed" aria-hidden="true">
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 5v14M5 12h14" /></svg>
+          </span>
+          <div><h2 className="font-serif text-lg text-navy-deep">Lançamento rápido</h2><p className="text-xs text-muted">Preencha o essencial e inclua.</p></div>
         </div>
-        <button
-          type="button"
-          onClick={() => setShowHelp((value) => !value)}
-          aria-expanded={showHelp}
-          className="rounded-full border border-navy/10 bg-cream/60 px-3 py-2 text-xs font-semibold text-navy transition hover:border-gold/60 hover:bg-gold/10"
-        >
-          {showHelp ? "Fechar ajuda" : "Como funciona?"}
-        </button>
-      </div>
-      {showHelp ? (
-        <div className="rounded-2xl border border-gold/25 bg-gold/8 p-4 text-sm leading-6 text-navy">
-          <strong>Única</strong> cria somente um lançamento. <strong>Parcelas</strong> cria o plano
-          completo a partir do primeiro vencimento. <strong>Recorrente</strong> projeta novos
-          lançamentos na frequência escolhida. Em uma despesa compartilhada, sua parte e a da
-          outra pessoa sempre fecham exatamente com o total.
+        <div className="flex rounded-xl border border-navy/8 bg-white p-1" role="group" aria-label="Tipo da despesa">
+          {([['single', 'Única'], ['installments', 'Parcelada'], ['recurring', 'Recorrente']] as [ExpenseKind, string][]).map(([id, label]) => (
+            <button key={id} type="button" onClick={() => onKind(id)} className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${kind === id ? "bg-navy-deep text-cream shadow-sm" : "text-muted hover:text-navy"}`}>{label}</button>
+          ))}
         </div>
-      ) : null}
+      </header>
       {error ? (
-        <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+        <p role="alert" className="m-3 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-800">
           {error}
         </p>
       ) : null}
-
-      <section className="space-y-3 rounded-2xl bg-cream/35 p-3.5 sm:p-4">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Tipo da despesa</p>
-          <div className="mt-2">
-            <ChipRow
-              value={kind}
-              onChange={onKind}
-              options={[
-                { id: "single", label: "Única" },
-                { id: "installments", label: "Parcelada" },
-                { id: "recurring", label: "Recorrente" },
-              ]}
-            />
-          </div>
+      <div className="p-3 sm:p-4">
+        <div className="grid items-end gap-2 md:grid-cols-2 xl:grid-cols-[145px_minmax(240px,1fr)_135px_180px_auto_auto]">
+          <CompactField label={kind === "single" ? "Data" : "Primeiro vencimento"} type="date" value={kind === "single" ? expenseDate : dueDate} onChange={kind === "single" ? setExpenseDate : setDueDate} />
+          <CompactField label="Descrição" value={description} placeholder="Ex.: conta de energia" onChange={(value) => setDescription(value.slice(0, 500))} />
+          <CompactField label="Valor total" value={amount} placeholder="R$ 0,00" onChange={setAmount} />
+          <label><span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-muted">Categoria</span><select required value={categoryId} onChange={(event) => setCategoryId(event.target.value)} className="h-10 w-full rounded-lg border border-navy/10 bg-white px-2.5 text-sm outline-none focus:border-teal/50"><option value="">Escolher</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
+          <MiniToggle label="Paga" checked={paid} onChange={setPaid} />
+          <button type="submit" disabled={busy || categories.length === 0} className="h-10 rounded-lg bg-gold px-5 text-sm font-bold text-navy-deep shadow-sm transition hover:-translate-y-0.5 hover:bg-gold/90 disabled:opacity-50">{busy ? "Incluindo…" : "Incluir"}</button>
         </div>
-        <InField
-          label="Descrição"
-          value={description}
-          required
-          placeholder="Ex.: conta de energia"
-          onChange={(v) => setDescription(v.slice(0, 500))}
-          hint={`${description.length}/500`}
-        />
 
-        <div className="grid gap-3 sm:grid-cols-2">
-        <InField
-          label="Valor (R$)"
-          value={amount}
-          required
-          placeholder="Ex.: 12,50 ou 1234,56"
-          onChange={setAmount}
-        />
-        {kind === "installments" ? (
-          <InField
-            label="Juro mensal (%)"
-            value={interest}
-            required
-            placeholder="Ex.: 4,5"
-            onChange={setInterest}
-          />
-        ) : (
-          <SwitchRow
-            label="Já está paga"
-            checked={paid}
-            onChange={setPaid}
-          />
-        )}
+        <div className="mt-3 flex flex-wrap items-end gap-2 border-t border-navy/8 pt-3">
+          {kind === "single" ? <><MiniToggle label="Vencimento" checked={hasDue} onChange={setHasDue} />{hasDue ? <div className="w-40"><CompactField label="Data de vencimento" type="date" value={dueDate} onChange={setDueDate} /></div> : null}</> : null}
+          {kind === "installments" ? <><div className="w-24"><CompactField label="Parcelas" type="number" value={installments} onChange={setInstallments} /></div><div className="w-32"><CompactField label="Juro mensal %" value={interest} placeholder="0,00" onChange={setInterest} /></div></> : null}
+          {kind === "recurring" ? <><div className="w-40"><CompactField label="Data da despesa" type="date" value={expenseDate} onChange={setExpenseDate} /></div><label><span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-muted">Frequência</span><select value={freq} onChange={(event) => setFreq(event.target.value as ExpenseFrequency)} className="h-10 rounded-lg border border-navy/10 bg-white px-3 text-sm"><option value="monthly">Mensal</option><option value="weekly">Semanal</option><option value="yearly">Anual</option></select></label></> : null}
+          {familyMode ? <button type="button" aria-expanded={showAdvanced} onClick={() => setShowAdvanced((value) => !value)} className="ml-auto h-10 rounded-lg border border-navy/10 px-3 text-xs font-semibold text-navy transition hover:border-teal/40">{showAdvanced ? "Ocultar família" : "Família e divisão"}<span className="ml-2" aria-hidden="true">{showAdvanced ? "⌃" : "⌄"}</span></button> : familyLoading ? <span className="ml-auto text-xs text-muted">Verificando família…</span> : null}
         </div>
-      {kind === "installments" ? (
-        <SwitchRow label="Já está paga" checked={paid} onChange={setPaid} />
-      ) : null}
-      </section>
+      </div>
 
-      {kind === "single" ? (
-        <section className="space-y-3 rounded-2xl border border-navy/8 p-3.5 sm:p-4">
-          <SectionTitle title="Datas" description="Quando a despesa aconteceu e, se aplicável, quando vence." />
-          <SwitchRow
-            label="Tem data de vencimento"
-            sub="Contas a pagar / alertas no dashboard"
-            checked={hasDue}
-            onChange={setHasDue}
-          />
-          <div className={`grid gap-3 ${hasDue ? "sm:grid-cols-2" : ""}`}>
-            <InField
-              label="Data da despesa"
-              type="date"
-              value={expenseDate}
-              required
-              onChange={setExpenseDate}
-            />
-            {hasDue ? (
-              <InField
-                label="Data de vencimento"
-                type="date"
-                value={dueDate}
-                required
-                hint="Opcional no tipo única, obrigatório se ligado"
-                onChange={setDueDate}
-              />
-            ) : null}
-          </div>
-        </section>
-      ) : null}
-
-      {kind === "installments" ? (
-        <section className="space-y-3 rounded-2xl border border-navy/8 p-3.5 sm:p-4">
-          <SectionTitle title="Plano de parcelas" description="O primeiro vencimento ancora todo o plano." />
-          <div className="grid gap-3 sm:grid-cols-2">
-          <InField
-            label="Primeiro vencimento"
-            type="date"
-            value={dueDate}
-            required
-            hint="Esta data define o vencimento de cada parcela."
-            onChange={setDueDate}
-          />
-          <InField
-            label="Número de parcelas"
-            type="number"
-            value={installments}
-            required
-            placeholder="2–999"
-            hint="Indique quantas parcelas tem o plano (2–999)."
-            onChange={setInstallments}
-          />
-          </div>
-        </section>
-      ) : null}
-
-      {kind === "recurring" ? (
-        <section className="space-y-3 rounded-2xl border border-navy/8 p-3.5 sm:p-4">
-          <SectionTitle title="Recorrência" description="Defina o início, o primeiro vencimento e a frequência." />
-          <div className="grid gap-3 sm:grid-cols-2">
-            <InField
-              label="Primeiro vencimento"
-              type="date"
-              value={dueDate}
-              required
-              hint="Obrigatório para parcelas e recorrentes."
-              onChange={setDueDate}
-            />
-            <InField
-              label="Data da despesa"
-              type="date"
-              value={expenseDate}
-              required
-              onChange={setExpenseDate}
-            />
-          </div>
-          <div>
-            <p className="mb-1 text-xs uppercase tracking-wide text-muted">Frequência</p>
-            <ChipRow
-              value={freq}
-              onChange={setFreq}
-              options={[
-                { id: "monthly", label: "mensal" },
-                { id: "weekly", label: "semanal" },
-                { id: "yearly", label: "anual" },
-              ]}
-            />
-          </div>
-        </section>
-      ) : null}
-
-      <section className="space-y-3 rounded-2xl border border-navy/8 p-3.5 sm:p-4">
-        <SectionTitle title="Classificação" description="Use a mesma categoria que organiza seus relatórios." />
-        <CategorySelect
-          label="Categoria"
-          value={categoryId}
-          categories={categories}
-          onChange={setCategoryId}
-        />
-      </section>
-
-      {familyMode ? (
-        <section className="space-y-3 rounded-2xl border border-navy/8 bg-navy/[0.025] p-3.5 sm:p-4">
-          <SectionTitle title="Família e divisão" description="Compartilhe a visibilidade ou divida o pagamento com uma pessoa." />
-          <SwitchRow
-            label="Conta família"
-            sub="Itens marcados aparecem no Modo Família para membros convidados."
-            checked={isFamily}
-            onChange={setIsFamily}
-          />
+      {familyMode && showAdvanced ? (
+        <section className="border-t border-navy/8 bg-cream/25 p-3 sm:p-4">
+          <div className="grid gap-2 md:grid-cols-2"><MiniToggle label="Conta família" checked={isFamily} onChange={setIsFamily} />
           {canShare ? (
             <>
-              <SwitchRow
-                label="Partilhar na família"
-                sub="Junta-te a uma família (convite) para usar partilha."
-                checked={share}
-                onChange={onShare}
-              />
+              <MiniToggle label="Partilhar com membro" checked={share} onChange={onShare} />
               {share ? (
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid gap-2 md:col-span-2 sm:grid-cols-2 lg:grid-cols-4">
                   <label className="block">
-                    <span className="mb-1 block text-xs uppercase tracking-wide text-muted">
-                      Partilhar com
-                    </span>
-                    <select
-                      className="w-full rounded-lg border border-navy/10 bg-white px-3 py-2.5 text-sm"
-                      value={peerId}
-                      onChange={(e) => setPeerId(e.target.value)}
-                      required
-                    >
-                      <option value="">Escolher</option>
-                      {peers.map((p) => (
-                        <option key={p.user_id} value={p.user_id}>
-                          {p.label}
-                        </option>
-                      ))}
-                    </select>
+                    <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-muted">Partilhar com</span>
+                    <select className="h-10 w-full rounded-lg border border-navy/10 bg-white px-3 text-sm" value={peerId} onChange={(e) => setPeerId(e.target.value)} required><option value="">Escolher</option>{peers.map((p) => <option key={p.user_id} value={p.user_id}>{p.label}</option>)}</select>
                   </label>
-                  <SwitchRow
-                    label="Dividir em %"
-                    sub="Predef.: valor; ligue para %."
-                    checked={splitPercent}
-                    onChange={onSplitMode}
-                  />
-                  <InField
-                    label={splitPercent ? "Sua parte (%)" : "Sua parte (R$)"}
-                    value={ownerPart}
-                    placeholder={splitPercent ? "50" : "metade"}
-                    onChange={setOwnerPart}
-                  />
+                  <MiniToggle label="Dividir em %" checked={splitPercent} onChange={onSplitMode} />
+                  <CompactField label={splitPercent ? "Sua parte (%)" : "Sua parte (R$)"} value={ownerPart} placeholder={splitPercent ? "50" : "metade"} onChange={setOwnerPart} />
                   <CalculatedValue
                     label={splitPercent ? "Outra pessoa (%)" : "Outra pessoa (R$)"}
                     value={
@@ -419,7 +233,7 @@ export function ExpenseCreateForm({
                     }
                   />
                   {splitPercent && percentageSplit ? (
-                    <div className="grid gap-2 sm:col-span-2 sm:grid-cols-2">
+                    <div className="grid gap-2 md:col-span-2 lg:col-span-4 sm:grid-cols-2">
                       <SplitPreview label="Sua parte estimada" cents={percentageSplit.ownerCents} />
                       <SplitPreview label="Parte da outra pessoa" cents={percentageSplit.peerCents} />
                     </div>
@@ -428,40 +242,23 @@ export function ExpenseCreateForm({
               ) : null}
             </>
           ) : (
-            <p className="text-xs text-muted">
-              Adicione mais membros ao agregado para partilhar a despesa com alguém em concreto.
-            </p>
+            <p className="text-xs text-muted">Adicione membros à família para dividir esta despesa.</p>
           )}
+          </div>
         </section>
-      ) : familyLoading ? (
-        <div className="rounded-2xl border border-navy/8 px-4 py-3 text-sm text-muted">
-          Verificando recursos da família…
-        </div>
       ) : null}
-
-      <div className="flex flex-col-reverse gap-3 border-t border-navy/8 pt-5 sm:flex-row sm:items-center sm:justify-end">
-        <p className="text-center text-xs text-muted sm:mr-auto sm:text-left">
-          Os valores são gravados com precisão de centavos.
-        </p>
-        <button
-          type="submit"
-          disabled={busy || categories.length === 0}
-          className="min-h-12 w-full rounded-xl bg-gold px-8 py-3 text-sm font-bold text-navy-deep shadow-[0_8px_22px_rgba(201,169,78,0.28)] transition hover:-translate-y-0.5 hover:bg-gold/90 hover:shadow-[0_12px_28px_rgba(201,169,78,0.36)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 sm:w-auto"
-        >
-          {busy ? "Salvando…" : "Salvar despesa"}
-        </button>
-      </div>
     </form>
   );
 }
 
-function SectionTitle({ title, description }: { title: string; description: string }) {
+function CompactField({ label, value, onChange, type = "text", placeholder }: { label: string; value: string; onChange: (value: string) => void; type?: string; placeholder?: string }) {
   return (
-    <div>
-      <h3 className="font-serif text-lg text-navy-deep">{title}</h3>
-      <p className="mt-0.5 text-xs leading-5 text-muted">{description}</p>
-    </div>
+    <label className="block"><span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-muted">{label}</span><input required type={type} value={value} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} className="h-10 w-full rounded-lg border border-navy/10 bg-white px-3 text-sm outline-none focus:border-teal/50 focus:ring-2 focus:ring-teal/10" /></label>
   );
+}
+
+function MiniToggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (value: boolean) => void }) {
+  return <label className="flex h-10 cursor-pointer items-center gap-2 rounded-lg border border-navy/8 bg-cream/30 px-2.5"><input type="checkbox" role="switch" checked={checked} onChange={(event) => onChange(event.target.checked)} className="peer sr-only" /><span aria-hidden="true" className="relative h-5 w-9 rounded-full bg-navy/20 transition peer-checked:bg-teal after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform peer-checked:after:translate-x-4" /><span className="whitespace-nowrap text-xs font-semibold text-navy">{label}</span></label>;
 }
 
 function CalculatedValue({ label, value }: { label: string; value: string }) {

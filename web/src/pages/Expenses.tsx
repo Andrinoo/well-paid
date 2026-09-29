@@ -237,7 +237,12 @@ function StatusBadge({ row }: { row: Expense }) {
 
 function ActionButton({ label, onClick, disabled, primary, danger }: { label: string; onClick: () => void; disabled?: boolean; primary?: boolean; danger?: boolean }) {
   const tone = primary ? "bg-teal/10 text-teal-deep hover:bg-teal/20" : danger ? "text-red-700 hover:bg-red-50" : "text-navy hover:bg-cream-muted";
-  return <button type="button" disabled={disabled} onClick={onClick} className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-35 ${tone}`}>{label}</button>;
+  const icon = label === "Editar"
+    ? <><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-4-4L4 16v4Z" /><path d="m13.5 6.5 4 4" /></>
+    : label === "Pagar"
+      ? <><circle cx="12" cy="12" r="9" /><path d="m8 12 2.5 2.5L16 9" /></>
+      : <><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5" /></>;
+  return <button type="button" title={label} aria-label={label} disabled={disabled} onClick={onClick} className={`grid h-8 w-8 place-items-center rounded-lg transition disabled:cursor-not-allowed disabled:opacity-35 ${tone}`}><svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{icon}</svg></button>;
 }
 
 function SummaryCard({ label, value, detail, tone }: { label: string; value: number; detail: string; tone: "navy" | "green" | "gold" }) {
