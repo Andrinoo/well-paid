@@ -539,11 +539,12 @@ def delete_goal(
     goal_id: uuid.UUID,
     user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
+    confirm_delete_balance: bool = False,
 ) -> None:
     row = _owned_goal(db, goal_id, user.id)
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Meta não encontrada")
-    if int(row.current_cents) > 0:
+    if int(row.current_cents) > 0 and not confirm_delete_balance:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=(

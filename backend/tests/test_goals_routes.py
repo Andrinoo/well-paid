@@ -5,6 +5,9 @@ from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
+from fastapi import HTTPException
+import pytest
+
 from app.api.routes import goals as goals_route
 from app.schemas.goal import GoalContribute, GoalUpdate
 
@@ -78,3 +81,28 @@ def test_update_goal_ignores_current_cents_field(monkeypatch) -> None:
     assert row.current_cents == 1000
     assert row.target_cents == 15000
     assert row.title == "Meta editada"
+
+
+def test_delete_goal_with_balance_requires_explicit_confirmation(monkeypatch) -> None:
+    user = _fake_user()
+    row = _fake_goal(user.id)
+    db = MagicMock()
+    monkeypatch.setattr(goals_route, "_owned_goal", lambda *_: row)
+
+    with pytest.raises(HTTPException) as exc:
+        goals_route.delete_goal(row.id, user, db)
+
+    assert exc.value.status_code == 409
+    db.delete.assert_not_called()
+
+
+def test_delete_goal_with_balance_accepts_explicit_confirmation(monkeypatch) -> None:
+    user = _fake_user()
+    row = _fake_goal(user.id)
+    db = MagicMock()
+    monkeypatch.setattr(goals_route, "_owned_goal", lambda *_: row)
+
+    goals_route.delete_goal(row.id, user, db, confirm_delete_balance=True)
+
+    db.delete.assert_called_once_with(row)
+    db.commit.assert_called_once()

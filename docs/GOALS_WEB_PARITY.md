@@ -19,7 +19,8 @@
 | Nota no aporte | Disponível |
 | Histórico de aportes | Disponível |
 | Excluir meta sem saldo | Disponível com confirmação |
-| Meta com saldo | Exclusão bloqueada; oferece arquivamento |
+| Excluir meta com saldo | Disponível com confirmação reforçada; remove também os aportes |
+| Preservar meta com saldo | Arquivamento disponível como alternativa segura |
 | Visualizar meta compartilhada | Disponível sem ações de proprietário |
 
 ## Causa das miniaturas quebradas

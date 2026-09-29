@@ -15,7 +15,6 @@ import {
 } from "../api";
 import {
   buildGoalPayload,
-  canDeleteGoal,
   dateInputValue,
   goalProgress,
   type GoalDraft,
@@ -221,7 +220,7 @@ export function GoalsPage() {
     if (!goal) return;
     setActionId(goal.id);
     try {
-      await deleteGoal(goal.id);
+      await deleteGoal(goal.id, true);
       setDeleteCandidate(null);
       if (editing?.id === goal.id) resetForm();
       await load();
@@ -378,8 +377,8 @@ function GoalCard({ goal, expanded, contributions, amount, note, busy, onToggle,
           <SecondaryButton onClick={onToggle}>{expanded ? "Fechar detalhes" : "Ver detalhes"}</SecondaryButton>
           {mine ? <SecondaryButton onClick={onEdit}>Editar</SecondaryButton> : null}
           {mine && (goal.target_url || goal.reference_product_name) ? <SecondaryButton onClick={onRefresh} disabled={busy}>{busy ? "Atualizando…" : "Atualizar preço"}</SecondaryButton> : null}
-          {mine && canDeleteGoal(goal) ? <DangerButton onClick={onDelete}>Excluir</DangerButton> : null}
-          {mine && !canDeleteGoal(goal) && goal.is_active ? <SecondaryButton onClick={onArchive} disabled={busy}>Arquivar</SecondaryButton> : null}
+          {mine ? <DangerButton onClick={onDelete}>Excluir</DangerButton> : null}
+          {mine && goal.current_cents > 0 && goal.is_active ? <SecondaryButton onClick={onArchive} disabled={busy}>Arquivar</SecondaryButton> : null}
         </div>
       </div>
       {expanded ? (
@@ -404,7 +403,8 @@ function GoalCard({ goal, expanded, contributions, amount, note, busy, onToggle,
 }
 
 function ConfirmDelete({ goal, busy, onCancel, onConfirm }: { goal: Goal; busy: boolean; onCancel: () => void; onConfirm: () => void }) {
-  return <div className="fixed inset-0 z-50 grid place-items-center bg-navy-deep/55 p-4" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }}><div role="dialog" aria-modal="true" aria-labelledby="delete-goal-title" className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl"><h2 id="delete-goal-title" className="font-serif text-2xl text-navy-deep">Excluir meta?</h2><p className="mt-2 text-sm leading-6 text-muted">“{goal.title}” será removida definitivamente. Esta ação só está disponível porque a meta não possui saldo.</p><div className="mt-6 flex justify-end gap-2"><SecondaryButton onClick={onCancel}>Cancelar</SecondaryButton><button type="button" disabled={busy} onClick={onConfirm} className="rounded-xl bg-red-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-800 disabled:opacity-60">{busy ? "Excluindo…" : "Excluir definitivamente"}</button></div></div></div>;
+  const hasBalance = goal.current_cents > 0;
+  return <div className="fixed inset-0 z-50 grid place-items-center bg-navy-deep/55 p-4" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }}><div role="dialog" aria-modal="true" aria-labelledby="delete-goal-title" className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl"><h2 id="delete-goal-title" className="font-serif text-2xl text-navy-deep">Excluir meta?</h2><p className="mt-2 text-sm leading-6 text-muted">“{goal.title}” será removida definitivamente.{hasBalance ? ` O saldo registrado de ${formatBrlFromCents(goal.current_cents)} e todo o histórico de aportes também serão excluídos.` : ""}</p>{hasBalance ? <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-800">Esta ação não pode ser desfeita. Se quiser preservar o histórico, use Arquivar.</p> : null}<div className="mt-6 flex justify-end gap-2"><SecondaryButton onClick={onCancel}>Cancelar</SecondaryButton><button type="button" disabled={busy} onClick={onConfirm} className="rounded-xl bg-red-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-800 disabled:opacity-60">{busy ? "Excluindo…" : "Excluir definitivamente"}</button></div></div></div>;
 }
 
 function SecondaryButton({ children, onClick, disabled = false }: { children: ReactNode; onClick: () => void; disabled?: boolean }) {

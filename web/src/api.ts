@@ -507,8 +507,9 @@ export async function updateGoal(id: string, body: Partial<{
   return await request(`/goals/${id}`, { method: "PUT", body: JSON.stringify(body) }, true) as Goal;
 }
 
-export async function deleteGoal(id: string): Promise<void> {
-  await request(`/goals/${id}`, { method: "DELETE" }, true);
+export async function deleteGoal(id: string, confirmDeleteBalance = false): Promise<void> {
+  const query = confirmDeleteBalance ? "?confirm_delete_balance=true" : "";
+  await request(`/goals/${id}${query}`, { method: "DELETE" }, true);
 }
 
 export async function fetchGoalContributions(id: string): Promise<GoalContribution[]> {
