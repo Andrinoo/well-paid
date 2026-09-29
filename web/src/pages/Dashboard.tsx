@@ -103,9 +103,9 @@ export function DashboardPage() {
           {[0, 1, 2, 3].map((item) => <div key={item} className="h-[360px] overflow-hidden rounded-3xl bg-white/70"><div className="h-full w-full wp-shimmer" /></div>)}
         </div>
       ) : (
-        <main className="relative grid gap-4 px-5 pb-24 pt-5 xl:grid-cols-2 xl:auto-rows-fr sm:px-8">
+        <main className="relative grid gap-4 px-5 pb-24 pt-5 xl:grid-cols-2 xl:auto-rows-[500px] xl:pb-8 sm:px-8">
           <DashboardPanel title="Despesas por categoria" subtitle="Onde seu dinheiro foi usado neste mês" value={formatBrlFromCents(spent)} valueLabel="total lançado" tone="expense">
-            <div className="mx-auto -my-4 w-full max-w-[390px]"><MonthOrbit spending={overview?.spending_by_category ?? []} balanceCents={balance} story={monthStory(balance, pending, income, spent)} /></div>
+            <div className="mx-auto -my-4 w-full max-w-[360px]"><MonthOrbit spending={overview?.spending_by_category ?? []} balanceCents={balance} story={monthStory(balance, pending, income, spent)} /></div>
           </DashboardPanel>
 
           <DashboardPanel title="Fluxo financeiro" subtitle="Histórico real e despesas previstas" value={formatBrlFromCents(balance)} valueLabel="saldo do mês" tone={tight ? "expense" : "teal"} delay="70ms">
@@ -130,13 +130,13 @@ function DashboardPanel({ title, subtitle, value, valueLabel, tone, children, ac
   const accent = tone === "teal" ? "bg-teal" : tone === "expense" ? "bg-expense-line" : tone === "gold" ? "bg-gold" : "bg-navy";
   const valueTone = tone === "expense" ? "text-expense-line" : tone === "teal" ? "text-teal-deep" : "text-navy-deep";
   return (
-    <section className="wp-rise flex min-h-[360px] min-w-0 flex-col overflow-hidden rounded-3xl border border-navy/8 bg-white/85 shadow-[0_16px_48px_rgba(20,28,42,0.07)] backdrop-blur" style={{ ["--wp-delay" as string]: delay }}>
+    <section className="wp-rise flex min-h-[360px] min-w-0 flex-col overflow-hidden rounded-3xl border border-navy/8 bg-white/85 shadow-[0_16px_48px_rgba(20,28,42,0.07)] backdrop-blur xl:min-h-0" style={{ ["--wp-delay" as string]: delay }}>
       <div className={`h-1 w-full ${accent}`} />
       <header className="flex flex-wrap items-start justify-between gap-3 border-b border-navy/8 px-5 py-4">
         <div className="min-w-0"><h2 className="font-display text-xl font-semibold text-navy-deep">{title}</h2><p className="mt-0.5 text-xs text-muted">{subtitle}</p>{action ? <div className="mt-2">{action}</div> : null}</div>
         <div className="text-right"><p className={`font-display text-xl font-semibold tabular-nums ${valueTone}`}>{value}</p><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted">{valueLabel}</p></div>
       </header>
-      <div className="min-h-0 flex-1 p-5">{children}</div>
+      <div className="min-h-0 flex-1 overflow-auto p-5">{children}</div>
     </section>
   );
 }
