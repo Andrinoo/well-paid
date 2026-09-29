@@ -1,4 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
-  <rect width="32" height="32" rx="8" fill="#141C2A"/>
-  <path d="M8 21.5L13 10h2.2l5 11.5H18l-1-2.4h-5.2L10.8 21.5H8zm4.2-4.3h4.1L14.2 13l-1.8 4.2zM22 10h2.1v11.5H22V10z" fill="#24C4A8"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <rect width="64" height="64" rx="17" fill="#141C2A"/>
+  <rect x="2" y="2" width="60" height="60" rx="15" stroke="#24C4A8" stroke-opacity=".22" stroke-width="2"/>
+  <text x="32" y="40" fill="#24C4A8" font-family="Georgia, 'Times New Roman', serif" font-size="27" font-weight="700" text-anchor="middle" letter-spacing="-2">WP</text>
 </svg>
