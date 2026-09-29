@@ -4,13 +4,16 @@ import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { LocaleProvider } from "./i18n/LocaleProvider";
 import { queryClient } from "./query-client";
+import { ThemeProvider } from "./theme/ThemeProvider";
 import "./index.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <LocaleProvider>
-        <App />
+        <ThemeProvider>
+          <App />
+        </ThemeProvider>
       </LocaleProvider>
     </QueryClientProvider>
   </StrictMode>,

@@ -700,3 +700,11 @@ export async function patchDisplayName(display_name: string): Promise<UserMe> {
     true,
   )) as UserMe;
 }
+
+export async function patchFamilyMode(family_mode_enabled: boolean): Promise<UserMe> {
+  return (await request(
+    "/auth/me",
+    { method: "PATCH", body: JSON.stringify({ family_mode_enabled }) },
+    true,
+  )) as UserMe;
+}

@@ -55,7 +55,7 @@ function NotFound() {
     document.title = "Well Paid";
   }, []);
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-paper font-ui text-navy/70">
+    <div className="site-root flex min-h-dvh items-center justify-center bg-paper font-ui text-navy/70">
       Não encontrado
     </div>
   );
@@ -83,7 +83,7 @@ function RequireSa({ children }: { children: ReactNode }) {
 
   if (state === "loading") {
     return (
-      <div className="flex min-h-dvh items-center justify-center bg-paper font-ui text-muted">
+      <div className="site-root flex min-h-dvh items-center justify-center bg-paper font-ui text-muted">
         …
       </div>
     );
@@ -306,7 +306,7 @@ function UserScreen() {
   }
   if (!data) {
     return (
-      <div className="flex min-h-dvh items-center justify-center bg-paper font-ui text-muted">
+      <div className="site-root flex min-h-dvh items-center justify-center bg-paper font-ui text-muted">
         …
       </div>
     );

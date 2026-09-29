@@ -7,6 +7,16 @@
     <meta name="robots" content="noindex, nofollow, noarchive" />
     <meta name="referrer" content="no-referrer" />
     <meta name="theme-color" content="#0E5C50" />
+    <script>
+      (() => {
+        try {
+          const saved = localStorage.getItem("wellpaid.theme");
+          const dark = saved === "dark" || (saved !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
+          document.documentElement.dataset.theme = dark ? "dark" : "light";
+          document.documentElement.style.colorScheme = dark ? "dark" : "light";
+        } catch (_) {}
+      })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

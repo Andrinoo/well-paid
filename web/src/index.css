@@ -41,6 +41,121 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+html[data-theme="dark"] body {
+  background: #0d1522;
+  color: #edf2f7;
+}
+
+html[data-theme="dark"] .wp-app-shell,
+html[data-theme="dark"] .site-root,
+html[data-theme="dark"] .wp-app-shell main {
+  background-color: #0d1522 !important;
+  color: #edf2f7;
+}
+
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .bg-white,
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .bg-white\/60,
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .bg-white\/70,
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .bg-white\/80,
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .bg-white\/85,
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .bg-white\/90,
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .bg-cream,
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .bg-cream\/25,
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .bg-cream\/30,
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .bg-cream\/35,
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .bg-cream\/40,
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .bg-cream\/50,
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .bg-cream\/60,
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .bg-cream-muted,
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .bg-paper {
+  background-color: #162131 !important;
+}
+
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .bg-sage,
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .bg-sage\/45,
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .bg-sage\/50,
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .bg-sky,
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .bg-peach,
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .bg-peach\/40,
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .bg-peach\/80,
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .bg-peach\/90 {
+  background-color: #1b3040 !important;
+}
+
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .text-navy,
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .text-navy\/60,
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .text-navy\/65,
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .text-navy\/70,
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .text-navy\/75,
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .text-navy\/80,
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .text-navy-deep,
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .text-navy-deep\/90,
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .text-ink {
+  color: #edf2f7 !important;
+}
+
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .text-muted {
+  color: #a9b5c4 !important;
+}
+
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .text-teal-deep {
+  color: #62dfc2 !important;
+}
+
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .text-gold-pressed {
+  color: #f0c967 !important;
+}
+
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) :is(.border-navy\/8, .border-navy\/10, .border-navy\/12, .border-navy\/15, .border-white\/80) {
+  border-color: #304158 !important;
+}
+
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) input,
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) select,
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) textarea {
+  background-color: #101a29;
+  border-color: #34445a;
+  color: #f7fafc;
+}
+
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) input::placeholder,
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) textarea::placeholder {
+  color: #718096;
+}
+
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) option {
+  background: #101a29;
+  color: #f7fafc;
+}
+
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .from-sky {
+  --tw-gradient-from: #183245;
+}
+
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .to-peach\/70 {
+  --tw-gradient-to: rgb(55 42 38 / 0.7);
+}
+
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .bg-gold.text-navy-deep,
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .bg-sun.text-navy-deep {
+  color: #141c2a !important;
+}
+
+html[data-theme="dark"] .wp-app-shell .wp-sidebar {
+  background-color: #080e18 !important;
+  color: #fff6eb;
+}
+
+html[data-theme="dark"] .wp-app-shell .wp-sidebar .text-navy,
+html[data-theme="dark"] .wp-app-shell .wp-sidebar .text-navy-deep {
+  color: #fff6eb !important;
+}
+
+html[data-theme="dark"] .wp-settings-card {
+  background: #162131;
+  border-color: #2b3a4e;
+}
+
 input,
 button,
 select {

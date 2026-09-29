@@ -107,16 +107,21 @@ export function SwitchRow({
   onChange: (next: boolean) => void;
 }) {
   return (
-    <label className="flex cursor-pointer items-start justify-between gap-3 rounded-lg border border-navy/8 bg-cream/40 px-3 py-2.5">
-      <span>
-        <span className="block text-sm text-navy">{label}</span>
+    <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-navy/8 bg-cream/40 px-3.5 py-3 transition hover:border-teal/25 hover:bg-teal/[0.035]">
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-medium text-navy">{label}</span>
         {sub ? <span className="mt-0.5 block text-[11px] text-muted">{sub}</span> : null}
       </span>
       <input
         type="checkbox"
-        className="mt-1 h-4 w-4 accent-gold"
+        role="switch"
+        className="peer sr-only"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
+      />
+      <span
+        aria-hidden="true"
+        className="relative h-7 w-12 shrink-0 rounded-full bg-navy/20 transition-colors peer-checked:bg-teal peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-teal after:absolute after:left-1 after:top-1 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow-sm after:transition-transform peer-checked:after:translate-x-5"
       />
     </label>
   );
