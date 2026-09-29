@@ -102,61 +102,46 @@ export function MonthOrbit({
 
 export function MonthWave({ data }: { data: DashboardCashflow }) {
   const months = data.months ?? [];
-  const leftover = (data.income_cents ?? []).map(
-    (inc, i) => inc - ((data.expense_paid_cents ?? [])[i] ?? 0),
-  );
-  if (months.length < 2 || leftover.length < 2) return null;
-  const peak = Math.max(1, ...leftover.map((v) => Math.abs(v)));
+  const [visible, setVisible] = useState({ income: true, paid: true, forecast: true });
+  const [focused, setFocused] = useState<number | null>(null);
+  const series = [
+    { key: "income" as const, label: "Entradas", values: data.income_cents ?? [], color: "#12a888", dashed: false },
+    { key: "paid" as const, label: "Despesas", values: data.expense_paid_cents ?? [], color: "#B85C4A", dashed: false },
+    { key: "forecast" as const, label: "Previstas", values: data.expense_forecast_cents ?? [], color: "#e3b23c", dashed: true },
+  ];
+  if (months.length < 2) return null;
+  const peak = Math.max(1, ...series.flatMap((item) => item.values));
   const w = 640;
-  const h = 110;
-  const pad = 10;
-  const mid = h / 2;
-  const pts = leftover.map((v, i) => ({
-    x: pad + (i * (w - pad * 2)) / Math.max(leftover.length - 1, 1),
-    y: mid - (v / peak) * (mid - pad),
-  }));
-  let line = `M ${pts[0].x} ${pts[0].y}`;
-  for (let i = 0; i < pts.length - 1; i += 1) {
-    const p0 = pts[i - 1] ?? pts[i];
-    const p1 = pts[i];
-    const p2 = pts[i + 1];
-    const p3 = pts[i + 2] ?? p2;
-    line += ` C ${p1.x + (p2.x - p0.x) / 6} ${p1.y + (p2.y - p0.y) / 6}, ${
-      p2.x - (p3.x - p1.x) / 6
-    } ${p2.y - (p3.y - p1.y) / 6}, ${p2.x} ${p2.y}`;
-  }
-  const last = pts[pts.length - 1];
-  const area = `${line} L ${last.x} ${h - pad} L ${pts[0].x} ${h - pad} Z`;
+  const h = 176;
+  const padX = 14;
+  const padY = 12;
+  const xAt = (index: number) => padX + (index * (w - padX * 2)) / Math.max(months.length - 1, 1);
+  const yAt = (value: number) => h - padY - (Math.max(0, value) / peak) * (h - padY * 2);
+  const pathFor = (input: number[]) => input.slice(0, months.length).map((value, index) => `${index ? "L" : "M"} ${xAt(index)} ${yAt(value ?? 0)}`).join(" ");
+  const activeIndex = focused ?? months.length - 1;
+  const forecastTotal = (data.expense_forecast_cents ?? []).reduce((sum, value) => sum + value, 0);
 
   return (
     <div className="wp-rise" style={{ ["--wp-delay" as string]: "220ms" }}>
-      <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">
-        Pulso dos últimos meses
-      </p>
-      <svg viewBox={`0 0 ${w} ${h}`} className="h-24 w-full overflow-visible">
-        <defs>
-          <linearGradient id="wp-wave-fill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#12a888" stopOpacity="0.35" />
-            <stop offset="100%" stopColor="#12a888" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        <g className="wp-wave-shift">
-          <path d={area} fill="url(#wp-wave-fill)" className="wp-area-in" />
-          <path
-            d={line}
-            fill="none"
-            stroke="#12a888"
-            strokeWidth="2.6"
-            strokeLinecap="round"
-            pathLength={1}
-            className="wp-line-draw"
-          />
-        </g>
-      </svg>
-      <div className="flex justify-between text-[11px] uppercase tracking-wide text-muted">
-        <span>{shortMonth(months[0].year, months[0].month)}</span>
-        <span>{shortMonth(months[months.length - 1].year, months[months.length - 1].month)}</span>
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-1.5" aria-label="Séries do gráfico">
+          {series.map((item) => <button key={item.key} type="button" aria-pressed={visible[item.key]} onClick={() => setVisible((current) => ({ ...current, [item.key]: !current[item.key] }))} className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold transition ${visible[item.key] ? "border-navy/10 bg-white text-navy shadow-sm" : "border-transparent bg-cream/50 text-muted opacity-60"}`}><span className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />{item.label}</button>)}
+        </div>
+        <p className="text-[10px] font-semibold text-muted">Passe pelo gráfico para comparar</p>
       </div>
+      <div className="rounded-2xl border border-navy/8 bg-cream/20 p-2">
+        <div className="mb-1 flex min-h-9 flex-wrap items-center gap-x-4 gap-y-1 px-2 text-[11px]">
+          <strong className="text-navy">{shortMonth(months[activeIndex].year, months[activeIndex].month)}</strong>
+          {series.filter((item) => visible[item.key]).map((item) => <span key={item.key} className="text-muted"><i className="mr-1 inline-block h-1.5 w-1.5 rounded-full" style={{ backgroundColor: item.color }} />{item.label}: <b className="text-navy-deep">{formatBrlFromCents(item.values[activeIndex] ?? 0)}</b></span>)}
+        </div>
+        <svg viewBox={`0 0 ${w} ${h}`} className="h-40 w-full overflow-visible" onPointerMove={(event) => { const rect = event.currentTarget.getBoundingClientRect(); const x = event.clientX - rect.left; setFocused(Math.max(0, Math.min(months.length - 1, Math.round((x / rect.width) * (months.length - 1))))); }} onPointerLeave={() => setFocused(null)}>
+          {[0.25, 0.5, 0.75, 1].map((ratio) => <line key={ratio} x1={padX} y1={h - padY - ratio * (h - padY * 2)} x2={w - padX} y2={h - padY - ratio * (h - padY * 2)} stroke="currentColor" strokeOpacity="0.07" strokeDasharray="3 7" />)}
+          {series.map((item) => visible[item.key] ? <g key={item.key}><path d={pathFor(item.values)} fill="none" stroke={item.color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" pathLength={item.dashed ? undefined : 1} className={item.dashed ? undefined : "wp-line-draw"} style={item.dashed ? { strokeDasharray: "8 7" } : undefined} />{item.values.slice(0, months.length).map((value, index) => <circle key={index} cx={xAt(index)} cy={yAt(value ?? 0)} r={focused === index ? 4.5 : 2.5} fill={item.color} stroke="white" strokeWidth="1.5" className="transition-all" />)}</g> : null)}
+          {focused != null ? <line x1={xAt(focused)} y1={padY} x2={xAt(focused)} y2={h - padY} stroke="currentColor" strokeOpacity="0.18" strokeDasharray="3 4" /> : null}
+        </svg>
+        <div className="flex justify-between px-2 text-[10px] font-bold uppercase tracking-wide text-muted"><span>{shortMonth(months[0].year, months[0].month)}</span><span>{shortMonth(months[months.length - 1].year, months[months.length - 1].month)}</span></div>
+      </div>
+      <div className="mt-2 flex flex-wrap justify-between gap-2 text-[11px] text-muted"><span>Previsão acumulada: <b className="text-gold-pressed">{formatBrlFromCents(forecastTotal)}</b></span><span>Dados realizados + projeção</span></div>
     </div>
   );
 }
