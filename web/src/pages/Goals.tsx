@@ -21,7 +21,7 @@ import {
 } from "../features/goals/model";
 import { formatBrlFromCents, parseBrlToCents } from "../format";
 import { GoalThumb } from "./home/GoalThumb";
-import { ApiError, ErrorNote, InField, PageTitle, SwitchRow } from "./common";
+import { ApiError, ErrorNote, PageTitle } from "./common";
 
 const emptyDraft: GoalDraft = {
   title: "",
@@ -55,6 +55,7 @@ export function GoalsPage() {
   const [actionId, setActionId] = useState<string | null>(null);
   const [deleteCandidate, setDeleteCandidate] = useState<Goal | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [listSearch, setListSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "archived">("all");
 
@@ -130,6 +131,7 @@ export function GoalsPage() {
 
   function beginEdit(goal: Goal) {
     setShowCreate(true);
+    setShowAdvanced(true);
     setEditing(goal);
     setDraft({
       title: goal.title,
@@ -154,6 +156,7 @@ export function GoalsPage() {
     setQuery("");
     setHits([]);
     setShowSearch(false);
+    setShowAdvanced(false);
     setShowCreate(false);
   }
 
@@ -250,83 +253,36 @@ export function GoalsPage() {
         <GoalMetric label="Metas ativas" value={null} detail={`${rows.filter((goal) => goal.is_active).length} em andamento`} tone="gold" />
       </section>
 
-      {showCreate ? <form className="wp-rise mt-4 min-w-0 space-y-4 rounded-3xl border border-navy/8 bg-white p-4 shadow-[0_18px_55px_rgba(20,28,42,0.08)] sm:p-5" onSubmit={saveGoal}>
-        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-navy/8 pb-4">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-gold-pressed">
-              {editing ? "Editando" : "Novo objetivo"}
-            </p>
-            <h2 className="mt-1 font-serif text-2xl text-navy-deep">
-              {editing ? editing.title : "Criar uma meta"}
-            </h2>
-          </div>
+      {showCreate ? <form className="wp-rise mt-4 min-w-0 overflow-hidden rounded-2xl border border-navy/8 bg-white shadow-[0_12px_38px_rgba(20,28,42,0.06)]" onSubmit={saveGoal}>
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-navy/8 bg-cream/25 px-4 py-3">
+          <div className="flex items-center gap-3"><span className="grid h-9 w-9 place-items-center rounded-xl bg-gold/15 text-gold-pressed"><GoalPlusIcon /></span><div><h2 className="font-serif text-lg text-navy-deep">{editing ? `Editar ${editing.title}` : "Meta rápida"}</h2><p className="text-xs text-muted">Defina o objetivo agora; detalhes são opcionais.</p></div></div>
           {editing ? <SecondaryButton onClick={resetForm}>Cancelar edição</SecondaryButton> : null}
+        </header>
+        <div className="grid items-end gap-2 p-3 md:grid-cols-2 xl:grid-cols-[minmax(230px,1fr)_150px_150px_150px_auto] sm:p-4">
+          <CompactGoalField label="Nome da meta" value={draft.title} required placeholder="Ex.: Viagem" onChange={(title) => patchDraft({ title: title.slice(0, 200) })} />
+          <CompactGoalField label="Objetivo" value={draft.target} required placeholder="R$ 0,00" onChange={(target) => patchDraft({ target })} />
+          {!editing ? <CompactGoalField label="Já guardado" value={draft.initial} placeholder="Opcional" onChange={(initial) => patchDraft({ initial })} /> : <div className="hidden xl:block" />}
+          <CompactGoalField label="Data-alvo" type="date" value={draft.dueDate} onChange={(dueDate) => patchDraft({ dueDate })} />
+          <button type="submit" disabled={busy} className="h-10 rounded-lg bg-gold px-5 text-sm font-bold text-navy-deep shadow-sm transition hover:-translate-y-0.5 disabled:opacity-60">{busy ? "Salvando…" : editing ? "Salvar" : "Criar meta"}</button>
         </div>
-
-        <section className="grid gap-3 rounded-2xl bg-cream/35 p-3.5 sm:grid-cols-2 sm:p-4">
-          <InField label="Título" value={draft.title} required onChange={(title) => patchDraft({ title: title.slice(0, 200) })} hint={`${draft.title.length}/200`} />
-          <InField label="Valor-alvo (R$)" value={draft.target} required placeholder="Ex.: 5.000,00" onChange={(target) => patchDraft({ target })} />
-          {!editing ? <InField label="Valor inicial (R$)" value={draft.initial} placeholder="Opcional" onChange={(initial) => patchDraft({ initial })} /> : null}
-          <InField label="Data-alvo" type="date" value={draft.dueDate} onChange={(dueDate) => patchDraft({ dueDate })} hint="Opcional" />
-          <label className="block md:col-span-2">
-            <span className="mb-1 block text-xs uppercase tracking-wide text-muted">Descrição</span>
-            <textarea className="min-h-24 w-full resize-y rounded-xl border border-navy/10 bg-white px-3 py-2.5 text-sm text-navy outline-none ring-gold/40 focus:ring-2" value={draft.description} maxLength={1000} onChange={(e) => patchDraft({ description: e.target.value })} placeholder="Por que esta meta é importante?" />
-            <span className="mt-1 block text-[11px] text-muted">{draft.description.length}/1000</span>
-          </label>
-        </section>
-
-        <section className="space-y-3 rounded-2xl border border-navy/8 p-3.5 sm:p-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h3 className="font-serif text-lg text-navy-deep">Produto e preço de referência</h3>
-              <p className="text-xs leading-5 text-muted">Opcional. A busca preenche nome, preço, link e miniatura.</p>
+        <div className="flex flex-wrap items-center gap-2 border-t border-navy/8 px-3 py-2.5 sm:px-4">
+          <button type="button" aria-expanded={showAdvanced} onClick={() => setShowAdvanced((value) => !value)} className="h-8 rounded-lg border border-navy/10 px-3 text-xs font-semibold text-navy transition hover:border-teal/40">{showAdvanced ? "Ocultar opções" : "Mais opções"}<span className="ml-2" aria-hidden="true">{showAdvanced ? "⌃" : "⌄"}</span></button>
+          <span className="text-[11px] text-muted">Descrição, produto, rastreamento e família</span>
+        </div>
+        {showAdvanced ? <section className="border-t border-navy/8 bg-cream/20 p-3 sm:p-4">
+          <div className="grid gap-3 lg:grid-cols-[minmax(260px,1fr)_minmax(300px,1.2fr)]">
+            <div className="space-y-3">
+              <label className="block"><GoalFieldLabel>Descrição opcional</GoalFieldLabel><textarea className="min-h-20 w-full resize-y rounded-lg border border-navy/10 bg-white px-3 py-2 text-sm text-navy outline-none focus:border-teal/50" value={draft.description} maxLength={1000} onChange={(event) => patchDraft({ description: event.target.value })} placeholder="Por que esta meta é importante?" /></label>
+              <div className="flex flex-wrap gap-2"><MiniGoalToggle label="Meta ativa" checked={draft.isActive} onChange={(isActive) => patchDraft({ isActive })} /><MiniGoalToggle label="Atualizar preço" checked={draft.trackingEnabled} onChange={(trackingEnabled) => patchDraft({ trackingEnabled })} />{familyMode ? <MiniGoalToggle label="Meta da família" checked={draft.isFamily} onChange={(isFamily) => patchDraft({ isFamily })} /> : null}</div>
             </div>
-            <SecondaryButton onClick={() => setShowSearch((value) => !value)}>{showSearch ? "Fechar busca" : "Pesquisar produto"}</SecondaryButton>
+            <div className="space-y-2 rounded-xl border border-navy/8 bg-white/60 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-sm font-semibold text-navy">Produto de referência</p><p className="text-[11px] text-muted">Busca, link e atualização de preço são opcionais.</p></div><button type="button" onClick={() => setShowSearch((value) => !value)} className="h-8 rounded-lg bg-sage px-3 text-xs font-semibold text-teal-deep">{showSearch ? "Fechar busca" : "Pesquisar produto"}</button></div>
+              {showSearch ? <div className="space-y-2"><div className="flex gap-2"><div className="min-w-0 flex-1"><CompactGoalField label="Produto" value={query} placeholder="Ex.: notebook" onChange={setQuery} /></div><button type="button" disabled={searching} onClick={() => void onSearch()} className="mt-4 h-10 rounded-lg bg-teal px-4 text-xs font-bold text-white disabled:opacity-60">{searching ? "…" : "Buscar"}</button></div>{hits.length > 0 ? <ul className="grid max-h-60 gap-2 overflow-y-auto sm:grid-cols-2">{hits.map((hit) => <li key={`${hit.url}-${hit.price_cents}`}><button type="button" className="flex w-full items-center gap-2 rounded-xl border border-navy/8 bg-white p-2 text-left hover:border-teal/40" onClick={() => applyHit(hit)}><GoalThumb url={hit.thumbnail} alt={hit.title} className="h-10 w-10" /><span className="min-w-0 flex-1"><span className="line-clamp-1 block text-xs font-semibold text-navy">{hit.title}</span><span className="text-[11px] text-muted">{formatBrlFromCents(hit.price_cents)}</span></span></button></li>)}</ul> : null}</div> : null}
+              {draft.picked || draft.targetUrl ? <div className="flex items-center gap-2 rounded-xl bg-gold/8 p-2"><GoalThumb url={draft.picked?.thumbnail ?? editing?.reference_thumbnail_url} alt={draft.title} className="h-10 w-10" /><p className="min-w-0 flex-1 truncate text-xs font-semibold text-navy">{draft.picked?.title ?? editing?.reference_product_name ?? draft.title}</p>{draft.picked ? <button type="button" className="text-xs text-red-700" onClick={() => patchDraft({ picked: null, targetUrl: "" })}>Remover</button> : null}</div> : null}
+              <CompactGoalField label="Link do produto" value={draft.targetUrl} placeholder="https://…" onChange={(targetUrl) => patchDraft({ targetUrl })} />
+            </div>
           </div>
-          {showSearch ? (
-            <div className="space-y-3 rounded-2xl bg-sage/45 p-3">
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <div className="min-w-0 flex-1"><InField label="Nome do produto" value={query} onChange={setQuery} placeholder="Ex.: notebook para trabalho" /></div>
-                <button type="button" disabled={searching} onClick={() => void onSearch()} className="self-end rounded-xl bg-teal px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-teal-deep disabled:opacity-60">
-                  {searching ? "Pesquisando…" : "Pesquisar"}
-                </button>
-              </div>
-              {hits.length > 0 ? (
-                <ul className="grid max-h-96 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
-                  {hits.map((hit) => (
-                    <li key={`${hit.url}-${hit.price_cents}`}>
-                      <button type="button" className="flex h-full w-full items-center gap-3 rounded-2xl border border-navy/8 bg-white p-3 text-left transition hover:-translate-y-0.5 hover:border-teal/40 hover:shadow-md" onClick={() => applyHit(hit)}>
-                        <GoalThumb url={hit.thumbnail} alt={hit.title} className="h-14 w-14" />
-                        <span className="min-w-0 flex-1"><span className="line-clamp-2 block text-sm font-medium text-navy">{hit.title}</span><span className="mt-1 block text-xs text-muted">{hit.source}</span></span>
-                        <span className="shrink-0 text-sm font-bold tabular-nums text-navy-deep">{formatBrlFromCents(hit.price_cents)}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </div>
-          ) : null}
-          {draft.picked || draft.targetUrl ? (
-            <div className="flex items-center gap-3 rounded-2xl border border-gold/25 bg-gold/8 p-3">
-              <GoalThumb url={draft.picked?.thumbnail ?? editing?.reference_thumbnail_url} alt={draft.title} className="h-16 w-16" />
-              <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-navy">{draft.picked?.title ?? editing?.reference_product_name ?? draft.title}</p><p className="mt-1 text-xs text-muted">Referência selecionada; título e valor ainda podem ser ajustados.</p></div>
-              {draft.picked ? <SecondaryButton onClick={() => patchDraft({ picked: null, targetUrl: "" })}>Remover</SecondaryButton> : null}
-            </div>
-          ) : null}
-          <InField label="Link do produto" value={draft.targetUrl} onChange={(targetUrl) => patchDraft({ targetUrl })} placeholder="https://… (opcional)" />
-        </section>
-
-        <section className="grid gap-3 rounded-2xl border border-navy/8 p-3.5 sm:grid-cols-2 sm:p-4">
-          <SwitchRow label="Meta ativa" sub="Metas arquivadas continuam no histórico." checked={draft.isActive} onChange={(isActive) => patchDraft({ isActive })} />
-          <SwitchRow label="Atualizar preço automaticamente" sub="Acompanha mudanças do produto de referência." checked={draft.trackingEnabled} onChange={(trackingEnabled) => patchDraft({ trackingEnabled })} />
-          {familyMode ? <SwitchRow label="Meta da família" sub="Fica visível para os membros convidados." checked={draft.isFamily} onChange={(isFamily) => patchDraft({ isFamily })} /> : null}
-        </section>
-
-        <div className="flex justify-end border-t border-navy/8 pt-5">
-          <button type="submit" disabled={busy} className="min-h-12 w-full rounded-xl bg-gold px-8 py-3 text-sm font-bold text-navy-deep shadow-[0_8px_22px_rgba(201,169,78,0.28)] transition hover:-translate-y-0.5 hover:bg-gold/90 disabled:opacity-60 sm:w-auto">
-            {busy ? "Salvando…" : editing ? "Salvar alterações" : "Criar meta"}
-          </button>
-        </div>
+        </section> : null}
       </form> : null}
 
       <section className="mt-4 min-w-0 overflow-hidden rounded-[1.6rem] border border-navy/8 bg-white/90 shadow-[0_18px_55px_rgba(20,28,42,0.08)] backdrop-blur-sm">
@@ -413,6 +369,22 @@ function GoalCard({ goal, expanded, contributions, amount, note, busy, onToggle,
 function ConfirmDelete({ goal, busy, onCancel, onConfirm }: { goal: Goal; busy: boolean; onCancel: () => void; onConfirm: () => void }) {
   const hasBalance = goal.current_cents > 0;
   return <div className="fixed inset-0 z-50 grid place-items-center bg-navy-deep/55 p-4" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }}><div role="dialog" aria-modal="true" aria-labelledby="delete-goal-title" className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl"><h2 id="delete-goal-title" className="font-serif text-2xl text-navy-deep">Excluir meta?</h2><p className="mt-2 text-sm leading-6 text-muted">“{goal.title}” será removida definitivamente.{hasBalance ? ` O saldo registrado de ${formatBrlFromCents(goal.current_cents)} e todo o histórico de aportes também serão excluídos.` : ""}</p>{hasBalance ? <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-800">Esta ação não pode ser desfeita. Se quiser preservar o histórico, use Arquivar.</p> : null}<div className="mt-6 flex justify-end gap-2"><SecondaryButton onClick={onCancel}>Cancelar</SecondaryButton><button type="button" disabled={busy} onClick={onConfirm} className="rounded-xl bg-red-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-800 disabled:opacity-60">{busy ? "Excluindo…" : "Excluir definitivamente"}</button></div></div></div>;
+}
+
+function CompactGoalField({ label, value, onChange, type = "text", placeholder, required = false }: { label: string; value: string; onChange: (value: string) => void; type?: string; placeholder?: string; required?: boolean }) {
+  return <label className="block"><GoalFieldLabel>{label}</GoalFieldLabel><input required={required} type={type} value={value} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} className="h-10 w-full rounded-lg border border-navy/10 bg-white px-3 text-sm outline-none focus:border-teal/50 focus:ring-2 focus:ring-teal/10" /></label>;
+}
+
+function GoalFieldLabel({ children }: { children: string }) {
+  return <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-muted">{children}</span>;
+}
+
+function MiniGoalToggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (value: boolean) => void }) {
+  return <label className="flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-navy/8 bg-cream/30 px-2.5"><input type="checkbox" role="switch" checked={checked} onChange={(event) => onChange(event.target.checked)} className="peer sr-only" /><span aria-hidden="true" className="relative h-5 w-9 rounded-full bg-navy/20 transition peer-checked:bg-teal after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform peer-checked:after:translate-x-4" /><span className="whitespace-nowrap text-xs font-semibold text-navy">{label}</span></label>;
+}
+
+function GoalPlusIcon() {
+  return <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="8"/><path d="M12 8v8M8 12h8"/></svg>;
 }
 
 function SecondaryButton({ children, onClick, disabled = false }: { children: ReactNode; onClick: () => void; disabled?: boolean }) {
