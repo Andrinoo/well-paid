@@ -120,11 +120,13 @@ export function MonthWave({ data }: { data: DashboardCashflow }) {
   const series = allSeries.map((item) => ({ ...item, values: item.values.slice(start, end) }));
   const peak = Math.max(1, ...series.flatMap((item) => item.values));
   const w = 640;
-  const h = 176;
-  const padX = 14;
-  const padY = 12;
-  const xAt = (index: number) => padX + (index * (w - padX * 2)) / Math.max(shownMonths.length - 1, 1);
-  const yAt = (value: number) => h - padY - (Math.max(0, value) / peak) * (h - padY * 2);
+  const h = 218;
+  const padLeft = 48;
+  const padRight = 14;
+  const padTop = 16;
+  const padBottom = 26;
+  const xAt = (index: number) => padLeft + (index * (w - padLeft - padRight)) / Math.max(shownMonths.length - 1, 1);
+  const yAt = (value: number) => h - padBottom - (Math.max(0, value) / peak) * (h - padTop - padBottom);
   const pathFor = (input: number[]) => {
     const points = input.slice(0, shownMonths.length).map((value, index) => ({ x: xAt(index), y: yAt(value ?? 0) }));
     if (points.length < 2) return "";
@@ -138,34 +140,42 @@ export function MonthWave({ data }: { data: DashboardCashflow }) {
     }
     return path;
   };
+  const areaFor = (input: number[]) => `${pathFor(input)} L ${xAt(shownMonths.length - 1)} ${h - padBottom} L ${xAt(0)} ${h - padBottom} Z`;
   const activeIndex = focused ?? shownMonths.length - 1;
   const forecastTotal = (data.expense_forecast_cents ?? []).reduce((sum, value) => sum + value, 0);
 
   return (
-    <div className="wp-rise" style={{ ["--wp-delay" as string]: "220ms" }}>
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap gap-1.5" aria-label="Séries do gráfico">
-          {series.map((item) => <button key={item.key} type="button" aria-pressed={visible[item.key]} onClick={() => setVisible((current) => ({ ...current, [item.key]: !current[item.key] }))} className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold transition ${visible[item.key] ? "border-navy/10 bg-white text-navy shadow-sm" : "border-transparent bg-cream/50 text-muted opacity-60"}`}><span className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />{item.label}</button>)}
+    <div className="wp-rise flex h-full min-h-0 flex-col" style={{ ["--wp-delay" as string]: "220ms" }}>
+      <div className="mb-1.5 flex shrink-0 flex-wrap items-center justify-between gap-1.5">
+        <div className="flex flex-wrap gap-1" aria-label="Séries do gráfico">
+          {series.map((item) => <button key={item.key} type="button" aria-pressed={visible[item.key]} onClick={() => setVisible((current) => ({ ...current, [item.key]: !current[item.key] }))} className={`flex h-7 items-center gap-1.5 rounded-lg border px-2 text-[10px] font-bold transition ${visible[item.key] ? "border-navy/10 bg-white text-navy shadow-sm" : "border-transparent bg-cream/50 text-muted opacity-55"}`}><span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: item.color }} />{item.label}</button>)}
         </div>
-        <div className="flex items-center gap-1 rounded-xl border border-navy/8 bg-white/70 p-1 shadow-sm">
-          <button type="button" disabled={start === 0} onClick={() => { setFocused(null); setWindowEnd((current) => Math.max(size, current - 1)); }} className="grid h-7 w-7 place-items-center rounded-lg text-navy transition hover:bg-sage disabled:opacity-25" aria-label="Período anterior">‹</button>
-          <button type="button" onClick={() => { const nextSize = windowSize === 6 ? Math.min(12, months.length) : 6; setWindowSize(nextSize); setWindowEnd(months.length); setFocused(null); }} className="min-w-20 px-2 text-[10px] font-bold uppercase tracking-wide text-navy">{size} meses</button>
-          <button type="button" disabled={end === months.length} onClick={() => { setFocused(null); setWindowEnd((current) => Math.min(months.length, current + 1)); }} className="grid h-7 w-7 place-items-center rounded-lg text-navy transition hover:bg-sage disabled:opacity-25" aria-label="Próximo período">›</button>
+        <div className="flex h-8 items-center rounded-lg border border-navy/8 bg-white/70 p-0.5 shadow-sm">
+          <button type="button" disabled={start === 0} onClick={() => { setFocused(null); setWindowEnd((current) => Math.max(size, current - 1)); }} className="grid h-7 w-7 place-items-center rounded-md text-navy transition hover:bg-sage disabled:opacity-25" aria-label="Período anterior">‹</button>
+          <button type="button" onClick={() => { const nextSize = windowSize === 6 ? Math.min(12, months.length) : 6; setWindowSize(nextSize); setWindowEnd(months.length); setFocused(null); }} className="min-w-16 px-1 text-[9px] font-bold uppercase tracking-wide text-navy">{size} meses</button>
+          <button type="button" disabled={end === months.length} onClick={() => { setFocused(null); setWindowEnd((current) => Math.min(months.length, current + 1)); }} className="grid h-7 w-7 place-items-center rounded-md text-navy transition hover:bg-sage disabled:opacity-25" aria-label="Próximo período">›</button>
         </div>
       </div>
-      <div className="rounded-2xl border border-navy/10 bg-cream/20 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
-        <div className="mb-1 flex min-h-9 flex-wrap items-center gap-x-4 gap-y-1 px-2 text-[11px]">
-          <strong className="text-navy">{shortMonth(shownMonths[activeIndex].year, shownMonths[activeIndex].month)}</strong>
-          {series.filter((item) => visible[item.key]).map((item) => <span key={item.key} className="text-muted"><i className="mr-1 inline-block h-1.5 w-1.5 rounded-full" style={{ backgroundColor: item.color }} />{item.label}: <b className="text-navy-deep">{formatBrlFromCents(item.values[activeIndex] ?? 0)}</b></span>)}
+      <div className="relative min-h-0 flex-1 overflow-hidden rounded-2xl border border-navy/10 bg-gradient-to-b from-white to-cream/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]">
+        <div className="pointer-events-none absolute left-3 top-2 z-10 flex max-w-[calc(100%-1.5rem)] flex-wrap items-center gap-x-2 gap-y-0.5 rounded-xl border border-white/80 bg-white/80 px-2.5 py-1.5 text-[9px] shadow-md backdrop-blur-md">
+          <strong className="uppercase tracking-wide text-navy">{shortMonth(shownMonths[activeIndex].year, shownMonths[activeIndex].month)}</strong>
+          {series.filter((item) => visible[item.key]).map((item) => <span key={item.key} className="text-muted"><i className="mr-1 inline-block h-1.5 w-1.5 rounded-full" style={{ backgroundColor: item.color }} />{item.label} <b className="text-navy-deep">{formatBrlFromCents(item.values[activeIndex] ?? 0)}</b></span>)}
         </div>
-        <svg viewBox={`0 0 ${w} ${h}`} className="h-44 w-full overflow-visible xl:h-[clamp(130px,17vh,210px)]" onPointerMove={(event) => { const rect = event.currentTarget.getBoundingClientRect(); const x = event.clientX - rect.left; setFocused(Math.max(0, Math.min(shownMonths.length - 1, Math.round((x / rect.width) * (shownMonths.length - 1))))); }} onPointerLeave={() => setFocused(null)}>
-          {[0.25, 0.5, 0.75, 1].map((ratio) => <line key={ratio} x1={padX} y1={h - padY - ratio * (h - padY * 2)} x2={w - padX} y2={h - padY - ratio * (h - padY * 2)} stroke="currentColor" strokeOpacity="0.07" strokeDasharray="3 7" />)}
-          {series.map((item) => visible[item.key] ? <g key={item.key}><path d={pathFor(item.values)} fill="none" stroke={item.color} strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" pathLength={item.dashed ? undefined : 1} className={item.dashed ? undefined : "wp-line-draw"} style={item.dashed ? { strokeDasharray: "8 7" } : undefined} />{item.values.slice(0, shownMonths.length).map((value, index) => <circle key={index} cx={xAt(index)} cy={yAt(value ?? 0)} r={focused === index ? 5 : 2.8} fill={item.color} stroke="white" strokeWidth="1.5" className="transition-all" />)}</g> : null)}
-          {focused != null ? <line x1={xAt(focused)} y1={padY} x2={xAt(focused)} y2={h - padY} stroke="currentColor" strokeOpacity="0.18" strokeDasharray="3 4" /> : null}
+        <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="h-full min-h-[190px] w-full cursor-crosshair" onPointerMove={(event) => { const rect = event.currentTarget.getBoundingClientRect(); const plotX = Math.max(0, Math.min(rect.width, event.clientX - rect.left)); setFocused(Math.max(0, Math.min(shownMonths.length - 1, Math.round((plotX / rect.width) * (shownMonths.length - 1))))); }} onPointerLeave={() => setFocused(null)}>
+          <defs>
+            <linearGradient id="wp-income-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#12a888" stopOpacity="0.24"/><stop offset="100%" stopColor="#12a888" stopOpacity="0"/></linearGradient>
+            <linearGradient id="wp-paid-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#B85C4A" stopOpacity="0.13"/><stop offset="100%" stopColor="#B85C4A" stopOpacity="0"/></linearGradient>
+            <filter id="wp-line-glow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          </defs>
+          {[0, 0.5, 1].map((ratio) => { const y = h - padBottom - ratio * (h - padTop - padBottom); return <g key={ratio}><line x1={padLeft} y1={y} x2={w - padRight} y2={y} stroke="currentColor" strokeOpacity="0.07" strokeDasharray="3 7"/><text x={padLeft - 7} y={y + 3} textAnchor="end" fontSize="8" fill="currentColor" opacity="0.45">{compactMoney(peak * ratio)}</text></g>; })}
+          {visible.income ? <path d={areaFor(series[0].values)} fill="url(#wp-income-area)" className="wp-area-in"/> : null}
+          {visible.paid ? <path d={areaFor(series[1].values)} fill="url(#wp-paid-area)" className="wp-area-in"/> : null}
+          {series.map((item) => visible[item.key] ? <g key={item.key}><path d={pathFor(item.values)} fill="none" stroke={item.color} strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" pathLength={item.dashed ? undefined : 1} className={item.dashed ? undefined : "wp-line-draw"} filter={item.dashed ? undefined : "url(#wp-line-glow)"} style={item.dashed ? { strokeDasharray: "8 7" } : undefined}/>{focused != null ? <circle cx={xAt(focused)} cy={yAt(item.values[focused] ?? 0)} r="4.8" fill={item.color} stroke="white" strokeWidth="2"/> : null}</g> : null)}
+          {focused != null ? <line x1={xAt(focused)} y1={padTop} x2={xAt(focused)} y2={h - padBottom} stroke="currentColor" strokeOpacity="0.22" strokeDasharray="3 4"/> : null}
+          {shownMonths.map((month, index) => <text key={`${month.year}-${month.month}`} x={xAt(index)} y={h - 7} textAnchor="middle" fontSize="8" fontWeight="700" fill="currentColor" opacity="0.48">{shortMonth(month.year, month.month)}</text>)}
         </svg>
-        <div className="flex justify-between px-2 text-[10px] font-bold uppercase tracking-wide text-muted"><span>{shortMonth(shownMonths[0].year, shownMonths[0].month)}</span><span>{shortMonth(shownMonths[shownMonths.length - 1].year, shownMonths[shownMonths.length - 1].month)}</span></div>
       </div>
-      <div className="mt-2 flex flex-wrap justify-between gap-2 text-[11px] text-muted"><span>Previsão acumulada: <b className="text-gold-pressed">{formatBrlFromCents(forecastTotal)}</b></span><span>Dados realizados + projeção</span></div>
+      <div className="mt-1.5 flex shrink-0 flex-wrap justify-between gap-2 text-[9px] font-semibold text-muted"><span>Previsão acumulada <b className="text-gold-pressed">{formatBrlFromCents(forecastTotal)}</b></span><span>Realizado + projeção</span></div>
     </div>
   );
 }
@@ -211,4 +221,11 @@ export function MonthTide({
       </p>
     </div>
   );
+}
+
+function compactMoney(cents: number): string {
+  return new Intl.NumberFormat("pt-BR", {
+    notation: "compact",
+    maximumFractionDigits: 1,
+  }).format(cents / 100);
 }

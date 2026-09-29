@@ -132,7 +132,7 @@ function DashboardPanel({ title, subtitle, value, valueLabel, tone, children, ac
     <section className="wp-rise flex min-h-[360px] min-w-0 flex-col overflow-hidden rounded-3xl border border-navy/8 bg-white/85 shadow-[0_16px_48px_rgba(20,28,42,0.07)] backdrop-blur xl:h-full xl:min-h-0" style={{ ["--wp-delay" as string]: delay }}>
       <div className={`h-1 w-full ${accent}`} />
       <header className="flex flex-wrap items-start justify-between gap-3 border-b border-navy/8 px-5 py-3">
-        <div className="min-w-0"><h2 className="font-display text-xl font-semibold text-navy-deep">{title}</h2><p className="mt-0.5 text-xs text-muted">{subtitle}</p>{action ? <div className="mt-2">{action}</div> : null}</div>
+        <div className="min-w-0"><h2 className="font-display text-xl font-semibold text-navy-deep">{title}</h2><div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1"><p className="text-xs text-muted">{subtitle}</p>{action}</div></div>
         <div className="text-right"><p className={`font-display text-xl font-semibold tabular-nums ${valueTone}`}>{value}</p><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted">{valueLabel}</p></div>
       </header>
       <div className="min-h-0 flex-1 overflow-auto p-4">{children}</div>
