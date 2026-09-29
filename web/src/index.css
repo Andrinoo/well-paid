@@ -54,6 +54,7 @@ html[data-theme="dark"] .wp-app-shell main {
 }
 
 html[data-theme="dark"] :where(.wp-app-shell, .site-root) .bg-white,
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .bg-white\/45,
 html[data-theme="dark"] :where(.wp-app-shell, .site-root) .bg-white\/60,
 html[data-theme="dark"] :where(.wp-app-shell, .site-root) .bg-white\/70,
 html[data-theme="dark"] :where(.wp-app-shell, .site-root) .bg-white\/80,
@@ -158,6 +159,10 @@ html[data-theme="dark"] :where(.wp-app-shell, .site-root) .via-white {
 
 html[data-theme="dark"] :where(.wp-app-shell, .site-root) .to-sage\/45 {
   --tw-gradient-to: rgb(27 48 64 / 0.72);
+}
+
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) .to-cream\/30 {
+  --tw-gradient-to: #101a29;
 }
 
 html[data-theme="dark"] :where(.wp-app-shell, .site-root) .bg-red-50,

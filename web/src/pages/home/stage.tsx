@@ -123,7 +123,7 @@ export function MonthWave({ data }: { data: DashboardCashflow }) {
   const h = 218;
   const padLeft = 48;
   const padRight = 14;
-  const padTop = 16;
+  const padTop = 44;
   const padBottom = 26;
   const xAt = (index: number) => padLeft + (index * (w - padLeft - padRight)) / Math.max(shownMonths.length - 1, 1);
   const yAt = (value: number) => h - padBottom - (Math.max(0, value) / peak) * (h - padTop - padBottom);
