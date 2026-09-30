@@ -5,8 +5,6 @@ import {
   fetchDashboardSnapshot,
   fetchHomeBanner,
   fetchMe,
-  type DashboardAttentionItem,
-  type DashboardChange,
   type DashboardSnapshot,
   type GoalSummaryItem,
   type HomeBanner,
@@ -102,19 +100,7 @@ export function DashboardPage() {
           {[0, 1, 2, 3].map((item) => <div key={item} className="h-[360px] overflow-hidden rounded-3xl bg-white/70"><div className="h-full w-full wp-shimmer" /></div>)}
         </div>
       ) : (
-        <main className="relative mx-auto max-w-[1500px] space-y-3 px-5 pb-24 pt-4 sm:px-8 2xl:px-6">
-          <section className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-navy/8 bg-navy/10 shadow-sm xl:grid-cols-4">
-            <SummaryCard label="Receitas" value={income} change={snapshot?.income_change} tone="teal" />
-            <SummaryCard label="Despesas" value={spent} change={snapshot?.expense_change} tone="expense" invertTrend />
-            <SummaryCard label="Resultado" value={balance} change={snapshot?.balance_change} tone={tight ? "expense" : "teal"} />
-            <SummaryCard label="Reserva" value={overview?.emergency_reserve_balance_cents ?? 0} note="Patrimônio protegido" tone="navy" />
-          </section>
-
-          <section className="grid overflow-hidden rounded-2xl border border-navy/8 bg-white/80 shadow-sm backdrop-blur lg:grid-cols-[minmax(0,1.2fr)_minmax(430px,.8fr)]">
-            <AttentionCenter items={snapshot?.attention ?? []} />
-            <QuickActions />
-          </section>
-
+        <main className="relative mx-auto w-full max-w-[1500px] px-5 pb-24 pt-4 sm:px-8 2xl:px-6">
           <section className="grid gap-3 xl:grid-cols-2">
           <DashboardPanel title="Despesas por categoria" subtitle="Onde seu dinheiro foi usado neste mês" value={formatBrlFromCents(spent)} valueLabel="total lançado" tone="expense">
             <MonthOrbit spending={overview?.spending_by_category ?? []} balanceCents={balance} story={monthStory(balance, pending, income, spent)} year={period.year} month={period.month} />
@@ -134,51 +120,6 @@ export function DashboardPage() {
           </section>
         </main>
       )}
-    </div>
-  );
-}
-
-function SummaryCard({ label, value, change, note, tone, invertTrend = false }: { label: string; value: number; change?: DashboardChange; note?: string; tone: "teal" | "expense" | "navy"; invertTrend?: boolean }) {
-  const accent = tone === "expense" ? "bg-expense-line" : tone === "teal" ? "bg-teal" : "bg-navy";
-  const hasComparison = change?.delta_percent != null;
-  const improvement = change ? (invertTrend ? change.delta_cents <= 0 : change.delta_cents >= 0) : true;
-  const comparison = hasComparison
-    ? `${change!.delta_cents >= 0 ? "↑" : "↓"} ${Math.abs(change!.delta_percent!)}% vs. mês anterior`
-    : note ?? "Primeiro mês para comparação";
-  return (
-    <article className="relative min-w-0 overflow-hidden bg-white/85 px-4 py-3">
-      <span className={`absolute inset-y-0 left-0 w-1 ${accent}`} />
-      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted">{label}</p>
-      <p className="truncate font-display text-lg font-semibold tabular-nums text-navy-deep sm:text-xl">{formatBrlFromCents(value)}</p>
-      <p className={`truncate text-[10px] font-semibold ${hasComparison ? (improvement ? "text-teal-deep" : "text-expense-line") : "text-muted"}`}>{comparison}</p>
-    </article>
-  );
-}
-
-function AttentionCenter({ items }: { items: DashboardAttentionItem[] }) {
-  return (
-    <div className="flex min-w-0 flex-col gap-2 p-2.5 sm:flex-row sm:items-center">
-      <div className="flex shrink-0 items-center gap-2"><h2 className="font-display text-sm font-semibold">Atenção</h2><span className="rounded-full bg-cream px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-navy/65">{items.length}</span></div>
-      <div className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto">
-        {items.map((item) => {
-          const tone = item.tone === "danger" ? "border-red-200 bg-red-50/70" : item.tone === "warning" ? "border-navy/8 bg-cream/50" : "border-navy/8 bg-sage/50";
-          const content = <><b className="text-[11px] text-navy-deep">{item.title}</b><span className="hidden truncate text-[10px] text-navy/60 xl:inline"> · {item.detail}</span></>;
-          return item.href ? <Link key={item.key} to={item.href} className={`min-w-0 rounded-lg border px-2.5 py-1.5 transition hover:shadow-sm ${tone}`}>{content}</Link> : <div key={item.key} className={`min-w-0 rounded-lg border px-2.5 py-1.5 ${tone}`}>{content}</div>;
-        })}
-      </div>
-    </div>
-  );
-}
-
-function QuickActions() {
-  const actions = [
-    ["Registrar despesa", "/app/despesas", "−"],
-    ["Adicionar receita", "/app/receitas", "+"],
-    ["Ver investimentos", "/app/investimentos", "↗"],
-  ];
-  return (
-    <div className="border-t border-navy/8 bg-navy-deep p-2.5 text-white lg:border-l lg:border-t-0">
-      <div className="flex items-center gap-2"><h2 className="shrink-0 font-display text-sm font-semibold">Ações</h2><div className="grid min-w-0 flex-1 grid-cols-3 gap-1.5">{actions.map(([label, href, icon]) => <Link key={href} to={href} className="flex min-w-0 items-center justify-between gap-1 rounded-lg bg-white/8 px-2 py-1.5 text-[10px] font-semibold transition hover:bg-white/14"><span className="truncate">{label}</span><span className="grid h-5 w-5 shrink-0 place-items-center rounded-md bg-gold text-navy-deep">{icon}</span></Link>)}</div></div>
     </div>
   );
 }
