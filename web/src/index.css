@@ -475,6 +475,35 @@ html[data-theme="dark"] .expense-list-row:hover {
   animation: wp-wave-shift 8s ease-in-out infinite;
 }
 
+/* Tabelas: separação suficiente para leitura sem criar uma grade pesada. */
+:where(.wp-app-shell, .site-root) table tbody > tr {
+  transition: background-color 160ms ease, box-shadow 160ms ease;
+}
+
+:where(.wp-app-shell, .site-root) table tbody > tr:not(:last-child) > td {
+  box-shadow: inset 0 -1px rgba(27, 44, 65, 0.12);
+}
+
+:where(.wp-app-shell, .site-root) table tbody > tr:nth-child(even) {
+  background-color: rgba(27, 44, 65, 0.018);
+}
+
+:where(.wp-app-shell, .site-root) table tbody > tr:hover {
+  background-color: rgba(18, 168, 136, 0.055);
+}
+
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) table tbody > tr:not(:last-child) > td {
+  box-shadow: inset 0 -1px rgba(169, 181, 196, 0.16);
+}
+
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) table tbody > tr:nth-child(even) {
+  background-color: rgba(255, 255, 255, 0.018);
+}
+
+html[data-theme="dark"] :where(.wp-app-shell, .site-root) table tbody > tr:hover {
+  background-color: rgba(45, 212, 191, 0.07);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .wp-rise,
   .wp-float,
