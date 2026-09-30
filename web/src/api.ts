@@ -357,6 +357,9 @@ export type InvestmentOverview = {
   total_allocated_cents: number;
   total_yield_cents: number;
   estimated_monthly_yield_cents: number;
+  rates_source?: string;
+  rates_fallback_used?: boolean;
+  buckets?: { key: string; label: string; allocated_cents: number; yield_cents: number; yield_pct_month: number }[];
 };
 
 export type InvestmentPosition = {
@@ -365,7 +368,13 @@ export type InvestmentPosition = {
   name: string;
   principal_cents: number;
   annual_rate_bps: number;
+  description?: string | null;
+  maturity_date?: string | null;
+  is_liquid?: boolean;
 };
+
+export type InvestmentTicker = { symbol: string; name: string; instrument_type: string; last_price?: number | null; currency?: string | null; change_24h_percent?: number | null };
+export type InvestmentRates = { cdi_annual_percent: number; cdb_annual_percent: number; fixed_income_annual_percent: number; source: string; rates_fallback_used: boolean };
 
 export type FamilyMe = {
   family: {
@@ -691,10 +700,13 @@ export async function createPosition(body: {
   name: string;
   principal_cents: number;
   annual_rate_bps: number;
+  description?: string | null;
+  maturity_date?: string | null;
+  is_liquid?: boolean;
 }): Promise<void> {
   await request(
     "/investments/positions",
-    { method: "POST", body: JSON.stringify({ ...body, is_liquid: true }) },
+    { method: "POST", body: JSON.stringify({ is_liquid: true, ...body }) },
     true,
   );
 }
@@ -733,6 +745,30 @@ export async function patchDisplayName(display_name: string): Promise<UserMe> {
     { method: "PATCH", body: JSON.stringify({ display_name }) },
     true,
   )) as UserMe;
+}
+
+export async function searchInvestmentTickers(query: string): Promise<InvestmentTicker[]> {
+  return await request(`/investments/tickers/search?${new URLSearchParams({ q: query, limit: "8" })}`, { method: "GET" }, true) as InvestmentTicker[];
+}
+
+export async function fetchInvestmentRates(): Promise<InvestmentRates> {
+  return await request("/investments/suggested-rates", { method: "GET" }, true) as InvestmentRates;
+}
+
+export async function addInvestmentPrincipal(id: string, add_principal_cents: number): Promise<void> {
+  await request(`/investments/positions/${id}`, { method: "PATCH", body: JSON.stringify({ add_principal_cents }) }, true);
+}
+
+export async function deleteInvestmentPosition(id: string): Promise<void> {
+  await request(`/investments/positions/${id}`, { method: "DELETE" }, true);
+}
+
+export async function fetchInvestmentPreferences(): Promise<{ view_mode: "cards" | "list" }> {
+  return await request("/investments/preferences", { method: "GET" }, true) as { view_mode: "cards" | "list" };
+}
+
+export async function saveInvestmentPreferences(view_mode: "cards" | "list"): Promise<void> {
+  await request("/investments/preferences", { method: "PUT", body: JSON.stringify({ view_mode }) }, true);
 }
 
 export async function moveReserveBalance(

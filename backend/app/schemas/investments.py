@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
 from datetime import date
+from typing import Literal
 
 
 class InvestmentBucketOut(BaseModel):
@@ -62,6 +63,14 @@ class InvestmentSuggestedRatesOut(BaseModel):
     fixed_income_annual_percent: float = Field(ge=0)
     source: str = "fallback"
     rates_fallback_used: bool = True
+
+
+class InvestmentPreferencesOut(BaseModel):
+    view_mode: Literal["cards", "list"] = "cards"
+
+
+class InvestmentPreferencesUpdate(BaseModel):
+    view_mode: Literal["cards", "list"]
 
 
 class StockQuoteOut(BaseModel):

@@ -19,6 +19,8 @@ from app.schemas.investments import (
     InvestmentPositionCreate,
     InvestmentPositionOut,
     InvestmentSuggestedRatesOut,
+    InvestmentPreferencesOut,
+    InvestmentPreferencesUpdate,
     MacroSnapshotOut,
     StockHistoryOut,
     StockQuoteOut,
@@ -41,6 +43,25 @@ from app.services.ticker_cache import ticker_cache_service
 
 router = APIRouter(prefix="/investments", tags=["investments"])
 logger = logging.getLogger(__name__)
+
+
+@router.get("/preferences", response_model=InvestmentPreferencesOut)
+def read_investment_preferences(
+    user: Annotated[User, Depends(get_current_user)],
+) -> InvestmentPreferencesOut:
+    return InvestmentPreferencesOut(view_mode=getattr(user, "investments_view_mode", "cards") or "cards")
+
+
+@router.put("/preferences", response_model=InvestmentPreferencesOut)
+def update_investment_preferences(
+    body: InvestmentPreferencesUpdate,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> InvestmentPreferencesOut:
+    user.investments_view_mode = body.view_mode
+    db.add(user)
+    db.commit()
+    return InvestmentPreferencesOut(view_mode=body.view_mode)
 
 
 @router.get("/suggested-rates", response_model=InvestmentSuggestedRatesOut)

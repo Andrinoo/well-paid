@@ -29,6 +29,7 @@ class User(Base, TimestampMixin):
     is_superuser: Mapped[bool] = mapped_column(Boolean, default=False)
     is_free_plan: Mapped[bool] = mapped_column(Boolean, default=False)
     family_mode_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    investments_view_mode: Mapped[str] = mapped_column(String(8), default="cards", server_default="cards")
     email_verified_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
