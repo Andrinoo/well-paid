@@ -110,7 +110,7 @@ export function DashboardPage() {
             <SummaryCard label="Reserva" value={overview?.emergency_reserve_balance_cents ?? 0} note="Patrimônio protegido" tone="navy" />
           </section>
 
-          <section className="grid gap-3 lg:grid-cols-[minmax(0,1.45fr)_minmax(280px,.55fr)]">
+          <section className="grid gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(360px,.8fr)]">
             <AttentionCenter items={snapshot?.attention ?? []} />
             <QuickActions />
           </section>
@@ -157,13 +157,13 @@ function SummaryCard({ label, value, change, note, tone, invertTrend = false }: 
 
 function AttentionCenter({ items }: { items: DashboardAttentionItem[] }) {
   return (
-    <section className="rounded-2xl border border-navy/8 bg-white/80 p-4 shadow-sm backdrop-blur">
-      <div className="mb-3 flex items-center justify-between gap-3"><div><h2 className="font-display text-lg font-semibold">Central de atenção</h2><p className="text-xs text-muted">Prioridades identificadas automaticamente</p></div><span className="rounded-full bg-cream px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-navy/65">{items.length} {items.length === 1 ? "item" : "itens"}</span></div>
-      <div className="grid gap-2 md:grid-cols-2">
+    <section className="rounded-2xl border border-navy/8 bg-white/80 p-3 shadow-sm backdrop-blur">
+      <div className="mb-2 flex items-center justify-between gap-3"><div className="flex flex-wrap items-baseline gap-x-2"><h2 className="font-display text-base font-semibold">Central de atenção</h2><p className="text-[11px] text-muted">Prioridades automáticas</p></div><span className="rounded-full bg-cream px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-navy/65">{items.length} {items.length === 1 ? "item" : "itens"}</span></div>
+      <div className="grid gap-1.5 md:grid-cols-2">
         {items.map((item) => {
           const tone = item.tone === "danger" ? "border-red-200 bg-red-50/70" : item.tone === "warning" ? "border-navy/8 bg-cream/50" : "border-navy/8 bg-sage/50";
-          const content = <><p className="text-sm font-bold text-navy-deep">{item.title}</p><p className="mt-0.5 text-xs leading-relaxed text-navy/60">{item.detail}</p></>;
-          return item.href ? <Link key={item.key} to={item.href} className={`rounded-xl border p-3 transition hover:-translate-y-0.5 hover:shadow-sm ${tone}`}>{content}</Link> : <div key={item.key} className={`rounded-xl border p-3 ${tone}`}>{content}</div>;
+          const content = <><p className="text-xs font-bold text-navy-deep">{item.title}</p><p className="truncate text-[10px] text-navy/60">{item.detail}</p></>;
+          return item.href ? <Link key={item.key} to={item.href} className={`rounded-lg border px-2.5 py-2 transition hover:-translate-y-0.5 hover:shadow-sm ${tone}`}>{content}</Link> : <div key={item.key} className={`rounded-lg border px-2.5 py-2 ${tone}`}>{content}</div>;
         })}
       </div>
     </section>
@@ -177,9 +177,9 @@ function QuickActions() {
     ["Ver investimentos", "/app/investimentos", "↗"],
   ];
   return (
-    <section className="rounded-2xl border border-navy/8 bg-navy-deep p-3.5 text-white shadow-sm">
-      <h2 className="font-display text-lg font-semibold">Ações rápidas</h2><p className="mb-3 text-xs text-white/55">Atalhos para o dia a dia</p>
-      <div className="grid gap-1.5">{actions.map(([label, href, icon]) => <Link key={href} to={href} className="flex items-center justify-between rounded-xl bg-white/8 px-3 py-1.5 text-sm font-semibold transition hover:bg-white/14"><span>{label}</span><span className="grid h-7 w-7 place-items-center rounded-lg bg-gold text-navy-deep">{icon}</span></Link>)}</div>
+    <section className="rounded-2xl border border-navy/8 bg-navy-deep p-3 text-white shadow-sm">
+      <div className="mb-2 flex items-baseline gap-2"><h2 className="font-display text-base font-semibold">Ações rápidas</h2><p className="text-[10px] text-white/55">Atalhos do dia a dia</p></div>
+      <div className="grid gap-1.5 sm:grid-cols-3">{actions.map(([label, href, icon]) => <Link key={href} to={href} className="flex min-w-0 items-center justify-between gap-1 rounded-lg bg-white/8 px-2 py-2 text-[11px] font-semibold transition hover:bg-white/14"><span className="truncate">{label}</span><span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-gold text-navy-deep">{icon}</span></Link>)}</div>
     </section>
   );
 }
@@ -188,7 +188,7 @@ function DashboardPanel({ title, subtitle, value, valueLabel, tone, children, ac
   const accent = tone === "teal" ? "bg-teal" : tone === "expense" ? "bg-expense-line" : tone === "gold" ? "bg-gold" : "bg-navy";
   const valueTone = tone === "expense" ? "text-expense-line" : tone === "teal" ? "text-teal-deep" : "text-navy-deep";
   return (
-    <section className="wp-rise flex min-h-[330px] min-w-0 flex-col overflow-hidden rounded-3xl border border-navy/8 bg-white/85 shadow-[0_16px_48px_rgba(20,28,42,0.07)] backdrop-blur" style={{ ["--wp-delay" as string]: delay }}>
+    <section className="wp-rise flex min-h-[310px] min-w-0 flex-col overflow-hidden rounded-3xl border border-navy/8 bg-white/85 shadow-[0_16px_48px_rgba(20,28,42,0.07)] backdrop-blur" style={{ ["--wp-delay" as string]: delay }}>
       <div className={`h-1 w-full ${accent}`} />
       <header className="flex flex-wrap items-start justify-between gap-3 border-b border-navy/8 px-5 py-3">
         <div className="min-w-0"><h2 className="font-display text-xl font-semibold text-navy-deep">{title}</h2><div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1"><p className="text-xs text-muted">{subtitle}</p>{action}</div></div>
