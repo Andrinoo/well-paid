@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { inferAssetType } from "./Investments";
+import { directTickerFallback, inferAssetType } from "./Investments";
 
 describe("detecção contextual de investimentos", () => {
   it("reconhece tickers B3 como ação", () => {
@@ -16,5 +16,10 @@ describe("detecção contextual de investimentos", () => {
   it("reconhece renda fixa pelo contexto", () => {
     expect(inferAssetType("CDB Banco X")).toBe("cdb");
     expect(inferAssetType("Tesouro Selic 2029")).toBe("treasury");
+  });
+
+  it("mantém ticker B3 pesquisável quando o autocomplete não responde", () => {
+    expect(directTickerFallback("fiqe3", [])).toEqual([{ symbol: "FIQE3", name: "FIQE3 · ativo B3", instrument_type: "stock" }]);
+    expect(directTickerFallback("HGLG11", [])[0].instrument_type).toBe("fii");
   });
 });

@@ -375,6 +375,8 @@ export type InvestmentPosition = {
 
 export type InvestmentTicker = { symbol: string; name: string; instrument_type: string; last_price?: number | null; currency?: string | null; change_24h_percent?: number | null };
 export type InvestmentRates = { cdi_annual_percent: number; cdb_annual_percent: number; fixed_income_annual_percent: number; source: string; rates_fallback_used: boolean };
+export type InvestmentQuote = { symbol: string; last_price: number; currency: string; as_of?: string | null; source: string; confidence?: number | null; fallback_used?: boolean; stale?: boolean; change_24h?: number | null; change_24h_percent?: number | null; day_high?: number | null; day_low?: number | null; volume_24h?: number | null; error?: string | null };
+export type InvestmentFundamentals = { symbol: string; company_name?: string | null; pl?: string | null; pvp?: string | null; daily_liquidity?: string | null; dividend_yield?: string | null; dividend_yield_12m?: string | null; roe?: string | null; ev_ebitda?: string | null; net_margin?: string | null; net_debt_ebitda?: string | null; eps?: string | null; source: string; confidence?: number | null };
 
 export type FamilyMe = {
   family: {
@@ -749,6 +751,14 @@ export async function patchDisplayName(display_name: string): Promise<UserMe> {
 
 export async function searchInvestmentTickers(query: string): Promise<InvestmentTicker[]> {
   return await request(`/investments/tickers/search?${new URLSearchParams({ q: query, limit: "8" })}`, { method: "GET" }, true) as InvestmentTicker[];
+}
+
+export async function fetchInvestmentQuote(symbol: string): Promise<InvestmentQuote> {
+  return await request(`/investments/quote?${new URLSearchParams({ symbol })}`, { method: "GET" }, true) as InvestmentQuote;
+}
+
+export async function fetchInvestmentFundamentals(symbol: string): Promise<InvestmentFundamentals> {
+  return await request(`/investments/fundamentals?${new URLSearchParams({ symbol })}`, { method: "GET" }, true) as InvestmentFundamentals;
 }
 
 export async function fetchInvestmentRates(): Promise<InvestmentRates> {
