@@ -151,6 +151,16 @@ class EquityFundamentalsOut(BaseModel):
     net_margin: str | None = None
     net_debt_ebitda: str | None = None
     eps: str | None = None
+    market_cap: str | None = None
+    beta: str | None = None
+    week_52_high: str | None = None
+    week_52_low: str | None = None
+    payout_ratio: str | None = None
+    roic: str | None = None
+    ebit_margin: str | None = None
+    current_ratio: str | None = None
+    debt_to_equity: str | None = None
+    revenue_growth: str | None = None
     source: str = "fundamentus"
     confidence: float | None = Field(default=None, ge=0, le=1)
 

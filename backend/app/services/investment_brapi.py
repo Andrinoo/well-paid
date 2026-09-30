@@ -118,7 +118,15 @@ def fetch_brapi_key_statistics_enrichment(symbol: str) -> dict[str, Any] | None:
         except (TypeError, ValueError):
             dy = None
 
-    if not name and not ev and not net_debt_e and not pvp and not dy:
+    market_cap = _format_pt_decimal2(row.get("marketCap"))
+    beta = _format_pt_decimal2(dks.get("beta")) if isinstance(dks, dict) else None
+    week_52_high = _format_pt_decimal2(sd.get("fiftyTwoWeekHigh")) if isinstance(sd, dict) else None
+    week_52_low = _format_pt_decimal2(sd.get("fiftyTwoWeekLow")) if isinstance(sd, dict) else None
+    payout_ratio = _format_pt_decimal2((sd.get("payoutRatio") or 0) * 100) if isinstance(sd, dict) and sd.get("payoutRatio") is not None else None
+    current_ratio = _format_pt_decimal2(fin.get("currentRatio")) if isinstance(fin, dict) else None
+    debt_to_equity = _format_pt_decimal2(fin.get("debtToEquity")) if isinstance(fin, dict) else None
+    revenue_growth = _format_pt_decimal2((fin.get("revenueGrowth") or 0) * 100) if isinstance(fin, dict) and fin.get("revenueGrowth") is not None else None
+    if not name and not ev and not net_debt_e and not pvp and not dy and not market_cap:
         return None
     return {
         "ev_ebitda": ev,
@@ -126,6 +134,14 @@ def fetch_brapi_key_statistics_enrichment(symbol: str) -> dict[str, Any] | None:
         "pvp": pvp,
         "dividend_yield": dy,
         "company_name": name or None,
+        "market_cap": market_cap,
+        "beta": beta,
+        "week_52_high": week_52_high,
+        "week_52_low": week_52_low,
+        "payout_ratio": payout_ratio,
+        "current_ratio": current_ratio,
+        "debt_to_equity": debt_to_equity,
+        "revenue_growth": revenue_growth,
     }
 
 

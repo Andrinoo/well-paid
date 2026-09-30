@@ -149,12 +149,23 @@ class MarketDataRouterService:
                 "net_margin": None,
                 "net_debt_ebitda": brapi_ks.get("net_debt_ebitda"),
                 "eps": None,
+                "market_cap": brapi_ks.get("market_cap"),
+                "beta": brapi_ks.get("beta"),
+                "week_52_high": brapi_ks.get("week_52_high"),
+                "week_52_low": brapi_ks.get("week_52_low"),
+                "payout_ratio": brapi_ks.get("payout_ratio"),
+                "current_ratio": brapi_ks.get("current_ratio"),
+                "debt_to_equity": brapi_ks.get("debt_to_equity"),
+                "revenue_growth": brapi_ks.get("revenue_growth"),
                 "source": "brapi",
                 "confidence": 0.72,
             }
             return data
         # EV/EBITDA/PVP/DY: prefer BRAPI values when available.
         if brapi_ks:
+            for key in ("market_cap", "beta", "week_52_high", "week_52_low", "payout_ratio", "current_ratio", "debt_to_equity", "revenue_growth"):
+                if brapi_ks.get(key):
+                    data[key] = brapi_ks[key]
             if brapi_ks.get("ev_ebitda"):
                 data["ev_ebitda"] = brapi_ks["ev_ebitda"]
             if brapi_ks.get("net_debt_ebitda"):

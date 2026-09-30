@@ -89,6 +89,11 @@ class FundamentusProvider:
             "Dívida Líquida/EBITDA",
         )
         eps = extract_any("LPA")
+        roic = extract("ROIC")
+        ebit_margin = extract_any("Marg. EBIT", "Margem EBIT")
+        current_ratio = extract_any("Liquidez Corr", "Liquidez Corrente")
+        debt_to_equity = extract_any("Dív. Bruta/ Patrim.", "Dív. Bruta/Patrim.")
+        revenue_growth = extract_any("Cresc. Rec.5a", "Cresc. Rec. 5a")
         if not any(
             [
                 pl,
@@ -126,6 +131,11 @@ class FundamentusProvider:
             "net_margin": net_margin,
             "net_debt_ebitda": net_debt_ebitda,
             "eps": eps,
+            "roic": roic,
+            "ebit_margin": ebit_margin,
+            "current_ratio": current_ratio,
+            "debt_to_equity": debt_to_equity,
+            "revenue_growth": revenue_growth,
             "source": self.source,
             "confidence": 0.65,
         }
