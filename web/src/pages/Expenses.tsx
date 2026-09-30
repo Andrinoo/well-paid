@@ -9,7 +9,7 @@ import {
   type Category,
   type Expense,
 } from "../api";
-import { formatBrlFromCents, formatDueDate, parseBrlToCents } from "../format";
+import { formatBrlFromCents, formatDueDate, maskBrlInput, parseBrlToCents } from "../format";
 import { ErrorNote, MonthBar, PageTitle } from "./common";
 import { ExpenseCreateForm } from "./ExpenseForm";
 
@@ -277,7 +277,7 @@ function FilterSelect({ label, value, onChange, options }: { label: string; valu
 
 function EditExpenseDialog({ row, categories, onClose, onSaved }: { row: Expense; categories: Category[]; onClose: () => void; onSaved: () => Promise<void> }) {
   const [description, setDescription] = useState(row.description);
-  const [amount, setAmount] = useState((row.amount_cents / 100).toFixed(2).replace(".", ","));
+  const [amount, setAmount] = useState(formatBrlFromCents(row.amount_cents));
   const [expenseDate, setExpenseDate] = useState(row.expense_date);
   const [dueDate, setDueDate] = useState(row.due_date || "");
   const [categoryId, setCategoryId] = useState(row.category_id);
@@ -295,7 +295,8 @@ function EditExpenseDialog({ row, categories, onClose, onSaved }: { row: Expense
 }
 
 function DialogField({ label, value, onChange, type = "text", wide }: { label: string; value: string; onChange: (value: string) => void; type?: string; wide?: boolean }) {
-  return <label className={wide ? "sm:col-span-2" : ""}><span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-muted">{label}</span><input required={label !== "Vencimento"} type={type} value={value} onChange={(event) => onChange(event.target.value)} className="w-full rounded-xl border border-navy/10 bg-white px-3 py-2.5 outline-none focus:border-teal/50" /></label>;
+  const money = label.startsWith("Valor");
+  return <label className={wide ? "sm:col-span-2" : ""}><span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-muted">{label}</span><input required={label !== "Vencimento"} type={type} inputMode={money ? "numeric" : undefined} value={value} onChange={(event) => onChange(money ? maskBrlInput(event.target.value) : event.target.value)} className="w-full rounded-xl border border-navy/10 bg-white px-3 py-2.5 outline-none focus:border-teal/50" /></label>;
 }
 
 function canManage(row: Expense) { return row.is_mine !== false && !row.is_projected; }

@@ -14,6 +14,7 @@ import {
   MoneyForm,
   PageTitle,
   parseBrlToCents,
+  maskBrlInput,
 } from "./common";
 
 export function InvestmentsPage() {
@@ -90,7 +91,7 @@ export function InvestmentsPage() {
       <MoneyForm onSubmit={onCreate} submitLabel={busy ? "…" : "Nova posição"} busy={busy} extra={
         <>
           <InField label="Nome" value={name} required onChange={setName} />
-          <InField label="Principal" value={principal} required onChange={setPrincipal} />
+          <InField label="Principal" value={principal} required onChange={(value) => setPrincipal(maskBrlInput(value))} />
           <InField label="% a.a." value={rate} required onChange={setRate} />
           <label className="block">
             <span className="mb-1 block text-xs uppercase tracking-wide text-muted">Tipo</span>

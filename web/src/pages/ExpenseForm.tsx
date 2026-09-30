@@ -5,7 +5,7 @@ import {
   fetchMe,
   type Category,
 } from "../api";
-import { formatBrlFromCents, parseBrlToCents, todayIso } from "../format";
+import { formatBrlFromCents, maskBrlInput, parseBrlToCents, todayIso } from "../format";
 import {
   amountSplit,
   amountToOwnerPercent,
@@ -192,7 +192,7 @@ export function ExpenseCreateForm({
         <div className="grid items-end gap-2 md:grid-cols-2 xl:grid-cols-[145px_minmax(240px,1fr)_135px_180px_auto_auto]">
           <CompactField label={kind === "single" ? "Data" : "Primeiro vencimento"} type="date" value={kind === "single" ? expenseDate : dueDate} onChange={kind === "single" ? setExpenseDate : setDueDate} />
           <CompactField label="Descrição" value={description} placeholder="Ex.: conta de energia" onChange={(value) => setDescription(value.slice(0, 500))} />
-          <CompactField label="Valor total" value={amount} placeholder="R$ 0,00" onChange={setAmount} />
+          <CompactField label="Valor total" value={amount} placeholder="R$ 0,00" onChange={(value) => setAmount(maskBrlInput(value))} inputMode="numeric" />
           <label><span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-muted">Categoria</span><select required value={categoryId} onChange={(event) => setCategoryId(event.target.value)} className="h-10 w-full rounded-lg border border-navy/10 bg-white px-2.5 text-sm outline-none focus:border-teal/50"><option value="">Escolher</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
           <MiniToggle label="Paga" checked={paid} onChange={setPaid} />
           <button type="submit" disabled={busy || categories.length === 0} className="h-10 rounded-lg bg-gold px-5 text-sm font-bold text-navy-deep shadow-sm transition hover:-translate-y-0.5 hover:bg-gold/90 disabled:opacity-50">{busy ? "Incluindo…" : "Incluir"}</button>
@@ -219,7 +219,7 @@ export function ExpenseCreateForm({
                     <select className="h-10 w-full rounded-lg border border-navy/10 bg-white px-3 text-sm" value={peerId} onChange={(e) => setPeerId(e.target.value)} required><option value="">Escolher</option>{peers.map((p) => <option key={p.user_id} value={p.user_id}>{p.label}</option>)}</select>
                   </label>
                   <MiniToggle label="Dividir em %" checked={splitPercent} onChange={onSplitMode} />
-                  <CompactField label={splitPercent ? "Sua parte (%)" : "Sua parte (R$)"} value={ownerPart} placeholder={splitPercent ? "50" : "metade"} onChange={setOwnerPart} />
+                  <CompactField label={splitPercent ? "Sua parte (%)" : "Sua parte (R$)"} value={ownerPart} placeholder={splitPercent ? "50" : "R$ 0,00"} onChange={(value) => setOwnerPart(splitPercent ? value : maskBrlInput(value))} inputMode={splitPercent ? "decimal" : "numeric"} />
                   <CalculatedValue
                     label={splitPercent ? "Outra pessoa (%)" : "Outra pessoa (R$)"}
                     value={
@@ -251,9 +251,9 @@ export function ExpenseCreateForm({
   );
 }
 
-function CompactField({ label, value, onChange, type = "text", placeholder }: { label: string; value: string; onChange: (value: string) => void; type?: string; placeholder?: string }) {
+function CompactField({ label, value, onChange, type = "text", placeholder, inputMode }: { label: string; value: string; onChange: (value: string) => void; type?: string; placeholder?: string; inputMode?: "numeric" | "decimal" }) {
   return (
-    <label className="block"><span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-muted">{label}</span><input required type={type} value={value} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} className="h-10 w-full rounded-lg border border-navy/10 bg-white px-3 text-sm outline-none focus:border-teal/50 focus:ring-2 focus:ring-teal/10" /></label>
+    <label className="block"><span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-muted">{label}</span><input required type={type} inputMode={inputMode} value={value} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} className="h-10 w-full rounded-lg border border-navy/10 bg-white px-3 text-sm outline-none focus:border-teal/50 focus:ring-2 focus:ring-teal/10" /></label>
   );
 }
 

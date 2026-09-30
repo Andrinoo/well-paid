@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { createIncome, deleteIncome, fetchIncomeCategories, fetchIncomes, type Category, type Income } from "../api";
 import { formatBrlFromCents, formatDueDate } from "../format";
 import { ApiError, ErrorNote, MonthBar, PageTitle, parseBrlToCents, todayIso, usePeriod } from "./common";
+import { maskBrlInput } from "../format";
 
 type IncomeSortKey = "date" | "description" | "category" | "amount";
 
@@ -100,7 +101,7 @@ export function IncomesPage() {
   );
 }
 
-function CompactField({ label, value, onChange, type = "text", placeholder }: { label: string; value: string; onChange: (value: string) => void; type?: string; placeholder?: string }) { return <label><FieldLabel>{label}</FieldLabel><input required={label !== "Nota opcional"} type={type} value={value} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} className="h-10 w-full rounded-lg border border-navy/10 bg-white px-3 text-sm outline-none focus:border-teal/50 focus:ring-2 focus:ring-teal/10" /></label>; }
+function CompactField({ label, value, onChange, type = "text", placeholder }: { label: string; value: string; onChange: (value: string) => void; type?: string; placeholder?: string }) { const money = label === "Valor"; return <label><FieldLabel>{label}</FieldLabel><input required={label !== "Nota opcional"} type={type} inputMode={money ? "numeric" : undefined} value={value} placeholder={placeholder} onChange={(event) => onChange(money ? maskBrlInput(event.target.value) : event.target.value)} className="h-10 w-full rounded-lg border border-navy/10 bg-white px-3 text-sm outline-none focus:border-teal/50 focus:ring-2 focus:ring-teal/10" /></label>; }
 function FieldLabel({ children }: { children: string }) { return <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-muted">{children}</span>; }
 function IncomeMetric({ label, value, detail, tone }: { label: string; value: number | null; detail: string; tone: "teal" | "navy" | "gold" }) { const border = tone === "teal" ? "border-l-teal" : tone === "gold" ? "border-l-gold" : "border-l-navy"; return <article className={`rounded-2xl border border-navy/8 border-l-4 ${border} bg-white/90 px-4 py-3.5 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:shadow-lg`}><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted">{label}</p>{value != null ? <p className="mt-1 font-display text-2xl font-semibold text-navy-deep">{formatBrlFromCents(value)}</p> : <p className="mt-1 font-display text-2xl font-semibold text-navy-deep">{detail.split(" ")[0]}</p>}<p className="mt-1 text-xs text-muted">{detail}</p></article>; }
 function IconButton({ label, onClick, danger }: { label: string; onClick: () => void; danger?: boolean }) { return <button type="button" title={label} aria-label={label} onClick={onClick} className={`grid h-8 w-8 place-items-center rounded-lg transition ${danger ? "text-red-700 hover:bg-red-50" : "text-navy hover:bg-cream"}`}><svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5" /></svg></button>; }

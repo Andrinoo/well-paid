@@ -33,6 +33,13 @@ export function parseBrlToCents(raw: string): number {
   return Math.round(value * 100);
 }
 
+/** Máscara monetária progressiva: 123456 -> R$ 1.234,56. */
+export function maskBrlInput(raw: string): string {
+  const digits = raw.replace(/\D/g, "").replace(/^0+(?=\d)/, "").slice(0, 15);
+  if (!digits || Number(digits) === 0) return "";
+  return formatBrlFromCents(Number(digits));
+}
+
 export function parsePercentToBps(raw: string): number | null {
   const cleaned = raw.trim().replace("%", "").replace(",", ".");
   if (!cleaned) return null;

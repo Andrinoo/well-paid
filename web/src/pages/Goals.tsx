@@ -19,7 +19,7 @@ import {
   goalProgress,
   type GoalDraft,
 } from "../features/goals/model";
-import { formatBrlFromCents, parseBrlToCents } from "../format";
+import { formatBrlFromCents, maskBrlInput, parseBrlToCents } from "../format";
 import { GoalThumb } from "./home/GoalThumb";
 import { ApiError, ErrorNote, PageTitle } from "./common";
 
@@ -131,7 +131,7 @@ export function GoalsPage() {
     patchDraft({
       picked: hit,
       title: hit.title.slice(0, 200),
-      target: (hit.price_cents / 100).toFixed(2).replace(".", ","),
+      target: formatBrlFromCents(hit.price_cents),
       targetUrl: hit.url,
     });
     setHits([]);
@@ -291,8 +291,8 @@ export function GoalsPage() {
         </header>
         <div className="grid items-end gap-2 p-3 md:grid-cols-2 xl:grid-cols-[minmax(230px,1fr)_150px_150px_150px_auto] sm:p-4">
           <label className="block"><GoalFieldLabel>Nome da meta</GoalFieldLabel><div className="relative">{draft.picked?.thumbnail ? <GoalThumb url={draft.picked.thumbnail} alt="" className="absolute left-1 top-1 h-8 w-8 rounded-md" /> : null}<input required value={draft.title} placeholder="Digite para pesquisar…" autoComplete="off" onChange={(event) => patchDraft({ title: event.target.value.slice(0, 200) })} className={`h-10 w-full rounded-lg border border-navy/10 bg-white pr-9 text-sm outline-none focus:border-teal/50 focus:ring-2 focus:ring-teal/10 ${draft.picked?.thumbnail ? "pl-11" : "pl-3"}`} />{searching ? <span className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin rounded-full border-2 border-teal/25 border-t-teal" aria-label="Pesquisando produtos" /> : <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted"><SearchIcon /></span>}</div></label>
-          <CompactGoalField label="Objetivo" value={draft.target} required placeholder="R$ 0,00" onChange={(target) => patchDraft({ target })} />
-          {!editing ? <CompactGoalField label="Já guardado" value={draft.initial} placeholder="Opcional" onChange={(initial) => patchDraft({ initial })} /> : <div className="hidden xl:block" />}
+          <CompactGoalField label="Objetivo" value={draft.target} required placeholder="R$ 0,00" money onChange={(target) => patchDraft({ target })} />
+          {!editing ? <CompactGoalField label="Já guardado" value={draft.initial} placeholder="Opcional" money onChange={(initial) => patchDraft({ initial })} /> : <div className="hidden xl:block" />}
           <CompactGoalField label="Data-alvo" type="date" value={draft.dueDate} onChange={(dueDate) => patchDraft({ dueDate })} />
           <button type="submit" disabled={busy} className="h-10 rounded-lg bg-gold px-5 text-sm font-bold text-navy-deep shadow-sm transition hover:-translate-y-0.5 disabled:opacity-60">{busy ? "Salvando…" : editing ? "Salvar" : "Criar meta"}</button>
         </div>
@@ -389,7 +389,7 @@ function GoalCard({ goal, expanded, contributions, amount, note, busy, onToggle,
           {goal.target_url ? <a href={goal.target_url} target="_blank" rel="noreferrer" className="inline-flex text-xs font-semibold text-teal-deep underline decoration-teal/30 underline-offset-4">Abrir produto de referência</a> : null}
           {mine ? (
             <form className="grid gap-2 rounded-2xl border border-navy/8 bg-white p-3 sm:grid-cols-[1fr_1fr_auto]" onSubmit={onContribute}>
-              <input className="rounded-xl border border-navy/10 px-3 py-2.5 text-sm outline-none ring-gold/40 focus:ring-2" placeholder="Valor do aporte" value={amount} onChange={(e) => onAmount(e.target.value)} />
+              <input className="rounded-xl border border-navy/10 px-3 py-2.5 text-sm outline-none ring-gold/40 focus:ring-2" inputMode="numeric" placeholder="R$ 0,00" value={amount} onChange={(e) => onAmount(maskBrlInput(e.target.value))} />
               <input className="rounded-xl border border-navy/10 px-3 py-2.5 text-sm outline-none ring-gold/40 focus:ring-2" placeholder="Nota opcional" maxLength={500} value={note} onChange={(e) => onNote(e.target.value)} />
               <button disabled={busy} className="rounded-xl bg-navy-deep px-4 py-2.5 text-sm font-semibold text-cream disabled:opacity-60">{busy ? "Salvando…" : "Aportar"}</button>
             </form>
@@ -406,8 +406,8 @@ function ConfirmDelete({ goal, busy, onCancel, onConfirm }: { goal: Goal; busy: 
   return <div className="fixed inset-0 z-50 grid place-items-center bg-navy-deep/55 p-4" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }}><div role="dialog" aria-modal="true" aria-labelledby="delete-goal-title" className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl"><h2 id="delete-goal-title" className="font-serif text-2xl text-navy-deep">Excluir meta?</h2><p className="mt-2 text-sm leading-6 text-muted">“{goal.title}” será removida definitivamente.{hasBalance ? ` O saldo registrado de ${formatBrlFromCents(goal.current_cents)} e todo o histórico de aportes também serão excluídos.` : ""}</p>{hasBalance ? <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-800">Esta ação não pode ser desfeita. Se quiser preservar o histórico, use Arquivar.</p> : null}<div className="mt-6 flex justify-end gap-2"><SecondaryButton onClick={onCancel}>Cancelar</SecondaryButton><button type="button" disabled={busy} onClick={onConfirm} className="rounded-xl bg-red-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-800 disabled:opacity-60">{busy ? "Excluindo…" : "Excluir definitivamente"}</button></div></div></div>;
 }
 
-function CompactGoalField({ label, value, onChange, type = "text", placeholder, required = false }: { label: string; value: string; onChange: (value: string) => void; type?: string; placeholder?: string; required?: boolean }) {
-  return <label className="block"><GoalFieldLabel>{label}</GoalFieldLabel><input required={required} type={type} value={value} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} className="h-10 w-full rounded-lg border border-navy/10 bg-white px-3 text-sm outline-none focus:border-teal/50 focus:ring-2 focus:ring-teal/10" /></label>;
+function CompactGoalField({ label, value, onChange, type = "text", placeholder, required = false, money = false }: { label: string; value: string; onChange: (value: string) => void; type?: string; placeholder?: string; required?: boolean; money?: boolean }) {
+  return <label className="block"><GoalFieldLabel>{label}</GoalFieldLabel><input required={required} type={type} inputMode={money ? "numeric" : undefined} value={value} placeholder={placeholder} onChange={(event) => onChange(money ? maskBrlInput(event.target.value) : event.target.value)} className="h-10 w-full rounded-lg border border-navy/10 bg-white px-3 text-sm outline-none focus:border-teal/50 focus:ring-2 focus:ring-teal/10" /></label>;
 }
 
 function GoalFieldLabel({ children }: { children: string }) {
@@ -445,7 +445,7 @@ function GoalActionButton({ kind, label, onClick, disabled, danger }: { kind: "d
 }
 
 function centsInput(cents: number): string {
-  return (cents / 100).toFixed(2).replace(".", ",");
+  return formatBrlFromCents(cents);
 }
 
 function formatDate(raw: string | null | undefined): string {

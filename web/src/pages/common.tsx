@@ -1,6 +1,6 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 import { ApiError, type Category } from "../api";
-import { parseBrlToCents, todayIso } from "../format";
+import { maskBrlInput, parseBrlToCents, todayIso } from "../format";
 import { InField, MonthBar } from "../ui";
 
 export function usePeriod() {
@@ -156,4 +156,4 @@ export function ChipRow<T extends string>({
   );
 }
 
-export { InField, MonthBar, parseBrlToCents, todayIso, ApiError };
+export { InField, MonthBar, maskBrlInput, parseBrlToCents, todayIso, ApiError };
