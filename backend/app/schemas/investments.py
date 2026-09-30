@@ -89,6 +89,14 @@ class StockQuoteOut(BaseModel):
     day_high: float | None = None
     day_low: float | None = None
     volume_24h: float | None = None
+    market_cap: float | None = None
+    market_cap_rank: int | None = None
+    circulating_supply: float | None = None
+    total_supply: float | None = None
+    max_supply: float | None = None
+    ath: float | None = None
+    ath_change_percent: float | None = None
+    image_url: str | None = None
     error: str | None = None
 
 

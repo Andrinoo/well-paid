@@ -184,6 +184,10 @@ class Settings(BaseSettings):
         default="",
         validation_alias=AliasChoices("finnhub_api_key", "FINNHUB_API_KEY"),
     )
+    coingecko_api_key: str = Field(
+        default="",
+        validation_alias=AliasChoices("coingecko_api_key", "COINGECKO_API_KEY"),
+    )
     market_provider_timeout_seconds: float = 10.0
     market_provider_retries: int = 1
     # Segurança de isolamento: por omissão cada conta vê apenas os próprios dados.

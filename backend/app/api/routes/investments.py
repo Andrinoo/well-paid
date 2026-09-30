@@ -131,6 +131,14 @@ def read_stock_quote(
         day_high=_opt_f("day_high"),
         day_low=_opt_f("day_low"),
         volume_24h=_opt_f("volume_24h"),
+        market_cap=_opt_f("market_cap"),
+        market_cap_rank=int(raw["market_cap_rank"]) if isinstance(raw.get("market_cap_rank"), (int, float)) else None,
+        circulating_supply=_opt_f("circulating_supply"),
+        total_supply=_opt_f("total_supply"),
+        max_supply=_opt_f("max_supply"),
+        ath=_opt_f("ath"),
+        ath_change_percent=_opt_f("ath_change_percent"),
+        image_url=str(raw["image_url"]) if raw.get("image_url") else None,
         error=None,
     )
 
