@@ -74,7 +74,7 @@ export function DashboardPage() {
       <div className="pointer-events-none absolute -right-16 top-32 h-72 w-72 rounded-full bg-peach/80 blur-3xl wp-float-alt" />
 
       <header className="relative shrink-0 border-b border-navy/8 bg-white/45 px-5 py-4 backdrop-blur-xl sm:px-8">
-        <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="mx-auto flex max-w-[1500px] flex-wrap items-center justify-between gap-4">
           <div className="min-w-0">
             <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-teal-deep">{name ? `${name}, sua visão financeira` : "Sua visão financeira"}</p>
             <div className="mt-1 flex flex-wrap items-baseline gap-x-4 gap-y-1">
@@ -91,7 +91,7 @@ export function DashboardPage() {
             <button type="button" className="rounded-xl px-3 py-2 text-sm text-navy md:hidden" onClick={toggleMenu}>Menu</button>
           </div>
         </div>
-        {banner ? <p className="mt-3 max-w-3xl text-sm text-navy/65">{banner.title}</p> : null}
+        {banner ? <p className="mx-auto mt-3 max-w-[1500px] text-sm text-navy/65">{banner.title}</p> : null}
       </header>
 
       {error ? <p className="relative mx-5 mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800 sm:mx-8">{error}</p> : null}
@@ -102,7 +102,7 @@ export function DashboardPage() {
           {[0, 1, 2, 3].map((item) => <div key={item} className="h-[360px] overflow-hidden rounded-3xl bg-white/70"><div className="h-full w-full wp-shimmer" /></div>)}
         </div>
       ) : (
-        <main className="relative space-y-4 px-5 pb-24 pt-4 sm:px-8">
+        <main className="relative mx-auto max-w-[1500px] space-y-3 px-5 pb-24 pt-4 sm:px-8 2xl:px-6">
           <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
             <SummaryCard label="Receitas" value={income} change={snapshot?.income_change} tone="teal" />
             <SummaryCard label="Despesas" value={spent} change={snapshot?.expense_change} tone="expense" invertTrend />
@@ -157,11 +157,11 @@ function SummaryCard({ label, value, change, note, tone, invertTrend = false }: 
 
 function AttentionCenter({ items }: { items: DashboardAttentionItem[] }) {
   return (
-    <section className="rounded-2xl border border-navy/8 bg-white/75 p-4 shadow-sm backdrop-blur">
+    <section className="rounded-2xl border border-navy/8 bg-white/80 p-4 shadow-sm backdrop-blur">
       <div className="mb-3 flex items-center justify-between gap-3"><div><h2 className="font-display text-lg font-semibold">Central de atenção</h2><p className="text-xs text-muted">Prioridades identificadas automaticamente</p></div><span className="rounded-full bg-cream px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-navy/65">{items.length} {items.length === 1 ? "item" : "itens"}</span></div>
       <div className="grid gap-2 md:grid-cols-2">
         {items.map((item) => {
-          const tone = item.tone === "danger" ? "border-red-200 bg-red-50/75" : item.tone === "warning" ? "border-amber-200 bg-amber-50/75" : "border-emerald-200 bg-emerald-50/70";
+          const tone = item.tone === "danger" ? "border-red-200 bg-red-50/70" : item.tone === "warning" ? "border-navy/8 bg-cream/50" : "border-navy/8 bg-sage/50";
           const content = <><p className="text-sm font-bold text-navy-deep">{item.title}</p><p className="mt-0.5 text-xs leading-relaxed text-navy/60">{item.detail}</p></>;
           return item.href ? <Link key={item.key} to={item.href} className={`rounded-xl border p-3 transition hover:-translate-y-0.5 hover:shadow-sm ${tone}`}>{content}</Link> : <div key={item.key} className={`rounded-xl border p-3 ${tone}`}>{content}</div>;
         })}
@@ -177,9 +177,9 @@ function QuickActions() {
     ["Ver investimentos", "/app/investimentos", "↗"],
   ];
   return (
-    <section className="rounded-2xl border border-navy/8 bg-navy-deep p-4 text-white shadow-sm">
+    <section className="rounded-2xl border border-navy/8 bg-navy-deep p-3.5 text-white shadow-sm">
       <h2 className="font-display text-lg font-semibold">Ações rápidas</h2><p className="mb-3 text-xs text-white/55">Atalhos para o dia a dia</p>
-      <div className="grid gap-2">{actions.map(([label, href, icon]) => <Link key={href} to={href} className="flex items-center justify-between rounded-xl bg-white/8 px-3 py-2 text-sm font-semibold transition hover:bg-white/14"><span>{label}</span><span className="grid h-7 w-7 place-items-center rounded-lg bg-gold text-navy-deep">{icon}</span></Link>)}</div>
+      <div className="grid gap-1.5">{actions.map(([label, href, icon]) => <Link key={href} to={href} className="flex items-center justify-between rounded-xl bg-white/8 px-3 py-1.5 text-sm font-semibold transition hover:bg-white/14"><span>{label}</span><span className="grid h-7 w-7 place-items-center rounded-lg bg-gold text-navy-deep">{icon}</span></Link>)}</div>
     </section>
   );
 }
@@ -188,13 +188,13 @@ function DashboardPanel({ title, subtitle, value, valueLabel, tone, children, ac
   const accent = tone === "teal" ? "bg-teal" : tone === "expense" ? "bg-expense-line" : tone === "gold" ? "bg-gold" : "bg-navy";
   const valueTone = tone === "expense" ? "text-expense-line" : tone === "teal" ? "text-teal-deep" : "text-navy-deep";
   return (
-    <section className="wp-rise flex min-h-[360px] min-w-0 flex-col overflow-hidden rounded-3xl border border-navy/8 bg-white/85 shadow-[0_16px_48px_rgba(20,28,42,0.07)] backdrop-blur" style={{ ["--wp-delay" as string]: delay }}>
+    <section className="wp-rise flex min-h-[330px] min-w-0 flex-col overflow-hidden rounded-3xl border border-navy/8 bg-white/85 shadow-[0_16px_48px_rgba(20,28,42,0.07)] backdrop-blur" style={{ ["--wp-delay" as string]: delay }}>
       <div className={`h-1 w-full ${accent}`} />
       <header className="flex flex-wrap items-start justify-between gap-3 border-b border-navy/8 px-5 py-3">
         <div className="min-w-0"><h2 className="font-display text-xl font-semibold text-navy-deep">{title}</h2><div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1"><p className="text-xs text-muted">{subtitle}</p>{action}</div></div>
         <div className="text-right"><p className={`font-display text-xl font-semibold tabular-nums ${valueTone}`}>{value}</p><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted">{valueLabel}</p></div>
       </header>
-      <div className="min-h-0 flex-1 overflow-auto p-4">{children}</div>
+      <div className="min-h-0 flex-1 overflow-auto p-3.5">{children}</div>
     </section>
   );
 }
