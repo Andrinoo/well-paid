@@ -19,7 +19,7 @@ export function InvestmentsPage() {
   const [name, setName] = useState("");
   const [principal, setPrincipal] = useState("");
   const [rate, setRate] = useState("");
-  const [type, setType] = useState("cdb");
+  const [type, setType] = useState("stock");
   const [description, setDescription] = useState("");
   const [maturity, setMaturity] = useState("");
   const [liquid, setLiquid] = useState(true);
@@ -37,14 +37,15 @@ export function InvestmentsPage() {
   useEffect(() => { void load(); }, []);
   useEffect(() => {
     const query = name.trim();
-    if (!showForm || query.length < 3 || !["stock", "fii", "etf", "crypto"].includes(type)) { setSuggestions([]); return; }
-    const timer = window.setTimeout(() => { setSearching(true); void searchInvestmentTickers(query).then(setSuggestions).catch(() => setSuggestions([])).finally(() => setSearching(false)); }, 350);
+    if (!showForm || query.length < 3) { setSuggestions([]); return; }
+    const timer = window.setTimeout(() => { setSearching(true); void searchInvestmentTickers(query).then((items) => { setSuggestions(items); const exact = items.find((item) => item.symbol.toUpperCase() === query.toUpperCase()); if (exact) setType(exact.instrument_type || inferAssetType(query) || "stock"); }).catch(() => setSuggestions([])).finally(() => setSearching(false)); }, 350);
     return () => window.clearTimeout(timer);
-  }, [name, type, showForm]);
+  }, [name, showForm]);
 
   const visible = useMemo(() => rows.filter((row) => filter === "all" || row.instrument_type === filter).filter((row) => `${row.name} ${row.description ?? ""}`.toLocaleLowerCase("pt-BR").includes(search.toLocaleLowerCase("pt-BR"))), [rows, filter, search]);
   const marketType = ["stock", "fii", "etf", "crypto"].includes(type);
 
+  function changeName(value: string) { setName(value); const inferred = inferAssetType(value); if (inferred) setType(inferred); }
   function selectTicker(item: InvestmentTicker) { setName(item.symbol); setType(item.instrument_type || "stock"); setDescription(item.name); if (item.last_price) setPrincipal(maskBrlInput(String(Math.round(item.last_price * 100)))); setSuggestions([]); }
   function applySuggestedRate() { const value = type === "cdb" ? rates?.cdb_annual_percent : rates?.fixed_income_annual_percent; if (value != null) setRate(String(value).replace(".", ",")); }
   async function onCreate(event: FormEvent) {
@@ -63,7 +64,7 @@ export function InvestmentsPage() {
     <div className="mt-4"><ErrorNote message={error} /></div>
     {overview ? <section className="mt-4 grid gap-3 sm:grid-cols-3">{[["Total alocado", overview.total_allocated_cents, "navy"], ["Rendimento estimado", overview.total_yield_cents, "teal"], ["Estimado por mês", overview.estimated_monthly_yield_cents, "gold"]].map(([label, value, tone]) => <Metric key={String(label)} label={String(label)} value={Number(value)} tone={String(tone)} />)}</section> : null}
     {showForm ? <form onSubmit={onCreate} className="wp-rise mt-4 overflow-visible rounded-3xl border border-navy/8 bg-white/90 shadow-[0_18px_55px_rgba(20,28,42,0.08)]"><header className="border-b border-navy/8 bg-cream/30 px-5 py-3"><h2 className="font-serif text-xl text-navy-deep">Adicionar investimento</h2><p className="text-xs text-muted">Pesquise pelo nome ou ticker; o tipo e os dados disponíveis serão preenchidos automaticamente.</p></header><div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-4">
-      <label className="relative"><FieldLabel>Ativo ou título</FieldLabel><input required value={name} onChange={(e) => setName(e.target.value)} placeholder={marketType ? "Ex.: PETR4 ou Petrobras" : "Ex.: CDB Banco X"} className="field" />{searching ? <span className="absolute right-3 top-9 text-xs text-muted">Buscando…</span> : null}{suggestions.length ? <ul className="absolute z-30 mt-1 max-h-64 w-full overflow-auto rounded-xl border border-navy/10 bg-white p-1 shadow-xl">{suggestions.map((item) => <li key={item.symbol}><button type="button" onClick={() => selectTicker(item)} className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left hover:bg-sage/50"><span><b className="text-sm text-navy">{item.symbol}</b><small className="block truncate text-muted">{item.name}</small></span>{item.last_price != null ? <span className="text-xs font-bold text-teal-deep">R$ {item.last_price.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span> : null}</button></li>)}</ul> : null}</label>
+      <label className="relative"><FieldLabel>Ativo ou título</FieldLabel><input required value={name} onChange={(e) => changeName(e.target.value)} placeholder="Ex.: FIQE3, bitcoin ou CDB" autoComplete="off" className="field" />{searching ? <span className="absolute right-3 top-9 text-xs text-muted">Buscando…</span> : null}{suggestions.length ? <ul className="absolute z-30 mt-1 max-h-64 w-full overflow-auto rounded-xl border border-navy/10 bg-white p-1 shadow-xl">{suggestions.map((item) => <li key={`${item.instrument_type}-${item.symbol}`}><button type="button" onClick={() => selectTicker(item)} className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left hover:bg-sage/50"><span><b className="text-sm text-navy">{item.symbol}</b><small className="block truncate text-muted">{item.name} · {typeLabel(item.instrument_type)}</small></span>{item.last_price != null ? <span className="text-xs font-bold text-teal-deep">{(item.currency || "BRL") === "BRL" ? "R$ " : `${item.currency || "USD"} `}{item.last_price.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span> : null}</button></li>)}</ul> : null}</label>
       <label><FieldLabel>Tipo</FieldLabel><select value={type} onChange={(e) => setType(e.target.value)} className="field">{TYPES.slice(1).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
       <label><FieldLabel>Valor aplicado</FieldLabel><input required inputMode="numeric" value={principal} onChange={(e) => setPrincipal(maskBrlInput(e.target.value))} placeholder="R$ 0,00" className="field" /></label>
       {!marketType ? <label><FieldLabel>Rentabilidade anual</FieldLabel><div className="flex gap-1"><input required inputMode="decimal" value={rate} onChange={(e) => setRate(e.target.value)} placeholder="% a.a." className="field min-w-0" /><button type="button" onClick={applySuggestedRate} className="rounded-lg bg-sage px-2 text-[10px] font-bold text-teal-deep">Usar mercado</button></div></label> : <label><FieldLabel>Descrição</FieldLabel><input value={description} onChange={(e) => setDescription(e.target.value)} className="field" /></label>}
@@ -80,4 +81,5 @@ function PositionCard({ row, aporte, busy, onAporte, onAdd, onDelete }: { row: I
 function ViewButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: string }) { return <button type="button" onClick={onClick} className={`rounded-lg px-3 py-1.5 text-xs font-bold ${active ? "bg-navy-deep text-white" : "text-muted"}`}>{children}</button>; }
 function FieldLabel({ children }: { children: string }) { return <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-muted">{children}</span>; }
 function typeLabel(type: string) { return TYPES.find(([key]) => key === type)?.[1] ?? type.replaceAll("_", " "); }
+export function inferAssetType(raw: string): string | null { const value = raw.trim().toLocaleLowerCase("pt-BR"); if (/\b(bitcoin|btc|ethereum|ether|eth|solana|sol|bnb|xrp|cardano|ada|dogecoin|doge|litecoin|ltc|usdt|usdc|cripto|crypto)\b/.test(value)) return "crypto"; if (/^[a-z]{4}\d{1,2}$/i.test(value)) return "stock"; if (/\b(cdb|renda fixa|lci|lca|deb[eê]nture)\b/.test(value)) return "cdb"; if (/\b(tesouro|selic|ipca\+)\b/.test(value)) return "treasury"; return null; }
 function messageOf(error: unknown, fallback: string) { return error instanceof ApiError ? error.message : error instanceof Error ? error.message : fallback; }
