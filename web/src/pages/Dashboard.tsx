@@ -103,14 +103,14 @@ export function DashboardPage() {
         </div>
       ) : (
         <main className="relative mx-auto max-w-[1500px] space-y-3 px-5 pb-24 pt-4 sm:px-8 2xl:px-6">
-          <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+          <section className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-navy/8 bg-navy/10 shadow-sm xl:grid-cols-4">
             <SummaryCard label="Receitas" value={income} change={snapshot?.income_change} tone="teal" />
             <SummaryCard label="Despesas" value={spent} change={snapshot?.expense_change} tone="expense" invertTrend />
             <SummaryCard label="Resultado" value={balance} change={snapshot?.balance_change} tone={tight ? "expense" : "teal"} />
             <SummaryCard label="Reserva" value={overview?.emergency_reserve_balance_cents ?? 0} note="Patrimônio protegido" tone="navy" />
           </section>
 
-          <section className="grid gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(360px,.8fr)]">
+          <section className="grid overflow-hidden rounded-2xl border border-navy/8 bg-white/80 shadow-sm backdrop-blur lg:grid-cols-[minmax(0,1.2fr)_minmax(430px,.8fr)]">
             <AttentionCenter items={snapshot?.attention ?? []} />
             <QuickActions />
           </section>
@@ -146,27 +146,27 @@ function SummaryCard({ label, value, change, note, tone, invertTrend = false }: 
     ? `${change!.delta_cents >= 0 ? "↑" : "↓"} ${Math.abs(change!.delta_percent!)}% vs. mês anterior`
     : note ?? "Primeiro mês para comparação";
   return (
-    <article className="relative min-w-0 overflow-hidden rounded-2xl border border-navy/8 bg-white/85 p-4 shadow-[0_10px_30px_rgba(20,28,42,.05)]">
+    <article className="relative min-w-0 overflow-hidden bg-white/85 px-4 py-3">
       <span className={`absolute inset-y-0 left-0 w-1 ${accent}`} />
       <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted">{label}</p>
-      <p className="mt-1 truncate font-display text-xl font-semibold tabular-nums text-navy-deep sm:text-2xl">{formatBrlFromCents(value)}</p>
-      <p className={`mt-1 truncate text-[11px] font-semibold ${hasComparison ? (improvement ? "text-teal-deep" : "text-expense-line") : "text-muted"}`}>{comparison}</p>
+      <p className="truncate font-display text-lg font-semibold tabular-nums text-navy-deep sm:text-xl">{formatBrlFromCents(value)}</p>
+      <p className={`truncate text-[10px] font-semibold ${hasComparison ? (improvement ? "text-teal-deep" : "text-expense-line") : "text-muted"}`}>{comparison}</p>
     </article>
   );
 }
 
 function AttentionCenter({ items }: { items: DashboardAttentionItem[] }) {
   return (
-    <section className="rounded-2xl border border-navy/8 bg-white/80 p-3 shadow-sm backdrop-blur">
-      <div className="mb-2 flex items-center justify-between gap-3"><div className="flex flex-wrap items-baseline gap-x-2"><h2 className="font-display text-base font-semibold">Central de atenção</h2><p className="text-[11px] text-muted">Prioridades automáticas</p></div><span className="rounded-full bg-cream px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-navy/65">{items.length} {items.length === 1 ? "item" : "itens"}</span></div>
-      <div className="grid gap-1.5 md:grid-cols-2">
+    <div className="flex min-w-0 flex-col gap-2 p-2.5 sm:flex-row sm:items-center">
+      <div className="flex shrink-0 items-center gap-2"><h2 className="font-display text-sm font-semibold">Atenção</h2><span className="rounded-full bg-cream px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-navy/65">{items.length}</span></div>
+      <div className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto">
         {items.map((item) => {
           const tone = item.tone === "danger" ? "border-red-200 bg-red-50/70" : item.tone === "warning" ? "border-navy/8 bg-cream/50" : "border-navy/8 bg-sage/50";
-          const content = <><p className="text-xs font-bold text-navy-deep">{item.title}</p><p className="truncate text-[10px] text-navy/60">{item.detail}</p></>;
-          return item.href ? <Link key={item.key} to={item.href} className={`rounded-lg border px-2.5 py-2 transition hover:-translate-y-0.5 hover:shadow-sm ${tone}`}>{content}</Link> : <div key={item.key} className={`rounded-lg border px-2.5 py-2 ${tone}`}>{content}</div>;
+          const content = <><b className="text-[11px] text-navy-deep">{item.title}</b><span className="hidden truncate text-[10px] text-navy/60 xl:inline"> · {item.detail}</span></>;
+          return item.href ? <Link key={item.key} to={item.href} className={`min-w-0 rounded-lg border px-2.5 py-1.5 transition hover:shadow-sm ${tone}`}>{content}</Link> : <div key={item.key} className={`min-w-0 rounded-lg border px-2.5 py-1.5 ${tone}`}>{content}</div>;
         })}
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -177,10 +177,9 @@ function QuickActions() {
     ["Ver investimentos", "/app/investimentos", "↗"],
   ];
   return (
-    <section className="rounded-2xl border border-navy/8 bg-navy-deep p-3 text-white shadow-sm">
-      <div className="mb-2 flex items-baseline gap-2"><h2 className="font-display text-base font-semibold">Ações rápidas</h2><p className="text-[10px] text-white/55">Atalhos do dia a dia</p></div>
-      <div className="grid gap-1.5 sm:grid-cols-3">{actions.map(([label, href, icon]) => <Link key={href} to={href} className="flex min-w-0 items-center justify-between gap-1 rounded-lg bg-white/8 px-2 py-2 text-[11px] font-semibold transition hover:bg-white/14"><span className="truncate">{label}</span><span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-gold text-navy-deep">{icon}</span></Link>)}</div>
-    </section>
+    <div className="border-t border-navy/8 bg-navy-deep p-2.5 text-white lg:border-l lg:border-t-0">
+      <div className="flex items-center gap-2"><h2 className="shrink-0 font-display text-sm font-semibold">Ações</h2><div className="grid min-w-0 flex-1 grid-cols-3 gap-1.5">{actions.map(([label, href, icon]) => <Link key={href} to={href} className="flex min-w-0 items-center justify-between gap-1 rounded-lg bg-white/8 px-2 py-1.5 text-[10px] font-semibold transition hover:bg-white/14"><span className="truncate">{label}</span><span className="grid h-5 w-5 shrink-0 place-items-center rounded-md bg-gold text-navy-deep">{icon}</span></Link>)}</div></div>
+    </div>
   );
 }
 
