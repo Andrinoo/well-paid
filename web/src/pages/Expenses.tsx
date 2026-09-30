@@ -10,7 +10,7 @@ import {
   type Expense,
 } from "../api";
 import { formatBrlFromCents, formatDueDate, parseBrlToCents } from "../format";
-import { ErrorNote, MonthBar, PageTitle, usePeriod } from "./common";
+import { ErrorNote, MonthBar, PageTitle } from "./common";
 import { ExpenseCreateForm } from "./ExpenseForm";
 
 type StatusFilter = "all" | "pending" | "paid";
@@ -19,7 +19,13 @@ type SortKey = "date" | "description" | "amount" | "status";
 export function ExpensesPage() {
   const [params] = useSearchParams();
   const pendingOnly = params.get("filtro") === "pagar";
-  const [period, setPeriod] = usePeriod();
+  const now = new Date();
+  const requestedYear = Number(params.get("ano"));
+  const requestedMonth = Number(params.get("mes"));
+  const [period, setPeriod] = useState({
+    year: Number.isInteger(requestedYear) && requestedYear >= 2000 && requestedYear <= 2100 ? requestedYear : now.getFullYear(),
+    month: Number.isInteger(requestedMonth) && requestedMonth >= 1 && requestedMonth <= 12 ? requestedMonth : now.getMonth() + 1,
+  });
   const [rows, setRows] = useState<Expense[]>([]);
   const [cats, setCats] = useState<Category[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -60,6 +66,13 @@ export function ExpensesPage() {
   useEffect(() => {
     if (pendingOnly) setStatus("pending");
   }, [pendingOnly]);
+
+  useEffect(() => {
+    const categoryKey = params.get("categoria");
+    if (!categoryKey || !cats.length) return;
+    const match = cats.find((item) => item.key === categoryKey);
+    if (match) setCategory(match.id);
+  }, [cats, params]);
 
   const visible = useMemo(() => {
     const term = search.trim().toLocaleLowerCase("pt-BR");

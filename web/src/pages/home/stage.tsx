@@ -1,23 +1,28 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import type { DashboardCashflow } from "../../api";
 import { formatBrlFromCents, shortMonth } from "../../format";
 import { MoneyCount } from "./count-up";
 
 const PALETTE = ["#12a888", "#1B2C41", "#e3b23c", "#B85C4A", "#3D5A80", "#0c6e5c"];
 
-export type SpendSlice = { category_key?: string; name: string; amount_cents: number };
+export type SpendSlice = { category_key?: string; name: string; amount_cents: number; share_bps?: number | null };
 
-function topSlices(spending: SpendSlice[]): { name: string; amount_cents: number; color: string }[] {
+type OrbitSlice = SpendSlice & { color: string; grouped?: boolean };
+
+function topSlices(spending: SpendSlice[]): OrbitSlice[] {
   const sorted = spending
     .filter((s) => s.amount_cents > 0)
     .sort((a, b) => b.amount_cents - a.amount_cents);
-  const head = sorted.slice(0, 6);
-  const rest = sorted.slice(6);
-  const rows = head.map((s) => ({ name: s.name, amount_cents: s.amount_cents }));
+  const head = sorted.slice(0, 5);
+  const rest = sorted.slice(5);
+  const rows: Omit<OrbitSlice, "color">[] = [...head];
   if (rest.length > 0) {
     rows.push({
-      name: "Outros",
+      name: "Outras categorias",
       amount_cents: rest.reduce((sum, s) => sum + s.amount_cents, 0),
+      share_bps: rest.reduce((sum, s) => sum + (s.share_bps ?? 0), 0),
+      grouped: true,
     });
   }
   return rows.map((row, i) => ({ ...row, color: PALETTE[i % PALETTE.length] }));
@@ -27,22 +32,29 @@ export function MonthOrbit({
   spending,
   balanceCents,
   story,
+  year,
+  month,
 }: {
   spending: SpendSlice[];
   balanceCents: number;
   story: string;
+  year: number;
+  month: number;
 }) {
   const slices = useMemo(() => topSlices(spending), [spending]);
   const total = slices.reduce((sum, s) => sum + s.amount_cents, 0);
   const [picked, setPicked] = useState<number | null>(null);
-  const active = picked != null ? slices[picked] : null;
+  const activeIndex = picked ?? (slices.length ? 0 : null);
+  const active = activeIndex != null ? slices[activeIndex] : null;
+  const ranking = slices.slice(0, 4);
   const cx = 200;
   const cy = 200;
   const ring = 138;
 
   return (
-    <div className="relative mx-auto aspect-square w-full max-w-[420px]">
-      <svg viewBox="0 0 400 400" className="h-full w-full overflow-visible" aria-hidden>
+    <div className="grid h-full min-h-0 items-center gap-2 md:grid-cols-[minmax(190px,0.9fr)_minmax(200px,1.1fr)]">
+      <div className="relative mx-auto aspect-square w-full max-w-[250px]">
+      <svg viewBox="0 0 400 400" className="h-full w-full overflow-visible" role="img" aria-label={`Despesas por categoria. Total ${formatBrlFromCents(total)}.`}>
         <defs>
           <radialGradient id="wp-sun-core" cx="50%" cy="45%" r="55%">
             <stop offset="0%" stopColor="#3ad4b0" stopOpacity="0.95" />
@@ -73,8 +85,12 @@ export function MonthOrbit({
                     <circle
                       r={r}
                       fill={slice.color}
-                      className={`cursor-pointer ${picked === i ? "wp-pulse-dot" : ""}`}
-                      onClick={() => setPicked(i === picked ? null : i)}
+                      className={`cursor-pointer outline-none ${activeIndex === i ? "wp-pulse-dot" : ""}`}
+                      onClick={() => setPicked(i)}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`${slice.name}: ${formatBrlFromCents(slice.amount_cents)}, ${sharePercent(slice, total)}%`}
+                      onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setPicked(i); } }}
                     />
                   </g>
                 </g>
@@ -85,7 +101,7 @@ export function MonthOrbit({
       </svg>
       <div className="pointer-events-none absolute inset-[22%] flex flex-col items-center justify-center text-center">
         <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-teal-deep">
-          {active ? active.name : "Sobra"}
+          {active ? active.name : "Sem despesas"}
         </p>
         <p
           className={`mt-1 font-display text-3xl font-semibold tabular-nums tracking-tight sm:text-4xl ${
@@ -94,10 +110,34 @@ export function MonthOrbit({
         >
           <MoneyCount cents={active ? active.amount_cents : balanceCents} />
         </p>
-        <p className="mt-2 max-w-[16rem] text-xs leading-relaxed text-navy/65">{story}</p>
+        <p className="mt-1 text-[11px] font-bold text-teal-deep">{active ? `${sharePercent(active, total)}% do total` : null}</p>
+        <p className="mt-1 max-w-[14rem] text-[10px] leading-relaxed text-navy/60">{active ? `${active.name} é ${activeIndex === 0 ? "a maior categoria" : "uma das principais categorias"} do mês.` : story}</p>
+      </div>
+      </div>
+      <div className="min-w-0 self-stretch py-1">
+        {ranking.length ? <>
+          <div className="space-y-1" aria-label="Ranking de despesas por categoria">
+            {ranking.map((slice, index) => {
+              const percentage = sharePercent(slice, total);
+              return <button key={`${slice.name}-${index}`} type="button" onClick={() => setPicked(index)} className={`group w-full rounded-xl border px-2.5 py-2 text-left transition ${activeIndex === index ? "border-teal/25 bg-sage/45" : "border-transparent hover:border-navy/8 hover:bg-cream/45"}`} aria-pressed={activeIndex === index}>
+                <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: slice.color }} /><span className="min-w-0 flex-1 truncate text-xs font-semibold text-navy">{slice.name}</span><span className="text-xs font-bold tabular-nums text-navy-deep">{formatBrlFromCents(slice.amount_cents)}</span><span className="w-8 text-right text-[10px] font-bold tabular-nums text-muted">{percentage}%</span></span>
+                <span className="mt-1.5 block h-1 overflow-hidden rounded-full bg-cream-muted"><span className="block h-full rounded-full transition-[width] duration-500" style={{ width: `${percentage}%`, backgroundColor: slice.color }} /></span>
+              </button>;
+            })}
+          </div>
+          <p className="mt-2 rounded-xl bg-cream/45 px-3 py-2 text-[10px] leading-relaxed text-navy/65"><b className="text-navy">{slices[0].name}</b> concentra {sharePercent(slices[0], total)}% das despesas deste mês.</p>
+        </> : <div className="grid h-full min-h-28 place-items-center rounded-2xl border border-dashed border-navy/12 bg-cream/30 p-4 text-center text-xs text-muted">As categorias aparecerão quando houver despesas no mês.</div>}
+        <div className="mt-2 flex items-center justify-between px-1">
+          {active?.category_key && !active.grouped ? <Link to={`/app/despesas?categoria=${encodeURIComponent(active.category_key)}&ano=${year}&mes=${month}`} className="text-[11px] font-bold text-teal-deep hover:underline">Ver esta categoria</Link> : <span />}
+          <Link to={`/app/despesas?ano=${year}&mes=${month}`} className="text-[11px] font-bold text-teal-deep hover:underline">Ver todas →</Link>
+        </div>
       </div>
     </div>
   );
+}
+
+function sharePercent(slice: SpendSlice, total: number): number {
+  return slice.share_bps != null ? Math.round(slice.share_bps / 100) : Math.round((slice.amount_cents / Math.max(1, total)) * 100);
 }
 
 export function MonthWave({ data }: { data: DashboardCashflow }) {

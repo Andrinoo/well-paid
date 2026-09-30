@@ -105,7 +105,7 @@ export function DashboardPage() {
       ) : (
         <main className="relative grid gap-3 px-5 pb-24 pt-4 xl:min-h-0 xl:flex-1 xl:grid-cols-2 xl:grid-rows-2 xl:overflow-hidden xl:pb-4 sm:px-8">
           <DashboardPanel title="Despesas por categoria" subtitle="Onde seu dinheiro foi usado neste mês" value={formatBrlFromCents(spent)} valueLabel="total lançado" tone="expense">
-            <div className="mx-auto -my-4 w-full max-w-[360px] xl:max-w-[270px]"><MonthOrbit spending={overview?.spending_by_category ?? []} balanceCents={balance} story={monthStory(balance, pending, income, spent)} /></div>
+            <MonthOrbit spending={overview?.spending_by_category ?? []} balanceCents={balance} story={monthStory(balance, pending, income, spent)} year={period.year} month={period.month} />
           </DashboardPanel>
 
           <DashboardPanel title="Fluxo financeiro" subtitle="Histórico real e despesas previstas" value={formatBrlFromCents(balance)} valueLabel="saldo do mês" tone={tight ? "expense" : "teal"} delay="70ms" action={<span className="text-[11px] font-semibold text-muted"><b className="text-teal-deep">Entradas {formatBrlFromCents(income)}</b><span className="mx-2 text-navy/20">•</span><b className="text-expense-line">Despesas {formatBrlFromCents(spent)}</b></span>}>
