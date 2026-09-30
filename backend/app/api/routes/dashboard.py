@@ -55,7 +55,16 @@ def read_dashboard_snapshot(
     previous_year, previous_month = _previous_month(year, month)
     overview = get_dashboard_overview(db, user, year, month)
     previous = get_dashboard_overview(db, user, previous_year, previous_month)
-    cashflow = get_dashboard_cashflow(db, user, dynamic=True, forecast_months=3)
+    cashflow = get_dashboard_cashflow(
+        db,
+        user,
+        dynamic=True,
+        start_year=None,
+        start_month=None,
+        end_year=None,
+        end_month=None,
+        forecast_months=3,
+    )
     attention: list[DashboardAttentionItem] = []
     today = date.today()
     overdue = [
