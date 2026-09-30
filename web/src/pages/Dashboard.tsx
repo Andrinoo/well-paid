@@ -2,12 +2,12 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   ApiError,
-  fetchCashflow,
+  fetchDashboardSnapshot,
   fetchHomeBanner,
   fetchMe,
-  fetchOverview,
-  type DashboardCashflow,
-  type DashboardOverview,
+  type DashboardAttentionItem,
+  type DashboardChange,
+  type DashboardSnapshot,
   type GoalSummaryItem,
   type HomeBanner,
   type PendingExpenseItem,
@@ -23,8 +23,7 @@ export function DashboardPage() {
   const now = new Date();
   const [period, setPeriod] = useState({ year: now.getFullYear(), month: now.getMonth() + 1 });
   const [name, setName] = useState<string | null>(null);
-  const [overview, setOverview] = useState<DashboardOverview | null>(null);
-  const [cashflow, setCashflow] = useState<DashboardCashflow | null>(null);
+  const [snapshot, setSnapshot] = useState<DashboardSnapshot | null>(null);
   const [banner, setBanner] = useState<HomeBanner | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(true);
@@ -35,16 +34,14 @@ export function DashboardPage() {
     setError(null);
     void (async () => {
       try {
-        const [user, ov, cf, recado] = await Promise.all([
+        const [user, financialSnapshot, recado] = await Promise.all([
           fetchMe(),
-          fetchOverview(period.year, period.month),
-          fetchCashflow({ dynamic: true, forecastMonths: 3, year: period.year, month: period.month }),
+          fetchDashboardSnapshot(period.year, period.month),
           fetchHomeBanner(),
         ]);
         if (cancelled) return;
         setName(greetingFirstName(user));
-        setOverview(ov);
-        setCashflow(cf);
+        setSnapshot(financialSnapshot);
         setBanner(recado);
       } catch (err) {
         if (cancelled) return;
@@ -60,6 +57,8 @@ export function DashboardPage() {
     return () => { cancelled = true; };
   }, [period.year, period.month, navigate]);
 
+  const overview = snapshot?.overview ?? null;
+  const cashflow = snapshot?.cashflow ?? null;
   const pending = overview?.pending_preview?.length ? overview.pending_preview : (overview?.upcoming_due ?? []);
   const goals = overview?.goals_preview ?? [];
   const monthTitle = capitalize(monthLabel(period.year, period.month));
@@ -70,7 +69,7 @@ export function DashboardPage() {
   const tight = balance < 0;
 
   return (
-    <div className="relative min-h-full overflow-hidden bg-paper font-ui text-navy-deep xl:flex xl:h-full xl:min-h-0 xl:flex-col">
+    <div className="relative min-h-full overflow-hidden bg-paper font-ui text-navy-deep">
       <div className={`pointer-events-none absolute -left-24 -top-24 h-[28rem] w-[28rem] rounded-full blur-3xl wp-float ${tight ? "bg-peach" : "bg-sky"}`} />
       <div className="pointer-events-none absolute -right-16 top-32 h-72 w-72 rounded-full bg-peach/80 blur-3xl wp-float-alt" />
 
@@ -103,7 +102,20 @@ export function DashboardPage() {
           {[0, 1, 2, 3].map((item) => <div key={item} className="h-[360px] overflow-hidden rounded-3xl bg-white/70"><div className="h-full w-full wp-shimmer" /></div>)}
         </div>
       ) : (
-        <main className="relative grid gap-3 px-5 pb-24 pt-4 xl:min-h-0 xl:flex-1 xl:grid-cols-2 xl:grid-rows-2 xl:overflow-hidden xl:pb-4 sm:px-8">
+        <main className="relative space-y-4 px-5 pb-24 pt-4 sm:px-8">
+          <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+            <SummaryCard label="Receitas" value={income} change={snapshot?.income_change} tone="teal" />
+            <SummaryCard label="Despesas" value={spent} change={snapshot?.expense_change} tone="expense" invertTrend />
+            <SummaryCard label="Resultado" value={balance} change={snapshot?.balance_change} tone={tight ? "expense" : "teal"} />
+            <SummaryCard label="Reserva" value={overview?.emergency_reserve_balance_cents ?? 0} note="Patrimônio protegido" tone="navy" />
+          </section>
+
+          <section className="grid gap-3 lg:grid-cols-[minmax(0,1.45fr)_minmax(280px,.55fr)]">
+            <AttentionCenter items={snapshot?.attention ?? []} />
+            <QuickActions />
+          </section>
+
+          <section className="grid gap-3 xl:grid-cols-2">
           <DashboardPanel title="Despesas por categoria" subtitle="Onde seu dinheiro foi usado neste mês" value={formatBrlFromCents(spent)} valueLabel="total lançado" tone="expense">
             <MonthOrbit spending={overview?.spending_by_category ?? []} balanceCents={balance} story={monthStory(balance, pending, income, spent)} year={period.year} month={period.month} />
           </DashboardPanel>
@@ -119,9 +131,56 @@ export function DashboardPage() {
           <DashboardPanel title="Metas em andamento" subtitle="Acompanhe o que está crescendo" value={formatBrlFromCents(goalsSaved)} valueLabel={`${goals.length} metas ativas`} tone="navy" delay="210ms" action={<Link to="/app/metas" className="text-xs font-bold text-teal-deep hover:underline">Ver metas →</Link>}>
             <GrowingNow goals={goals} />
           </DashboardPanel>
+          </section>
         </main>
       )}
     </div>
+  );
+}
+
+function SummaryCard({ label, value, change, note, tone, invertTrend = false }: { label: string; value: number; change?: DashboardChange; note?: string; tone: "teal" | "expense" | "navy"; invertTrend?: boolean }) {
+  const accent = tone === "expense" ? "bg-expense-line" : tone === "teal" ? "bg-teal" : "bg-navy";
+  const hasComparison = change?.delta_percent != null;
+  const improvement = change ? (invertTrend ? change.delta_cents <= 0 : change.delta_cents >= 0) : true;
+  const comparison = hasComparison
+    ? `${change!.delta_cents >= 0 ? "↑" : "↓"} ${Math.abs(change!.delta_percent!)}% vs. mês anterior`
+    : note ?? "Primeiro mês para comparação";
+  return (
+    <article className="relative min-w-0 overflow-hidden rounded-2xl border border-navy/8 bg-white/85 p-4 shadow-[0_10px_30px_rgba(20,28,42,.05)]">
+      <span className={`absolute inset-y-0 left-0 w-1 ${accent}`} />
+      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted">{label}</p>
+      <p className="mt-1 truncate font-display text-xl font-semibold tabular-nums text-navy-deep sm:text-2xl">{formatBrlFromCents(value)}</p>
+      <p className={`mt-1 truncate text-[11px] font-semibold ${hasComparison ? (improvement ? "text-teal-deep" : "text-expense-line") : "text-muted"}`}>{comparison}</p>
+    </article>
+  );
+}
+
+function AttentionCenter({ items }: { items: DashboardAttentionItem[] }) {
+  return (
+    <section className="rounded-2xl border border-navy/8 bg-white/75 p-4 shadow-sm backdrop-blur">
+      <div className="mb-3 flex items-center justify-between gap-3"><div><h2 className="font-display text-lg font-semibold">Central de atenção</h2><p className="text-xs text-muted">Prioridades identificadas automaticamente</p></div><span className="rounded-full bg-cream px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-navy/65">{items.length} {items.length === 1 ? "item" : "itens"}</span></div>
+      <div className="grid gap-2 md:grid-cols-2">
+        {items.map((item) => {
+          const tone = item.tone === "danger" ? "border-red-200 bg-red-50/75" : item.tone === "warning" ? "border-amber-200 bg-amber-50/75" : "border-emerald-200 bg-emerald-50/70";
+          const content = <><p className="text-sm font-bold text-navy-deep">{item.title}</p><p className="mt-0.5 text-xs leading-relaxed text-navy/60">{item.detail}</p></>;
+          return item.href ? <Link key={item.key} to={item.href} className={`rounded-xl border p-3 transition hover:-translate-y-0.5 hover:shadow-sm ${tone}`}>{content}</Link> : <div key={item.key} className={`rounded-xl border p-3 ${tone}`}>{content}</div>;
+        })}
+      </div>
+    </section>
+  );
+}
+
+function QuickActions() {
+  const actions = [
+    ["Registrar despesa", "/app/despesas", "−"],
+    ["Adicionar receita", "/app/receitas", "+"],
+    ["Ver investimentos", "/app/investimentos", "↗"],
+  ];
+  return (
+    <section className="rounded-2xl border border-navy/8 bg-navy-deep p-4 text-white shadow-sm">
+      <h2 className="font-display text-lg font-semibold">Ações rápidas</h2><p className="mb-3 text-xs text-white/55">Atalhos para o dia a dia</p>
+      <div className="grid gap-2">{actions.map(([label, href, icon]) => <Link key={href} to={href} className="flex items-center justify-between rounded-xl bg-white/8 px-3 py-2 text-sm font-semibold transition hover:bg-white/14"><span>{label}</span><span className="grid h-7 w-7 place-items-center rounded-lg bg-gold text-navy-deep">{icon}</span></Link>)}</div>
+    </section>
   );
 }
 
@@ -129,7 +188,7 @@ function DashboardPanel({ title, subtitle, value, valueLabel, tone, children, ac
   const accent = tone === "teal" ? "bg-teal" : tone === "expense" ? "bg-expense-line" : tone === "gold" ? "bg-gold" : "bg-navy";
   const valueTone = tone === "expense" ? "text-expense-line" : tone === "teal" ? "text-teal-deep" : "text-navy-deep";
   return (
-    <section className="wp-rise flex min-h-[360px] min-w-0 flex-col overflow-hidden rounded-3xl border border-navy/8 bg-white/85 shadow-[0_16px_48px_rgba(20,28,42,0.07)] backdrop-blur xl:h-full xl:min-h-0" style={{ ["--wp-delay" as string]: delay }}>
+    <section className="wp-rise flex min-h-[360px] min-w-0 flex-col overflow-hidden rounded-3xl border border-navy/8 bg-white/85 shadow-[0_16px_48px_rgba(20,28,42,0.07)] backdrop-blur" style={{ ["--wp-delay" as string]: delay }}>
       <div className={`h-1 w-full ${accent}`} />
       <header className="flex flex-wrap items-start justify-between gap-3 border-b border-navy/8 px-5 py-3">
         <div className="min-w-0"><h2 className="font-display text-xl font-semibold text-navy-deep">{title}</h2><div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1"><p className="text-xs text-muted">{subtitle}</p>{action}</div></div>

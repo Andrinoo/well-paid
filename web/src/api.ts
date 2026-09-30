@@ -70,6 +70,31 @@ export type DashboardCashflow = {
   expense_forecast_cents: number[];
 };
 
+export type DashboardChange = {
+  current_cents: number;
+  previous_cents: number;
+  delta_cents: number;
+  delta_percent: number | null;
+};
+
+export type DashboardAttentionItem = {
+  key: string;
+  title: string;
+  detail: string;
+  tone: "danger" | "warning" | "positive" | "neutral";
+  href?: string | null;
+};
+
+export type DashboardSnapshot = {
+  overview: DashboardOverview;
+  previous_overview: DashboardOverview;
+  cashflow: DashboardCashflow;
+  income_change: DashboardChange;
+  expense_change: DashboardChange;
+  balance_change: DashboardChange;
+  attention: DashboardAttentionItem[];
+};
+
 export async function login(
   email: string,
   password: string,
@@ -185,6 +210,11 @@ export async function fetchOverview(
     { method: "GET" },
     true,
   )) as DashboardOverview;
+}
+
+export async function fetchDashboardSnapshot(year: number, month: number): Promise<DashboardSnapshot> {
+  const q = new URLSearchParams({ year: String(year), month: String(month) });
+  return (await request(`/dashboard/snapshot?${q}`, { method: "GET" }, true)) as DashboardSnapshot;
 }
 
 export async function fetchCashflow(opts?: {

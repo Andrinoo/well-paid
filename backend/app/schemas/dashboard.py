@@ -130,3 +130,28 @@ class DashboardOverviewResponse(BaseModel):
         ge=0,
         description="Meta mensal configurada para a reserva (centavos)",
     )
+
+
+class DashboardChange(BaseModel):
+    current_cents: int
+    previous_cents: int
+    delta_cents: int
+    delta_percent: float | None = None
+
+
+class DashboardAttentionItem(BaseModel):
+    key: str
+    title: str
+    detail: str
+    tone: str = "neutral"
+    href: str | None = None
+
+
+class DashboardSnapshotResponse(BaseModel):
+    overview: DashboardOverviewResponse
+    previous_overview: DashboardOverviewResponse
+    cashflow: DashboardCashflowResponse
+    income_change: DashboardChange
+    expense_change: DashboardChange
+    balance_change: DashboardChange
+    attention: list[DashboardAttentionItem] = Field(default_factory=list)
