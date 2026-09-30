@@ -1,16 +1,9 @@
-import { useEffect, useState, type FormEvent } from "react";
-import {
-  addShoppingItem,
-  createShoppingList,
-  deleteShoppingList,
-  fetchShoppingDetail,
-  fetchShoppingLists,
-  patchShoppingItem,
-  type ShoppingItem,
-  type ShoppingList,
-} from "../api";
-import { formatBrlFromCents } from "../format";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { addShoppingItem, createShoppingList, deleteShoppingItem, deleteShoppingList, fetchShoppingDetail, fetchShoppingLists, patchShoppingItem, patchShoppingList, searchShoppingPrices, type GoalProductHit, type ShoppingItem, type ShoppingList } from "../api";
+import { formatBrlFromCents, maskBrlInput, parseBrlToCents } from "../format";
 import { ApiError, ErrorNote, PageTitle } from "./common";
+
+type ItemDraft = { label: string; quantity: string; price: string };
 
 export function ShoppingPage() {
   const [rows, setRows] = useState<ShoppingList[]>([]);
@@ -19,136 +12,49 @@ export function ShoppingPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [title, setTitle] = useState("");
+  const [search, setSearch] = useState("");
   const [item, setItem] = useState("");
+  const [quantity, setQuantity] = useState("1");
+  const [price, setPrice] = useState("");
+  const [suggestions, setSuggestions] = useState<GoalProductHit[]>([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const [editingList, setEditingList] = useState<string | null>(null);
+  const [listTitle, setListTitle] = useState("");
+  const [editingItem, setEditingItem] = useState<string | null>(null);
+  const [draft, setDraft] = useState<ItemDraft>({ label: "", quantity: "1", price: "" });
 
-  async function load() {
-    setError(null);
-    try {
-      setRows(await fetchShoppingLists());
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Falha ao carregar.");
-    }
-  }
-
+  async function load() { setError(null); try { setRows(await fetchShoppingLists()); } catch (err) { setError(messageOf(err, "Falha ao carregar as listas.")); } }
+  useEffect(() => { void load(); }, []);
   useEffect(() => {
-    void load();
-  }, []);
+    const query = item.trim();
+    if (!openId || query.length < 2) { setSuggestions([]); setSuggestionsLoading(false); return; }
+    const timer = window.setTimeout(() => { setSuggestionsLoading(true); void searchShoppingPrices(query).then(setSuggestions).catch(() => setSuggestions([])).finally(() => setSuggestionsLoading(false)); }, 650);
+    return () => window.clearTimeout(timer);
+  }, [item, openId]);
 
-  async function openList(id: string) {
-    setOpenId(id);
-    const detail = await fetchShoppingDetail(id);
-    setItems(detail.items ?? []);
-  }
+  const visible = useMemo(() => rows.filter((row) => `${row.title ?? ""} ${row.store_name ?? ""}`.toLocaleLowerCase("pt-BR").includes(search.toLocaleLowerCase("pt-BR"))), [rows, search]);
 
-  async function onCreate(e: FormEvent) {
-    e.preventDefault();
-    if (!title.trim()) return;
-    setBusy(true);
-    try {
-      await createShoppingList(title.trim());
-      setTitle("");
-      await load();
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Não foi possível criar.");
-    } finally {
-      setBusy(false);
-    }
-  }
+  async function openList(id: string) { if (openId === id) { setOpenId(null); setItems([]); return; } setOpenId(id); setItems((await fetchShoppingDetail(id)).items ?? []); }
+  async function refreshDetail(id: string) { setItems((await fetchShoppingDetail(id)).items ?? []); await load(); }
+  async function run(action: () => Promise<void>, fallback: string) { setBusy(true); setError(null); try { await action(); } catch (err) { setError(messageOf(err, fallback)); } finally { setBusy(false); } }
+  async function onCreate(e: FormEvent) { e.preventDefault(); if (!title.trim()) return; await run(async () => { await createShoppingList(title.trim()); setTitle(""); await load(); }, "Não foi possível criar a lista."); }
+  async function addItem(e: FormEvent, listId: string) { e.preventDefault(); const label = item.trim(); if (!label) return; const qty = Math.max(1, Number.parseInt(quantity, 10) || 1); const cents = parseBrlToCents(price); await run(async () => { await addShoppingItem(listId, { label, quantity: qty, line_amount_cents: cents || null, is_picked: false }); setItem(""); setQuantity("1"); setPrice(""); setSuggestions([]); await refreshDetail(listId); }, "Não foi possível adicionar o produto."); }
+  async function saveItem(listId: string, itemId: string) { const label = draft.label.trim(); if (!label) return; await run(async () => { await patchShoppingItem(listId, itemId, { label, quantity: Math.max(1, Number.parseInt(draft.quantity, 10) || 1), line_amount_cents: parseBrlToCents(draft.price) || null }); setEditingItem(null); await refreshDetail(listId); }, "Não foi possível editar o produto."); }
+  function beginItemEdit(value: ShoppingItem) { setEditingItem(value.id); setDraft({ label: value.label, quantity: String(value.quantity), price: value.line_amount_cents ? formatBrlFromCents(value.line_amount_cents) : "" }); }
 
-  return (
-    <div className="-mx-4 -my-5 min-h-full bg-gradient-to-br from-paper via-paper to-sage/45 px-4 py-5 sm:-mx-6 sm:px-6">
-      <div className="flex flex-wrap items-end justify-between gap-4"><div><PageTitle kicker="Organização" title="Listas de compras" /><p className="mt-2 text-sm text-muted">Planeje suas compras e acompanhe o total sem perder nenhum item.</p></div><form onSubmit={onCreate} className="flex gap-2"><input className="field min-w-56" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Nome da nova lista" required /><button disabled={busy} className="rounded-xl bg-gold px-4 text-sm font-bold text-navy-deep shadow-sm">{busy ? "…" : "+ Criar lista"}</button></form></div>
-      <div className="mt-4"><ErrorNote message={error} /></div>
-      <section className="mt-4 grid gap-3 sm:grid-cols-3"><ShoppingMetric label="Listas" value={String(rows.length)} detail="organizadas" /><ShoppingMetric label="Itens" value={String(rows.reduce((sum, row) => sum + row.items_count, 0))} detail="no total" /><ShoppingMetric label="Valor planejado" value={formatBrlFromCents(rows.reduce((sum, row) => sum + (row.total_cents ?? 0), 0))} detail="em todas as listas" /></section>
-      <ul className="mt-4 grid gap-4 lg:grid-cols-2">
-        {rows.length === 0 ? (
-          <li className="rounded-3xl border border-dashed border-navy/15 bg-white/70 px-4 py-14 text-center text-sm text-muted lg:col-span-2">
-            Sem listas.
-          </li>
-        ) : (
-          rows.map((list) => (
-            <li key={list.id} className="expense-list-row self-start overflow-hidden rounded-3xl border border-navy/8 bg-white/90 shadow-[0_12px_38px_rgba(20,28,42,0.06)] transition hover:-translate-y-0.5 hover:shadow-xl">
-              <div className="h-1 bg-gradient-to-r from-gold to-teal" />
-              <div className="p-5">
-              <div className="flex items-start justify-between gap-3">
-                <button type="button" className="min-w-0 flex-1 text-left" onClick={() => void openList(list.id)}>
-                  <div className="flex justify-between text-sm">
-                    <span className="font-serif text-xl font-semibold text-navy-deep">{list.title || "Lista"}</span>
-                    <span className="text-muted">
-                      {list.items_count} itens
-                      {list.total_cents != null
-                        ? ` · ${formatBrlFromCents(list.total_cents)}`
-                        : ""}
-                    </span>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  className="text-xs text-muted hover:text-red-700"
-                  onClick={() =>
-                    void deleteShoppingList(list.id).then(() => {
-                      if (openId === list.id) {
-                        setOpenId(null);
-                        setItems([]);
-                      }
-                      return load();
-                    })
-                  }
-                >
-                  Apagar
-                </button>
-              </div>
-              {openId === list.id ? (
-                <div className="mt-4 border-t border-navy/8 pt-3">
-                  <div className="mb-3 h-1.5 overflow-hidden rounded-full bg-cream-muted"><div className="h-full rounded-full bg-teal" style={{ width: `${items.length ? Math.round(items.filter((i) => i.is_picked).length / items.length * 100) : 0}%` }} /></div>
-                  <ul className="max-h-64 space-y-1 overflow-auto text-sm">
-                    {items.map((it) => (
-                      <li key={it.id} className="flex items-center gap-2 rounded-xl px-2 py-2 hover:bg-cream/50">
-                        <input
-                          type="checkbox"
-                          checked={it.is_picked}
-                          onChange={() =>
-                            void patchShoppingItem(list.id, it.id, {
-                              is_picked: !it.is_picked,
-                            }).then(() => openList(list.id))
-                          }
-                        />
-                        <span className={it.is_picked ? "text-muted line-through" : ""}>
-                          {it.quantity}× {it.label}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                  <form
-                    className="mt-3 flex gap-2"
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      if (!item.trim()) return;
-                      void addShoppingItem(list.id, item.trim()).then(() => {
-                        setItem("");
-                        return openList(list.id);
-                      });
-                    }}
-                  >
-                    <input
-                      className="min-w-0 flex-1 rounded-lg border border-navy/10 px-3 py-2 text-sm"
-                      placeholder="Novo item"
-                      value={item}
-                      onChange={(e) => setItem(e.target.value)}
-                    />
-                    <button type="submit" className="rounded-lg bg-teal px-3 py-2 text-xs font-bold text-white">
-                      Adicionar
-                    </button>
-                  </form>
-                </div>
-              ) : null}
-              </div>
-            </li>
-          ))
-        )}
-      </ul>
-    </div>
-  );
+  return <div className="-mx-4 -my-5 min-h-full bg-gradient-to-br from-paper via-paper to-sage/45 px-4 py-5 sm:-mx-6 sm:px-6">
+    <div className="flex flex-wrap items-end justify-between gap-4"><div><PageTitle kicker="Organização" title="Listas de compras" /><p className="mt-2 text-sm text-muted">Pesquise preços, edite produtos e acompanhe sua compra em tempo real.</p></div><form onSubmit={onCreate} className="flex gap-2"><input className="field min-w-56" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Nome da nova lista" required /><button disabled={busy} className="rounded-xl bg-gold px-4 text-sm font-bold text-navy-deep shadow-sm">{busy ? "…" : "+ Criar lista"}</button></form></div>
+    <div className="mt-4"><ErrorNote message={error} /></div>
+    <section className="mt-4 grid gap-3 sm:grid-cols-3"><ShoppingMetric label="Listas" value={String(rows.length)} detail="organizadas" /><ShoppingMetric label="Itens" value={String(rows.reduce((sum, row) => sum + row.items_count, 0))} detail="no total" /><ShoppingMetric label="Valor planejado" value={formatBrlFromCents(rows.reduce((sum, row) => sum + (row.total_cents ?? 0), 0))} detail="em todas as listas" /></section>
+    <div className="mt-4 rounded-2xl border border-navy/8 bg-white/80 p-3 shadow-sm"><input className="field bg-cream/25" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Pesquisar listas ou mercados…" /></div>
+    <ul className="mt-4 grid gap-4 lg:grid-cols-2">{visible.length === 0 ? <li className="rounded-3xl border border-dashed border-navy/15 bg-white/70 px-4 py-14 text-center text-sm text-muted lg:col-span-2">Nenhuma lista encontrada.</li> : visible.map((list) => <li key={list.id} className="expense-list-row self-start overflow-hidden rounded-3xl border border-navy/8 bg-white/90 shadow-[0_12px_38px_rgba(20,28,42,0.06)]"><div className="h-1 bg-gradient-to-r from-gold to-teal" /><div className="p-5">
+      <div className="flex items-start justify-between gap-3"><button type="button" className="min-w-0 flex-1 text-left" onClick={() => void openList(list.id)}>{editingList === list.id ? <span className="flex gap-2" onClick={(e) => e.stopPropagation()}><input autoFocus className="field" value={listTitle} onChange={(e) => setListTitle(e.target.value)} /><button type="button" className="rounded-lg bg-teal px-3 text-xs font-bold text-white" onClick={() => void run(async () => { await patchShoppingList(list.id, { title: listTitle.trim() }); setEditingList(null); await load(); }, "Não foi possível renomear.")}>Salvar</button></span> : <span className="flex justify-between gap-3"><span><b className="font-serif text-xl text-navy-deep">{list.title || "Lista"}</b>{list.store_name ? <small className="block text-muted">{list.store_name}</small> : null}</span><span className="text-sm text-muted">{list.items_count} itens{list.total_cents != null ? ` · ${formatBrlFromCents(list.total_cents)}` : ""}</span></span>}</button><div className="flex gap-2"><button type="button" className="text-xs font-semibold text-teal-deep" onClick={() => { setEditingList(list.id); setListTitle(list.title || ""); }}>Editar</button><button type="button" className="text-xs text-muted hover:text-red-700" onClick={() => { if (!window.confirm(`Apagar a lista ${list.title || "Lista"}?`)) return; void run(async () => { await deleteShoppingList(list.id); if (openId === list.id) { setOpenId(null); setItems([]); } await load(); }, "Não foi possível apagar a lista."); }}>Apagar</button></div></div>
+      {openId === list.id ? <div className="mt-4 border-t border-navy/8 pt-3"><div className="mb-3 flex items-center gap-3"><div className="h-1.5 flex-1 overflow-hidden rounded-full bg-cream-muted"><div className="h-full rounded-full bg-teal transition-all" style={{ width: `${items.length ? Math.round(items.filter((value) => value.is_picked).length / items.length * 100) : 0}%` }} /></div><span className="text-[10px] font-bold text-muted">{items.filter((value) => value.is_picked).length}/{items.length}</span></div>
+        <ul className="max-h-[28rem] space-y-1 overflow-auto text-sm">{items.length ? items.map((value) => <li key={value.id} className="rounded-xl border border-transparent px-2 py-2 transition hover:border-navy/8 hover:bg-cream/45">{editingItem === value.id ? <div className="grid gap-2 sm:grid-cols-[1fr_70px_130px_auto]"><input className="field" value={draft.label} onChange={(e) => setDraft((old) => ({ ...old, label: e.target.value }))} /><input className="field" type="number" min="1" value={draft.quantity} onChange={(e) => setDraft((old) => ({ ...old, quantity: e.target.value }))} /><input className="field" inputMode="numeric" value={draft.price} onChange={(e) => setDraft((old) => ({ ...old, price: maskBrlInput(e.target.value) }))} placeholder="Preço unit." /><div className="flex gap-1"><button type="button" className="rounded-lg bg-teal px-2 text-xs font-bold text-white" onClick={() => void saveItem(list.id, value.id)}>Salvar</button><button type="button" className="text-xs text-muted" onClick={() => setEditingItem(null)}>Cancelar</button></div></div> : <div className="flex items-center gap-2"><input className="h-4 w-4 accent-teal" type="checkbox" checked={value.is_picked} onChange={() => void run(async () => { await patchShoppingItem(list.id, value.id, { is_picked: !value.is_picked }); await refreshDetail(list.id); }, "Não foi possível atualizar o item.")} /><div className="min-w-0 flex-1"><p className={`truncate font-medium ${value.is_picked ? "text-muted line-through" : "text-navy"}`}>{value.quantity}× {value.label}</p>{value.line_amount_cents ? <small className="text-muted">{formatBrlFromCents(value.line_amount_cents)} cada · <b>{formatBrlFromCents(value.line_amount_cents * value.quantity)}</b></small> : null}</div><button type="button" className="text-xs font-semibold text-teal-deep" onClick={() => beginItemEdit(value)}>Editar</button><button type="button" className="text-xs text-muted hover:text-red-700" onClick={() => { if (!window.confirm(`Apagar ${value.label}?`)) return; void run(async () => { await deleteShoppingItem(list.id, value.id); await refreshDetail(list.id); }, "Não foi possível apagar o item."); }}>Apagar</button></div>}</li>) : <li className="py-6 text-center text-sm text-muted">Adicione o primeiro produto.</li>}</ul>
+        <form className="relative mt-3 rounded-2xl border border-navy/8 bg-cream/30 p-3" onSubmit={(e) => void addItem(e, list.id)}><div className="grid gap-2 sm:grid-cols-[1fr_72px_132px_auto]"><div className="relative"><input className="field" placeholder="Pesquisar ou digitar produto" value={item} onChange={(e) => setItem(e.target.value)} autoComplete="off" />{suggestionsLoading ? <span className="absolute right-3 top-3 text-[10px] text-muted">Pesquisando…</span> : null}</div><input className="field" type="number" min="1" max="9999" value={quantity} onChange={(e) => setQuantity(e.target.value)} aria-label="Quantidade" /><input className="field" inputMode="numeric" value={price} onChange={(e) => setPrice(maskBrlInput(e.target.value))} placeholder="Preço unit." /><button disabled={busy || !item.trim()} className="rounded-lg bg-teal px-3 py-2 text-xs font-bold text-white disabled:opacity-40">Adicionar</button></div>{suggestions.length ? <div className="mt-2 grid max-h-56 gap-2 overflow-auto sm:grid-cols-2">{suggestions.map((hit) => <button type="button" key={`${hit.url}-${hit.title}`} className="flex items-center gap-2 rounded-xl border border-navy/8 bg-white p-2 text-left hover:border-teal/40 hover:bg-sage/30" onClick={() => { setItem(hit.title); setPrice(maskBrlInput(String(hit.price_cents))); setSuggestions([]); }}>{hit.thumbnail ? <img src={hit.thumbnail} alt="" className="h-10 w-10 rounded-lg object-cover" /> : <span className="h-10 w-10 rounded-lg bg-sage" />}<span className="min-w-0"><b className="block truncate text-xs text-navy">{hit.title}</b><small className="font-bold text-teal-deep">{formatBrlFromCents(hit.price_cents)}</small></span></button>)}</div> : null}</form>
+      </div> : null}</div></li>)}</ul>
+  </div>;
 }
 
 function ShoppingMetric({ label, value, detail }: { label: string; value: string; detail: string }) { return <article className="rounded-2xl border border-navy/8 border-l-4 border-l-teal bg-white/90 px-4 py-3.5 shadow-sm"><p className="text-[10px] font-bold uppercase tracking-wider text-muted">{label}</p><p className="mt-1 font-display text-2xl font-semibold text-navy-deep">{value}</p><p className="text-xs text-muted">{detail}</p></article>; }
+function messageOf(error: unknown, fallback: string) { return error instanceof ApiError ? error.message : error instanceof Error ? error.message : fallback; }

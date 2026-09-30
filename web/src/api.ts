@@ -656,11 +656,11 @@ export async function fetchShoppingDetail(id: string): Promise<{
 
 export async function addShoppingItem(
   listId: string,
-  label: string,
+  body: { label: string; quantity?: number; line_amount_cents?: number | null; is_picked?: boolean },
 ): Promise<void> {
   await request(
     `/shopping-lists/${listId}/items`,
-    { method: "POST", body: JSON.stringify({ label, quantity: 1 }) },
+    { method: "POST", body: JSON.stringify(body) },
     true,
   );
 }
@@ -668,7 +668,7 @@ export async function addShoppingItem(
 export async function patchShoppingItem(
   listId: string,
   itemId: string,
-  body: { is_picked?: boolean },
+  body: { label?: string; quantity?: number; line_amount_cents?: number | null; is_picked?: boolean },
 ): Promise<void> {
   await request(
     `/shopping-lists/${listId}/items/${itemId}`,
@@ -747,6 +747,19 @@ export async function patchDisplayName(display_name: string): Promise<UserMe> {
     { method: "PATCH", body: JSON.stringify({ display_name }) },
     true,
   )) as UserMe;
+}
+
+export async function deleteShoppingItem(listId: string, itemId: string): Promise<void> {
+  await request(`/shopping-lists/${listId}/items/${itemId}`, { method: "DELETE" }, true);
+}
+
+export async function patchShoppingList(id: string, body: { title?: string; store_name?: string | null }): Promise<void> {
+  await request(`/shopping-lists/${id}`, { method: "PATCH", body: JSON.stringify(body) }, true);
+}
+
+export async function searchShoppingPrices(query: string): Promise<GoalProductHit[]> {
+  const body = await request("/shopping-lists/price-suggestions", { method: "POST", body: JSON.stringify({ query }) }, true) as { results?: GoalProductHit[] };
+  return body.results ?? [];
 }
 
 export async function searchInvestmentTickers(query: string): Promise<InvestmentTicker[]> {
